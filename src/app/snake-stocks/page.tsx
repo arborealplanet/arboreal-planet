@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
 import { MarketChartFrame } from "@/components/MarketChartFrame";
 import { SnakeStocksExplorer } from "@/components/SnakeStocksExplorer";
+import { SnakeStocksBrandBanner } from "@/components/BrandVisuals";
 
 const localityRows = [
   ["Wamena", "Morelia azurea utaraensis", "Captive Bred + Import"],
@@ -21,6 +22,10 @@ export default function SnakeStocksPage() {
         description="Track reptile asking markets, sold-listing evidence and locality segments with transparent methodology. Median is primary, sample size stays visible, and empty data never becomes a fake trend line."
         aside={<div className="rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-200/65">Track · Compare · Discover</div>}
       />
+
+      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
+        <SnakeStocksBrandBanner />
+      </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
         <SnakeStocksExplorer />
@@ -76,7 +81,7 @@ export default function SnakeStocksPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
-        <div className="flex items-end justify-between gap-4"><div><div className="section-kicker">Locality market map</div><h2 className="mt-2 text-2xl font-semibold">Built to drill down, not flatten.</h2></div><Link href="/animals" className="hidden text-xs font-bold text-emerald-300 sm:block">OPEN ANIMAL RECORD →</Link></div>
+        <div className="flex items-end justify-between gap-4"><div><div className="section-kicker">Locality market map</div><h2 className="mt-2 text-2xl font-semibold">Built to drill down, not flatten.</h2></div><Link href="/animals/green-tree-python" className="hidden text-xs font-bold text-emerald-300 sm:block">OPEN ANIMAL RECORD →</Link></div>
         <div className="mt-6 overflow-hidden rounded-3xl border border-white/[.07]">
           {localityRows.map(([name, group, origin], index) => (
             <div key={name} className={`grid gap-2 bg-white/[.018] px-5 py-4 sm:grid-cols-[.7fr_1.5fr_.8fr_auto] sm:items-center ${index ? "border-t border-white/[.055]" : ""}`}>
