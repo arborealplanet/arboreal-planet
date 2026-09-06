@@ -2,7 +2,8 @@ import Link from "next/link";
 import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
 
 const platformCards = [
-  { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "KNOWLEDGE", icon: "◇" },
+  { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
+  { title: "Plant Database", text: "Nepenthes, bromeliads and terrarium cultivation knowledge.", href: "/plants", tag: "PLANTS", icon: "⌁" },
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "DISCOVER", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and the topics you actually care about.", href: "/community", tag: "CONNECT", icon: "◎" },
@@ -24,7 +25,7 @@ export default function Home() {
               One ecosystem for the animals <span className="text-emerald-300">above the ground.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-white/52">
-              Arboreal Planet brings keepers, species knowledge, listings, community activity and reptile market intelligence together without flattening them into the same thing.
+              Arboreal Planet brings keepers, species knowledge, plant cultivation, listings, community activity and reptile market intelligence together without flattening them into the same thing.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/community" className="rounded-xl bg-emerald-300 px-5 py-3.5 text-sm font-bold text-[#06100c] transition hover:bg-emerald-200">Explore the network</Link>
@@ -46,7 +47,7 @@ export default function Home() {
                 <div className="absolute left-5 top-5 rounded-full border border-emerald-300/15 bg-black/25 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/70">Green Tree Python · Reference Species</div>
                 <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
                   <div><div className="text-xs italic text-white/35">Morelia viridis complex</div><div className="mt-1 text-xl font-semibold">Animal data ↔ market data</div></div>
-                  <Link href="/animals" className="rounded-xl border border-white/[.09] bg-black/30 px-3 py-2 text-[10px] font-bold text-white/60 backdrop-blur">OPEN RECORD →</Link>
+                  <Link href="/animals/green-tree-python" className="rounded-xl border border-white/[.09] bg-black/30 px-3 py-2 text-[10px] font-bold text-white/60 backdrop-blur">OPEN RECORD →</Link>
                 </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4">
@@ -60,10 +61,10 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Five spaces. One identity.</h2></div>
+          <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Six spaces. One identity.</h2></div>
           <p className="max-w-md text-sm leading-6 text-white/38">Each system can grow without turning navigation into a wall of competing products.</p>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {platformCards.map((card) => (
             <Link key={card.href} href={card.href} className="panel group flex min-h-64 flex-col rounded-3xl p-5 transition duration-300 hover:-translate-y-1 hover:border-emerald-300/20">
               <div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.07] bg-white/[.025] text-lg text-emerald-300/70">{card.icon}</span><span className="text-[9px] font-bold tracking-[.16em] text-white/24">{card.tag}</span></div>
@@ -81,7 +82,7 @@ export default function Home() {
             <p className="mt-2 text-sm italic text-white/32">Morelia viridis complex · Arboreal Planet market grouping</p>
             <p className="mt-6 max-w-xl text-base leading-7 text-white/48">This is the first animal going all the way through the system: animal record → locality structure → origin terminology → marketplace → Snake Stocks → community context.</p>
             <div className="mt-7 flex flex-wrap gap-2">{populations.map((name) => <span key={name} className="rounded-full border border-white/[.08] bg-white/[.02] px-3 py-1.5 text-xs text-white/45">{name}</span>)}</div>
-            <Link href="/animals" className="mt-7 w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link>
+            <Link href="/animals/green-tree-python" className="mt-7 w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[["CAPTIVE BRED", "USCBB, CBB and other unambiguous captive-produced terms normalize here."],["IMPORT", "Import, farm bred, farm raised, wild caught and LTC normalize into the public Import market."],["LOCALITY", "Population and locality stay visible instead of being flattened into one generic species price."],["DESIGNER LINES", "Designer and project animals remain separate from locality import comparisons."]].map(([title, text]) => <div key={title} className="panel-soft rounded-2xl p-5"><div className="text-[10px] font-bold tracking-[.17em] text-emerald-300/60">{title}</div><p className="mt-3 text-sm leading-6 text-white/42">{text}</p></div>)}
