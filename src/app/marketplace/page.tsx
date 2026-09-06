@@ -1,4 +1,5 @@
 import { PageIntro } from "@/components/AppShell";
+import { MarketplaceExplorer } from "@/components/MarketplaceExplorer";
 
 const categories = [
   ["Animals", "Live reptiles and other permitted animals", "◇"],
@@ -18,21 +19,12 @@ export default function MarketplacePage() {
         aside={<button className="rounded-xl bg-emerald-300 px-4 py-3 text-xs font-bold text-[#06100c]">Create listing</button>}
       />
 
-      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <div className="panel rounded-3xl p-4 sm:p-5">
-          <div className="grid gap-3 lg:grid-cols-[1.4fr_.6fr_.6fr_auto]">
-            <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-3 text-sm text-white/28">Search animals, localities, plants, gear...</div>
-            <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-3 text-sm text-white/36">Category · All</div>
-            <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-3 text-sm text-white/36">Origin · All</div>
-            <button className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.05] px-5 py-3 text-sm font-bold text-emerald-200">Filters</button>
-          </div>
-        </div>
-      </section>
+      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6"><MarketplaceExplorer /></section>
 
       <section className="mx-auto max-w-7xl px-5 pb-10 sm:px-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {categories.map(([title, text, icon]) => (
-            <div key={title} className="panel group min-h-44 rounded-3xl p-5 transition hover:border-emerald-300/18">
+            <div key={title} className="panel group min-h-44 rounded-3xl p-5 transition hover:-translate-y-0.5 hover:border-emerald-300/18">
               <div className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.07] bg-white/[.025] text-lg text-emerald-300/65">{icon}</div>
               <div className="mt-5 font-semibold">{title}</div>
               <p className="mt-2 text-xs leading-5 text-white/34">{text}</p>
@@ -64,11 +56,7 @@ export default function MarketplacePage() {
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-5 px-5 py-14 sm:px-6 lg:grid-cols-3">
-        {[
-          ["Animal Database context", "A Green Tree Python listing can link to the species and locality record without making seller claims part of the database."],
-          ["Snake Stocks context", "Qualified listings can contribute observations to market intelligence after normalization and duplicate checks."],
-          ["Seller identity", "Profiles can show breeder/seller information, verification state and public history once account systems are connected."],
-        ].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-6"><h3 className="font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
+        {[["Animal Database context", "A Green Tree Python listing can link to the species and locality record without making seller claims part of the database."],["Snake Stocks context", "Qualified listings can contribute observations to market intelligence after normalization and duplicate checks."],["Seller identity", "Profiles can show breeder/seller information, verification state and public history once account systems are connected."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-6"><h3 className="font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
       </section>
     </main>
   );
