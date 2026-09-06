@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
 import { MarketChartFrame } from "@/components/MarketChartFrame";
-
-const filters = {
-  time: ["1M", "3M", "6M", "1Y", "5Y", "ALL"],
-  origin: ["All origins", "Captive Bred", "Import"],
-  color: ["All neo colors", "Red", "Yellow"],
-  sex: ["All sexes", "Female", "Male"],
-  age: ["All ages", "Neonate", "Juvenile", "Subadult", "Adult"],
-};
+import { SnakeStocksExplorer } from "@/components/SnakeStocksExplorer";
 
 const localityRows = [
   ["Wamena", "Morelia azurea utaraensis", "Captive Bred + Import"],
@@ -18,19 +11,6 @@ const localityRows = [
   ["Manokwari", "Morelia azurea pulcher", "Captive Bred + Import"],
   ["Aru", "Morelia viridis", "Captive Bred + Import"],
 ];
-
-function FilterGroup({ label, values }: { label: string; values: string[] }) {
-  return (
-    <div>
-      <div className="mb-2 text-[9px] font-bold uppercase tracking-[.15em] text-white/25">{label}</div>
-      <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
-        {values.map((value, index) => (
-          <button key={value} className={`whitespace-nowrap rounded-lg border px-3 py-2 text-[11px] font-semibold ${index === 0 ? "border-emerald-300/20 bg-emerald-300/[.08] text-emerald-200" : "border-white/[.07] bg-white/[.025] text-white/40"}`}>{value}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function SnakeStocksPage() {
   return (
@@ -43,46 +23,7 @@ export default function SnakeStocksPage() {
       />
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <div className="panel overflow-hidden rounded-3xl">
-          <div className="flex flex-col gap-4 border-b border-white/[.06] p-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-300/65">Green Tree Python</div>
-              <h2 className="mt-1.5 text-2xl font-semibold">Morelia viridis complex market</h2>
-            </div>
-            <div className="inline-flex w-fit rounded-xl border border-white/[.07] bg-black/15 p-1 text-[11px] font-bold">
-              <button className="rounded-lg bg-emerald-300 px-4 py-2 text-[#06100c]">FOR SALE</button>
-              <button className="px-4 py-2 text-white/38">SOLD HISTORY</button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 border-b border-white/[.06] p-5 lg:grid-cols-5">
-            <FilterGroup label="Time" values={filters.time} />
-            <FilterGroup label="Origin" values={filters.origin} />
-            <FilterGroup label="Neonate color" values={filters.color} />
-            <FilterGroup label="Sex" values={filters.sex} />
-            <FilterGroup label="Age" values={filters.age} />
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-            {[
-              ["Median ask", "—"], ["Typical range", "—"], ["Eligible records", "131"], ["Unique sellers", "—"], ["Sources", "—"], ["Confidence", "Pending"],
-            ].map(([label, value]) => (
-              <div key={label} className="border-b border-r border-white/[.055] px-4 py-5 lg:border-b-0">
-                <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/24">{label}</div>
-                <div className={`mt-2 font-semibold ${value === "131" ? "text-2xl text-white" : "text-lg text-white/58"}`}>{value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <MarketChartFrame
-          title="Green Tree Python · Overall market"
-          subtitle="Default public view: overall market first, with locality lines only when comparable dated history exists."
-          legends={["Overall", "Captive Bred", "Import"]}
-          status="The current evidence pool can support descriptive market summaries, but a dated historical line needs multiple trustworthy snapshots."
-        />
+        <SnakeStocksExplorer />
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
