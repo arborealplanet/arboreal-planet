@@ -1,4 +1,5 @@
 import { PageIntro } from "@/components/AppShell";
+import { GreenTreePythonArt } from "@/components/ArborealArt";
 
 const achievements = ["First Clutch", "First Red Neo", "First Yellow Neo", "Three Generations", "Lineage Keeper", "Genetics Student"];
 
@@ -28,7 +29,7 @@ export default function HatcheryPage() {
             <div className="mx-auto w-full max-w-sm">
               <div className="relative overflow-hidden rounded-[26px] border border-amber-200/15 bg-gradient-to-b from-emerald-300/[.07] to-black/20 p-5 shadow-2xl shadow-black/25">
                 <div className="flex items-center justify-between"><span className="rounded-full border border-amber-200/15 bg-amber-200/[.06] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.15em] text-amber-100/60">Virtual</span><span className="text-[9px] font-bold uppercase tracking-[.15em] text-white/22">Collection card</span></div>
-                <div className="grid-surface mt-5 grid h-52 place-items-center rounded-2xl border border-white/[.06] bg-emerald-300/[.018]"><div className="text-center"><div className="text-5xl text-emerald-300/20">◇</div><div className="mt-3 text-xs font-semibold text-white/35">Virtual Green Tree Python art</div></div></div>
+                <div className="grid-surface mt-5 h-52 overflow-hidden rounded-2xl border border-white/[.06] bg-emerald-300/[.018]"><GreenTreePythonArt compact /></div>
                 <div className="mt-5"><div className="text-xl font-semibold">Wamena #01</div><div className="mt-1 text-xs text-white/30">Female · Red neonate · Generation 1</div></div>
                 <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-white/35"><div className="rounded-xl border border-white/[.06] p-3"><div className="text-white/20">LINEAGE</div><div className="mt-1 font-semibold text-white/48">Starter pair</div></div><div className="rounded-xl border border-white/[.06] p-3"><div className="text-white/20">GAME RARITY</div><div className="mt-1 font-semibold text-white/48">Uncommon</div></div></div>
               </div>
@@ -39,12 +40,7 @@ export default function HatcheryPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-14 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["1 · SELECT", "Receive or choose two virtual animals with lineage, locality and phenotype information."],
-            ["2 · PAIR", "Build a pairing and see which traits are simple, polygenic, line-bred, locality-linked or unknown."],
-            ["3 · HATCH", "Generate individual virtual offspring with parents and generation preserved."],
-            ["4 · LEARN", "A Why did this happen? card explains outcomes without pretending every GTP trait is simple Mendelian genetics."],
-          ].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
+          {[["1 · SELECT", "Receive or choose two virtual animals with lineage, locality and phenotype information."],["2 · PAIR", "Build a pairing and see which traits are simple, polygenic, line-bred, locality-linked or unknown."],["3 · HATCH", "Generate individual virtual offspring with parents and generation preserved."],["4 · LEARN", "A Why did this happen? card explains outcomes without pretending every GTP trait is simple Mendelian genetics."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
         </div>
       </section>
 
