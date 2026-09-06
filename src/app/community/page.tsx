@@ -1,4 +1,5 @@
 import { PageIntro } from "@/components/AppShell";
+import { CommunityComposer } from "@/components/CommunityComposer";
 
 const topics = ["Green Tree Pythons", "Boiga", "Tree Monitors", "Nepenthes", "Breeding", "Husbandry", "Enclosures"];
 
@@ -9,7 +10,7 @@ export default function CommunityPage() {
         eyebrow="Community"
         title="Keeper activity with useful context."
         description="Follow people, animals, plants and topics. Share questions, breeding updates, photos, videos, husbandry notes and discussions without burying the useful stuff under a generic social feed."
-        aside={<button className="rounded-xl bg-emerald-300 px-4 py-3 text-xs font-bold text-[#06100c]">Create post</button>}
+        aside={<div className="rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-200/65">Following · Explore</div>}
       />
 
       <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-14 sm:px-6 lg:grid-cols-[.72fr_1.45fr_.83fr]">
@@ -27,6 +28,7 @@ export default function CommunityPage() {
         </aside>
 
         <div className="space-y-4">
+          <CommunityComposer />
           {["Keeper update", "Husbandry discussion", "Breeding note"].map((type, index) => (
             <article key={type} className="panel overflow-hidden rounded-3xl">
               <div className="flex items-center gap-3 p-5">
