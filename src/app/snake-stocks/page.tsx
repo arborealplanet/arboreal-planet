@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { PageIntro } from "@/components/AppShell";
 import { MarketChartFrame } from "@/components/MarketChartFrame";
 import { SnakeStocksExplorer } from "@/components/SnakeStocksExplorer";
 import { SnakeStocksBrandBanner } from "@/components/BrandVisuals";
@@ -16,15 +15,27 @@ const localityRows = [
 export default function SnakeStocksPage() {
   return (
     <main>
-      <PageIntro
-        eyebrow="Snake Stocks"
-        title="Market intelligence built like a data product."
-        description="Track reptile asking markets, sold-listing evidence and locality segments with transparent methodology. Median is primary, sample size stays visible, and empty data never becomes a fake trend line."
-        aside={<div className="rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-200/65">Track · Compare · Discover</div>}
-      />
+      <section className="border-b border-white/[.06] bg-black/10">
+        <div className="mx-auto max-w-[1560px] px-0 py-0 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+          <div className="sm:overflow-hidden sm:rounded-[30px]">
+            <SnakeStocksBrandBanner />
+          </div>
+        </div>
+      </section>
 
-      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <SnakeStocksBrandBanner />
+      <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:py-10">
+        <div className="grid gap-5 border-b border-white/[.06] pb-8 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <div className="section-kicker">Snake Stocks market intelligence</div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-.035em] text-white sm:text-4xl">The market dashboard starts here.</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/48 sm:text-base">Track reptile asking markets, sold-listing evidence and locality segments with transparent methodology. Median is primary, sample size stays visible, and empty data never becomes a fake trend line.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-white/45">
+            <span className="rounded-full border border-white/[.07] px-3 py-2">USA market</span>
+            <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-3 py-2 text-emerald-200/65">Median first</span>
+            <span className="rounded-full border border-white/[.07] px-3 py-2">Source first</span>
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
