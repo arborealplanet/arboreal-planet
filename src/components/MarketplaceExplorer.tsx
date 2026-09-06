@@ -1,48 +1,5 @@
 "use client";
-
-import { useMemo, useState } from "react";
-
-const categories = ["All", "Animals", "Plants", "Enclosures", "Supplies", "Feeders"];
-const origins = ["All origins", "Captive Bred", "Import"];
-
-export function MarketplaceExplorer() {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
-  const [origin, setOrigin] = useState("All origins");
-
-  const summary = useMemo(() => {
-    const bits = [];
-    if (category !== "All") bits.push(category);
-    if (origin !== "All origins") bits.push(origin);
-    if (query.trim()) bits.push(`“${query.trim()}”`);
-    return bits.length ? bits.join(" · ") : "All marketplace categories";
-  }, [query, category, origin]);
-
-  return (
-    <div className="space-y-5">
-      <div className="panel rounded-3xl p-4 sm:p-5">
-        <div className="grid gap-3 lg:grid-cols-[1.35fr_.7fr_.7fr_auto]">
-          <label className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/22">⌕</span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search animals, localities, plants, gear..." className="w-full rounded-xl border border-white/[.07] bg-black/15 py-3 pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/23 focus:border-emerald-300/20" />
-          </label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-xl border border-white/[.07] bg-[#08130e] px-4 py-3 text-sm text-white/55 outline-none focus:border-emerald-300/20">
-            {categories.map((item) => <option key={item} value={item}>Category · {item}</option>)}
-          </select>
-          <select value={origin} onChange={(e) => setOrigin(e.target.value)} className="rounded-xl border border-white/[.07] bg-[#08130e] px-4 py-3 text-sm text-white/55 outline-none focus:border-emerald-300/20">
-            {origins.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <button onClick={() => { setQuery(""); setCategory("All"); setOrigin("All origins"); }} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.05] px-5 py-3 text-sm font-bold text-emerald-200">Reset</button>
-        </div>
-        <div className="mt-4 flex flex-col gap-2 border-t border-white/[.055] pt-4 text-[10px] sm:flex-row sm:items-center sm:justify-between">
-          <span className="font-bold uppercase tracking-[.13em] text-white/24">Active view</span>
-          <span className="text-white/38">{summary}</span>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-amber-200/10 bg-amber-200/[.025] px-4 py-3 text-xs leading-5 text-amber-100/45">
-        Browsing controls are functional now. Listing results stay empty until real marketplace records are connected—no fake sellers, animals or prices are generated to fill the grid.
-      </div>
-    </div>
-  );
-}
+import { useEffect,useMemo,useState } from "react";
+type Listing={id:string;category:string;title:string;description?:string;public_origin?:string;price:number;currency:string;seller_location?:string;morph?:string;sex?:string;age_or_year?:string;created_at:string};
+const categories=["All","ANIMAL","PLANT","ENCLOSURE","SUPPLY","FEEDER"],origins=["All origins","CAPTIVE_BRED","IMPORT"];
+export function MarketplaceExplorer(){const [query,setQuery]=useState(""),[category,setCategory]=useState("All"),[origin,setOrigin]=useState("All origins"),[rows,setRows]=useState<Listing[]>([]),[loading,setLoading]=useState(true);useEffect(()=>{fetch("/api/marketplace/listings").then(r=>r.json()).then(d=>setRows(d.rows??[])).finally(()=>setLoading(false))},[]);const visible=useMemo(()=>{const q=query.trim().toLowerCase();return rows.filter(r=>(category==="All"||r.category===category)&&(origin==="All origins"||r.public_origin===origin)&&(!q||[r.title,r.description,r.morph,r.seller_location].filter(Boolean).join(" ").toLowerCase().includes(q)))},[rows,query,category,origin]);return <div className="space-y-5"><div className="panel rounded-3xl p-4 sm:p-5"><div className="grid gap-3 lg:grid-cols-[1.35fr_.7fr_.7fr_auto]"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search animals, plants, gear..." className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-3 text-sm outline-none"/><select value={category} onChange={e=>setCategory(e.target.value)} className="rounded-xl border border-white/[.07] bg-[#08130e] px-4 py-3 text-sm">{categories.map(c=><option key={c}>{c}</option>)}</select><select value={origin} onChange={e=>setOrigin(e.target.value)} className="rounded-xl border border-white/[.07] bg-[#08130e] px-4 py-3 text-sm">{origins.map(o=><option key={o}>{o}</option>)}</select><button onClick={()=>{setQuery("");setCategory("All");setOrigin("All origins")}} className="rounded-xl border border-emerald-300/15 px-5 py-3 text-sm font-bold text-emerald-200">Reset</button></div></div><div><div className="mb-4 flex justify-between text-xs text-white/30"><span>{loading?"Loading marketplace…":`${visible.length} active listing${visible.length===1?"":"s"}`}</span><span>Real seller records only</span></div>{!loading&&visible.length?<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{visible.map(r=><article key={r.id} className="panel overflow-hidden rounded-3xl"><div className="grid-surface grid h-36 place-items-center border-b border-white/[.06] text-2xl text-white/10">◇</div><div className="p-5"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300/55">{r.category}{r.public_origin?` · ${r.public_origin==="CAPTIVE_BRED"?"Captive Bred":"Import"}`:""}</div><h3 className="mt-2 font-semibold">{r.title}</h3><div className="mt-3 text-xl font-semibold">${Number(r.price).toLocaleString()}</div><div className="mt-2 text-xs text-white/30">{[r.morph,r.sex,r.age_or_year,r.seller_location].filter(Boolean).join(" · ")}</div></div></article>)}</div>:!loading?<div className="panel rounded-3xl py-14 text-center"><div className="font-semibold text-white/50">No active listings match this view.</div><p className="mt-2 text-xs text-white/28">The marketplace stays empty until real sellers publish inventory.</p></div>:null}</div></div>}
