@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
+import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
 
 const groups = [
   { name: "Morelia azurea azurea", places: ["Biak", "Numfor"], note: "Arboreal Planet market grouping" },
@@ -21,7 +22,7 @@ export default function AnimalsPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
         <div className="panel overflow-hidden rounded-[30px]">
-          <div className="relative grid min-h-[340px] overflow-hidden lg:grid-cols-[1.05fr_.95fr]">
+          <div className="relative grid min-h-[390px] overflow-hidden lg:grid-cols-[.9fr_1.1fr]">
             <div className="relative z-10 p-7 sm:p-9">
               <div className="text-xs italic text-white/35">Morelia viridis complex</div>
               <h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">An animal record that connects the whole platform.</h2>
@@ -32,15 +33,11 @@ export default function AnimalsPage() {
                 ))}
               </div>
             </div>
-            <div className="grid-surface relative min-h-64 border-t border-white/[.06] bg-emerald-300/[.025] lg:border-l lg:border-t-0">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(57,230,125,.11),transparent_42%)]" />
-              <div className="absolute inset-0 grid place-items-center p-8 text-center">
-                <div>
-                  <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-emerald-300/15 bg-emerald-300/[.05] text-3xl text-emerald-200/55">◇</div>
-                  <div className="mt-4 text-sm font-semibold text-white/58">Species imagery layer</div>
-                  <p className="mt-1.5 max-w-xs text-xs leading-5 text-white/28">Real keeper and animal media will populate here after storage and moderation are connected.</p>
-                </div>
-              </div>
+            <div className="grid-surface relative min-h-[340px] overflow-hidden border-t border-white/[.06] bg-emerald-300/[.025] lg:border-l lg:border-t-0">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_44%,rgba(57,230,125,.12),transparent_36%)]" />
+              <div className="absolute bottom-0 left-0 right-0 h-[95%]"><GreenTreePythonArt /></div>
+              <div className="absolute bottom-0 right-2 h-44 w-36 opacity-60"><PitcherPlantArt /></div>
+              <div className="absolute left-5 top-5 rounded-full border border-emerald-300/15 bg-black/25 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.14em] text-emerald-200/60">Stylized species art · keeper media later</div>
             </div>
           </div>
           <div className="grid border-t border-white/[.06] sm:grid-cols-3">
@@ -55,20 +52,14 @@ export default function AnimalsPage() {
         <div className="panel rounded-3xl p-6">
           <div className="section-kicker">At a glance</div>
           <div className="mt-5 space-y-4 text-sm">
-            {[
-              ["Common name", "Green Tree Python"],
-              ["Primary habitat", "Arboreal tropical forest"],
-              ["Public market origins", "Captive Bred · Import"],
-              ["Reference market", "United States"],
-              ["First Snake Stocks build", "Green Tree Python"],
-            ].map(([label, value]) => <div key={label} className="flex items-start justify-between gap-5 border-b border-white/[.055] pb-4 last:border-0 last:pb-0"><span className="text-white/28">{label}</span><span className="text-right font-semibold text-white/62">{value}</span></div>)}
+            {[["Common name", "Green Tree Python"],["Primary habitat", "Arboreal tropical forest"],["Public market origins", "Captive Bred · Import"],["Reference market", "United States"],["First Snake Stocks build", "Green Tree Python"]].map(([label, value]) => <div key={label} className="flex items-start justify-between gap-5 border-b border-white/[.055] pb-4 last:border-0 last:pb-0"><span className="text-white/28">{label}</span><span className="text-right font-semibold text-white/62">{value}</span></div>)}
           </div>
         </div>
 
         <div className="panel rounded-3xl p-6">
           <div className="section-kicker">Population & market grouping</div>
           <h2 className="mt-3 text-2xl font-semibold">Locality stays visible.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/38">This grouping is an Arboreal Planet market structure. It is used to keep locality comparisons useful and auditable, not to pretend every taxonomic question is universally settled.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/38">This grouping is an Arboreal Planet market structure. It keeps locality comparisons useful and auditable without pretending every taxonomic question is universally settled.</p>
           <div className="mt-6 space-y-3">
             {groups.map((group) => (
               <div key={group.name} className="rounded-2xl border border-white/[.06] bg-white/[.018] p-4">
@@ -83,12 +74,7 @@ export default function AnimalsPage() {
       <section className="border-y border-white/[.06] bg-black/[.12]">
         <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["HUSBANDRY", "Environment, perching, feeding, hydration and keeper techniques belong here with source and experience context."],
-              ["BREEDING", "Pairings, seasonal strategy, incubation, hatch records and lineage data can connect to breeder tools later."],
-              ["LOCALITY", "Locality labels stay explicit so Manokwari, Wamena, Biak and others are not flattened into one price bucket."],
-              ["NEONATE COLOR", "Red and yellow hatch color can be analyzed as a phenotype variable without pretending it proves locality."],
-            ].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/58">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
+            {[["HUSBANDRY", "Environment, perching, feeding, hydration and keeper techniques belong here with source and experience context."],["BREEDING", "Pairings, seasonal strategy, incubation, hatch records and lineage data can connect to breeder tools later."],["LOCALITY", "Locality labels stay explicit so Manokwari, Wamena, Biak and others are not flattened into one price bucket."],["NEONATE COLOR", "Red and yellow hatch color can be analyzed as a phenotype variable without pretending it proves locality."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/58">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
           </div>
         </div>
       </section>
@@ -96,18 +82,11 @@ export default function AnimalsPage() {
       <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="panel rounded-3xl p-6">
-            <div className="section-kicker">Origin terminology</div>
-            <h2 className="mt-3 text-2xl font-semibold">Simple in public. Detailed underneath.</h2>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.035] p-5"><div className="font-semibold text-emerald-200">Captive Bred</div><p className="mt-2 text-xs leading-5 text-white/34">Includes USCBB, CBB, CB, captive produced and other unambiguous captive-produced terminology.</p></div>
-              <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[.035] p-5"><div className="font-semibold text-cyan-200">Import</div><p className="mt-2 text-xs leading-5 text-white/34">Includes imported, farm bred, farm raised, ranched, wild caught and LTC, with internal subtype preserved.</p></div>
-            </div>
+            <div className="section-kicker">Origin terminology</div><h2 className="mt-3 text-2xl font-semibold">Simple in public. Detailed underneath.</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.035] p-5"><div className="font-semibold text-emerald-200">Captive Bred</div><p className="mt-2 text-xs leading-5 text-white/34">Includes USCBB, CBB, CB, captive produced and other unambiguous captive-produced terminology.</p></div><div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[.035] p-5"><div className="font-semibold text-cyan-200">Import</div><p className="mt-2 text-xs leading-5 text-white/34">Includes imported, farm bred, farm raised, ranched, wild caught and LTC, with internal subtype preserved.</p></div></div>
           </div>
           <div className="panel rounded-3xl p-6">
-            <div className="section-kicker">Designer projects</div>
-            <h2 className="mt-3 text-2xl font-semibold">Do not force an Import graph where it makes no sense.</h2>
-            <p className="mt-4 text-sm leading-6 text-white/38">Designer lines, blue lines, TWBL, calico and other captive project categories are treated as project markets. Their charts should reflect captive-produced evidence rather than inventing an Import comparison.</p>
-            <Link href="/snake-stocks" className="mt-6 inline-block text-sm font-bold text-emerald-300">See market structure →</Link>
+            <div className="section-kicker">Designer projects</div><h2 className="mt-3 text-2xl font-semibold">Do not force an Import graph where it makes no sense.</h2><p className="mt-4 text-sm leading-6 text-white/38">Designer lines, blue lines, TWBL, calico and other captive project categories are treated as project markets. Their charts should reflect captive-produced evidence rather than inventing an Import comparison.</p><Link href="/snake-stocks" className="mt-6 inline-block text-sm font-bold text-emerald-300">See market structure →</Link>
           </div>
         </div>
       </section>
