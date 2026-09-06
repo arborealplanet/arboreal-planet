@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
+import { ArborealsByBunnBadge, SnakeStocksHomeFeature } from "@/components/BrandVisuals";
 
 const platformCards = [
   { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
@@ -74,6 +75,11 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6 lg:pb-20">
+        <div className="mb-5 flex items-end justify-between gap-4"><div><div className="section-kicker">Signature market feature</div><h2 className="mt-2 text-2xl font-semibold">Snake Stocks has its own visual identity.</h2></div><Link href="/snake-stocks" className="hidden text-xs font-bold text-emerald-300 sm:block">OPEN SNAKE STOCKS →</Link></div>
+        <SnakeStocksHomeFeature />
+      </section>
+
       <section className="border-y border-white/[.06] bg-black/[.12]">
         <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 sm:px-6 lg:grid-cols-[.9fr_1.1fr] lg:py-20">
           <div className="flex flex-col justify-center">
@@ -91,15 +97,18 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
-        <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
           <div className="panel overflow-hidden rounded-3xl">
             <div className="flex items-center justify-between border-b border-white/[.06] p-5"><div><div className="section-kicker">Community</div><h2 className="mt-2 text-2xl font-semibold">Keeper activity without filler.</h2></div><Link href="/community" className="text-xs font-bold text-emerald-300">EXPLORE →</Link></div>
             <div className="grid gap-px bg-white/[.055] sm:grid-cols-3">{["Breeding updates", "Husbandry discussions", "Animal & plant posts"].map((item) => <div key={item} className="bg-[#08140f] p-6"><div className="text-sm font-semibold">{item}</div><p className="mt-2 text-xs leading-5 text-white/34">Feed cards will populate from real accounts once authentication and community tables are connected.</p></div>)}</div>
           </div>
-          <Link href="/hatchery" className="panel relative overflow-hidden rounded-3xl p-6">
-            <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-amber-200/[.08] bg-amber-200/[.025]" />
-            <div className="section-kicker text-amber-200/70">The Hatchery</div><h2 className="mt-3 text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Pair virtual animals, hatch offspring, learn why outcomes happened and preserve lineages across generations.</p><div className="mt-7 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Educational · Collectible</div>
-          </Link>
+          <div className="grid gap-4">
+            <Link href="/hatchery" className="panel relative overflow-hidden rounded-3xl p-6">
+              <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-amber-200/[.08] bg-amber-200/[.025]" />
+              <div className="section-kicker text-amber-200/70">The Hatchery</div><h2 className="mt-3 text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Pair virtual animals, hatch offspring, learn why outcomes happened and preserve lineages across generations.</p><div className="mt-7 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Educational · Collectible</div>
+            </Link>
+            <ArborealsByBunnBadge />
+          </div>
         </div>
       </section>
     </main>
