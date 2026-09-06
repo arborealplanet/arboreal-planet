@@ -32,7 +32,7 @@ export function SnakeStocksBrandBanner({ compact = false }: { compact?: boolean 
       style={{ aspectRatio: "1983 / 793" }}
     >
       <img
-        src="/branding/snake-stocks-hero.webp?v=2"
+        src="/branding/snake-stocks-hero.webp?v=3"
         alt="Snake Stocks — Track, Compare, Discover"
         className="absolute inset-0 block h-full w-full object-cover"
       />
