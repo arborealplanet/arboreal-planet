@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArborealPlanetMark } from "@/components/BrandVisuals";
 
 const nav = [
   ["Animals", "/animals"],
@@ -10,22 +11,13 @@ const nav = [
   ["The Hatchery", "/hatchery"],
 ] as const;
 
-function BrandMark() {
-  return (
-    <div className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-emerald-300/25 bg-emerald-400/[.08] shadow-[0_0_32px_rgba(52,211,153,.08)]">
-      <div className="absolute -right-2 top-1 h-8 w-3 rotate-[32deg] rounded-full bg-emerald-400/20" />
-      <span className="relative text-[11px] font-black tracking-[-.05em] text-emerald-300">AP</span>
-    </div>
-  );
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen overflow-x-hidden text-white">
       <header className="sticky top-0 z-50 border-b border-white/[.08] bg-[#06100c]/90 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[72px] max-w-[1440px] items-center gap-5 px-4 sm:px-6">
           <Link href="/" className="flex min-w-fit items-center gap-3">
-            <BrandMark />
+            <ArborealPlanetMark className="h-10 w-10" />
             <div>
               <div className="text-[15px] font-extrabold tracking-[.17em] sm:text-base">ARBOREAL PLANET</div>
               <div className="mt-0.5 text-[8px] font-semibold tracking-[.27em] text-emerald-300/55 sm:text-[9px]">PEOPLE · DATA · CONSERVATION</div>
@@ -59,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <footer className="border-t border-white/[.07] bg-black/10 px-5 py-10 pb-24 lg:pb-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs text-white/30 sm:flex-row sm:items-center sm:justify-between">
-          <div>Arboreal Planet · Built for keepers, breeders and the animals behind the data.</div>
+          <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Built for keepers, breeders and the animals behind the data.</span></div>
           <div className="flex flex-wrap gap-5"><Link href="/plants">Plants</Link><span>Privacy</span><span>Guidelines</span><span>Support</span></div>
         </div>
       </footer>
