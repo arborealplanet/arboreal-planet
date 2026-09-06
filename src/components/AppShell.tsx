@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 const nav = [
   ["Animals", "/animals"],
+  ["Plants", "/plants"],
   ["Snake Stocks", "/snake-stocks"],
   ["Marketplace", "/marketplace"],
   ["Community", "/community"],
@@ -59,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <footer className="border-t border-white/[.07] bg-black/10 px-5 py-10 pb-24 lg:pb-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs text-white/30 sm:flex-row sm:items-center sm:justify-between">
           <div>Arboreal Planet · Built for keepers, breeders and the animals behind the data.</div>
-          <div className="flex gap-5"><span>Privacy</span><span>Guidelines</span><span>Support</span></div>
+          <div className="flex flex-wrap gap-5"><Link href="/plants">Plants</Link><span>Privacy</span><span>Guidelines</span><span>Support</span></div>
         </div>
       </footer>
     </div>
