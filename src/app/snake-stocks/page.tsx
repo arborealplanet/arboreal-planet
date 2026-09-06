@@ -1,16 +1,7 @@
 import Link from "next/link";
-import { MarketChartFrame } from "@/components/MarketChartFrame";
 import { SnakeStocksExplorer } from "@/components/SnakeStocksExplorer";
 import { SnakeStocksBrandBanner } from "@/components/BrandVisuals";
-
-const localityRows = [
-  ["Wamena", "Morelia azurea utaraensis", "Captive Bred + Import"],
-  ["Lereh", "Morelia azurea utaraensis", "Captive Bred + Import"],
-  ["Cyclops", "Morelia azurea utaraensis", "Captive Bred + Import"],
-  ["Jayapura", "Morelia azurea utaraensis", "Captive Bred + Import"],
-  ["Manokwari", "Morelia azurea pulcher", "Captive Bred + Import"],
-  ["Aru", "Morelia viridis", "Captive Bred + Import"],
-];
+import { LocalitySubspeciesCarousel, WamenaAnalysisCarousel } from "@/components/SnakeStocksChartDeck";
 
 export default function SnakeStocksPage() {
   return (
@@ -27,13 +18,13 @@ export default function SnakeStocksPage() {
         <div className="grid gap-5 border-b border-white/[.06] pb-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <div className="section-kicker">Snake Stocks market intelligence</div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-.035em] text-white sm:text-4xl">The market dashboard starts here.</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/48 sm:text-base">Track reptile asking markets, sold-listing evidence and locality segments with transparent methodology. Median is primary, sample size stays visible, and empty data never becomes a fake trend line.</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-.035em] text-white sm:text-4xl">Lock the market layout before loading the next dataset.</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/48 sm:text-base">Green Tree Python market records are intentionally cleared for now. The page is being organized around stable locality groupings, paired Captive Bred / Import charts and compact slideshow navigation before clean records are imported.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-white/45">
             <span className="rounded-full border border-white/[.07] px-3 py-2">USA market</span>
-            <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-3 py-2 text-emerald-200/65">Median first</span>
-            <span className="rounded-full border border-white/[.07] px-3 py-2">Source first</span>
+            <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-3 py-2 text-emerald-200/65">Captive Bred left</span>
+            <span className="rounded-full border border-cyan-300/12 bg-cyan-300/[.035] px-3 py-2 text-cyan-200/65">Import right</span>
           </div>
         </div>
       </section>
@@ -43,39 +34,21 @@ export default function SnakeStocksPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div><div className="section-kicker">Wamena analysis</div><h2 className="mt-2 text-2xl font-semibold">Separate graphs for the comparisons that matter.</h2></div>
-          <span className="text-xs text-white/30">No universal multipliers · intersections matter</span>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <MarketChartFrame compact title="Wamena · Males vs females" subtitle="Comparable age, origin and neonate-color filters." legends={["Female", "Male"]} />
-          <MarketChartFrame compact title="Wamena · Red vs yellow neonates" subtitle="Comparable sex and age filters." legends={["Red neo", "Yellow neo"]} />
-          <MarketChartFrame compact title="Wamena · Age classes" subtitle="Neonate, juvenile, subadult and adult segments only when sample sizes support them." legends={["Neo", "Juvenile", "Adult"]} />
-          <MarketChartFrame compact title="Wamena · Red neonates by sex" subtitle="Female vs male within the same red-neonate segment." legends={["Female", "Male"]} />
-          <MarketChartFrame compact title="Wamena · Yellow neonates by sex" subtitle="Female vs male within the same yellow-neonate segment." legends={["Female", "Male"]} />
-          <MarketChartFrame compact title="Locality comparison" subtitle="Wamena vs Lereh vs Cyclops vs Jayapura under the same active filters." legends={["Wamena", "Lereh", "Cyclops"]} />
-        </div>
+        <LocalitySubspeciesCarousel />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-10 sm:px-6">
+        <WamenaAnalysisCarousel />
       </section>
 
       <section className="border-y border-white/[.06] bg-black/[.12]">
-        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
-          <div className="grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
+        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-6">
+          <div className="grid gap-5 lg:grid-cols-2">
             <div className="panel rounded-3xl p-6">
-              <div className="section-kicker">Evidence inventory</div>
-              <h2 className="mt-3 text-2xl font-semibold">Current and sold evidence stay separate.</h2>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="panel-soft rounded-2xl p-5">
-                  <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/65">Current asking market</div>
-                  <div className="mt-3 text-3xl font-semibold">131</div>
-                  <p className="mt-2 text-xs leading-5 text-white/35">USA-cleaned single-animal asking-price records from the current MorphMarket video extraction.</p>
-                </div>
-                <div className="panel-soft rounded-2xl p-5">
-                  <div className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-300/65">Sold-listing evidence</div>
-                  <div className="mt-3 text-3xl font-semibold">340</div>
-                  <p className="mt-2 text-xs leading-5 text-white/35">Readable USA sold-listing observations captured Sep 5, 2026. Capture date is not treated as sold date.</p>
-                </div>
-              </div>
-              <div className="mt-4 rounded-2xl border border-amber-200/10 bg-amber-200/[.035] p-4 text-xs leading-5 text-amber-100/55">Sold-card price means the last displayed listing price when marked sold. It does not mean confirmed final transaction amount.</div>
+              <div className="section-kicker">Dataset status</div>
+              <h2 className="mt-3 text-2xl font-semibold">Green Tree Python market data reset.</h2>
+              <p className="mt-3 text-sm leading-6 text-white/38">The prior GTP evidence batches, observations and snapshots are no longer being used. Snake Stocks is holding an intentionally empty market state while the layout and grouping logic are finalized.</p>
+              <div className="mt-5 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.035] p-4 text-xs leading-5 text-emerald-100/55">Next clean import can enter the same schema without carrying forward any of the discarded GTP pricing evidence.</div>
             </div>
 
             <div className="panel rounded-3xl p-6">
@@ -91,17 +64,13 @@ export default function SnakeStocksPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
-        <div className="flex items-end justify-between gap-4"><div><div className="section-kicker">Locality market map</div><h2 className="mt-2 text-2xl font-semibold">Built to drill down, not flatten.</h2></div><Link href="/animals/green-tree-python" className="hidden text-xs font-bold text-emerald-300 sm:block">OPEN ANIMAL RECORD →</Link></div>
-        <div className="mt-6 overflow-hidden rounded-3xl border border-white/[.07]">
-          {localityRows.map(([name, group, origin], index) => (
-            <div key={name} className={`grid gap-2 bg-white/[.018] px-5 py-4 sm:grid-cols-[.7fr_1.5fr_.8fr_auto] sm:items-center ${index ? "border-t border-white/[.055]" : ""}`}>
-              <div className="font-semibold">{name}</div>
-              <div className="text-xs italic text-white/32">{group}</div>
-              <div className="text-xs text-white/34">{origin}</div>
-              <div className="text-[10px] font-bold uppercase tracking-[.12em] text-white/26">Market pending</div>
-            </div>
-          ))}
+      <section className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
+        <div className="flex flex-col gap-4 rounded-3xl border border-white/[.07] bg-white/[.018] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="section-kicker">Grouping reference</div>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Designer / line projects stay outside the locality subspecies deck. Batanta remains visibly review-flagged instead of being silently treated as a locked permanent line.</p>
+          </div>
+          <Link href="/animals/green-tree-python" className="w-fit rounded-xl border border-emerald-300/15 bg-emerald-300/[.055] px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-300/[.09]">OPEN GREEN TREE PYTHON RECORD →</Link>
         </div>
       </section>
     </main>
