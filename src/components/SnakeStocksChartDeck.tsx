@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MarketChartFrame } from "@/components/MarketChartFrame";
 
 type Slide = {
@@ -88,9 +88,9 @@ function CarouselControls({ slides, active, setActive }: { slides: Slide[]; acti
   const next = () => setActive((active + 1) % slides.length);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button onClick={previous} aria-label="Previous chart slide" className="grid h-9 w-9 place-items-center rounded-full border border-white/[.08] bg-white/[.025] text-white/55 transition hover:bg-white/[.06] hover:text-white">←</button>
-      <div className="hide-scrollbar flex max-w-full gap-1.5 overflow-x-auto">
+    <div className="flex max-w-full flex-wrap items-center gap-2">
+      <button onClick={previous} aria-label="Previous chart slide" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[.08] bg-white/[.025] text-white/55 transition hover:bg-white/[.06] hover:text-white">←</button>
+      <div className="hide-scrollbar flex max-w-[calc(100vw-9rem)] gap-1.5 overflow-x-auto sm:max-w-xl">
         {slides.map((slide, index) => (
           <button
             key={slide.short}
@@ -101,7 +101,7 @@ function CarouselControls({ slides, active, setActive }: { slides: Slide[]; acti
           </button>
         ))}
       </div>
-      <button onClick={next} aria-label="Next chart slide" className="grid h-9 w-9 place-items-center rounded-full border border-white/[.08] bg-white/[.025] text-white/55 transition hover:bg-white/[.06] hover:text-white">→</button>
+      <button onClick={next} aria-label="Next chart slide" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[.08] bg-white/[.025] text-white/55 transition hover:bg-white/[.06] hover:text-white">→</button>
     </div>
   );
 }
@@ -113,24 +113,64 @@ function PairedOriginCharts({ slide }: { slide: Slide }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <div>
         <div className="mb-2 px-1 text-[10px] font-black uppercase tracking-[.16em] text-emerald-300/65">Captive Bred</div>
-        <MarketChartFrame
-          compact
-          title={`${slide.title} · Captive Bred`}
-          subtitle={slide.subtitle}
-          legends={slide.legends}
-          status={emptyStatus}
-        />
+        <MarketChartFrame compact title={`${slide.title} · Captive Bred`} subtitle={slide.subtitle} legends={slide.legends} status={emptyStatus} />
       </div>
       <div>
         <div className="mb-2 px-1 text-[10px] font-black uppercase tracking-[.16em] text-cyan-300/65">Import</div>
-        <MarketChartFrame
-          compact
-          title={`${slide.title} · Import`}
-          subtitle={slide.subtitle}
-          legends={slide.legends}
-          status={emptyStatus}
-        />
+        <MarketChartFrame compact title={`${slide.title} · Import`} subtitle={slide.subtitle} legends={slide.legends} status={emptyStatus} />
       </div>
+    </div>
+  );
+}
+
+function SwipeDeck({ slides, active, setActive, children, label }: { slides: Slide[]; active: number; setActive: (index: number) => void; children: React.ReactNode; label: string }) {
+  const touchStart = useRef<number | null>(null);
+  const touchEnd = useRef<number | null>(null);
+
+  const previous = () => setActive((active - 1 + slides.length) % slides.length);
+  const next = () => setActive((active + 1) % slides.length);
+
+  const handleTouchEnd = () => {
+    if (touchStart.current === null || touchEnd.current === null) return;
+    const distance = touchStart.current - touchEnd.current;
+    if (Math.abs(distance) > 45) {
+      if (distance > 0) next();
+      else previous();
+    }
+    touchStart.current = null;
+    touchEnd.current = null;
+  };
+
+  return (
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label={label}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") previous();
+        if (event.key === "ArrowRight") next();
+      }}
+      onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+      onTouchMove={(event) => { touchEnd.current = event.touches[0]?.clientX ?? null; }}
+      onTouchEnd={handleTouchEnd}
+      className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/25"
+    >
+      {children}
+    </div>
+  );
+}
+
+function SlideDots({ total, active, setActive }: { total: number; active: number; setActive: (index: number) => void }) {
+  return (
+    <div className="mt-5 flex justify-center gap-2" aria-label="Chart slide position">
+      {Array.from({ length: total }).map((_, index) => (
+        <button
+          key={index}
+          onClick={() => setActive(index)}
+          aria-label={`Go to slide ${index + 1}`}
+          className={`h-1.5 rounded-full transition-all ${active === index ? "w-8 bg-emerald-300/70" : "w-2.5 bg-white/15 hover:bg-white/25"}`}
+        />
+      ))}
     </div>
   );
 }
@@ -140,38 +180,40 @@ export function LocalitySubspeciesCarousel() {
   const slide = localitySlides[active];
 
   return (
-    <div className="panel overflow-hidden rounded-3xl">
-      <div className="border-b border-white/[.06] p-5 sm:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className="section-kicker">Subspecies locality deck</div>
-            <h2 className="mt-2 text-2xl font-semibold">Localities stay inside the correct market grouping.</h2>
-            <p className="mt-2 max-w-3xl text-xs leading-5 text-white/34">Each slide uses the same layout: Captive Bred on the left, Import on the right. Swipe through the taxonomic market groups instead of stacking every graph down the page.</p>
-          </div>
-          <CarouselControls slides={localitySlides} active={active} setActive={setActive} />
-        </div>
-      </div>
-
-      <div className="p-5 sm:p-6">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[.16em] text-white/28">Slide {active + 1} of {localitySlides.length}</div>
-            <h3 className="mt-1.5 text-xl font-semibold italic text-white/82">{slide.title}</h3>
-          </div>
-          {slide.localities ? (
-            <div className="flex max-w-2xl flex-wrap gap-2">
-              {slide.localities.map((locality) => (
-                <span key={locality} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold ${locality.includes("review") ? "border-amber-300/15 bg-amber-300/[.04] text-amber-100/55" : "border-white/[.07] bg-black/10 text-white/40"}`}>{locality}</span>
-              ))}
+    <SwipeDeck slides={localitySlides} active={active} setActive={setActive} label="Subspecies locality charts">
+      <div className="panel overflow-hidden rounded-3xl">
+        <div className="border-b border-white/[.06] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <div className="section-kicker">Subspecies locality deck</div>
+              <h2 className="mt-2 text-2xl font-semibold">Localities stay inside the correct market grouping.</h2>
+              <p className="mt-2 max-w-3xl text-xs leading-5 text-white/34">Captive Bred stays left, Import stays right. Use the arrows, tabs, keyboard arrow keys, or swipe horizontally on mobile to move through the market groups.</p>
             </div>
-          ) : null}
+            <CarouselControls slides={localitySlides} active={active} setActive={setActive} />
+          </div>
         </div>
 
-        <PairedOriginCharts slide={slide} />
+        <div className="p-5 sm:p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[.16em] text-white/28">Slide {active + 1} of {localitySlides.length}</div>
+              <h3 className="mt-1.5 text-xl font-semibold italic text-white/82">{slide.title}</h3>
+            </div>
+            {slide.localities ? (
+              <div className="flex max-w-2xl flex-wrap gap-2">
+                {slide.localities.map((locality) => (
+                  <span key={locality} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold ${locality.includes("review") ? "border-amber-300/15 bg-amber-300/[.04] text-amber-100/55" : "border-white/[.07] bg-black/10 text-white/40"}`}>{locality}</span>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
-        {slide.note ? <div className="mt-4 rounded-2xl border border-amber-300/10 bg-amber-300/[.03] px-4 py-3 text-[10px] leading-5 text-amber-100/50">{slide.note}</div> : null}
+          <PairedOriginCharts slide={slide} />
+          <SlideDots total={localitySlides.length} active={active} setActive={setActive} />
+          {slide.note ? <div className="mt-4 rounded-2xl border border-amber-300/10 bg-amber-300/[.03] px-4 py-3 text-[10px] leading-5 text-amber-100/50">{slide.note}</div> : null}
+        </div>
       </div>
-    </div>
+    </SwipeDeck>
   );
 }
 
@@ -180,22 +222,25 @@ export function WamenaAnalysisCarousel() {
   const slide = wamenaSlides[active];
 
   return (
-    <div className="panel overflow-hidden rounded-3xl">
-      <div className="border-b border-white/[.06] p-5 sm:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className="section-kicker">Wamena analysis deck</div>
-            <h2 className="mt-2 text-2xl font-semibold">One comparison at a time.</h2>
-            <p className="mt-2 max-w-3xl text-xs leading-5 text-white/34">The detailed Wamena views now live in a carousel too. Every slide keeps Captive Bred left and Import right so the origin comparison never changes position.</p>
+    <SwipeDeck slides={wamenaSlides} active={active} setActive={setActive} label="Wamena analysis charts">
+      <div className="panel overflow-hidden rounded-3xl">
+        <div className="border-b border-white/[.06] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <div className="section-kicker">Wamena analysis deck</div>
+              <h2 className="mt-2 text-2xl font-semibold">One comparison at a time.</h2>
+              <p className="mt-2 max-w-3xl text-xs leading-5 text-white/34">The detailed Wamena comparisons stay consolidated into one deck, with the same Captive Bred-left / Import-right orientation on every slide.</p>
+            </div>
+            <CarouselControls slides={wamenaSlides} active={active} setActive={setActive} />
           </div>
-          <CarouselControls slides={wamenaSlides} active={active} setActive={setActive} />
+        </div>
+
+        <div className="p-5 sm:p-6">
+          <div className="mb-4 text-[10px] font-bold uppercase tracking-[.16em] text-white/28">Slide {active + 1} of {wamenaSlides.length} · {slide.title}</div>
+          <PairedOriginCharts slide={slide} />
+          <SlideDots total={wamenaSlides.length} active={active} setActive={setActive} />
         </div>
       </div>
-
-      <div className="p-5 sm:p-6">
-        <div className="mb-4 text-[10px] font-bold uppercase tracking-[.16em] text-white/28">Slide {active + 1} of {wamenaSlides.length} · {slide.title}</div>
-        <PairedOriginCharts slide={slide} />
-      </div>
-    </div>
+    </SwipeDeck>
   );
 }
