@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const nav = [
   ["Animals", "/animals"],
@@ -34,6 +35,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="ml-auto hidden items-center gap-2 lg:ml-2 lg:flex">
             <span className="hidden rounded-full border border-amber-300/15 bg-amber-300/[.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-amber-200/70 xl:inline-flex">Early access</span>
+            <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-lg text-white/65 transition hover:border-emerald-300/25 hover:text-emerald-200" aria-label="Messages">✉</Link>
+            <NotificationBell />
             <Link href="/profile" className="rounded-xl border border-white/10 bg-white/[.035] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:border-emerald-300/25 hover:text-emerald-200">Profile</Link>
           </div>
         </div>
@@ -46,7 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link href="/animals" className="mobile-nav-item"><span>◇</span>Animals</Link>
         <Link href="/snake-stocks" className="mobile-nav-item text-emerald-300"><span>↗</span>Stocks</Link>
         <Link href="/marketplace" className="mobile-nav-item"><span>▣</span>Market</Link>
-        <Link href="/profile" className="mobile-nav-item"><span>○</span>Profile</Link>
+        <Link href="/notifications" className="mobile-nav-item"><span>♢</span>Alerts</Link>
       </nav>
 
       <footer className="border-t border-white/[.07] bg-black/10 px-5 py-10 pb-24 lg:pb-10">
