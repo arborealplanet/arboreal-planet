@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server";
+import { getServerIdentity,SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+export async function GET(){const identity=await getServerIdentity();if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});const h={apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`};const memberships=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/conversation_participants?user_id=eq.${identity.user.id}&select=conversation_id,last_read_at,conversations(id,listing_id,updated_at,marketplace_listings(title,image_urls))&order=joined_at.desc`,{headers:h,cache:"no-store"});if(!memberships.ok)return NextResponse.json({rows:[]});const rows=await memberships.json();return NextResponse.json({rows});}
