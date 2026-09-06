@@ -14,7 +14,7 @@ export default function AnimalsPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[["PUBLISHED", "1", "Verified reference record"], ["GROUPS", "4", "Snakes · Lizards · Amphibians · expanding"], ["REFERENCE", "GTP", "Green Tree Python pipeline"], ["CONNECTED", "3", "Snake Stocks · Marketplace · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
+          {[["PUBLISHED", "1", "Verified reference record"], ["GROUPS", "3", "Snakes · Lizards · Amphibians · expanding"], ["REFERENCE", "GTP", "Green Tree Python pipeline"], ["CONNECTED", "3", "Snake Stocks · Marketplace · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
         </div>
       </section>
 
