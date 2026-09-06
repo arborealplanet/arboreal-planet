@@ -1,5 +1,4 @@
 import Link from "next/link";
-import snakeStocksBannerBase64 from "@/lib/brand-assets/banner-01";
 
 function Pitcher({ left, top, scale = 1 }: { left: string; top: string; scale?: number }) {
   return (
@@ -25,21 +24,18 @@ export function ArborealPlanetMark({ className = "" }: { className?: string }) {
 }
 
 export function SnakeStocksBrandBanner({ compact = false }: { compact?: boolean }) {
-  const src = `data:image/webp;base64,${snakeStocksBannerBase64}`;
-
   return (
     <div
       role="img"
       aria-label="Snake Stocks jungle banner with mascot, market chart, locality signs and Arboreal Planet branding"
-      className={`relative w-full overflow-hidden border border-emerald-300/15 bg-[#020805] shadow-[0_28px_90px_rgba(0,0,0,.32)] ${compact ? "min-h-[220px] rounded-[26px]" : "min-h-[190px] sm:min-h-[300px] lg:min-h-[470px] sm:rounded-[30px]"}`}
-      style={{
-        backgroundImage: `url(${src})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center center",
-        backgroundRepeat: "no-repeat",
-        aspectRatio: compact ? "2.5 / 1" : "2.5 / 1",
-      }}
+      className={`relative w-full overflow-hidden border border-emerald-300/15 bg-[#020805] shadow-[0_28px_90px_rgba(0,0,0,.32)] ${compact ? "rounded-[26px]" : "sm:rounded-[30px]"}`}
+      style={{ aspectRatio: "1983 / 793" }}
     >
+      <img
+        src="/assets/snake-stocks-hero"
+        alt="Snake Stocks — Track, Compare, Discover"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
       <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/[.03]" />
     </div>
   );
