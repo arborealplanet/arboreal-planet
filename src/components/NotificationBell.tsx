@@ -1,0 +1,4 @@
+"use client";
+import Link from "next/link";
+import { useEffect,useState } from "react";
+export function NotificationBell(){const [unread,setUnread]=useState(0);useEffect(()=>{let active=true;const load=()=>fetch("/api/notifications",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(active&&d)setUnread(Number(d.unread)||0)});load();const timer=setInterval(load,30000);return()=>{active=false;clearInterval(timer)}},[]);return <Link href="/notifications" aria-label={unread?`${unread} unread notifications`:"Notifications"} className="relative grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-lg text-white/65 transition hover:border-emerald-300/25 hover:text-emerald-200"><span aria-hidden>♢</span>{unread>0&&<span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-emerald-300 px-1 text-[9px] font-black text-[#06100c]">{unread>99?"99+":unread}</span>}</Link>}
