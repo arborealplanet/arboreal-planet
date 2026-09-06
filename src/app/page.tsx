@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
-import { ArborealsByBunnBadge, SnakeStocksHomeFeature } from "@/components/BrandVisuals";
+import { ArborealsByBunnBadge } from "@/components/BrandVisuals";
 
 const platformCards = [
   { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
@@ -73,11 +73,6 @@ export default function Home() {
             </Link>
           ))}
         </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6 lg:pb-20">
-        <div className="mb-5 flex items-end justify-between gap-4"><div><div className="section-kicker">Signature market feature</div><h2 className="mt-2 text-2xl font-semibold">Snake Stocks has its own visual identity.</h2></div><Link href="/snake-stocks" className="hidden text-xs font-bold text-emerald-300 sm:block">OPEN SNAKE STOCKS →</Link></div>
-        <SnakeStocksHomeFeature />
       </section>
 
       <section className="border-y border-white/[.06] bg-black/[.12]">
