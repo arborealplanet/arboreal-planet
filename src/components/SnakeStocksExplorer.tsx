@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const timeRanges = ["1M", "3M", "6M", "1Y", "5Y", "ALL"];
 const origins = ["All origins", "Captive Bred", "Import"];
@@ -8,6 +8,19 @@ const colors = ["All neo colors", "Red", "Yellow"];
 const sexes = ["All sexes", "Female", "Male"];
 const ages = ["All ages", "Neonate", "Juvenile", "Subadult", "Adult"];
 const localities = ["All localities", "Wamena", "Lereh", "Cyclops", "Jayapura", "Manokwari", "Aru", "Merauke"];
+
+type EvidenceRow = {
+  observation_kind: "CURRENT_ASKING" | "SOLD_LISTING" | "CONFIRMED_SALE";
+  eligible_count: number | null;
+  captured_at: string;
+  source_name: string | null;
+};
+
+type EvidenceResponse = {
+  current?: EvidenceRow | null;
+  sold?: EvidenceRow | null;
+  error?: string;
+};
 
 function ChoiceRow({ label, values, active, onChange }: { label: string; values: string[]; active: string; onChange: (value: string) => void }) {
   return (
@@ -36,11 +49,38 @@ export function SnakeStocksExplorer() {
   const [sex, setSex] = useState(sexes[0]);
   const [age, setAge] = useState(ages[0]);
   const [locality, setLocality] = useState(localities[0]);
+  const [evidence, setEvidence] = useState<EvidenceResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/market/evidence", { cache: "no-store" })
+      .then(async (response) => {
+        const data = (await response.json()) as EvidenceResponse;
+        if (!response.ok) throw new Error(data.error ?? "Evidence API unavailable");
+        return data;
+      })
+      .then((data) => {
+        if (!cancelled) setEvidence(data);
+      })
+      .catch(() => {
+        if (!cancelled) setEvidence({ error: "Backend evidence unavailable" });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const context = useMemo(() => {
     const bits = [locality, origin, neoColor, sex, age].filter((x) => !x.startsWith("All "));
     return bits.length ? bits.join(" · ") : "Entire qualified Green Tree Python market";
   }, [locality, origin, neoColor, sex, age]);
+
+  const currentCount = evidence?.current?.eligible_count ?? null;
+  const soldCount = evidence?.sold?.eligible_count ?? null;
+  const activeEvidenceCount = mode === "FOR SALE" ? currentCount : soldCount;
+  const backendState = evidence === null ? "Connecting" : evidence.error ? "Unavailable" : "Connected";
 
   return (
     <div className="panel overflow-hidden rounded-3xl">
@@ -50,10 +90,13 @@ export function SnakeStocksExplorer() {
           <h2 className="mt-1.5 text-2xl font-semibold">Morelia viridis complex market explorer</h2>
           <p className="mt-2 text-xs text-white/30">Interactive filters are live now. Market values remain blank until qualified records support them.</p>
         </div>
-        <div className="inline-flex w-fit rounded-xl border border-white/[.07] bg-black/15 p-1 text-[11px] font-bold">
-          {(["FOR SALE", "SOLD HISTORY"] as const).map((item) => (
-            <button key={item} onClick={() => setMode(item)} className={`rounded-lg px-4 py-2 transition ${mode === item ? "bg-emerald-300 text-[#06100c]" : "text-white/38 hover:text-white/60"}`}>{item}</button>
-          ))}
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <span className={`rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.13em] ${backendState === "Connected" ? "border-emerald-300/15 bg-emerald-300/[.05] text-emerald-200/60" : backendState === "Connecting" ? "border-white/[.07] text-white/35" : "border-amber-300/15 bg-amber-300/[.04] text-amber-100/55"}`}>Data backend · {backendState}</span>
+          <div className="inline-flex w-fit rounded-xl border border-white/[.07] bg-black/15 p-1 text-[11px] font-bold">
+            {(["FOR SALE", "SOLD HISTORY"] as const).map((item) => (
+              <button key={item} onClick={() => setMode(item)} className={`rounded-lg px-4 py-2 transition ${mode === item ? "bg-emerald-300 text-[#06100c]" : "text-white/38 hover:text-white/60"}`}>{item}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -70,14 +113,14 @@ export function SnakeStocksExplorer() {
         {[
           [mode === "FOR SALE" ? "Median ask" : "Median last-listed", "—"],
           ["Typical range", "—"],
-          [mode === "FOR SALE" ? "Eligible current" : "Readable sold", mode === "FOR SALE" ? "131" : "340"],
+          [mode === "FOR SALE" ? "Eligible current" : "Readable sold", activeEvidenceCount === null ? "—" : String(activeEvidenceCount)],
           ["Unique sellers", "—"],
-          ["Sources", "—"],
+          ["Sources", evidence?.current?.source_name || evidence?.sold?.source_name ? "1+" : "—"],
           ["Confidence", "Pending"],
         ].map(([label, value]) => (
           <div key={label} className="border-b border-r border-white/[.055] px-4 py-5 lg:border-b-0">
             <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/24">{label}</div>
-            <div className={`mt-2 font-semibold ${value === "131" || value === "340" ? "text-2xl text-white" : "text-lg text-white/58"}`}>{value}</div>
+            <div className={`mt-2 font-semibold ${activeEvidenceCount !== null && value === String(activeEvidenceCount) ? "text-2xl text-white" : "text-lg text-white/58"}`}>{value}</div>
           </div>
         ))}
       </div>
