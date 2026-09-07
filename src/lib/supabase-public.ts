@@ -1,5 +1,5 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://yldclmskztunzycoxnme.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_IqfEprvIS7UQTJt-MEXjnA_UtB1CPbh";
+const SUPABASE_URL = "https://ykaqnxajszwgeqkmaora.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_tYr_JfyA_WTGk8qNkL93iw_8uknK50C";
 
 export async function supabasePublicFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
