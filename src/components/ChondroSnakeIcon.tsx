@@ -1,10 +1,10 @@
 type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
 
 const artBySubspecies: Record<ChondroSubspecies, string> = {
-  "Morelia azurea azurea": "/hatchery/snakes/azurea.svg",
-  "Morelia azurea pulcher": "/hatchery/snakes/pulcher.svg",
-  "Morelia azurea utaraensis": "/hatchery/snakes/utaraensis.svg",
-  "Morelia viridis": "/hatchery/snakes/viridis.svg",
+  "Morelia azurea azurea": "/hatchery/snakes/azurea.webp",
+  "Morelia azurea pulcher": "/hatchery/snakes/pulcher.webp",
+  "Morelia azurea utaraensis": "/hatchery/snakes/utaraensis.webp",
+  "Morelia viridis": "/hatchery/snakes/viridis.webp",
 };
 
 export function ChondroSnakeIcon({ subspecies, name, compact = false }: { subspecies: ChondroSubspecies; name: string; compact?: boolean }) {
