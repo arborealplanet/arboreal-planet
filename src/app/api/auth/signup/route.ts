@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAuthRequest, writeAuthCookies } from "@/lib/supabase-auth";
 
+const PRODUCTION_ORIGIN = "https://arboreal-planet.vercel.app";
+
 function publicSignupError(raw: string) {
   const lower = raw.toLowerCase();
   if (lower.includes("email address not authorized")) {
@@ -17,14 +19,19 @@ function safeNext(value: string | undefined) {
   return value;
 }
 
+function confirmationOrigin(request: Request) {
+  const requestOrigin = new URL(request.url).origin;
+  if (requestOrigin.includes("localhost") || requestOrigin.includes("127.0.0.1")) return requestOrigin;
+  return PRODUCTION_ORIGIN;
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { email?: string; password?: string; displayName?: string; next?: string } | null;
   if (!body?.email || !body.password) return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
   if (body.password.length < 8) return NextResponse.json({ error: "Use a password with at least 8 characters." }, { status: 400 });
 
   const next = safeNext(body.next);
-  const origin = new URL(request.url).origin;
-  const redirectTo = new URL("/auth/email/bridge", origin);
+  const redirectTo = new URL("/auth/email/bridge", confirmationOrigin(request));
   redirectTo.searchParams.set("next", next);
 
   const auth = await supabaseAuthRequest(`signup?redirect_to=${encodeURIComponent(redirectTo.toString())}`, {
