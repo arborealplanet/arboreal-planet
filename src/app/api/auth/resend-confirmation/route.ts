@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { supabaseAuthRequest } from "@/lib/supabase-auth";
 
+const PRODUCTION_ORIGIN = "https://arboreal-planet.vercel.app";
+
 function safeNext(value: string | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/profile";
   return value;
+}
+
+function confirmationOrigin(request: Request) {
+  const requestOrigin = new URL(request.url).origin;
+  if (requestOrigin.includes("localhost") || requestOrigin.includes("127.0.0.1")) return requestOrigin;
+  return PRODUCTION_ORIGIN;
 }
 
 export async function POST(request: Request) {
@@ -12,8 +20,7 @@ export async function POST(request: Request) {
   if (!email) return NextResponse.json({ error: "Email is required." }, { status: 400 });
 
   const next = safeNext(body?.next);
-  const origin = new URL(request.url).origin;
-  const redirectTo = new URL("/auth/email/bridge", origin);
+  const redirectTo = new URL("/auth/email/bridge", confirmationOrigin(request));
   redirectTo.searchParams.set("next", next);
 
   const auth = await supabaseAuthRequest("resend", {
