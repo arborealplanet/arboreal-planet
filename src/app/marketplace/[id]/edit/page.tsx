@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 type Listing = {
   id:string; owner_id:string; category:string; title:string; description:string|null; price:number;
-  public_origin:string|null; morph:string|null; sex:string|null; age_or_year:string|null;
+  species_id:string|null; locality_id:string|null; public_origin:string|null; morph:string|null; sex:string|null; age_or_year:string|null;
   lineage:string|null; seller_location:string|null; status:string; image_urls:string[]|null;
 };
 
