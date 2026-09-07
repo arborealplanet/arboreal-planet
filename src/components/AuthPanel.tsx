@@ -10,21 +10,45 @@ export function AuthPanel() {
   const [loading, setLoading] = useState(false);
   const [signupSent, setSignupSent] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState("");
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
   const initialError = params.get("authError");
   const [error, setError] = useState<string | null>(
     initialError === "invalid_confirmation"
-      ? "That confirmation link is invalid or expired. Please request a new confirmation email."
+      ? "That confirmation link is invalid or expired. Request a fresh confirmation email below."
       : null,
   );
   const next = params.get("next") || "/profile";
+
+  async function resendConfirmation(email: string) {
+    if (!email) return;
+    setLoading(true);
+    setError(null);
+    setResendStatus(null);
+    const response = await fetch("/api/auth/resend-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, next }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setLoading(false);
+    if (!response.ok) {
+      setError(data.error ?? "Unable to resend confirmation email.");
+      return;
+    }
+    setResendStatus(`A fresh confirmation email was sent to ${email}.`);
+  }
 
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setResendStatus(null);
+    setUnconfirmedEmail("");
     const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "").trim();
     const payload = {
-      email: String(form.get("email") ?? ""),
+      email,
       password: String(form.get("password") ?? ""),
     };
     const response = await fetch("/api/auth/login", {
@@ -36,6 +60,7 @@ export function AuthPanel() {
     setLoading(false);
     if (!response.ok) {
       setError(data.error ?? "Unable to sign in.");
+      if (data.code === "EMAIL_NOT_CONFIRMED") setUnconfirmedEmail(email);
       return;
     }
     router.push(next);
@@ -46,6 +71,7 @@ export function AuthPanel() {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setResendStatus(null);
     setSignupSent(false);
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
@@ -84,6 +110,8 @@ export function AuthPanel() {
             setMode("login");
             setError(null);
             setSignupSent(false);
+            setUnconfirmedEmail("");
+            setResendStatus(null);
           }}
           className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[.12em] ${mode === "login" ? "bg-white/[.08] text-white/80" : "text-white/35"}`}
         >
@@ -95,6 +123,8 @@ export function AuthPanel() {
             setMode("signup");
             setError(null);
             setSignupSent(false);
+            setUnconfirmedEmail("");
+            setResendStatus(null);
           }}
           className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[.12em] ${mode === "signup" ? "bg-white/[.08] text-white/80" : "text-white/35"}`}
         >
@@ -117,8 +147,19 @@ export function AuthPanel() {
             <input required minLength={8} name="password" type="password" autoComplete="current-password" className="w-full rounded-2xl border border-white/[.08] bg-black/15 px-4 py-3 outline-none" />
           </label>
           {error ? <div className="rounded-2xl border border-red-300/15 bg-red-300/[.04] p-3 text-xs text-red-100/70">{error}</div> : null}
+          {unconfirmedEmail ? (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => resendConfirmation(unconfirmedEmail)}
+              className="w-full rounded-2xl border border-amber-200/20 bg-amber-200/[.05] px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-amber-100/75 disabled:opacity-50"
+            >
+              Resend confirmation email
+            </button>
+          ) : null}
+          {resendStatus ? <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-3 text-xs text-emerald-100/75">{resendStatus}</div> : null}
           <button disabled={loading} className="w-full rounded-2xl bg-emerald-300 px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-[#06100c] disabled:opacity-50">
-            {loading ? "Signing in…" : "Enter Arboreal Planet"}
+            {loading ? "Working…" : "Enter Arboreal Planet"}
           </button>
         </form>
       ) : signupSent ? (
@@ -131,9 +172,20 @@ export function AuthPanel() {
           </div>
           <button
             type="button"
+            disabled={loading}
+            onClick={() => resendConfirmation(signupEmail)}
+            className="w-full rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-emerald-100/75 disabled:opacity-50"
+          >
+            Resend confirmation email
+          </button>
+          {resendStatus ? <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-3 text-xs text-emerald-100/75">{resendStatus}</div> : null}
+          {error ? <div className="rounded-2xl border border-red-300/15 bg-red-300/[.04] p-3 text-xs text-red-100/70">{error}</div> : null}
+          <button
+            type="button"
             onClick={() => {
               setSignupSent(false);
               setError(null);
+              setResendStatus(null);
             }}
             className="w-full rounded-2xl border border-white/[.1] bg-white/[.04] px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-white/65"
           >
