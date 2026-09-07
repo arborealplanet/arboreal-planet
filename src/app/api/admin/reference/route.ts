@@ -21,7 +21,7 @@ export async function PATCH(request:NextRequest){
  const identity=await adminIdentity();if(!identity)return NextResponse.json({error:"Not found"},{status:404});
  const body=await request.json().catch(()=>({}));const kind=String(body.kind??"");const id=String(body.id??"");if(!id||!["animal","plant"].includes(kind))return NextResponse.json({error:"Invalid reference update"},{status:400});
  const h={...headers(identity.token),"Content-Type":"application/json","Prefer":"return=representation"};
- let table="",payload:Record<string,unknown>={description:cleanText(body.description,4000),tags:cleanTags(body.tags)};
+ let table="";const payload:Record<string,unknown>={description:cleanText(body.description,4000),tags:cleanTags(body.tags)};
  if(kind==="animal"){
   table="species";const source=body.reference_data&&typeof body.reference_data==="object"?body.reference_data as Record<string,unknown>:{};
   payload.reference_data={taxonomy_notes:cleanText(source.taxonomy_notes),natural_history:cleanText(source.natural_history),husbandry:cleanText(source.husbandry),breeding:cleanText(source.breeding),source_notes:cleanText(source.source_notes)};
