@@ -6,6 +6,9 @@ type Subspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia 
 type Locality = "Biak" | "Numfor" | "Manokwari" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
 type Sex = "Male" | "Female";
 type Source = "Captive Bred" | "Import";
+type Classification = "Pure" | "Hybrid" | "Designer";
+type NidoStatus = "Unknown" | "Negative" | "Positive";
+type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention";
 
 type Snake = {
   id: string;
@@ -13,7 +16,7 @@ type Snake = {
   sex: Sex;
   source: Source;
   subspecies: Subspecies;
-  locality: Locality;
+  locality: Locality | "Designer";
   neonateColor: "Red" | "Yellow";
   highBlack: number;
   highWhite: number;
@@ -25,8 +28,12 @@ type Snake = {
   head: string;
   pattern: string;
   color: string;
-  nidoStatus: "Unknown" | "Negative" | "Positive";
+  nidoStatus: NidoStatus;
   condition: "Excellent" | "Good" | "Fair";
+  classification: Classification;
+  generation: number;
+  parentIds: string[];
+  ancestry: Partial<Record<Subspecies, number>>;
 };
 
 type StarterPath = {
@@ -40,9 +47,17 @@ type StarterPath = {
   risk: "Low" | "Moderate" | "High";
 };
 
-const STARTING_CASH = 30000;
+type Clutch = {
+  id: string;
+  dam: Snake;
+  sire: Snake;
+  offspring: Snake[];
+};
 
-const localitySubspecies: Record<Locality, Subspecies> = {
+const STARTING_CASH = 30000;
+const NIDO_TEST_COST = 125;
+
+const localitySubspecies: Record<Exclude<Locality, never>, Subspecies> = {
   Biak: "Morelia azurea azurea",
   Numfor: "Morelia azurea azurea",
   Manokwari: "Morelia azurea pulcher",
@@ -68,50 +83,31 @@ const makeSnake = (
   blueStripe: number,
   yellowRetention: number,
   condition: Snake["condition"] = "Good",
-): Snake => ({
-  id,
-  name,
-  sex,
-  source,
-  locality,
-  subspecies: localitySubspecies[locality],
-  neonateColor,
-  highBlack,
-  highWhite,
-  blueStripe,
-  yellowRetention,
-  body: localitySubspecies[locality],
-  tail: localitySubspecies[locality],
-  eyes: localitySubspecies[locality],
-  head: localitySubspecies[locality],
-  pattern: locality,
-  color: locality,
-  nidoStatus: "Unknown",
-  condition,
-});
+): Snake => {
+  const subspecies = localitySubspecies[locality];
+  return {
+    id, name, sex, source, locality, subspecies, neonateColor,
+    highBlack, highWhite, blueStripe, yellowRetention,
+    body: subspecies, tail: subspecies, eyes: subspecies, head: subspecies,
+    pattern: locality, color: locality, nidoStatus: "Unknown", condition,
+    classification: "Pure", generation: 1, parentIds: [], ancestry: { [subspecies]: 100 },
+  };
+};
 
 const starterPaths: StarterPath[] = [
   {
-    id: "safe",
-    name: "The Safe Start",
-    tagline: "Cleaner stock. Fewer surprises.",
-    description: "Begin with two captive-bred animals, a comfortable testing budget and a conservative enclosure plan.",
-    setupCost: 8950,
-    enclosurePlan: "4 Chondro Dojo bins · 2 quarantine bins · starter incubator",
-    risk: "Low",
+    id: "safe", name: "The Safe Start", tagline: "Cleaner stock. Fewer surprises.", risk: "Low",
+    description: "Two captive-bred animals, a comfortable testing budget and a conservative enclosure plan.",
+    setupCost: 8950, enclosurePlan: "4 Chondro Dojo bins · 2 quarantine bins · starter incubator",
     animals: [
       makeSnake("SAFE-F-01", "Manokwari F1", "Female", "Captive Bred", "Manokwari", "Red", 10, 4, 16, 28, "Excellent"),
       makeSnake("SAFE-M-01", "Sorong M1", "Male", "Captive Bred", "Sorong", "Yellow", 4, 2, 20, 18, "Excellent"),
     ],
   },
   {
-    id: "importer",
-    name: "The Importer",
-    tagline: "More animals. More uncertainty.",
-    description: "Spend less per animal and start with four imports. The upside is genetic opportunity; the downside is health and quarantine pressure.",
-    setupCost: 7800,
-    enclosurePlan: "6 Chondro Dojo bins · 4 quarantine bins · starter incubator",
-    risk: "High",
+    id: "importer", name: "The Importer", tagline: "More animals. More uncertainty.", risk: "High",
+    description: "Four cheaper imports create more genetic opportunity, but also more health and quarantine pressure.",
+    setupCost: 7800, enclosurePlan: "6 Chondro Dojo bins · 4 quarantine bins · starter incubator",
     animals: [
       makeSnake("IMP-F-01", "Biak Import", "Female", "Import", "Biak", "Red", 15, 4, 4, 22, "Fair"),
       makeSnake("IMP-M-01", "Cyclops Import", "Male", "Import", "Cyclops", "Yellow", 2, 8, 38, 5, "Good"),
@@ -120,26 +116,18 @@ const starterPaths: StarterPath[] = [
     ],
   },
   {
-    id: "locality",
-    name: "The Locality Breeder",
-    tagline: "Start focused and build a family.",
-    description: "Begin with a matched Cyclops pair and enough room to hold back offspring. Strong foundation, narrower genetic options.",
-    setupCost: 10150,
-    enclosurePlan: "4 Chondro Dojo bins · 2 PVC display enclosures · 2 quarantine bins · starter incubator",
-    risk: "Moderate",
+    id: "locality", name: "The Locality Breeder", tagline: "Start focused and build a family.", risk: "Moderate",
+    description: "A matched Cyclops pair with enough room to hold back the animals that move your project forward.",
+    setupCost: 10150, enclosurePlan: "4 Chondro Dojo bins · 2 PVC display enclosures · 2 quarantine bins · starter incubator",
     animals: [
       makeSnake("LOC-F-01", "Cyclops F1", "Female", "Captive Bred", "Cyclops", "Yellow", 3, 10, 42, 4, "Excellent"),
       makeSnake("LOC-M-01", "Cyclops M1", "Male", "Captive Bred", "Cyclops", "Yellow", 5, 8, 48, 3, "Excellent"),
     ],
   },
   {
-    id: "opportunist",
-    name: "The Opportunist",
-    tagline: "One known animal. One wildcard.",
-    description: "Mix a quality captive-bred female with a cheaper import male and keep more cash available for the next opportunity.",
-    setupCost: 6900,
-    enclosurePlan: "4 Chondro Dojo bins · 2 quarantine bins · starter incubator",
-    risk: "Moderate",
+    id: "opportunist", name: "The Opportunist", tagline: "One known animal. One wildcard.", risk: "Moderate",
+    description: "A quality captive-bred female, one cheaper import male, and more cash kept in reserve.",
+    setupCost: 6900, enclosurePlan: "4 Chondro Dojo bins · 2 quarantine bins · starter incubator",
     animals: [
       makeSnake("OPP-F-01", "Aru F1", "Female", "Captive Bred", "Aru", "Yellow", 2, 20, 28, 5, "Excellent"),
       makeSnake("OPP-M-01", "Biak Import", "Male", "Import", "Biak", "Red", 17, 3, 5, 26, "Fair"),
@@ -148,91 +136,145 @@ const starterPaths: StarterPath[] = [
 ];
 
 const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+const pick = <T,>(a: T, b: T) => Math.random() < 0.5 ? a : b;
 
-const traitLabel = (value: number) => {
+function inheritLineTrait(a: number, b: number) {
+  const midpoint = (a + b) / 2;
+  const spread = 18;
+  const ordinary = midpoint + (Math.random() + Math.random() - 1) * spread;
+  const rareOutlier = Math.random() < 0.055 ? (Math.random() < 0.72 ? 10 + Math.random() * 12 : -(8 + Math.random() * 10)) : 0;
+  const topResistance = ordinary + rareOutlier > 85 ? (ordinary + rareOutlier - 85) * 0.45 : 0;
+  return clamp(ordinary + rareOutlier - topResistance);
+}
+
+function combineAncestry(a: Snake, b: Snake) {
+  const output: Partial<Record<Subspecies, number>> = {};
+  const keys = Object.keys({ ...a.ancestry, ...b.ancestry }) as Subspecies[];
+  for (const key of keys) output[key] = Math.round((((a.ancestry[key] ?? 0) + (b.ancestry[key] ?? 0)) / 2) * 10) / 10;
+  return output;
+}
+
+function classifyPair(a: Snake, b: Snake): Classification {
+  if (a.classification !== "Pure" || b.classification !== "Pure") return "Designer";
+  return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
+}
+
+function makeOffspring(dam: Snake, sire: Snake, clutchId: string, index: number): Snake {
+  const classification = classifyPair(dam, sire);
+  const ancestry = combineAncestry(dam, sire);
+  const inheritedSubspecies = pick(dam.subspecies, sire.subspecies);
+  const pureSameSubspecies = classification === "Pure" && dam.subspecies === sire.subspecies;
+  const locality = pureSameSubspecies ? pick(dam.locality, sire.locality) : "Designer";
+  const generation = Math.max(dam.generation, sire.generation) + 1;
+  return {
+    id: `${clutchId}-${String(index + 1).padStart(2, "0")}`,
+    name: `Hatchling ${index + 1}`,
+    sex: Math.random() < 0.5 ? "Male" : "Female",
+    source: "Captive Bred",
+    subspecies: pureSameSubspecies ? dam.subspecies : inheritedSubspecies,
+    locality,
+    neonateColor: Math.random() < 0.5 ? dam.neonateColor : sire.neonateColor,
+    highBlack: inheritLineTrait(dam.highBlack, sire.highBlack),
+    highWhite: inheritLineTrait(dam.highWhite, sire.highWhite),
+    blueStripe: inheritLineTrait(dam.blueStripe, sire.blueStripe),
+    yellowRetention: inheritLineTrait(dam.yellowRetention, sire.yellowRetention),
+    body: pick(dam.body, sire.body),
+    tail: pick(dam.tail, sire.tail),
+    eyes: pick(dam.eyes, sire.eyes),
+    head: pick(dam.head, sire.head),
+    pattern: pick(dam.pattern, sire.pattern),
+    color: pick(dam.color, sire.color),
+    nidoStatus: "Unknown",
+    condition: "Good",
+    classification,
+    generation,
+    parentIds: [dam.id, sire.id],
+    ancestry,
+  };
+}
+
+function createClutch(dam: Snake, sire: Snake): Clutch {
+  const clutchId = `CL-${Date.now().toString(36).toUpperCase()}`;
+  const size = 5 + Math.floor(Math.random() * 5);
+  return { id: clutchId, dam, sire, offspring: Array.from({ length: size }, (_, i) => makeOffspring(dam, sire, clutchId, i)) };
+}
+
+function traitLabel(value: number) {
   if (value >= 85) return "Extreme";
   if (value >= 60) return "Strong";
   if (value >= 35) return "Moderate";
   if (value >= 15) return "Noticeable";
   return "Background";
-};
+}
+
+const traitRows: [string, TraitKey][] = [["High Black", "highBlack"], ["High White", "highWhite"], ["Blue Stripe", "blueStripe"], ["Yellow Retention", "yellowRetention"]];
 
 export function ChondroBreederGame() {
   const [started, setStarted] = useState(false);
   const [selectedPath, setSelectedPath] = useState<StarterPath | null>(null);
   const [confirmedPath, setConfirmedPath] = useState<StarterPath | null>(null);
+  const [colony, setColony] = useState<Snake[]>([]);
   const [tested, setTested] = useState<string[]>([]);
+  const [damId, setDamId] = useState("");
+  const [sireId, setSireId] = useState("");
+  const [clutch, setClutch] = useState<Clutch | null>(null);
+  const [holdbacks, setHoldbacks] = useState<string[]>([]);
+  const [season, setSeason] = useState(1);
 
-  const cash = useMemo(() => confirmedPath ? STARTING_CASH - confirmedPath.setupCost - tested.length * 125 : STARTING_CASH, [confirmedPath, tested]);
+  const cash = useMemo(() => confirmedPath ? STARTING_CASH - confirmedPath.setupCost - tested.length * NIDO_TEST_COST : STARTING_CASH, [confirmedPath, tested]);
+  const females = colony.filter((a) => a.sex === "Female");
+  const males = colony.filter((a) => a.sex === "Male");
+  const dam = colony.find((a) => a.id === damId) ?? null;
+  const sire = colony.find((a) => a.id === sireId) ?? null;
+
+  function confirmStarter(path: StarterPath) {
+    setConfirmedPath(path);
+    setColony(path.animals.map((a) => ({ ...a })));
+  }
 
   function testSnake(id: string) {
-    if (tested.includes(id) || cash < 125) return;
+    if (tested.includes(id) || cash < NIDO_TEST_COST) return;
     setTested((current) => [...current, id]);
+    setColony((current) => current.map((animal) => {
+      if (animal.id !== id) return animal;
+      const positiveChance = animal.source === "Import" ? 0.12 : 0.018;
+      return { ...animal, nidoStatus: Math.random() < positiveChance ? "Positive" : "Negative" };
+    }));
   }
 
-  if (!started) {
-    return (
-      <div className="mx-auto max-w-5xl px-5 py-10 sm:px-6">
-        <section className="panel overflow-hidden rounded-[32px] p-7 sm:p-10">
-          <div className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/55">Start Your Dream Sweepstakes</div>
-          <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-.04em] sm:text-5xl">You won {money(STARTING_CASH)}.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-white/45">A sweepstakes you entered months ago just changed your life. The prize is enough to start the chondro breeding program you always wanted — but not enough to make every choice at once.</p>
-          <div className="mt-8 rounded-3xl border border-amber-200/10 bg-amber-200/[.03] p-5">
-            <div className="text-xs font-bold text-amber-100/65">The same opening for every player.</div>
-            <p className="mt-2 text-sm leading-6 text-white/36">Your decisions, hidden animal variables, imports, health, pairings and selective breeding determine what happens after this point.</p>
-          </div>
-          <button onClick={() => setStarted(true)} className="mt-8 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a]">Start the journey</button>
-        </section>
-      </div>
-    );
+  function breedSelected() {
+    if (!dam || !sire) return;
+    setClutch(createClutch(dam, sire));
+    setHoldbacks([]);
   }
 
-  if (!confirmedPath) {
-    return (
-      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><div className="section-kicker">Opening decision</div><h1 className="mt-2 text-3xl font-semibold">Choose how your colony begins.</h1></div>
-          <div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-5 py-3"><div className="text-[9px] font-bold uppercase tracking-[.16em] text-white/25">Available cash</div><div className="mt-1 text-xl font-semibold text-emerald-200/80">{money(STARTING_CASH)}</div></div>
-        </div>
-
-        <div className="mt-7 grid gap-4 lg:grid-cols-2">
-          {starterPaths.map((path) => <button key={path.id} onClick={() => setSelectedPath(path)} className={`panel-soft rounded-[26px] p-6 text-left transition ${selectedPath?.id === path.id ? "ring-1 ring-amber-200/45" : "hover:bg-white/[.035]"}`}>
-            <div className="flex items-start justify-between gap-4"><div><div className="text-xl font-semibold">{path.name}</div><div className="mt-1 text-xs font-semibold text-amber-100/45">{path.tagline}</div></div><span className="rounded-full border border-white/[.07] px-3 py-1 text-[10px] uppercase tracking-[.12em] text-white/35">{path.risk} risk</span></div>
-            <p className="mt-4 text-sm leading-6 text-white/38">{path.description}</p>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">{path.animals.map((animal) => <div key={animal.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4"><div className="text-sm font-semibold text-white/65">{animal.name}</div><div className="mt-1 text-[11px] text-white/28">{animal.sex} · {animal.source} · {animal.locality}</div><div className="mt-3 flex gap-2 text-[10px] text-white/32"><span>HB {animal.highBlack}%</span><span>HW {animal.highWhite}%</span><span>Blue {animal.blueStripe}%</span></div></div>)}</div>
-            <div className="mt-5 border-t border-white/[.05] pt-4 text-xs text-white/30"><div>{path.enclosurePlan}</div><div className="mt-1">Opening spend: <span className="font-semibold text-white/48">{money(path.setupCost)}</span> · Cash left: <span className="font-semibold text-emerald-200/60">{money(STARTING_CASH - path.setupCost)}</span></div></div>
-          </button>)}
-        </div>
-
-        <div className="mt-6 flex justify-end"><button disabled={!selectedPath} onClick={() => selectedPath && setConfirmedPath(selectedPath)} className="rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a] disabled:cursor-not-allowed disabled:opacity-30">Commit to this start</button></div>
-      </div>
-    );
+  function keepHatchling(id: string) {
+    setHoldbacks((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
   }
 
-  return (
-    <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><div className="section-kicker">Your first colony</div><h1 className="mt-2 text-3xl font-semibold">{confirmedPath.name}</h1><p className="mt-2 text-sm text-white/34">{confirmedPath.enclosurePlan}</p></div>
-        <div className="grid grid-cols-2 gap-2 text-right"><div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3"><div className="text-[9px] uppercase tracking-[.14em] text-white/24">Cash</div><div className="mt-1 font-semibold text-emerald-200/75">{money(cash)}</div></div><div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3"><div className="text-[9px] uppercase tracking-[.14em] text-white/24">Animals</div><div className="mt-1 font-semibold text-white/65">{confirmedPath.animals.length}</div></div></div>
-      </div>
+  function finishClutch() {
+    if (!clutch) return;
+    const kept = clutch.offspring.filter((baby) => holdbacks.includes(baby.id));
+    setColony((current) => [...current, ...kept]);
+    setClutch(null);
+    setHoldbacks([]);
+    setDamId("");
+    setSireId("");
+    setSeason((current) => current + 1);
+  }
 
-      <div className="mt-7 grid gap-4 lg:grid-cols-2">
-        {confirmedPath.animals.map((animal) => {
-          const hasTest = tested.includes(animal.id);
-          return <article key={animal.id} className="panel rounded-[28px] p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-2xl font-semibold">{animal.name}</div><div className="mt-1 text-xs text-white/30">{animal.id} · {animal.sex} · {animal.neonateColor} neonate</div></div><span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[.12em] ${animal.source === "Import" ? "border-amber-200/15 text-amber-100/55" : "border-emerald-300/15 text-emerald-200/55"}`}>{animal.source}</span></div>
-            <div className="mt-5 rounded-2xl border border-white/[.06] bg-white/[.018] p-4"><div className="text-xs font-semibold text-white/55">{animal.subspecies}</div><div className="mt-1 text-[11px] text-white/28">Locality: {animal.locality} · Condition: {animal.condition}</div></div>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[["High Black", animal.highBlack], ["High White", animal.highWhite], ["Blue Stripe", animal.blueStripe], ["Yellow Retention", animal.yellowRetention]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-white/[.06] p-3"><div className="text-[9px] uppercase tracking-[.11em] text-white/23">{label}</div><div className="mt-2 text-lg font-semibold text-white/62">{value}%</div><div className="text-[9px] text-white/24">{traitLabel(Number(value))}</div></div>)}</div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[.06] bg-black/10 p-4"><div><div className="text-[10px] font-bold uppercase tracking-[.12em] text-white/25">Nido status</div><div className="mt-1 text-sm font-semibold text-white/55">{hasTest ? "Negative" : "Unknown"}</div></div><button disabled={hasTest || cash < 125} onClick={() => testSnake(animal.id)} className="rounded-xl border border-white/[.08] bg-white/[.03] px-4 py-2 text-xs font-bold text-white/55 disabled:opacity-35">{hasTest ? "Test complete" : "Order Nido test · $125"}</button></div>
-          </article>;
-        })}
-      </div>
+  if (!started) return <div className="mx-auto max-w-5xl px-5 py-10 sm:px-6"><section className="panel overflow-hidden rounded-[32px] p-7 sm:p-10"><div className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/55">Start Your Dream Sweepstakes</div><h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-.04em] sm:text-5xl">You won {money(STARTING_CASH)}.</h1><p className="mt-5 max-w-2xl text-sm leading-7 text-white/45">You finally have enough to start a small chondro program — but not enough to make every choice at once.</p><div className="mt-8 rounded-3xl border border-amber-200/10 bg-amber-200/[.03] p-5"><div className="text-xs font-bold text-amber-100/65">Everyone begins here.</div><p className="mt-2 text-sm leading-6 text-white/36">After this, hidden animal variables, health, imports, pairings and selective breeding begin pulling colonies in different directions.</p></div><button onClick={() => setStarted(true)} className="mt-8 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a]">Start the journey</button></section></div>;
 
-      <section className="panel-soft mt-6 rounded-[28px] p-6">
-        <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-300/50">Prototype milestone 1</div>
-        <h2 className="mt-2 text-xl font-semibold">The colony exists. The next build adds the first breeding season.</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/34">This foundation already locks the four subspecies/locality map, starter economy, import-vs-captive-bred choice, line percentages, health uncertainty and Nido testing. Breeding, clutch generation, enclosure assignment and persistent saves are the next systems to connect.</p>
-      </section>
-    </div>
-  );
+  if (!confirmedPath) return <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="section-kicker">Opening decision</div><h1 className="mt-2 text-3xl font-semibold">Choose how your colony begins.</h1></div><div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-5 py-3"><div className="text-[9px] font-bold uppercase tracking-[.16em] text-white/25">Available cash</div><div className="mt-1 text-xl font-semibold text-emerald-200/80">{money(STARTING_CASH)}</div></div></div><div className="mt-7 grid gap-4 lg:grid-cols-2">{starterPaths.map((path) => <button key={path.id} onClick={() => setSelectedPath(path)} className={`panel-soft rounded-[26px] p-6 text-left transition ${selectedPath?.id === path.id ? "ring-1 ring-amber-200/45" : "hover:bg-white/[.035]"}`}><div className="flex items-start justify-between gap-4"><div><div className="text-xl font-semibold">{path.name}</div><div className="mt-1 text-xs font-semibold text-amber-100/45">{path.tagline}</div></div><span className="rounded-full border border-white/[.07] px-3 py-1 text-[10px] uppercase tracking-[.12em] text-white/35">{path.risk} risk</span></div><p className="mt-4 text-sm leading-6 text-white/38">{path.description}</p><div className="mt-5 grid gap-2 sm:grid-cols-2">{path.animals.map((animal) => <div key={animal.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4"><div className="text-sm font-semibold text-white/65">{animal.name}</div><div className="mt-1 text-[11px] text-white/28">{animal.sex} · {animal.source} · {animal.locality}</div><div className="mt-3 flex flex-wrap gap-2 text-[10px] text-white/32"><span>HB {animal.highBlack}%</span><span>HW {animal.highWhite}%</span><span>Blue {animal.blueStripe}%</span></div></div>)}</div><div className="mt-5 border-t border-white/[.05] pt-4 text-xs text-white/30"><div>{path.enclosurePlan}</div><div className="mt-1">Opening spend: <span className="font-semibold text-white/48">{money(path.setupCost)}</span> · Cash left: <span className="font-semibold text-emerald-200/60">{money(STARTING_CASH - path.setupCost)}</span></div></div></button>)}</div><div className="mt-6 flex justify-end"><button disabled={!selectedPath} onClick={() => selectedPath && confirmStarter(selectedPath)} className="rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a] disabled:cursor-not-allowed disabled:opacity-30">Commit to this start</button></div></div>;
+
+  return <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><div className="section-kicker">Chondro Breeder · Season {season}</div><h1 className="mt-2 text-3xl font-semibold">{confirmedPath.name}</h1><p className="mt-2 text-sm text-white/34">{confirmedPath.enclosurePlan}</p></div><div className="grid grid-cols-2 gap-2 text-right"><div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3"><div className="text-[9px] uppercase tracking-[.14em] text-white/24">Cash</div><div className="mt-1 font-semibold text-emerald-200/75">{money(cash)}</div></div><div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3"><div className="text-[9px] uppercase tracking-[.14em] text-white/24">Colony</div><div className="mt-1 font-semibold text-white/65">{colony.length}</div></div></div></div>
+
+    <section className="mt-7 panel rounded-[28px] p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="section-kicker">Breeding room</div><h2 className="mt-2 text-2xl font-semibold">Build this season&apos;s pairing.</h2></div><div className="text-xs text-white/30">Pure same-subspecies pairings stay pure. First cross-subspecies offspring are Hybrid. Any later hybrid descendant is Designer.</div></div><div className="mt-5 grid gap-4 md:grid-cols-2"><label className="block"><span className="mb-2 block text-xs font-bold text-white/38">Female</span><select value={damId} onChange={(e) => setDamId(e.target.value)} className="w-full rounded-2xl border border-white/[.08] bg-black/30 px-4 py-3 text-sm"><option value="">Choose female</option>{females.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.locality}</option>)}</select></label><label className="block"><span className="mb-2 block text-xs font-bold text-white/38">Male</span><select value={sireId} onChange={(e) => setSireId(e.target.value)} className="w-full rounded-2xl border border-white/[.08] bg-black/30 px-4 py-3 text-sm"><option value="">Choose male</option>{males.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.locality}</option>)}</select></label></div>{dam && sire ? <div className="mt-5 rounded-2xl border border-amber-200/10 bg-amber-200/[.025] p-4 text-sm text-white/45"><span className="font-semibold text-amber-100/65">Projected classification:</span> {classifyPair(dam, sire)} · Offspring line-trait values will cluster around the parental midpoint with uncommon higher and lower outliers.</div> : null}<button disabled={!dam || !sire || !!clutch} onClick={breedSelected} className="mt-5 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a] disabled:opacity-30">Run breeding season</button></section>
+
+    {clutch ? <section className="mt-6 panel rounded-[28px] p-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="section-kicker">{clutch.id}</div><h2 className="mt-2 text-2xl font-semibold">Clutch hatched · {clutch.offspring.length} offspring</h2><p className="mt-2 text-sm text-white/34">{clutch.dam.name} × {clutch.sire.name}</p></div><div className="text-xs text-white/30">Select holdbacks. Unselected offspring leave your active colony when the clutch is closed.</div></div><div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{clutch.offspring.map((baby) => { const kept = holdbacks.includes(baby.id); return <button key={baby.id} onClick={() => keepHatchling(baby.id)} className={`rounded-3xl border p-5 text-left transition ${kept ? "border-amber-200/35 bg-amber-200/[.05]" : "border-white/[.06] bg-white/[.015]"}`}><div className="flex items-start justify-between gap-3"><div><div className="font-semibold text-white/75">{baby.name}</div><div className="mt-1 text-[10px] text-white/28">{baby.sex} · {baby.neonateColor} neonate · Gen {baby.generation}</div></div><span className="rounded-full border border-white/[.07] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.1em] text-white/38">{baby.classification}</span></div><div className="mt-4 grid grid-cols-2 gap-2">{traitRows.map(([label, key]) => <div key={key} className="rounded-xl border border-white/[.05] p-3"><div className="text-[9px] uppercase tracking-[.09em] text-white/22">{label}</div><div className="mt-1 text-lg font-semibold text-white/65">{baby[key]}%</div><div className="text-[9px] text-white/25">{traitLabel(baby[key])}</div></div>)}</div><div className="mt-4 text-[10px] text-white/28">Body: {baby.body.replace("Morelia ", "M. ")} · Pattern: {baby.pattern}</div><div className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-amber-100/50">{kept ? "Holdback selected" : "Tap to hold back"}</div></button>; })}</div><div className="mt-6 flex flex-wrap items-center justify-between gap-4"><div className="text-sm text-white/38">Holdbacks: <span className="font-semibold text-white/65">{holdbacks.length}</span></div><button onClick={finishClutch} className="rounded-2xl bg-emerald-300 px-6 py-3 text-sm font-black text-[#06100c]">Close clutch & advance season</button></div></section> : null}
+
+    <section className="mt-6"><div className="mb-4 flex items-end justify-between gap-4"><div><div className="section-kicker">Your colony</div><h2 className="mt-2 text-2xl font-semibold">Animals and project material</h2></div></div><div className="grid gap-4 lg:grid-cols-2">{colony.map((animal) => <article key={animal.id} className="panel rounded-[28px] p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xl font-semibold">{animal.name}</div><div className="mt-1 text-xs text-white/30">{animal.id} · {animal.sex} · {animal.classification} · Gen {animal.generation}</div></div><span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[.12em] ${animal.source === "Import" ? "border-amber-200/15 text-amber-100/55" : "border-emerald-300/15 text-emerald-200/55"}`}>{animal.source}</span></div><div className="mt-4 text-xs text-white/35">{animal.subspecies} · {animal.locality} · Condition: {animal.condition}</div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{traitRows.map(([label, key]) => <div key={key} className="rounded-2xl border border-white/[.06] p-3"><div className="text-[9px] uppercase tracking-[.1em] text-white/23">{label}</div><div className="mt-2 text-lg font-semibold text-white/62">{animal[key]}%</div></div>)}</div><div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/[.05] pt-4"><div className="text-xs text-white/32">Nido: <span className={animal.nidoStatus === "Positive" ? "font-semibold text-red-200/75" : animal.nidoStatus === "Negative" ? "font-semibold text-emerald-200/70" : "text-white/42"}>{animal.nidoStatus}</span></div>{animal.nidoStatus === "Unknown" ? <button disabled={cash < NIDO_TEST_COST} onClick={() => testSnake(animal.id)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55 disabled:opacity-30">Buy Nido test · {money(NIDO_TEST_COST)}</button> : null}</div></article>)}</div></section>
+  </div>;
 }
