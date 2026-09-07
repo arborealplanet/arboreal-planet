@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { PageIntro } from "@/components/PageIntro";
+import { PageIntro } from "@/components/AppShell";
 import { EditListingForm } from "@/components/EditListingForm";
-import { getServerIdentity, supabaseRest } from "@/lib/supabase-auth";
+import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +15,9 @@ export default async function EditListingPage({params}:{params:Promise<{id:strin
   const {id}=await params;
   const identity=await getServerIdentity();
   if(!identity) redirect(`/login?next=/marketplace/${id}/edit`);
-  const r=await supabaseRest(`/rest/v1/marketplace_listings?id=eq.${encodeURIComponent(id)}&select=*`,{},identity.accessToken);
-  const rows=(await r.json().catch(()=>[])) as Listing[];
+  const r=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/marketplace_listings?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(identity.user.id)}&select=*`,{headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,Accept:"application/json"},cache:"no-store"});
+  const rows=(r.ok?await r.json().catch(()=>[]):[]) as Listing[];
   const listing=rows[0];
-  if(!listing || listing.owner_id!==identity.user.id) redirect(`/marketplace/${id}`);
-  return <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6"><PageIntro eyebrow="Marketplace" title="Edit listing" description="Update the public details for this listing. Existing photos stay attached."/><div className="mt-8"><EditListingForm listing={listing}/></div></main>;
+  if(!listing) redirect(`/marketplace/${id}`);
+  return <main><PageIntro eyebrow="Marketplace · Seller tools" title="Edit listing" description="Update the public details for this listing. Existing photos stay attached."/><section className="mx-auto max-w-3xl px-5 pb-16 sm:px-6"><EditListingForm listing={listing}/></section></main>;
 }
