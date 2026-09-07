@@ -3,46 +3,34 @@ import { getServerIdentity,SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/sup
 
 const statuses=new Set(["DRAFT","ACTIVE","SOLD","REMOVED"]);
 const origins=new Set(["CAPTIVE_BRED","IMPORT"]);
-const editable=new Set(["title","description","price","seller_location","public_origin","morph","sex","age_or_year","lineage","status"]);
+const editable=new Set(["title","description","price","seller_location","public_origin","species_id","locality_id","morph","sex","age_or_year","lineage","status"]);
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function PATCH(request:NextRequest,{params}:{params:Promise<{id:string}>}){
   const identity=await getServerIdentity();
   if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});
-
   const {id}=await params;
   const body=await request.json();
   const entries=Object.entries(body).filter(([key])=>editable.has(key));
   if(!entries.length)return NextResponse.json({error:"No valid changes supplied"},{status:400});
-
   const payload:Record<string,unknown>=Object.fromEntries(entries);
-
-  if("title" in payload){
-    const title=String(payload.title??"").trim();
-    if(!title||title.length>160)return NextResponse.json({error:"Invalid title"},{status:400});
-    payload.title=title;
-  }
-  if("price" in payload){
-    const price=Number(payload.price);
-    if(!Number.isFinite(price)||price<0)return NextResponse.json({error:"Invalid price"},{status:400});
-    payload.price=price;
-  }
-  if("status" in payload){
-    const status=String(payload.status??"");
-    if(!statuses.has(status))return NextResponse.json({error:"Invalid listing status"},{status:400});
-    payload.status=status;
-  }
-  if("public_origin" in payload){
-    const origin=payload.public_origin==null||payload.public_origin===""?null:String(payload.public_origin);
-    if(origin!==null&&!origins.has(origin))return NextResponse.json({error:"Invalid animal origin"},{status:400});
-    payload.public_origin=origin;
-  }
+  if("title" in payload){const title=String(payload.title??"").trim();if(!title||title.length>160)return NextResponse.json({error:"Invalid title"},{status:400});payload.title=title}
+  if("price" in payload){const price=Number(payload.price);if(!Number.isFinite(price)||price<0)return NextResponse.json({error:"Invalid price"},{status:400});payload.price=price}
+  if("status" in payload){const status=String(payload.status??"");if(!statuses.has(status))return NextResponse.json({error:"Invalid listing status"},{status:400});payload.status=status}
+  if("public_origin" in payload){const origin=payload.public_origin==null||payload.public_origin===""?null:String(payload.public_origin);if(origin!==null&&!origins.has(origin))return NextResponse.json({error:"Invalid animal origin"},{status:400});payload.public_origin=origin}
+  const speciesId=payload.species_id==null||payload.species_id===""?null:String(payload.species_id);
+  const localityId=payload.locality_id==null||payload.locality_id===""?null:String(payload.locality_id);
+  if(speciesId!==null&&!uuid.test(speciesId))return NextResponse.json({error:"Invalid species"},{status:400});
+  if(localityId!==null&&!uuid.test(localityId))return NextResponse.json({error:"Invalid locality"},{status:400});
+  if("species_id" in payload)payload.species_id=speciesId;
+  if("locality_id" in payload)payload.locality_id=localityId;
+  if(localityId){if(!speciesId)return NextResponse.json({error:"Select a species before selecting a locality"},{status:400});const check=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/localities?id=eq.${localityId}&species_id=eq.${speciesId}&active=eq.true&select=id`,{headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${SUPABASE_AUTH_KEY}`},cache:"no-store"});const rows=check.ok?await check.json():[];if(!rows.length)return NextResponse.json({error:"Locality does not match selected species"},{status:400})}
   if("description" in payload)payload.description=String(payload.description??"").trim().slice(0,5000)||null;
   if("seller_location" in payload)payload.seller_location=String(payload.seller_location??"").trim().slice(0,160)||null;
   if("morph" in payload)payload.morph=String(payload.morph??"").trim().slice(0,160)||null;
   if("sex" in payload)payload.sex=String(payload.sex??"").trim().slice(0,40)||null;
   if("age_or_year" in payload)payload.age_or_year=String(payload.age_or_year??"").trim().slice(0,80)||null;
   if("lineage" in payload)payload.lineage=String(payload.lineage??"").trim().slice(0,2000)||null;
-
   const response=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/marketplace_listings?id=eq.${encodeURIComponent(id)}&owner_id=eq.${identity.user.id}`,{method:"PATCH",headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify(payload),cache:"no-store"});
   if(!response.ok)return NextResponse.json({error:await response.text()},{status:400});
   const rows=await response.json();
@@ -50,10 +38,7 @@ export async function PATCH(request:NextRequest,{params}:{params:Promise<{id:str
 }
 
 export async function DELETE(_:NextRequest,{params}:{params:Promise<{id:string}>}){
-  const identity=await getServerIdentity();
-  if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});
-  const {id}=await params;
+  const identity=await getServerIdentity();if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});const {id}=await params;
   const response=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/marketplace_listings?id=eq.${encodeURIComponent(id)}&owner_id=eq.${identity.user.id}`,{method:"DELETE",headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,Prefer:"return=representation"},cache:"no-store"});
-  if(!response.ok)return NextResponse.json({error:await response.text()},{status:400});
-  return NextResponse.json({ok:true});
+  if(!response.ok)return NextResponse.json({error:await response.text()},{status:400});return NextResponse.json({ok:true});
 }
