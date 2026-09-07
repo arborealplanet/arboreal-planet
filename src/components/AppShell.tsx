@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { NotificationBell } from "@/components/NotificationBell";
+import { fetchOwnProfile,getServerIdentity } from "@/lib/supabase-auth";
 
 const nav = [
   ["Animals", "/animals"],
@@ -12,7 +13,12 @@ const nav = [
   ["The Hatchery", "/hatchery"],
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export async function AppShell({ children }: { children: ReactNode }) {
+  const identity=await getServerIdentity();
+  const profile=identity?await fetchOwnProfile(identity.token,identity.user.id) as {username?:string|null;display_name?:string|null;avatar_url?:string|null}|null:null;
+  const signedIn=Boolean(identity);
+  const accountLabel=profile?.display_name||profile?.username||"Profile";
+
   return (
     <div className="min-h-screen overflow-x-hidden text-white">
       <header className="sticky top-0 z-50 border-b border-white/[.08] bg-[#06100c]/90 backdrop-blur-xl">
@@ -34,28 +40,35 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto hidden items-center gap-2 lg:ml-2 lg:flex">
-            <span className="hidden rounded-full border border-amber-300/15 bg-amber-300/[.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-amber-200/70 xl:inline-flex">Early access</span>
-            <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-lg text-white/65 transition hover:border-emerald-300/25 hover:text-emerald-200" aria-label="Messages">✉</Link>
-            <NotificationBell />
-            <Link href="/profile" className="rounded-xl border border-white/10 bg-white/[.035] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:border-emerald-300/25 hover:text-emerald-200">Profile</Link>
+            {signedIn?<>
+              <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-lg text-white/65 transition hover:border-emerald-300/25 hover:text-emerald-200" aria-label="Messages">✉</Link>
+              <NotificationBell />
+              <Link href="/profile" className="flex max-w-40 items-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 py-2 text-sm font-semibold text-white/80 transition hover:border-emerald-300/25 hover:text-emerald-200">{profile?.avatar_url?<img src={profile.avatar_url} alt="" className="h-7 w-7 rounded-lg object-cover"/>:null}<span className="truncate">{accountLabel}</span></Link>
+            </>:<Link href="/login" className="rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-black text-[#06100c] transition hover:bg-emerald-200">Sign in</Link>}
           </div>
         </div>
+        <nav className="mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/[.045] px-4 py-2 text-[10px] font-bold uppercase tracking-[.1em] text-white/42 lg:hidden sm:px-6">
+          <Link href="/animals" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Animals</Link>
+          <Link href="/plants" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Plants</Link>
+          <Link href="/hatchery" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Hatchery</Link>
+          {signedIn?<><Link href="/messages" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Messages</Link><Link href="/notifications" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Alerts</Link></>:<Link href="/login" className="whitespace-nowrap rounded-lg border border-emerald-300/15 px-3 py-2 text-emerald-200/70">Sign in</Link>}
+        </nav>
       </header>
 
       {children}
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid h-[62px] grid-cols-5 border-t border-white/[.08] bg-[#06100c]/95 px-1 pt-2 text-center text-[9px] font-semibold uppercase tracking-[.08em] text-white/45 backdrop-blur-xl lg:hidden">
-        <Link href="/community" className="mobile-nav-item"><span>◎</span>Social</Link>
-        <Link href="/animals" className="mobile-nav-item"><span>◇</span>Animals</Link>
-        <Link href="/snake-stocks" className="mobile-nav-item text-emerald-300"><span>↗</span>Stocks</Link>
+        <Link href="/community" className="mobile-nav-item"><span>◎</span>Community</Link>
         <Link href="/marketplace" className="mobile-nav-item"><span>▣</span>Market</Link>
-        <Link href="/notifications" className="mobile-nav-item"><span>♢</span>Alerts</Link>
+        <Link href="/snake-stocks" className="mobile-nav-item text-emerald-300"><span>↗</span>Stocks</Link>
+        <Link href={signedIn?"/messages":"/login?next=/messages"} className="mobile-nav-item"><span>✉</span>Messages</Link>
+        <Link href={signedIn?"/profile":"/login"} className="mobile-nav-item"><span>◇</span>{signedIn?"Profile":"Sign in"}</Link>
       </nav>
 
       <footer className="border-t border-white/[.07] bg-black/10 px-5 py-10 pb-24 lg:pb-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs text-white/30 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Built for keepers, breeders and the animals behind the data.</span></div>
-          <div className="flex flex-wrap gap-5"><Link href="/plants">Plants</Link><span>Privacy</span><span>Guidelines</span><span>Support</span></div>
+          <div className="flex flex-wrap gap-5"><Link href="/animals">Animals</Link><Link href="/plants">Plants</Link><Link href="/community">Community</Link><Link href="/marketplace">Marketplace</Link></div>
         </div>
       </footer>
     </div>
