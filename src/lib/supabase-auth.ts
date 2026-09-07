@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export const SUPABASE_AUTH_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://yldclmskztunzycoxnme.supabase.co";
-export const SUPABASE_AUTH_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_IqfEprvIS7UQTJt-MEXjnA_UtB1CPbh";
+export const SUPABASE_AUTH_URL = "https://ykaqnxajszwgeqkmaora.supabase.co";
+export const SUPABASE_AUTH_KEY = "sb_publishable_tYr_JfyA_WTGk8qNkL93iw_8uknK50C";
 export const ACCESS_COOKIE = "ap_access";
 export const REFRESH_COOKIE = "ap_refresh";
 
