@@ -1,0 +1,3 @@
+import { NextRequest,NextResponse } from "next/server";
+import { getServerIdentity,SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+export async function GET(_:NextRequest,{params}:{params:Promise<{id:string}>}){const identity=await getServerIdentity();if(!identity)return NextResponse.json({reacted:false,saved:false,signedIn:false});const {id}=await params;const r=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/community_post_state`,{method:"POST",headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,"Content-Type":"application/json"},body:JSON.stringify({p_post_id:id}),cache:"no-store"});const row=r.ok?(await r.json())[0]:null;return NextResponse.json({reacted:Boolean(row?.reacted),saved:Boolean(row?.saved),signedIn:true});}
