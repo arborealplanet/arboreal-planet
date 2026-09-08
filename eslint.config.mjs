@@ -15,7 +15,10 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["src/components/ChondroBreederSocial.tsx"],
+    files: [
+      "src/components/ChondroBreederSocial.tsx",
+      "src/components/ChondroBreederFacility.tsx",
+    ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
       "react/no-unescaped-entities": "off",
