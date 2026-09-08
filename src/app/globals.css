@@ -90,6 +90,22 @@ button { cursor: pointer; }
 .hide-scrollbar { scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 
+/* Chondro Breeder conservation program: preserve the existing controls while
+   replacing the old schematic SVG with the supplied Green Tree Python
+   subspecies infographic. */
+div:has(> svg[aria-label="Stylized educational map of New Guinea and nearby regions"]) > svg {
+  display: none;
+}
+
+div:has(> svg[aria-label="Stylized educational map of New Guinea and nearby regions"])::before {
+  content: "";
+  display: block;
+  width: 100%;
+  aspect-ratio: 1122 / 1402;
+  border-radius: 18px;
+  background: url("/assets/chondro-conservation-map") center / contain no-repeat;
+}
+
 @media (max-width: 640px) {
   .panel { box-shadow: none; }
 }
