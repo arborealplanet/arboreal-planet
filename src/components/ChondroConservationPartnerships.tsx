@@ -104,40 +104,14 @@ function statusFor(payload: Payload | null, subspecies: Subspecies) {
 function OriginMap({ selected, onSelect }: { selected: Subspecies; onSelect: (value: Subspecies) => void }) {
   const active = (value: Subspecies) => selected === value;
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-white/[.07] bg-[#071510] p-3 sm:p-5">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(52,211,153,.09),transparent_38%),radial-gradient(circle_at_20%_70%,rgba(56,189,248,.07),transparent_32%)]" />
-      <svg viewBox="0 0 1000 470" role="img" aria-label="Stylized educational map of New Guinea and nearby regions" className="relative z-10 h-auto w-full">
-        <rect x="0" y="0" width="1000" height="470" rx="28" fill="#071510" />
-        <path d="M214 234 C280 176 358 145 459 151 C535 126 643 139 731 173 C798 199 841 231 866 266 C807 273 758 286 701 301 C639 324 574 326 508 308 C431 330 348 318 290 290 C254 273 226 252 214 234Z" fill="#17372b" stroke="#3f6c58" strokeWidth="3" />
-        <path d="M151 190 C173 166 202 157 226 166 C244 175 247 194 230 208 C208 221 177 218 158 205Z" fill="#17372b" stroke="#3f6c58" strokeWidth="3" />
-        <ellipse cx="135" cy="218" rx="14" ry="9" fill="#17372b" stroke="#3f6c58" strokeWidth="2" />
-        <ellipse cx="116" cy="199" rx="11" ry="7" fill="#17372b" stroke="#3f6c58" strokeWidth="2" />
-        <ellipse cx="191" cy="342" rx="12" ry="19" fill="#17372b" stroke="#3f6c58" strokeWidth="2" />
-        <ellipse cx="216" cy="352" rx="10" ry="16" fill="#17372b" stroke="#3f6c58" strokeWidth="2" />
-        <path d="M825 347 C868 332 906 346 925 381 C913 406 885 429 847 446 C835 414 827 383 825 347Z" fill="#17372b" stroke="#3f6c58" strokeWidth="3" />
+    <div className="overflow-hidden rounded-[24px] border border-white/[.07] bg-[#071510] p-3 sm:p-5">
+      <img
+        src="/hatchery/chondro-subspecies-map.webp"
+        alt="Green Tree Python subspecies distribution map showing Morelia azurea azurea, Morelia azurea pulcher, Morelia azurea utaraensis, and Morelia viridis across New Guinea and nearby islands"
+        className="block h-auto w-full rounded-[18px] object-contain"
+      />
 
-        <path d="M108 183 C127 169 153 165 170 178 C159 194 143 210 119 218 C105 208 101 195 108 183Z" fill={active("Morelia azurea azurea") ? "#34d399" : "#1d5f49"} opacity="0.86" />
-        <path d="M214 231 C245 194 278 172 320 164 C331 183 322 218 296 249 C266 258 238 251 214 231Z" fill={active("Morelia azurea pulcher") ? "#fbbf24" : "#6b5420"} opacity="0.82" />
-        <path d="M300 182 C410 145 575 143 715 177 C777 193 819 216 847 243 C774 240 713 246 649 260 C541 249 426 247 321 265 C311 236 304 207 300 182Z" fill={active("Morelia azurea utaraensis") ? "#38bdf8" : "#235b70"} opacity="0.78" />
-        <path d="M301 267 C407 247 531 249 649 262 C723 251 795 248 857 268 C813 294 756 312 695 326 C620 350 519 343 448 326 C383 330 327 308 301 267Z" fill={active("Morelia viridis") ? "#a3e635" : "#4a6724"} opacity="0.72" />
-        <ellipse cx="202" cy="346" rx="34" ry="25" fill={active("Morelia viridis") ? "#a3e635" : "#4a6724"} opacity="0.76" />
-        <path d="M835 350 C873 341 900 354 916 380 C899 404 875 424 849 438 C839 407 834 379 835 350Z" fill={active("Morelia viridis") ? "#a3e635" : "#4a6724"} opacity="0.42" />
-
-        <g fontFamily="system-ui, sans-serif" fill="#e7fff4">
-          <text x="375" y="228" fontSize="19" opacity="0.75">NEW GUINEA</text>
-          <text x="826" y="460" fontSize="11" opacity="0.5">Cape York</text>
-          <text x="168" y="385" fontSize="11" opacity="0.5">Aru Islands</text>
-        </g>
-
-        <g>
-          <circle cx="129" cy="194" r={active("Morelia azurea azurea") ? 12 : 9} fill="#34d399" stroke="#d1fae5" strokeWidth="2" />
-          <circle cx="263" cy="207" r={active("Morelia azurea pulcher") ? 12 : 9} fill="#fbbf24" stroke="#fef3c7" strokeWidth="2" />
-          <circle cx="548" cy="195" r={active("Morelia azurea utaraensis") ? 12 : 9} fill="#38bdf8" stroke="#e0f2fe" strokeWidth="2" />
-          <circle cx="548" cy="301" r={active("Morelia viridis") ? 12 : 9} fill="#a3e635" stroke="#ecfccb" strokeWidth="2" />
-        </g>
-      </svg>
-
-      <div className="relative z-20 mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {(Object.keys(regionInfo) as Subspecies[]).map((subspecies) => (
           <button
             key={subspecies}
@@ -262,9 +236,9 @@ export function ChondroConservationPartnerships() {
             <div className="mt-6 rounded-[28px] border border-sky-300/10 bg-sky-300/[.018] p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="text-[10px] font-black uppercase tracking-[.15em] text-sky-100/50">Interactive origin explorer</div>
-                  <h3 className="mt-2 text-2xl font-semibold text-white/80">Where the subspecies comes from</h3>
-                  <p className="mt-2 max-w-3xl text-xs leading-5 text-white/36">The highlighted areas are deliberately broad. They teach regional distribution without pretending hobby locality names are exact collection coordinates.</p>
+                  <div className="text-[10px] font-black uppercase tracking-[.15em] text-sky-100/50">Subspecies distribution guide</div>
+                  <h3 className="mt-2 text-2xl font-semibold text-white/80">Green Tree Python subspecies &amp; natural ranges</h3>
+                  <p className="mt-2 max-w-3xl text-xs leading-5 text-white/36">Broad natural ranges are shown alongside familiar hobby locality labels for pedigree context.</p>
                 </div>
                 <div className="rounded-2xl border border-white/[.06] bg-black/10 px-4 py-3 text-right">
                   <div className="text-[9px] uppercase text-white/25">Selected program</div>
@@ -321,7 +295,7 @@ export function ChondroConservationPartnerships() {
             </div>
 
             <div className="mt-5 rounded-2xl border border-white/[.05] bg-black/10 p-4 text-xs leading-5 text-white/30">
-              Educational range notes are based on modern green-python taxonomy and broad distribution summaries. The map is intentionally schematic, not a field-collection map. Future versions can add sourced habitat, legal-trade and conservation-history lessons for each region.
+              Educational range notes are based on modern green-python taxonomy and broad distribution summaries. The map is intentionally broad, not a field-collection map. Future versions can add sourced habitat, legal-trade and conservation-history lessons for each region.
             </div>
           </div>
         ) : null}
