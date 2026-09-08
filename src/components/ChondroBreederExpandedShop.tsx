@@ -8,6 +8,7 @@ type Sex = "Male" | "Female";
 type Locality = "Biak" | "Numfor" | "Manokwari" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
 type Subspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
+type ConservationRow = { subspecies: Subspecies; import_multiplier: number; phenotype_bonus: number; stewardship_score: number; contribution_count: number };
 
 type Snake = {
   id: string;
@@ -43,16 +44,11 @@ type Snake = {
 };
 
 type Offer = Snake & { price: number; featured?: boolean; specialLabel?: string };
-type GameSave = {
-  cash: number;
-  colony: Snake[];
-  enclosures: Record<string, number>;
-  purchasedStoreIds?: string[];
-  [key: string]: unknown;
-};
+type GameSave = { cash: number; colony: Snake[]; enclosures: Record<string, number>; purchasedStoreIds?: string[]; [key: string]: unknown };
 
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
+const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitySubspecies: Record<Locality, Subspecies> = {
   Biak: "Morelia azurea azurea",
   Numfor: "Morelia azurea azurea",
@@ -66,7 +62,12 @@ const localitySubspecies: Record<Locality, Subspecies> = {
   Aru: "Morelia viridis",
   Merauke: "Morelia viridis",
 };
-const localities = Object.keys(localitySubspecies) as Locality[];
+const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
+  "Morelia azurea azurea": ["Biak", "Numfor"],
+  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],
+  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena"],
+  "Morelia viridis": ["Aru", "Merauke"],
+};
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
@@ -93,17 +94,34 @@ function ordinaryTrait(random: () => number) {
   return 76 + Math.floor(random() * 25);
 }
 
-function makeRandomOffer(seed: number, index: number, random: () => number): Offer {
+function effectMap(rows: ConservationRow[]) {
+  return new Map(rows.map((row) => [row.subspecies, row]));
+}
+
+function chooseSubspecies(random: () => number, source: Snake["source"], effects: Map<Subspecies, ConservationRow>) {
+  const weights = subspeciesList.map((subspecies) => source === "Import" ? Number(effects.get(subspecies)?.import_multiplier ?? 1) : 1);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  let roll = random() * total;
+  for (let i = 0; i < subspeciesList.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return subspeciesList[i];
+  }
+  return subspeciesList[subspeciesList.length - 1];
+}
+
+function makeRandomOffer(seed: number, index: number, random: () => number, effects: Map<Subspecies, ConservationRow>): Offer {
+  const source: Snake["source"] = random() < 0.6 ? "Captive Bred" : "Import";
+  const subspecies = chooseSubspecies(random, source, effects);
+  const localities = localitiesBySubspecies[subspecies];
   const locality = localities[Math.floor(random() * localities.length)];
-  const subspecies = localitySubspecies[locality];
   const sex: Sex = random() < 0.5 ? "Male" : "Female";
   const neonateColor: "Red" | "Yellow" = random() < 0.4 ? "Red" : "Yellow";
-  const source: "Captive Bred" | "Import" = random() < 0.6 ? "Captive Bred" : "Import";
   const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
   const lifeStage = stages[Math.floor(random() * stages.length)];
   const geneticsTested = random() < 0.22;
   const nidoStatus: Snake["nidoStatus"] = random() < 0.42 ? "Negative" : "Unknown";
-  const phenotypeScore = 66 + Math.floor(random() * 35);
+  const conservationBonus = source === "Import" ? Number(effects.get(subspecies)?.phenotype_bonus ?? 0) : 0;
+  const phenotypeScore = Math.min(100, 66 + Math.floor(random() * 35) + conservationBonus);
   const highBlack = ordinaryTrait(random);
   const highWhite = ordinaryTrait(random);
   const blueStripe = ordinaryTrait(random);
@@ -142,7 +160,7 @@ function makeRandomOffer(seed: number, index: number, random: () => number): Off
     generation: 1,
     parentIds: [],
     ancestry: { [subspecies]: 100 },
-    notes: "",
+    notes: source === "Import" && conservationBonus > 0 ? `Community conservation partnership phenotype bonus: +${conservationBonus}.` : "",
     breederInitials: null,
     price,
   };
@@ -179,17 +197,18 @@ function specialCyclops(sex: Sex): Offer {
     generation: 1,
     parentIds: [],
     ancestry: { "Morelia azurea utaraensis": 100 },
-    notes: "Special A++ Cyclops phenotype shop animal.",
+    notes: "Special A++ Morelia azurea utaraensis phenotype shop animal.",
     breederInitials: null,
     price: 5000,
     featured: true,
-    specialLabel: "A++ Cyclops phenotype",
+    specialLabel: "A++ M. a. utaraensis phenotype",
   };
 }
 
-function buildOffers(seed: number) {
+function buildOffers(seed: number, rows: ConservationRow[]) {
   const random = rng(seed * 7919 + 20260908);
-  return [specialCyclops("Male"), specialCyclops("Female"), ...Array.from({ length: 18 }, (_, index) => makeRandomOffer(seed, index, random))];
+  const effects = effectMap(rows);
+  return [specialCyclops("Male"), specialCyclops("Female"), ...Array.from({ length: 18 }, (_, index) => makeRandomOffer(seed, index, random, effects))];
 }
 
 function parseSave(value: unknown): GameSave | null {
@@ -203,6 +222,7 @@ export function ChondroBreederExpandedShop() {
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
+  const [conservation, setConservation] = useState<ConservationRow[]>([]);
   const [seed, setSeed] = useState(1);
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -214,10 +234,7 @@ export function ChondroBreederExpandedShop() {
       const section = heading?.closest("section");
       if (!section) return;
       const existing = section.querySelector<HTMLElement>("[data-expanded-shop-mount]");
-      if (existing) {
-        setMount(existing);
-        return;
-      }
+      if (existing) { setMount(existing); return; }
       const node = document.createElement("div");
       node.dataset.expandedShopMount = "true";
       node.className = "mt-6";
@@ -236,26 +253,35 @@ export function ChondroBreederExpandedShop() {
       let local: GameSave | null = null;
       try { local = parseSave(JSON.parse(window.localStorage.getItem(LOCAL_SAVE_KEY) || "null")); } catch {}
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) {
-          setAuthenticated(Boolean(data.authenticated));
-          const cloud = parseSave(data.save?.state);
-          setSave(cloud ?? local);
-          return;
+        const [saveResponse, conservationResponse] = await Promise.all([
+          fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" }),
+          fetch("/api/hatchery/chondro-breeder/conservation", { cache: "no-store" }),
+        ]);
+        const saveData = await saveResponse.json();
+        if (!cancelled && saveResponse.ok) {
+          setAuthenticated(Boolean(saveData.authenticated));
+          setSave(parseSave(saveData.save?.state) ?? local);
+        } else if (!cancelled) setSave(local);
+        if (!cancelled && conservationResponse.ok) {
+          const conservationData = await conservationResponse.json() as { status?: ConservationRow[] };
+          setConservation(conservationData.status ?? []);
         }
+        return;
       } catch {}
       if (!cancelled) setSave(local);
     }
     void load();
     const timer = window.setInterval(load, 5000);
+    const onConservation = () => void load();
+    window.addEventListener("chondro-conservation-updated", onConservation);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.removeEventListener("chondro-conservation-updated", onConservation);
     };
   }, []);
 
-  const offers = useMemo(() => buildOffers(seed), [seed]);
+  const offers = useMemo(() => buildOffers(seed, conservation), [seed, conservation]);
   const purchased = useMemo(() => new Set(save?.purchasedStoreIds ?? []), [save?.purchasedStoreIds]);
   const capacity = Object.values(save?.enclosures ?? {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
@@ -267,27 +293,18 @@ export function ChondroBreederExpandedShop() {
     setSeed(next);
     setPage(0);
     window.localStorage.setItem(SHOP_SEED_KEY, String(next));
-    setStatus("Shop refreshed. The two A++ Cyclops remain available until purchased.");
+    setStatus("Shop refreshed. Community conservation effects were applied to the new import pool.");
   }
 
   async function buy(offer: Offer) {
     if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
     setBusy(offer.id);
     setStatus("");
-    const next: GameSave = {
-      ...save,
-      cash: save.cash - offer.price,
-      colony: [...save.colony, offer],
-      purchasedStoreIds: [...(save.purchasedStoreIds ?? []), offer.id],
-    };
+    const next: GameSave = { ...save, cash: save.cash - offer.price, colony: [...save.colony, offer], purchasedStoreIds: [...(save.purchasedStoreIds ?? []), offer.id] };
     try {
       window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(next));
       if (authenticated) {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(next),
-        });
+        const response = await fetch("/api/hatchery/chondro-breeder/save", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
         if (!response.ok) throw new Error("save failed");
       }
       setSave(next);
@@ -308,7 +325,7 @@ export function ChondroBreederExpandedShop() {
         <div>
           <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
           <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
-          <p className="mt-1 text-xs text-white/35">The A++ Cyclops pair is pinned first. Browse five listings at a time or refresh the other 18 animals.</p>
+          <p className="mt-1 text-xs text-white/35">The A++ utaraensis pair is pinned first. Community conservation stewardship now influences subspecies representation and phenotype quality among imported animals.</p>
         </div>
         <button type="button" onClick={refreshShop} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-black text-sky-100/75">Refresh shop</button>
       </div>
@@ -316,6 +333,7 @@ export function ChondroBreederExpandedShop() {
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {visible.map((offer) => {
           const sold = purchased.has(offer.id);
+          const effect = conservation.find((row) => row.subspecies === offer.subspecies);
           return (
             <article key={offer.id} className={`rounded-2xl border p-3 ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}>
               <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }} compact />
@@ -323,6 +341,7 @@ export function ChondroBreederExpandedShop() {
               <div className="mt-1 text-[10px] text-white/32">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
               <div className="mt-1 text-[10px] font-semibold text-red-100/65">Neonate color: {offer.neonateColor}</div>
               {offer.specialLabel ? <div className="mt-2 rounded-full border border-amber-200/20 px-2 py-1 text-center text-[9px] font-black uppercase text-amber-100/75">{offer.specialLabel}</div> : null}
+              {offer.source === "Import" && effect && Number(effect.stewardship_score) > 0 ? <div className="mt-2 text-[9px] font-semibold text-emerald-100/55">Conservation-supported import · stewardship {Number(effect.stewardship_score).toFixed(1)}</div> : null}
               <div className="mt-3 rounded-xl border border-white/[.06] p-2 text-[10px] leading-5 text-white/42">
                 {offer.geneticsTested ? `HB ${offer.highBlack}% · HW ${offer.highWhite}% · Blue ${offer.blueStripe}% · Yellow ${offer.yellowRetention}%` : "Genetics untested · percentages hidden"}<br />
                 Nido: <span className={offer.nidoStatus === "Negative" ? "text-emerald-200/70" : "text-white/45"}>{offer.nidoStatus}</span>
