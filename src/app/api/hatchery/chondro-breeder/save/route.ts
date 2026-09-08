@@ -72,6 +72,38 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Invalid game save." }, { status: 400 });
   }
 
+  const incoming = parsed as Record<string, unknown>;
+  let favoriteIds = Array.isArray(incoming.favoriteIds)
+    ? incoming.favoriteIds.map((id) => String(id).slice(0, 160)).slice(0, 500)
+    : null;
+
+  if (favoriteIds === null) {
+    try {
+      const existingResponse = await fetch(
+        `${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?user_id=eq.${encodeURIComponent(identity.user.id)}&select=state&limit=1`,
+        {
+          headers: {
+            apikey: SUPABASE_AUTH_KEY,
+            Authorization: `Bearer ${identity.token}`,
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        },
+      );
+      if (existingResponse.ok) {
+        const rows = (await existingResponse.json()) as Array<{ state?: Record<string, unknown> }>;
+        const currentFavorites = rows[0]?.state?.favoriteIds;
+        favoriteIds = Array.isArray(currentFavorites)
+          ? currentFavorites.map((id) => String(id).slice(0, 160)).slice(0, 500)
+          : [];
+      }
+    } catch {
+      favoriteIds = [];
+    }
+  }
+
+  const state = { ...incoming, favoriteIds: favoriteIds ?? [] };
+
   const response = await fetch(
     `${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?on_conflict=user_id`,
     {
@@ -84,7 +116,7 @@ export async function PUT(request: NextRequest) {
       },
       body: JSON.stringify({
         user_id: identity.user.id,
-        state: parsed,
+        state,
         version: 1,
         updated_at: new Date().toISOString(),
       }),
