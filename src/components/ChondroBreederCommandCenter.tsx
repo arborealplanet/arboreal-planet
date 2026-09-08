@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { ChondroTraitFocusPanel } from "@/components/ChondroTraitFocusPanel";
 import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
@@ -53,8 +54,8 @@ export function ChondroBreederCommandCenter() {
         <div className="max-h-[72vh] overflow-y-auto p-3 sm:p-4">
           {tab === "manage" ? (
             <div className="space-y-3">
-              <CompactBlock title="Trait Focus" defaultOpen={false}><ChondroTraitFocusPanel /></CompactBlock>
-              <CompactBlock title="Favorites & Player Market" defaultOpen={false}><ChondroFavoritesMarketPanel /></CompactBlock>
+              <CompactBlock title="Trait Focus"><ChondroTraitFocusPanel /></CompactBlock>
+              <CompactBlock title="Favorites & Player Market"><ChondroFavoritesMarketPanel /></CompactBlock>
               <ChondroCollectionManager />
             </div>
           ) : null}
@@ -62,16 +63,16 @@ export function ChondroBreederCommandCenter() {
           {tab === "career" ? (
             <div className="space-y-3">
               <ChondroCareerSystemsPanel />
-              <CompactBlock title="Achievements & Titles" defaultOpen={false}><ChondroAchievementsPanel /></CompactBlock>
-              <CompactBlock title="Legacy Career Progression" defaultOpen={false}><ChondroBreederProgression /></CompactBlock>
-              <CompactBlock title="Facility Detail" defaultOpen={false}><ChondroBreederFacility /></CompactBlock>
+              <CompactBlock title="Achievements & Titles"><ChondroAchievementsPanel /></CompactBlock>
+              <CompactBlock title="Legacy Career Progression"><ChondroBreederProgression /></CompactBlock>
+              <CompactBlock title="Facility Detail"><ChondroBreederFacility /></CompactBlock>
             </div>
           ) : null}
 
           {tab === "projects" ? (
             <div className="space-y-3">
               <CompactBlock title="Breeder Lines" defaultOpen><ChondroBreederLines /></CompactBlock>
-              <CompactBlock title="Conservation Partnerships" defaultOpen={false}><ChondroConservationPartnerships /></CompactBlock>
+              <CompactBlock title="Conservation Partnerships"><ChondroConservationPartnerships /></CompactBlock>
             </div>
           ) : null}
 
@@ -82,7 +83,7 @@ export function ChondroBreederCommandCenter() {
   );
 }
 
-function CompactBlock({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function CompactBlock({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   return (
     <details open={defaultOpen} className="rounded-2xl border border-white/[.06] bg-black/10">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-white/60 [&::-webkit-details-marker]:hidden">
