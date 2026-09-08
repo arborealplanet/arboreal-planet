@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { achievementReputation } from "@/lib/chondro-achievements";
 import { animalMeetsContract, contractsForSeason } from "@/lib/chondro-contracts";
+import { facilityEnclosureCap, installedEnclosures } from "@/lib/chondro-facility-limits";
 import {
   BREEDING_PROJECTS,
   WARDROBE_UNLOCKS,
@@ -76,6 +77,9 @@ export function ChondroCareerSystemsPanel() {
   const rank = rankForReputation(reputation);
   const facility = facilityForId(save?.facilityId);
   const upgrade = nextFacility(save?.facilityId);
+  const facilityCap = facilityEnclosureCap(save?.facilityId);
+  const enclosureCount = installedEnclosures(save?.enclosures);
+  const enclosureSpaceLeft = Math.max(0, facilityCap - enclosureCount);
   const claimedProjects = new Set(save?.claimedProjectIds ?? []);
   const claimedContracts = new Set(save?.claimedContractIds ?? []);
   const contracts = save ? contractsForSeason(save.season ?? 1, reputation) : [];
@@ -132,16 +136,13 @@ export function ChondroCareerSystemsPanel() {
 
   function buyFacility() {
     if (!save || busy || upgrade.id === facility.id || save.cash < upgrade.purchaseCost || reputation < upgrade.reputationRequired) return;
-    const bonusDifference = Math.max(0, upgrade.baseCapacityBonus - facility.baseCapacityBonus);
-    const enclosures = { ...save.enclosures };
-    enclosures["Chondro Dojo Bin"] = Number(enclosures["Chondro Dojo Bin"] ?? 0) + bonusDifference;
+    const nextCap = facilityEnclosureCap(upgrade.id);
     const next: Save = {
       ...save,
       cash: save.cash - upgrade.purchaseCost,
       facilityId: upgrade.id,
-      enclosures,
     };
-    void persist(next, `${upgrade.name} purchased. ${bonusDifference ? `Facility space increased by ${bonusDifference}.` : ""}`);
+    void persist(next, `${upgrade.name} purchased. Enclosure space increased to ${nextCap}.`);
   }
 
   function scoutStock() {
@@ -178,17 +179,20 @@ export function ChondroCareerSystemsPanel() {
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Rank" value={rank.name} detail={`${reputation.toLocaleString()} reputation`} />
-        <Stat label="Facility" value={facility.name} detail={`+${facility.baseCapacityBonus} facility spaces`} />
+        <Stat label="Facility" value={facility.name} detail={`${enclosureCount}/${facilityCap} enclosure spaces used`} />
         <Stat label="Cash" value={money(save.cash)} detail={`Season ${save.season}`} />
         <Stat label="Market" value={demand ? `${String(demand.hotTrait).replace(/([A-Z])/g, " $1")} hot` : "—"} detail={demand ? `${Math.round((demand.hotTraitMultiplier - 1) * 100)}% demand premium` : ""} />
       </div>
 
       <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><div className="text-sm font-bold text-white/75">Facility progression</div><div className="mt-1 text-[11px] text-white/35">Facility upgrades now add real colony capacity to the save.</div></div>
+          <div><div className="text-sm font-bold text-white/75">Facility progression</div><div className="mt-1 text-[11px] text-white/35">Your facility limits how many enclosures can physically fit. Enclosures still have to be purchased individually.</div></div>
           {upgrade.id !== facility.id ? <button disabled={busy !== "" || save.cash < upgrade.purchaseCost || reputation < upgrade.reputationRequired} onClick={buyFacility} className="rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-[#07110c] disabled:opacity-30">Upgrade · {money(upgrade.purchaseCost)}</button> : <span className="text-xs font-bold text-emerald-200/65">Max facility</span>}
         </div>
-        {upgrade.id !== facility.id ? <div className="mt-3 text-[10px] text-white/35">Next: {upgrade.name} · requires {upgrade.reputationRequired.toLocaleString()} rep · +{upgrade.baseCapacityBonus - facility.baseCapacityBonus} additional spaces</div> : null}
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-white/[.06] px-3 py-2 text-[10px] text-white/40">Current enclosure space: <strong className="text-white/65">{enclosureCount}/{facilityCap}</strong> · {enclosureSpaceLeft} open installation slots</div>
+          {upgrade.id !== facility.id ? <div className="rounded-xl border border-white/[.06] px-3 py-2 text-[10px] text-white/40">Next: <strong className="text-white/65">{upgrade.name}</strong> · cap {facilityEnclosureCap(upgrade.id)} enclosures · requires {upgrade.reputationRequired.toLocaleString()} rep</div> : <div className="rounded-xl border border-emerald-300/10 px-3 py-2 text-[10px] text-emerald-100/55">Maximum facility enclosure cap: {facilityCap}</div>}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
