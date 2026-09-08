@@ -8,10 +8,12 @@ import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederS
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroTraitFocusPanel } from "@/components/ChondroTraitFocusPanel";
 import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
+import { ChondroFavoriteCardControls } from "@/components/ChondroFavoriteCardControls";
 
 export default function ChondroBreederPage() {
   return (
     <>
+      <ChondroFavoriteCardControls />
       <ChondroBreederSubspeciesPhenotypes />
       <ChondroTraitFocusPanel />
       <ChondroFavoritesMarketPanel />
