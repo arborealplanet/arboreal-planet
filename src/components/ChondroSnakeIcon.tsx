@@ -22,14 +22,21 @@ const slugByTrait: Record<TraitKey, string> = {
   yellowRetention: "yellow",
   blotches: "blotches",
 };
-const portraitTiers = [70, 85, 95, 100] as const;
+
+function portraitTier(value: number) {
+  if (value >= 100) return 100;
+  if (value >= 95) return 95;
+  if (value >= 85) return 85;
+  if (value >= 70) return 70;
+  return null;
+}
 
 function portraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
   if (!traits) return baseArtBySubspecies[subspecies];
   const entries = (Object.keys(slugByTrait) as TraitKey[]).map(key => [key, Number(traits[key] ?? 0)] as const);
   const [trait, value] = entries.reduce((best, current) => current[1] > best[1] ? current : best, entries[0]);
-  if (value < portraitTiers[0]) return baseArtBySubspecies[subspecies];
-  const tier = portraitTiers.reduce((best, current) => Math.abs(value - current) < Math.abs(value - best) ? current : best, portraitTiers[0]);
+  const tier = portraitTier(value);
+  if (tier === null) return baseArtBySubspecies[subspecies];
   return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
 }
 
