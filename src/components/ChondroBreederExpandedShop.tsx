@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Sex = "Male" | "Female";
@@ -39,10 +40,9 @@ type Snake = {
   ancestry: Partial<Record<Subspecies, number>>;
   notes: string;
   breederInitials: string | null;
-  specialPhenotypeLabel?: string;
 };
 
-type Offer = Snake & { price: number; featured?: boolean };
+type Offer = Snake & { price: number; featured?: boolean; specialLabel?: string };
 type GameSave = {
   cash: number;
   colony: Snake[];
@@ -52,9 +52,7 @@ type GameSave = {
 };
 
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
-const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v1";
-const SPECIAL_IDS = new Set(["SPECIAL-CYCLOPS-A++-RED-M", "SPECIAL-CYCLOPS-A++-RED-F"]);
-
+const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const localitySubspecies: Record<Locality, Subspecies> = {
   Biak: "Morelia azurea azurea",
   Numfor: "Morelia azurea azurea",
@@ -85,25 +83,38 @@ function rng(seed: number) {
   };
 }
 
-function clamp(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)));
-}
-
 function ordinaryTrait(random: () => number) {
-  const r = random();
-  if (r < 0.48) return 0;
-  if (r < 0.78) return 1 + Math.floor(random() * 10);
-  if (r < 0.92) return 11 + Math.floor(random() * 15);
-  if (r < 0.98) return 26 + Math.floor(random() * 25);
-  if (r < 0.997) return 51 + Math.floor(random() * 25);
+  const roll = random();
+  if (roll < 0.5) return 0;
+  if (roll < 0.79) return 1 + Math.floor(random() * 10);
+  if (roll < 0.93) return 11 + Math.floor(random() * 15);
+  if (roll < 0.98) return 26 + Math.floor(random() * 25);
+  if (roll < 0.997) return 51 + Math.floor(random() * 25);
   return 76 + Math.floor(random() * 25);
 }
 
-function makeBaseSnake(id: string, locality: Locality, sex: Sex, neonateColor: "Red" | "Yellow", lifeStage: LifeStage, source: "Captive Bred" | "Import", random: () => number): Snake {
+function makeRandomOffer(seed: number, index: number, random: () => number): Offer {
+  const locality = localities[Math.floor(random() * localities.length)];
   const subspecies = localitySubspecies[locality];
+  const sex: Sex = random() < 0.5 ? "Male" : "Female";
+  const neonateColor: "Red" | "Yellow" = random() < 0.4 ? "Red" : "Yellow";
+  const source: "Captive Bred" | "Import" = random() < 0.6 ? "Captive Bred" : "Import";
+  const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
+  const lifeStage = stages[Math.floor(random() * stages.length)];
   const geneticsTested = random() < 0.22;
+  const nidoStatus: Snake["nidoStatus"] = random() < 0.42 ? "Negative" : "Unknown";
+  const phenotypeScore = 66 + Math.floor(random() * 35);
+  const highBlack = ordinaryTrait(random);
+  const highWhite = ordinaryTrait(random);
+  const blueStripe = ordinaryTrait(random);
+  const yellowRetention = ordinaryTrait(random);
+  const blotches = ordinaryTrait(random);
+  const stageMultiplier = lifeStage === "Hatchling" ? 0.58 : lifeStage === "Neonate" ? 0.76 : lifeStage === "Subadult" ? 1 : 1.28;
+  const testedTraits = geneticsTested ? (highBlack + highWhite + blueStripe + yellowRetention + blotches) * 10 : 0;
+  const base = (source === "Import" ? 900 : 2050) + (neonateColor === "Red" ? 600 : 0) + (nidoStatus === "Negative" ? 425 : 0) + (geneticsTested ? 350 : 0) + testedTraits + Math.max(0, phenotypeScore - 70) * 40;
+  const price = Math.max(500, Math.round((base * stageMultiplier) / 25) * 25);
   return {
-    id,
+    id: `SHOP-PLUS-${seed}-${index}`,
     name: `${locality} ${source === "Import" ? "Import" : "CB"}`,
     sex,
     source,
@@ -111,13 +122,13 @@ function makeBaseSnake(id: string, locality: Locality, sex: Sex, neonateColor: "
     locality,
     neonateColor,
     lifeStage,
-    highBlack: ordinaryTrait(random),
-    highWhite: ordinaryTrait(random),
-    blueStripe: ordinaryTrait(random),
-    yellowRetention: ordinaryTrait(random),
-    blotches: ordinaryTrait(random),
+    highBlack,
+    highWhite,
+    blueStripe,
+    yellowRetention,
+    blotches,
     geneticsTested,
-    phenotypeScore: 66 + Math.floor(random() * 35),
+    phenotypeScore,
     localityAncestry: { [locality]: 100 },
     body: subspecies,
     tail: subspecies === "Morelia azurea utaraensis" ? "Matching body color and pattern" : "Black-dipped",
@@ -125,7 +136,7 @@ function makeBaseSnake(id: string, locality: Locality, sex: Sex, neonateColor: "
     head: subspecies,
     pattern: locality,
     color: locality,
-    nidoStatus: random() < 0.42 ? "Negative" : "Unknown",
+    nidoStatus,
     condition: source === "Import" ? "Fair" : "Good",
     classification: "Pure",
     generation: 1,
@@ -133,16 +144,8 @@ function makeBaseSnake(id: string, locality: Locality, sex: Sex, neonateColor: "
     ancestry: { [subspecies]: 100 },
     notes: "",
     breederInitials: null,
+    price,
   };
-}
-
-function priceSnake(snake: Snake) {
-  const stage = snake.lifeStage === "Hatchling" ? 0.58 : snake.lifeStage === "Neonate" ? 0.76 : snake.lifeStage === "Subadult" ? 1 : 1.28;
-  const traits = snake.highBlack + snake.highWhite + snake.blueStripe + snake.yellowRetention + snake.blotches;
-  const testedPremium = snake.geneticsTested ? traits * 10 : 0;
-  const phenotypePremium = Math.max(0, snake.phenotypeScore - 70) * 40;
-  const value = (snake.source === "Import" ? 900 : 2050) + (snake.neonateColor === "Red" ? 600 : 0) + (snake.nidoStatus === "Negative" ? 425 : 0) + (snake.geneticsTested ? 350 : 0) + testedPremium + phenotypePremium;
-  return Math.max(500, Math.round((value * stage) / 25) * 25);
 }
 
 function specialCyclops(sex: Sex): Offer {
@@ -178,25 +181,15 @@ function specialCyclops(sex: Sex): Offer {
     ancestry: { "Morelia azurea utaraensis": 100 },
     notes: "Special A++ Cyclops phenotype shop animal.",
     breederInitials: null,
-    specialPhenotypeLabel: "A++ Cyclops phenotype",
     price: 5000,
     featured: true,
+    specialLabel: "A++ Cyclops phenotype",
   };
 }
 
-function buildOffers(seed: number): Offer[] {
+function buildOffers(seed: number) {
   const random = rng(seed * 7919 + 20260908);
-  const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
-  const randomOffers: Offer[] = Array.from({ length: 18 }, (_, index) => {
-    const locality = localities[Math.floor(random() * localities.length)];
-    const sex: Sex = random() < 0.5 ? "Male" : "Female";
-    const color: "Red" | "Yellow" = random() < 0.4 ? "Red" : "Yellow";
-    const source: "Captive Bred" | "Import" = random() < 0.57 ? "Captive Bred" : "Import";
-    const stage = stages[Math.floor(random() * stages.length)];
-    const snake = makeBaseSnake(`EXPANDED-${seed}-${index}`, locality, sex, color, stage, source, random);
-    return { ...snake, price: priceSnake(snake) };
-  });
-  return [specialCyclops("Male"), specialCyclops("Female"), ...randomOffers];
+  return [specialCyclops("Male"), specialCyclops("Female"), ...Array.from({ length: 18 }, (_, index) => makeRandomOffer(seed, index, random))];
 }
 
 function parseSave(value: unknown): GameSave | null {
@@ -207,18 +200,37 @@ function parseSave(value: unknown): GameSave | null {
 }
 
 export function ChondroBreederExpandedShop() {
+  const [mount, setMount] = useState<HTMLElement | null>(null);
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [seed, setSeed] = useState(1);
   const [page, setPage] = useState(0);
-  const [open, setOpen] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    const storedSeed = Number(window.localStorage.getItem(SHOP_SEED_KEY) || "1");
-    setSeed(Number.isFinite(storedSeed) && storedSeed > 0 ? storedSeed : 1);
+    const timer = window.setTimeout(() => {
+      const heading = [...document.querySelectorAll("h2")].find((node) => node.textContent?.includes("Most are ordinary. The special ones matter."));
+      const section = heading?.closest("section");
+      if (!section) return;
+      const existing = section.querySelector<HTMLElement>("[data-expanded-shop-mount]");
+      if (existing) {
+        setMount(existing);
+        return;
+      }
+      const node = document.createElement("div");
+      node.dataset.expandedShopMount = "true";
+      node.className = "mt-6";
+      const originalStore = section.querySelector<HTMLElement>(".mx-auto.mt-6.max-w-2xl");
+      section.insertBefore(node, originalStore ?? null);
+      setMount(node);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem(SHOP_SEED_KEY) || "1");
+    window.setTimeout(() => setSeed(Number.isFinite(stored) && stored > 0 ? stored : 1), 0);
     let cancelled = false;
     async function load() {
       let local: GameSave | null = null;
@@ -230,46 +242,32 @@ export function ChondroBreederExpandedShop() {
           setAuthenticated(Boolean(data.authenticated));
           const cloud = parseSave(data.save?.state);
           setSave(cloud ?? local);
-          if (cloud) window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(cloud));
           return;
         }
       } catch {}
       if (!cancelled) setSave(local);
     }
     void load();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    const decorate = () => {
-      for (const node of document.querySelectorAll<HTMLElement>("article, [role='dialog']")) {
-        const text = node.textContent || "";
-        if (![...SPECIAL_IDS].some((id) => text.includes(id))) continue;
-        for (const badge of node.querySelectorAll<HTMLElement>("span")) {
-          if (badge.textContent?.trim() === "A+ Cyclops phenotype") badge.textContent = "A++ Cyclops phenotype";
-        }
-      }
+    const timer = window.setInterval(load, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
     };
-    decorate();
-    const observer = new MutationObserver(decorate);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
   }, []);
 
   const offers = useMemo(() => buildOffers(seed), [seed]);
-  const purchased = new Set(save?.purchasedStoreIds ?? []);
+  const purchased = useMemo(() => new Set(save?.purchasedStoreIds ?? []), [save?.purchasedStoreIds]);
   const capacity = Object.values(save?.enclosures ?? {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
-  const pageSize = 5;
-  const pageCount = Math.ceil(offers.length / pageSize);
-  const visible = offers.slice(page * pageSize, page * pageSize + pageSize);
+  const visible = offers.slice(page * 5, page * 5 + 5);
+  const pageCount = Math.ceil(offers.length / 5);
 
   function refreshShop() {
     const next = seed + 1;
     setSeed(next);
     setPage(0);
     window.localStorage.setItem(SHOP_SEED_KEY, String(next));
-    setStatus("Shop refreshed. The two featured Cyclops remain reserved in the lineup until purchased.");
+    setStatus("Shop refreshed. The two A++ Cyclops remain available until purchased.");
   }
 
   async function buy(offer: Offer) {
@@ -293,68 +291,58 @@ export function ChondroBreederExpandedShop() {
         if (!response.ok) throw new Error("save failed");
       }
       setSave(next);
-      setStatus(`${offer.name} joined your colony. Reloading the game state…`);
-      window.setTimeout(() => window.location.reload(), 350);
+      setStatus(`${offer.name} purchased. Updating your colony…`);
+      window.setTimeout(() => window.location.reload(), 250);
     } catch {
-      setStatus("That purchase could not be saved. Nothing was intentionally removed from your game.");
+      setStatus("That purchase could not be saved.");
     } finally {
       setBusy(null);
     }
   }
 
-  if (!save) return null;
+  if (!mount || !save) return null;
 
-  return (
-    <section className="mx-auto mt-6 max-w-7xl px-5 sm:px-6">
-      <div className="overflow-hidden rounded-[28px] border border-sky-300/10 bg-sky-300/[.02]">
-        <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/45">Expanded snake shop</div>
-            <div className="mt-2 text-xl font-semibold text-white/80">20 snakes available</div>
-            <div className="mt-1 text-xs text-white/34">5 at a time · {openSlots} colony space{openSlots === 1 ? "" : "s"} open · cash {money(save.cash)}</div>
-          </div>
-          <div className="rounded-full border border-white/[.08] px-3 py-2 text-xs font-bold text-white/45">{open ? "Collapse ▴" : "Open shop ▾"}</div>
-        </button>
-
-        {open ? (
-          <div className="border-t border-white/[.06] p-5 sm:p-6">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs leading-5 text-white/34">The random lineup can be refreshed whenever you want. Featured animals remain until your save records them as purchased.</div>
-              <button type="button" onClick={refreshShop} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-black text-sky-100/70">Refresh shop</button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              {visible.map((offer) => {
-                const sold = purchased.has(offer.id);
-                return (
-                  <article key={offer.id} className={`rounded-3xl border p-4 ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-white/[.015]"}`}>
-                    <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }} compact />
-                    <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
-                    <div className="mt-1 text-[10px] text-white/30">{offer.id}</div>
-                    <div className="mt-2 text-[10px] text-white/40">{offer.sex} · {offer.lifeStage} · {offer.locality} · {offer.neonateColor} neonate</div>
-                    {offer.specialPhenotypeLabel ? <div className="mt-2 inline-flex rounded-full border border-amber-200/20 bg-amber-200/[.04] px-2.5 py-1 text-[9px] font-black text-amber-100/75">{offer.specialPhenotypeLabel}</div> : <div className="mt-2 text-[10px] text-amber-100/50">Phenotype score {offer.phenotypeScore}</div>}
-                    <div className="mt-3 rounded-xl border border-white/[.06] p-3 text-[10px] leading-5 text-white/40">
-                      {offer.geneticsTested ? <>HB {offer.highBlack}% · HW {offer.highWhite}% · Blue {offer.blueStripe}% · Yellow {offer.yellowRetention}% · Blotches {offer.blotches}%</> : <>Genetics untested · exact percentages hidden</>}
-                    </div>
-                    <div className="mt-2 text-[10px] text-white/35">Nido: <span className={offer.nidoStatus === "Negative" ? "text-emerald-200/70" : "text-white/45"}>{offer.nidoStatus}</span></div>
-                    <div className="mt-4 flex items-center justify-between gap-2">
-                      <div className="font-semibold text-emerald-200/75">{money(offer.price)}</div>
-                      <button type="button" disabled={sold || busy !== null || openSlots <= 0 || save.cash < offer.price} onClick={() => void buy(offer)} className="rounded-xl bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">{sold ? "Purchased" : openSlots <= 0 ? "Need space" : save.cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}</button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-3">
-              <button type="button" onClick={() => setPage((value) => (value - 1 + pageCount) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">← Previous 5</button>
-              <div className="text-xs text-white/30">Page {page + 1} of {pageCount}</div>
-              <button type="button" onClick={() => setPage((value) => (value + 1) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Next 5 →</button>
-            </div>
-            {status ? <div role="status" className="mt-4 rounded-xl border border-sky-300/10 bg-sky-300/[.025] p-3 text-xs text-sky-100/60">{status}</div> : null}
-          </div>
-        ) : null}
+  return createPortal(
+    <div className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
+          <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
+          <p className="mt-1 text-xs text-white/35">The A++ Cyclops pair is pinned first. Browse five listings at a time or refresh the other 18 animals.</p>
+        </div>
+        <button type="button" onClick={refreshShop} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-black text-sky-100/75">Refresh shop</button>
       </div>
-    </section>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {visible.map((offer) => {
+          const sold = purchased.has(offer.id);
+          return (
+            <article key={offer.id} className={`rounded-2xl border p-3 ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}>
+              <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }} compact />
+              <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
+              <div className="mt-1 text-[10px] text-white/32">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
+              <div className="mt-1 text-[10px] font-semibold text-red-100/65">Neonate color: {offer.neonateColor}</div>
+              {offer.specialLabel ? <div className="mt-2 rounded-full border border-amber-200/20 px-2 py-1 text-center text-[9px] font-black uppercase text-amber-100/75">{offer.specialLabel}</div> : null}
+              <div className="mt-3 rounded-xl border border-white/[.06] p-2 text-[10px] leading-5 text-white/42">
+                {offer.geneticsTested ? `HB ${offer.highBlack}% · HW ${offer.highWhite}% · Blue ${offer.blueStripe}% · Yellow ${offer.yellowRetention}%` : "Genetics untested · percentages hidden"}<br />
+                Nido: <span className={offer.nidoStatus === "Negative" ? "text-emerald-200/70" : "text-white/45"}>{offer.nidoStatus}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
+                <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">{sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}</button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={() => setPage((value) => (value - 1 + pageCount) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">← Previous 5</button>
+        <div className="text-xs text-white/32">Page {page + 1} of {pageCount} · {openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</div>
+        <button type="button" onClick={() => setPage((value) => (value + 1) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Next 5 →</button>
+      </div>
+      {status ? <div role="status" className="mt-3 text-xs text-sky-100/65">{status}</div> : null}
+    </div>,
+    mount,
   );
 }
