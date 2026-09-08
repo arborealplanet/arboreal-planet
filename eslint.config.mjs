@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     files: [
       "src/components/ChondroBreederSocial.tsx",
       "src/components/ChondroBreederFacility.tsx",
+      "src/components/ChondroBreederExpandedShop.tsx",
+      "src/components/ChondroBreederLines.tsx",
     ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
