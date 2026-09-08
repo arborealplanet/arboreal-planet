@@ -2,6 +2,8 @@ type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "M
 type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
 type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 
+const TRAIT_ART_VERSION = "2026-09-08-d";
+
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.webp",
   "Morelia azurea pulcher": "/hatchery/snakes/pulcher.webp",
@@ -22,6 +24,8 @@ const slugByTrait: Record<TraitKey, string> = {
   yellowRetention: "yellow",
   blotches: "blotches",
 };
+
+const withVersion = (src: string) => `${src}?v=${TRAIT_ART_VERSION}`;
 
 function portraitTier(value: number) {
   if (value >= 100) return 100;
@@ -57,11 +61,22 @@ function portraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
 }
 
 export function ChondroSnakeIcon({ subspecies, name, traits, compact = false }: { subspecies: ChondroSubspecies; name: string; traits?: PortraitTraits; compact?: boolean }) {
-  const src = portraitArt(subspecies, traits);
-  const fallback = baseArtBySubspecies[subspecies];
+  const rawSrc = portraitArt(subspecies, traits);
+  const rawFallback = baseArtBySubspecies[subspecies];
+  const src = withVersion(rawSrc);
+  const fallback = withVersion(rawFallback);
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
-      <img src={src} onError={event => { if (event.currentTarget.src.endsWith(fallback)) return; event.currentTarget.src = fallback; }} alt={`${name} illustrated game portrait`} className="h-full w-full object-contain p-1 sm:p-2" />
+      <img
+        key={src}
+        src={src}
+        onError={(event) => {
+          if (event.currentTarget.src.includes(rawFallback)) return;
+          event.currentTarget.src = fallback;
+        }}
+        alt={`${name} illustrated game portrait`}
+        className="h-full w-full object-contain p-1 sm:p-2"
+      />
     </div>
   );
 }
