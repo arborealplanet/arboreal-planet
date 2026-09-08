@@ -37,8 +37,8 @@ export function ChondroSnakeIcon({ subspecies, name, traits, compact = false }: 
   const src = portraitArt(subspecies, traits);
   const fallback = baseArtBySubspecies[subspecies];
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-28" : "h-40"}`}>
-      <img src={src} onError={event => { if (event.currentTarget.src.endsWith(fallback)) return; event.currentTarget.src = fallback; }} alt={`${name} illustrated game portrait`} className="h-full w-full object-contain p-2" />
+    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
+      <img src={src} onError={event => { if (event.currentTarget.src.endsWith(fallback)) return; event.currentTarget.src = fallback; }} alt={`${name} illustrated game portrait`} className="h-full w-full object-contain p-1 sm:p-2" />
     </div>
   );
 }
