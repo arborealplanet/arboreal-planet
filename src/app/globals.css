@@ -90,20 +90,31 @@ button { cursor: pointer; }
 .hide-scrollbar { scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 
-/* Chondro Breeder conservation program: preserve the existing controls while
-   replacing the old schematic SVG with the supplied Green Tree Python
-   subspecies infographic. */
-div:has(> svg[aria-label="Stylized educational map of New Guinea and nearby regions"]) > svg {
-  display: none;
+/* Chondro Breeder conservation program: the supplied Green Tree Python
+   subspecies infographic fully replaces the legacy schematic SVG map.
+   Keep the existing program-selection buttons below the image. */
+svg[aria-label="Stylized educational map of New Guinea and nearby regions"] {
+  display: none !important;
 }
 
-div:has(> svg[aria-label="Stylized educational map of New Guinea and nearby regions"])::before {
+svg[aria-label="Stylized educational map of New Guinea and nearby regions"] + div {
+  margin-top: 0.75rem;
+}
+
+svg[aria-label="Stylized educational map of New Guinea and nearby regions"] + div::before {
   content: "";
   display: block;
+  grid-column: 1 / -1;
   width: 100%;
   aspect-ratio: 1122 / 1402;
+  margin-bottom: 0.25rem;
   border-radius: 18px;
-  background: url("/assets/chondro-conservation-map") center / contain no-repeat;
+  border: 1px solid rgba(255,255,255,.08);
+  background-image: url("/assets/chondro-conservation-map");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  box-shadow: 0 18px 45px rgba(0,0,0,.2);
 }
 
 @media (max-width: 640px) {
