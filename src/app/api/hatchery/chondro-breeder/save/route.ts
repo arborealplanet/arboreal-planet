@@ -3,9 +3,28 @@ import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/s
 
 const MAX_SAVE_BYTES = 250_000;
 
+async function claimTargetedBonus(token: string) {
+  try {
+    await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/claim_arborealsbybunn_chondro_bonus`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_AUTH_KEY,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      cache: "no-store",
+    });
+  } catch {
+    // A bonus failure must never block a normal game-save load.
+  }
+}
+
 export async function GET() {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ authenticated: false }, { status: 401 });
+
+  await claimTargetedBonus(identity.token);
 
   const response = await fetch(
     `${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?user_id=eq.${encodeURIComponent(identity.user.id)}&select=state,version,updated_at&limit=1`,
