@@ -1,14 +1,6 @@
 type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
-type VisualTrait = "highWhite" | "blue" | "highBlack" | "yellow" | "blotches";
-type TraitTier = 70 | 85 | 95 | 100;
-
-type TraitValues = {
-  highBlack?: number;
-  highWhite?: number;
-  blue?: number;
-  yellow?: number;
-  blotches?: number;
-};
+type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
+type PortraitTraits = Partial<Record<TraitKey, number>>;
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.webp",
@@ -23,77 +15,30 @@ const slugBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea utaraensis": "utaraensis",
   "Morelia viridis": "viridis",
 };
-
-const traitSlug: Record<VisualTrait, string> = {
-  highWhite: "high-white",
-  blue: "blue",
+const slugByTrait: Record<TraitKey, string> = {
   highBlack: "high-black",
-  yellow: "yellow",
+  highWhite: "high-white",
+  blueStripe: "blue",
+  yellowRetention: "yellow",
   blotches: "blotches",
 };
+const portraitTiers = [70, 85, 95, 100] as const;
 
-function artTier(value: number): TraitTier | null {
-  if (value >= 100) return 100;
-  if (value >= 95) return 95;
-  if (value >= 85) return 85;
-  if (value >= 70) return 70;
-  return null;
+function portraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
+  if (!traits) return baseArtBySubspecies[subspecies];
+  const entries = (Object.keys(slugByTrait) as TraitKey[]).map(key => [key, Number(traits[key] ?? 0)] as const);
+  const [trait, value] = entries.reduce((best, current) => current[1] > best[1] ? current : best, entries[0]);
+  if (value < portraitTiers[0]) return baseArtBySubspecies[subspecies];
+  const tier = portraitTiers.reduce((best, current) => Math.abs(value - current) < Math.abs(value - best) ? current : best, portraitTiers[0]);
+  return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
 }
 
-function dominantTrait(traits: TraitValues): { trait: VisualTrait; value: number; tier: TraitTier } | null {
-  const candidates: { trait: VisualTrait; value: number }[] = [
-    { trait: "highBlack", value: traits.highBlack ?? 0 },
-    { trait: "highWhite", value: traits.highWhite ?? 0 },
-    { trait: "blue", value: traits.blue ?? 0 },
-    { trait: "yellow", value: traits.yellow ?? 0 },
-    { trait: "blotches", value: traits.blotches ?? 0 },
-  ];
-
-  candidates.sort((a, b) => b.value - a.value);
-  const winner = candidates[0];
-  const tier = artTier(winner.value);
-  return tier ? { ...winner, tier } : null;
-}
-
-function traitArt(subspecies: ChondroSubspecies, traits: TraitValues) {
-  const winner = dominantTrait(traits);
-  if (!winner) return baseArtBySubspecies[subspecies];
-  return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${traitSlug[winner.trait]}-${winner.tier}.webp`;
-}
-
-export function ChondroSnakeIcon({
-  subspecies,
-  name,
-  compact = false,
-  highBlack = 0,
-  highWhite = 0,
-  blue = 0,
-  yellow = 0,
-  blotches = 0,
-}: {
-  subspecies: ChondroSubspecies;
-  name: string;
-  compact?: boolean;
-  highBlack?: number;
-  highWhite?: number;
-  blue?: number;
-  yellow?: number;
-  blotches?: number;
-}) {
+export function ChondroSnakeIcon({ subspecies, name, traits, compact = false }: { subspecies: ChondroSubspecies; name: string; traits?: PortraitTraits; compact?: boolean }) {
+  const src = portraitArt(subspecies, traits);
   const fallback = baseArtBySubspecies[subspecies];
-  const src = traitArt(subspecies, { highBlack, highWhite, blue, yellow, blotches });
-
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-28" : "h-40"}`}>
-      <img
-        src={src}
-        alt={`${name} illustrated game portrait`}
-        className="h-full w-full object-contain p-2"
-        onError={(event) => {
-          const image = event.currentTarget;
-          if (!image.src.endsWith(fallback)) image.src = fallback;
-        }}
-      />
+      <img src={src} onError={event => { if (event.currentTarget.src.endsWith(fallback)) return; event.currentTarget.src = fallback; }} alt={`${name} illustrated game portrait`} className="h-full w-full object-contain p-2" />
     </div>
   );
 }
