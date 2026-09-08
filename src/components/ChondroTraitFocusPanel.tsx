@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ChondroTraitKey } from "@/lib/chondro-progression";
 import {
   DEFAULT_TRAIT_FOCUS,
@@ -12,13 +13,39 @@ import {
 
 type Props = {
   value?: TraitFocusPreferences;
-  onChange: (next: TraitFocusPreferences) => void;
+  onChange?: (next: TraitFocusPreferences) => void;
 };
+
+export const TRAIT_FOCUS_STORAGE_KEY = "arboreal_chondro_trait_focus_v1";
+export const TRAIT_FOCUS_EVENT = "arboreal-chondro-trait-focus-change";
 
 const traitKeys = Object.keys(TRAIT_FOCUS_LABELS) as ChondroTraitKey[];
 
-export function ChondroTraitFocusPanel({ value = DEFAULT_TRAIT_FOCUS, onChange }: Props) {
-  const focus = normalizeTraitFocus(value);
+export function ChondroTraitFocusPanel({ value, onChange }: Props) {
+  const controlled = value !== undefined;
+  const [storedValue, setStoredValue] = useState<TraitFocusPreferences>(DEFAULT_TRAIT_FOCUS);
+  const focus = normalizeTraitFocus(controlled ? value : storedValue);
+
+  useEffect(() => {
+    if (controlled) return;
+    try {
+      const raw = window.localStorage.getItem(TRAIT_FOCUS_STORAGE_KEY);
+      if (raw) setStoredValue(normalizeTraitFocus(JSON.parse(raw)));
+    } catch {}
+  }, [controlled]);
+
+  function commit(nextValue: TraitFocusPreferences) {
+    const next = normalizeTraitFocus(nextValue);
+    if (!controlled) {
+      setStoredValue(next);
+      try {
+        window.localStorage.setItem(TRAIT_FOCUS_STORAGE_KEY, JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent(TRAIT_FOCUS_EVENT, { detail: next }));
+      } catch {}
+    }
+    onChange?.(next);
+  }
+
   const targetFor = (key: ChondroTraitKey) => focus.targets.find((target) => target.key === key);
 
   return (
@@ -27,13 +54,13 @@ export function ChondroTraitFocusPanel({ value = DEFAULT_TRAIT_FOCUS, onChange }
         <div>
           <div className="text-sm font-bold text-white/80">Trait Focus</div>
           <div className="mt-1 text-[11px] leading-5 text-white/40">
-            Pick the traits you are actively hunting. Matching percentages can be highlighted in your collection,
-            store, pairing tools and hatchlings without changing the genetics themselves.
+            Pick the traits you are actively hunting. Your choices are saved for this player and can be used to
+            highlight matching animals without changing genetics or odds.
           </div>
         </div>
         <button
           type="button"
-          onClick={() => onChange({ ...focus, enabled: !focus.enabled && focus.targets.length > 0 })}
+          onClick={() => commit({ ...focus, enabled: !focus.enabled && focus.targets.length > 0 })}
           className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-white/60"
         >
           {focus.enabled ? "On" : "Off"}
@@ -50,8 +77,8 @@ export function ChondroTraitFocusPanel({ value = DEFAULT_TRAIT_FOCUS, onChange }
                   type="checkbox"
                   checked={!!target}
                   onChange={(event) => {
-                    if (event.target.checked) onChange(setTraitFocusTarget(focus, key, 70, "Primary"));
-                    else onChange(removeTraitFocusTarget(focus, key));
+                    if (event.target.checked) commit(setTraitFocusTarget(focus, key, 70, "Primary"));
+                    else commit(removeTraitFocusTarget(focus, key));
                   }}
                 />
                 {TRAIT_FOCUS_LABELS[key]}
@@ -63,7 +90,7 @@ export function ChondroTraitFocusPanel({ value = DEFAULT_TRAIT_FOCUS, onChange }
                   <select
                     value={target.minimum}
                     onChange={(event) =>
-                      onChange(setTraitFocusTarget(focus, key, Number(event.target.value), target.priority))
+                      commit(setTraitFocusTarget(focus, key, Number(event.target.value), target.priority))
                     }
                     className="w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white/70"
                   >
@@ -74,7 +101,7 @@ export function ChondroTraitFocusPanel({ value = DEFAULT_TRAIT_FOCUS, onChange }
                   <button
                     type="button"
                     onClick={() =>
-                      onChange(
+                      commit(
                         setTraitFocusTarget(
                           focus,
                           key,
@@ -93,6 +120,12 @@ export function ChondroTraitFocusPanel({ value = DEFAULT_TRAIT_FOCUS, onChange }
           );
         })}
       </div>
+
+      {focus.targets.length > 0 ? (
+        <div className="mt-3 text-[10px] text-white/35">
+          {focus.enabled ? "Highlighting enabled" : "Targets saved — highlighting paused"} · {focus.targets.length} trait{focus.targets.length === 1 ? "" : "s"} tracked
+        </div>
+      ) : null}
     </section>
   );
 }
