@@ -6,11 +6,13 @@ import { ChondroBreederSocial } from "@/components/ChondroBreederSocial";
 import { ChondroBreederFacility } from "@/components/ChondroBreederFacility";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
+import { ChondroTraitFocusPanel } from "@/components/ChondroTraitFocusPanel";
 
 export default function ChondroBreederPage() {
   return (
     <>
       <ChondroBreederSubspeciesPhenotypes />
+      <ChondroTraitFocusPanel />
       <ChondroBreederGameV3 />
       <ChondroBreederExpandedShop />
       <ChondroConservationPartnerships />
