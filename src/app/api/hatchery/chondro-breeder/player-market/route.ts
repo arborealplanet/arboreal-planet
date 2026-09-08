@@ -1,0 +1,26 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+
+const headers = (token: string) => ({ apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" });
+
+export async function GET() {
+  const identity = await getServerIdentity();
+  if (!identity) return NextResponse.json({ authenticated: false, listings: [] }, { status: 401 });
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_player_market?status=eq.active&select=id,snake_id,seller_id,snake,price,listed_at&order=listed_at.desc&limit=60`, { headers: headers(identity.token), cache: "no-store" });
+  if (!response.ok) return NextResponse.json({ error: "Unable to load the player market." }, { status: 502 });
+  return NextResponse.json({ authenticated: true, listings: await response.json() });
+}
+
+export async function POST(request: NextRequest) {
+  const identity = await getServerIdentity();
+  if (!identity) return NextResponse.json({ error: "Sign in to use the player market." }, { status: 401 });
+  const body = await request.json() as { action?: string; snakeId?: string; price?: number; listingId?: string };
+  const action = body.action === "list" ? "list_chondro_snake_for_player_market" : body.action === "buy" ? "buy_chondro_player_market_listing" : null;
+  if (!action) return NextResponse.json({ error: "Unsupported market action." }, { status: 400 });
+  const payload = action === "list_chondro_snake_for_player_market"
+    ? { p_snake_id: String(body.snakeId ?? "").slice(0, 160), p_price: Math.round(Number(body.price ?? 0)) }
+    : { p_listing_id: String(body.listingId ?? "") };
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/${action}`, { method: "POST", headers: headers(identity.token), body: JSON.stringify(payload), cache: "no-store" });
+  if (!response.ok) { const message = await response.text(); const match = message.match(/"message":"([^"]+)/); return NextResponse.json({ error: match?.[1] ?? "The market changed before this action completed." }, { status: response.status === 400 ? 409 : 502 }); }
+  return NextResponse.json({ ok: true, result: await response.json() });
+}
