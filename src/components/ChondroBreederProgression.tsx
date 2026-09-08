@@ -7,6 +7,8 @@ type Snake = {
   generation?: number;
   classification?: string;
   locality?: string;
+  subspecies?: string;
+  ancestry?: Record<string, number>;
   localityAncestry?: Record<string, number>;
   phenotypeScore?: number;
   geneticsTested?: boolean;
@@ -77,11 +79,10 @@ function isPlayerProduced(snake: Snake) {
   return (snake.generation ?? 1) > 1;
 }
 
-function isPureNamedLocality(snake: Snake) {
-  const locality = snake.locality ?? "";
-  if (!locality || locality === "Mixed Locality" || locality === "Designer") return false;
-  if (snake.classification !== "Pure") return false;
-  return (snake.localityAncestry?.[locality] ?? 0) >= 99.9;
+function isPureSubspecies(snake: Snake) {
+  if (!snake.subspecies || snake.classification !== "Pure") return false;
+  const purity = snake.ancestry?.[snake.subspecies];
+  return typeof purity === "number" ? purity >= 99.9 : true;
 }
 
 function reputationName(points: number) {
@@ -192,8 +193,8 @@ export function ChondroBreederProgression() {
       { id: "trait-50", title: "Trait Breakthrough", description: "Produce and genetically verify a 50%+ trait animal.", points: 100, unlocked: bestTested >= 50, icon: "⚡" },
       { id: "trait-75", title: "High Expression", description: "Produce and genetically verify a 75%+ trait animal.", points: 150, unlocked: bestTested >= 75, icon: "💎" },
       { id: "trait-90", title: "Extreme Expression", description: "Produce and genetically verify a 90%+ trait animal.", points: 250, unlocked: bestTested >= 90, icon: "👑" },
-      { id: "a-plus", title: "A+ Locality Animal", description: "Produce an A+ pure named-locality phenotype.", points: 250, unlocked: produced.some((snake) => isPureNamedLocality(snake) && (snake.phenotypeScore ?? 0) >= 95), icon: "🌿" },
-      { id: "third-generation", title: "Built a Line", description: "Reach generation 3 with a 100% named-locality line.", points: 250, unlocked: produced.some((snake) => isPureNamedLocality(snake) && (snake.generation ?? 1) >= 3), icon: "🌳" },
+      { id: "a-plus", title: "A+ Subspecies Animal", description: "Produce an A+ pure-subspecies phenotype.", points: 250, unlocked: produced.some((snake) => isPureSubspecies(snake) && (snake.phenotypeScore ?? 0) >= 95), icon: "🌿" },
+      { id: "third-generation", title: "Built a Line", description: "Reach generation 3 with a 100% pure-subspecies line.", points: 250, unlocked: produced.some((snake) => isPureSubspecies(snake) && (snake.generation ?? 1) >= 3), icon: "🌳" },
       { id: "designer", title: "Designer Project", description: "Produce your first hybrid or designer animal.", points: 150, unlocked: produced.some((snake) => snake.classification === "Hybrid" || snake.classification === "Designer"), icon: "🎨" },
       { id: "red-neonate", title: "Seeing Red", description: "Produce a red neonate in your own program.", points: 50, unlocked: produced.some((snake) => snake.neonateColor === "Red"), icon: "🔴" },
       { id: "five-figure-sale", title: "Five-Figure Animal", description: "Record a snake sale worth $10,000 or more.", points: 150, unlocked: bestSale >= 10000, icon: "💰" },
@@ -232,7 +233,7 @@ export function ChondroBreederProgression() {
                 </article>
               ))}
             </div>
-            <p className="mt-4 text-xs leading-5 text-white/28">Trait achievements only count player-produced animals after genetic testing, so trophies never reveal a hidden trait percentage before you choose to test it.</p>
+            <p className="mt-4 text-xs leading-5 text-white/28">Trait achievements only count player-produced animals after genetic testing, so trophies never reveal a hidden trait percentage before you choose to test it. Phenotype achievements follow subspecies purity; locality labels remain pedigree information and do not turn same-subspecies pairings into hybrids.</p>
           </div>
         ) : null}
       </div>
