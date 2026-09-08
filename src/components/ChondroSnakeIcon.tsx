@@ -1,6 +1,6 @@
 type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
 type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
-type PortraitTraits = Partial<Record<TraitKey, number>>;
+type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.webp",
@@ -31,10 +31,26 @@ function portraitTier(value: number) {
   return null;
 }
 
+function traitValue(traits: PortraitTraits, key: TraitKey) {
+  if (key === "blueStripe") return Number(traits.blueStripe ?? traits.blue ?? 0);
+  return Number(traits[key] ?? 0);
+}
+
 function portraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
   if (!traits) return baseArtBySubspecies[subspecies];
-  const entries = (Object.keys(slugByTrait) as TraitKey[]).map(key => [key, Number(traits[key] ?? 0)] as const);
-  const [trait, value] = entries.reduce((best, current) => current[1] > best[1] ? current : best, entries[0]);
+
+  const blue = traitValue(traits, "blueStripe");
+  if (blue >= 100) {
+    return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-blue-100.webp`;
+  }
+
+  const entries = (Object.keys(slugByTrait) as TraitKey[]).map(
+    key => [key, traitValue(traits, key)] as const,
+  );
+  const [trait, value] = entries.reduce(
+    (best, current) => (current[1] > best[1] ? current : best),
+    entries[0],
+  );
   const tier = portraitTier(value);
   if (tier === null) return baseArtBySubspecies[subspecies];
   return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
