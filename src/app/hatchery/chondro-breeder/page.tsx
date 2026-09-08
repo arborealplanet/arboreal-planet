@@ -9,6 +9,8 @@ import { ChondroConservationPartnerships } from "@/components/ChondroConservatio
 import { ChondroTraitFocusPanel } from "@/components/ChondroTraitFocusPanel";
 import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
 import { ChondroFavoriteCardControls } from "@/components/ChondroFavoriteCardControls";
+import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
+import { ChondroAchievementsPanel } from "@/components/ChondroAchievementsPanel";
 
 export default function ChondroBreederPage() {
   return (
@@ -17,6 +19,8 @@ export default function ChondroBreederPage() {
       <ChondroBreederSubspeciesPhenotypes />
       <ChondroTraitFocusPanel />
       <ChondroFavoritesMarketPanel />
+      <ChondroCollectionManager />
+      <ChondroAchievementsPanel />
       <ChondroBreederGameV3 />
       <ChondroBreederExpandedShop />
       <ChondroConservationPartnerships />
