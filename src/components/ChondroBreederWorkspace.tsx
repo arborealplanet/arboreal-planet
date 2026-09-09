@@ -5,8 +5,6 @@ import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroBreederCommandCenter } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
-import { ChondroRealtimeProgression } from "@/components/ChondroRealtimeProgression";
-import { ChondroOperationsQueue } from "@/components/ChondroOperationsQueue";
 
 type WorkspaceTab = "game" | "manage" | "guide";
 
@@ -19,8 +17,6 @@ export function ChondroBreederWorkspace() {
         <div className="section-kicker">Arboreal Arcade</div>
         <div className="mt-1 text-xs text-white/35">Chondro Breeder</div>
       </div>
-      <ChondroRealtimeProgression />
-      <ChondroOperationsQueue />
       <div className="sticky top-2 z-30 mx-auto mt-3 max-w-7xl px-4 sm:px-6">
         <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/[.08] bg-[#07100d]/90 p-1.5 shadow-2xl backdrop-blur-xl">
           <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
