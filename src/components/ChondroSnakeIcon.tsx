@@ -74,9 +74,12 @@ export function ChondroSnakeIcon({ subspecies, name, traits, compact = false }: 
           if (event.currentTarget.src.includes(rawFallback)) return;
           event.currentTarget.src = fallback;
         }}
-        alt={`${name} illustrated game portrait`}
+        alt={`${name} illustrated virtual game portrait`}
         className="h-full w-full object-contain p-1 sm:p-2"
       />
+      <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
+        Virtual
+      </div>
     </div>
   );
 }
