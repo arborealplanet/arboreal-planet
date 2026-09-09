@@ -37,7 +37,7 @@ export function ChondroOperationsQueue() {
 
   useEffect(() => {
     let cancelled = false;
-    setNow(Date.now());
+    const firstClock = window.requestAnimationFrame(() => setNow(Date.now()));
     async function load() {
       try {
         const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
@@ -50,6 +50,7 @@ export function ChondroOperationsQueue() {
     const clock = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => {
       cancelled = true;
+      window.cancelAnimationFrame(firstClock);
       window.clearInterval(refresh);
       window.clearInterval(clock);
     };
