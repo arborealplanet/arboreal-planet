@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
-import { geneticTestingUnlocked, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
+import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 
 type Subspecies =
   | "Morelia azurea azurea"
@@ -83,6 +83,10 @@ type PlayerMarketListing = {
 type Sale = { id: string; name: string; value: number; season: number };
 type Transfer = { id: string; name: string; season: number };
 type EnclosureType = "Chondro Dojo Bin" | "PVC Arboreal";
+type BreedingStage = "cycling" | "pairing" | "laying" | "incubation" | "hatch-day";
+type BreedingCycle = { damId: string; sireId: string; stage: BreedingStage; startedAt: number; completesAt: number };
+type GeneticTestJob = { snakeId: string; completesAt: number };
+type FacilityConstruction = { roomId: string; completesAt: number };
 type GameSave = {
   started: boolean;
   cash: number;
@@ -98,16 +102,14 @@ type GameSave = {
   transfers: Transfer[];
   enclosures: Record<EnclosureType, number>;
   purchasedStoreIds: string[];
-};
-
-type BreedingStage = "cycling" | "pairing" | "laying" | "incubation" | "hatch-day";
-type ProgressionState = {
   careerReputation?: number;
-  facilityRooms?: Record<string, number>;
-  breedingCycle?: { damId: string; sireId: string; stage: BreedingStage; completesAt: number; startedAt: number } | null;
-  geneticTestsPending?: Array<{ snakeId: string; completesAt: number }>;
+  facilityRooms?: FacilityRoomState;
+  facilityConstruction?: FacilityConstruction | null;
+  breedingCycle?: BreedingCycle | null;
+  geneticTestsPending?: GeneticTestJob[];
   femaleRecovery?: Record<string, number>;
   seasonCarePaid?: number;
+  breedingMessage?: string;
 };
 
 type RandomFn = () => number;
@@ -115,20 +117,19 @@ type RandomFn = () => number;
 const STARTING_CASH = 30000;
 const NIDO_TEST_COST = 125;
 const GENETIC_TEST_COST = 350;
+const GENETIC_TEST_HOURS = 12;
+const SEASON_CARE_PER_ADULT = 180;
+const BREEDING_STAGES: Array<{ id: BreedingStage; label: string; hours: number }> = [
+  { id: "cycling", label: "Cycling", hours: 4 },
+  { id: "pairing", label: "Pairing", hours: 8 },
+  { id: "laying", label: "Laying", hours: 12 },
+  { id: "incubation", label: "Incubation", hours: 24 },
+  { id: "hatch-day", label: "Hatch Day", hours: 2 },
+];
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const RODENT_COST = 2.5;
 const CARE_PER_YEAR = 1500;
 const DAY_MS = 86_400_000;
-const CYCLING_HOURS = 4;
-
-async function patchCoreProgression(patch: Record<string, unknown>) {
-  const response = await fetch("/api/hatchery/chondro-breeder/progression", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ patch }),
-  });
-  if (!response.ok) throw new Error("progression save failed");
-}
 const enclosurePrices: Record<EnclosureType, number> = {
   "Chondro Dojo Bin": 225,
   "PVC Arboreal": 650,
@@ -170,6 +171,28 @@ const money = (value: number) =>
   }).format(value);
 const clamp = (n: number, max = 100) =>
   Math.max(0, Math.min(max, Math.round(n)));
+const remainingTime = (ms: number) => {
+  const total = Math.max(0, Math.ceil(ms / 60_000));
+  const days = Math.floor(total / 1440);
+  const hours = Math.floor((total % 1440) / 60);
+  const minutes = total % 60;
+  if (days) return `${days}d ${hours}h`;
+  if (hours) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
+function pairingChance(dam: Snake, sire: Snake) {
+  let chance = 0.78;
+  if (dam.condition === "Excellent") chance += 0.08;
+  if (sire.condition === "Excellent") chance += 0.04;
+  if (dam.condition === "Fair") chance -= 0.28;
+  if (sire.condition === "Fair") chance -= 0.16;
+  return Math.max(0.25, Math.min(0.94, chance));
+}
+function pairingFailureReason(dam: Snake, sire: Snake) {
+  if (dam.condition === "Fair") return "The female did not cycle strongly enough to complete the pairing.";
+  if (sire.condition === "Fair") return "The male showed poor breeding interest this cycle.";
+  return Math.random() < 0.5 ? "No successful lock was observed." : "The female was unreceptive and the pairing was stopped.";
+}
 const pick = <T,>(a: T, b: T) => (Math.random() < 0.5 ? a : b);
 const tailFor = (s: Subspecies) =>
   s === "Morelia azurea utaraensis"
@@ -699,6 +722,16 @@ export function ChondroBreederGameV3() {
     "PVC Arboreal": 0,
   });
   const [purchasedStoreIds, setPurchasedStoreIds] = useState<string[]>([]);
+  const [careerReputation, setCareerReputation] = useState(0);
+  const [facilityRooms, setFacilityRooms] = useState<FacilityRoomState>({ "starter-room": 1 });
+  const [facilityConstruction, setFacilityConstruction] = useState<FacilityConstruction | null>(null);
+  const [breedingCycle, setBreedingCycle] = useState<BreedingCycle | null>(null);
+  const [geneticTestsPending, setGeneticTestsPending] = useState<GeneticTestJob[]>([]);
+  const [femaleRecovery, setFemaleRecovery] = useState<Record<string, number>>({});
+  const [seasonCarePaid, setSeasonCarePaid] = useState(0);
+  const [breedingMessage, setBreedingMessage] = useState("");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [collapsedAnimalIds, setCollapsedAnimalIds] = useState<string[]>([]);
   const [playerMarket, setPlayerMarket] = useState<PlayerMarketListing[]>([]);
   const [marketStatus, setMarketStatus] = useState("");
   const [marketBusy, setMarketBusy] = useState<string | null>(null);
@@ -710,21 +743,21 @@ export function ChondroBreederGameV3() {
   const [storeIndex, setStoreIndex] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [cloudSave, setCloudSave] = useState(false);
-  const [progression, setProgression] = useState<ProgressionState>({});
-  const [operationStatus, setOperationStatus] = useState("");
   const [now, setNow] = useState(Date.now());
 
   const storeEpoch = Math.floor(now / DAY_MS);
   const store = useMemo(() => storeForEpoch(storeEpoch), [storeEpoch]);
   const nextRefresh = (storeEpoch + 1) * DAY_MS;
-  const capacity = enclosures["Chondro Dojo Bin"] + enclosures["PVC Arboreal"];
-  const roomSlots = roomCapacityFromSave({ facilityRooms: progression.facilityRooms });
+  const installedEnclosureCount = enclosures["Chondro Dojo Bin"] + enclosures["PVC Arboreal"];
+  const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms });
+  const capacity = installedEnclosureCount;
   const openSlots = Math.max(0, capacity - colony.length);
-  const geneticsUnlocked = geneticTestingUnlocked(progression);
-  const pendingGeneticTests = new Set((progression.geneticTestsPending ?? []).map((job) => job.snakeId));
-  const breedingCycleActive = Boolean(progression.breedingCycle);
-  const females = colony.filter((a) => a.sex === "Female" && a.lifeStage === "Adult");
+  const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedEnclosureCount);
+  const females = colony.filter((a) => a.sex === "Female" && a.lifeStage === "Adult" && Number(femaleRecovery[a.id] ?? 0) <= season);
   const males = colony.filter((a) => a.sex === "Male" && a.lifeStage === "Adult");
+  const geneticsUnlocked = geneticTestingUnlocked({ careerReputation, facilityRooms });
+  const adultCount = colony.filter((a) => a.lifeStage === "Adult").length;
+  const seasonCareCost = Math.max(SEASON_CARE_PER_ADULT, adultCount * SEASON_CARE_PER_ADULT);
   const dam = colony.find((a) => a.id === damId) ?? null;
   const sire = colony.find((a) => a.id === sireId) ?? null;
   const saleIncome = sales.reduce((sum, item) => sum + item.value, 0);
@@ -798,15 +831,14 @@ export function ChondroBreederGameV3() {
         setTransfers(chosen.transfers ?? []);
         setEnclosures(chosen.enclosures ?? { "Chondro Dojo Bin": 0, "PVC Arboreal": 0 });
         setPurchasedStoreIds(chosen.purchasedStoreIds ?? []);
-        const extended = chosen as GameSave & ProgressionState;
-        setProgression({
-          careerReputation: Number(extended.careerReputation ?? 0),
-          facilityRooms: extended.facilityRooms,
-          breedingCycle: extended.breedingCycle ?? null,
-          geneticTestsPending: extended.geneticTestsPending ?? [],
-          femaleRecovery: extended.femaleRecovery ?? {},
-          seasonCarePaid: extended.seasonCarePaid,
-        });
+        setCareerReputation(Number(chosen.careerReputation ?? 0));
+        setFacilityRooms(chosen.facilityRooms ?? { "starter-room": 1 });
+        setFacilityConstruction(chosen.facilityConstruction ?? null);
+        setBreedingCycle(chosen.breedingCycle ?? null);
+        setGeneticTestsPending(chosen.geneticTestsPending ?? []);
+        setFemaleRecovery(chosen.femaleRecovery ?? {});
+        setSeasonCarePaid(Number(chosen.seasonCarePaid ?? 0));
+        setBreedingMessage(chosen.breedingMessage ?? "");
       }
       if (!cancelled) setHydrated(true);
     }
@@ -817,38 +849,6 @@ export function ChondroBreederGameV3() {
       window.clearInterval(timer);
     };
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    let cancelled = false;
-    async function refreshProgression() {
-      try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok && data.save?.state) {
-          const state = data.save.state as ProgressionState;
-          setProgression({
-            careerReputation: Number(state.careerReputation ?? 0),
-            facilityRooms: state.facilityRooms,
-            breedingCycle: state.breedingCycle ?? null,
-            geneticTestsPending: state.geneticTestsPending ?? [],
-            femaleRecovery: state.femaleRecovery ?? {},
-            seasonCarePaid: state.seasonCarePaid,
-          });
-        }
-      } catch {}
-    }
-    const timer = window.setInterval(() => void refreshProgression(), 30_000);
-    const onProgress = () => void refreshProgression();
-    window.addEventListener("chondro-progression-updated", onProgress);
-    window.addEventListener("chondro-room-capacity-updated", onProgress);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-      window.removeEventListener("chondro-progression-updated", onProgress);
-      window.removeEventListener("chondro-room-capacity-updated", onProgress);
-    };
-  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -867,6 +867,14 @@ export function ChondroBreederGameV3() {
       transfers,
       enclosures,
       purchasedStoreIds,
+      careerReputation,
+      facilityRooms,
+      facilityConstruction,
+      breedingCycle,
+      geneticTestsPending,
+      femaleRecovery,
+      seasonCarePaid,
+      breedingMessage,
     };
     const timer = window.setTimeout(() => {
       try {
@@ -880,7 +888,7 @@ export function ChondroBreederGameV3() {
         });
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds]);
+  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -926,13 +934,97 @@ export function ChondroBreederGameV3() {
     };
   }, [hydrated]);
 
-  function buyEnclosure(type: EnclosureType) {
-    const price = enclosurePrices[type];
-    if (cash < price || capacity >= roomSlots) {
-      if (capacity >= roomSlots) setOperationStatus("Your current rooms are full. Build another room before installing more enclosures.");
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    async function loadFavorites() {
+      try {
+        const response = await fetch("/api/hatchery/chondro-breeder/favorites", { cache: "no-store" });
+        const data = await response.json();
+        if (!cancelled && response.ok && Array.isArray(data.favoriteIds)) setFavoriteIds(data.favoriteIds.map((item: unknown) => String(item)));
+      } catch {}
+    }
+    void loadFavorites();
+    return () => { cancelled = true; };
+  }, [hydrated]);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!hydrated) return;
+    if (facilityConstruction && facilityConstruction.completesAt <= now) {
+      const room = ROOM_EXPANSIONS.find((item) => item.id === facilityConstruction.roomId);
+      if (room) {
+        setFacilityRooms((current) => ({ ...current, [room.id]: Number(current[room.id] ?? 0) + 1 }));
+        setBreedingMessage(`${room.name} is ready.`);
+      }
+      setFacilityConstruction(null);
       return;
     }
-    setOperationStatus("");
+    const readyTests = geneticTestsPending.filter((job) => job.completesAt <= now);
+    if (readyTests.length) {
+      const readyIds = new Set(readyTests.map((job) => job.snakeId));
+      setColony((current) => current.map((animal) => readyIds.has(animal.id) ? { ...animal, geneticsTested: true } : animal));
+      setGeneticTestsPending((current) => current.filter((job) => !readyIds.has(job.snakeId)));
+      setBreedingMessage(`${readyTests.length} genetic test${readyTests.length === 1 ? " is" : "s are"} ready.`);
+      return;
+    }
+    if (!breedingCycle || breedingCycle.completesAt > now) return;
+    const cycleDam = colony.find((animal) => animal.id === breedingCycle.damId);
+    const cycleSire = colony.find((animal) => animal.id === breedingCycle.sireId);
+    if (!cycleDam || !cycleSire) {
+      setBreedingCycle(null);
+      setBreedingMessage("Breeding cycle cancelled because one selected animal is no longer in the colony.");
+      return;
+    }
+    if (breedingCycle.stage === "pairing") {
+      if (Math.random() > pairingChance(cycleDam, cycleSire)) {
+        setBreedingCycle(null);
+        setBreedingMessage(pairingFailureReason(cycleDam, cycleSire));
+        return;
+      }
+      const positiveIds = [cycleDam, cycleSire].filter((animal) => animal.nidoStatus === "Positive").filter(() => Math.random() < 0.60).map((animal) => animal.id);
+      if (positiveIds.length) {
+        const names = colony.filter((animal) => positiveIds.includes(animal.id)).map((animal) => animal.name);
+        setColony((current) => current.filter((animal) => !positiveIds.includes(animal.id)));
+        if (positiveIds.includes(damId)) setDamId("");
+        if (positiveIds.includes(sireId)) setSireId("");
+        setBreedingCycle(null);
+        setBreedingMessage(`${names.join(" and ")} ${names.length === 1 ? "was" : "were"} lost following the high-risk Nido-positive breeding attempt.`);
+        return;
+      }
+      if (cycleDam.nidoStatus === "Positive" && cycleSire.nidoStatus !== "Positive" && Math.random() < 0.40) {
+        setColony((current) => current.map((animal) => animal.id === cycleSire.id ? { ...animal, nidoStatus: "Positive" } : animal));
+        setBreedingMessage(`${cycleSire.name} became Nido Positive after exposure during breeding.`);
+      } else if (cycleSire.nidoStatus === "Positive" && cycleDam.nidoStatus !== "Positive" && Math.random() < 0.40) {
+        setColony((current) => current.map((animal) => animal.id === cycleDam.id ? { ...animal, nidoStatus: "Positive" } : animal));
+        setBreedingMessage(`${cycleDam.name} became Nido Positive after exposure during breeding.`);
+      }
+    }
+    if (breedingCycle.stage === "hatch-day") {
+      if (!breederInitials) {
+        setBreedingCycle(null);
+        setInitialsPrompt(true);
+        setBreedingMessage("Choose breeder initials before the clutch can be recorded.");
+        return;
+      }
+      setClutch(createClutch(cycleDam, cycleSire, breederInitials));
+      setHoldbacks([]);
+      setBreedingCycle(null);
+      setBreedingMessage("Hatch Day complete. Your clutch is ready for review.");
+      return;
+    }
+    const stageIndex = BREEDING_STAGES.findIndex((stage) => stage.id === breedingCycle.stage);
+    const nextStage = BREEDING_STAGES[stageIndex + 1];
+    if (nextStage) {
+      setBreedingCycle({ ...breedingCycle, stage: nextStage.id, completesAt: Date.now() + nextStage.hours * 3_600_000 });
+      setBreedingMessage(`${nextStage.label} started.`);
+    }
+  }, [hydrated, now, facilityConstruction, geneticTestsPending, breedingCycle, colony, breederInitials, damId, sireId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  function buyEnclosure(type: EnclosureType) {
+    const price = enclosurePrices[type];
+    if (cash < price || roomEnclosureSlots <= 0) return;
     setCash((value) => value - price);
     setEnclosures((current) => ({ ...current, [type]: current[type] + 1 }));
   }
@@ -944,29 +1036,34 @@ export function ChondroBreederGameV3() {
     setPurchasedStoreIds((current) => [...current, offer.id]);
   }
 
-  async function geneticTest(id: string) {
+  function geneticTest(id: string) {
+    if (!geneticsUnlocked || cash < GENETIC_TEST_COST) return;
     const animal = colony.find((a) => a.id === id);
-    if (!animal || animal.geneticsTested) return;
-    if (!geneticsUnlocked) {
-      setOperationStatus("Genetic testing unlocks at 1,500 breeder reputation or with a Research & Conservation Wing.");
-      return;
-    }
-    if (pendingGeneticTests.has(id)) {
-      setOperationStatus(`${animal.name} already has a genetic panel in progress.`);
-      return;
-    }
-    if (cash < GENETIC_TEST_COST) return;
-    const jobs = [...(progression.geneticTestsPending ?? []), { snakeId: id, completesAt: Date.now() + 12 * 3_600_000 }];
-    const nextCash = cash - GENETIC_TEST_COST;
-    setCash(nextCash);
-    setProgression((current) => ({ ...current, geneticTestsPending: jobs }));
-    setOperationStatus(`${animal.name}'s genetic panel was submitted. Results in 12 hours.`);
+    if (!animal || animal.geneticsTested || geneticTestsPending.some((job) => job.snakeId === id)) return;
+    setCash((value) => value - GENETIC_TEST_COST);
+    setGeneticTestsPending((current) => [...current, { snakeId: id, completesAt: Date.now() + GENETIC_TEST_HOURS * 3_600_000 }]);
+    setBreedingMessage(`${animal.name}'s genetic panel was submitted. Results in ${GENETIC_TEST_HOURS} hours.`);
+  }
+
+  async function toggleFavorite(id: string) {
+    const favorite = !favoriteIds.includes(id);
+    setFavoriteIds((current) => favorite ? [...current, id] : current.filter((item) => item !== id));
     try {
-      await patchCoreProgression({ cash: nextCash, geneticTestsPending: jobs });
-      window.dispatchEvent(new Event("chondro-progression-updated"));
+      const response = await fetch("/api/hatchery/chondro-breeder/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snakeId: id, favorite }),
+      });
+      if (!response.ok) throw new Error("favorite failed");
+      const data = await response.json();
+      if (Array.isArray(data.favoriteIds)) setFavoriteIds(data.favoriteIds.map((item: unknown) => String(item)));
     } catch {
-      setOperationStatus("The genetic test could not be submitted. Refresh and try again.");
+      setFavoriteIds((current) => favorite ? current.filter((item) => item !== id) : [...current, id]);
     }
+  }
+
+  function toggleAnimalDetails(id: string) {
+    setCollapsedAnimalIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   }
 
   function nidoTest(id: string) {
@@ -1087,38 +1184,39 @@ export function ChondroBreederGameV3() {
     setHoldbacks([]);
   }
 
-  async function startBreedingCycle(initials: string) {
-    if (!dam || !sire || progression.breedingCycle) return;
-    const recoverySeason = Number(progression.femaleRecovery?.[dam.id] ?? 0);
-    if (recoverySeason > season) {
-      setOperationStatus(`${dam.name} needs another full year of recovery before breeding again.`);
+  function startBreedingCycle() {
+    if (!dam || !sire || clutch || breedingCycle) return;
+    if (seasonCarePaid !== season) {
+      setBreedingMessage("Provide this season's food and care before starting a breeding cycle.");
       return;
     }
-    if (progression.seasonCarePaid !== season) {
-      setOperationStatus("Provide this season's food and care before starting a breeding cycle.");
+    const recoverySeason = Number(femaleRecovery[dam.id] ?? 0);
+    if (recoverySeason > season) {
+      setBreedingMessage(`${dam.name} needs another full year of recovery before breeding again.`);
       return;
     }
     if ((dam.nidoStatus === "Positive" || sire.nidoStatus === "Positive") && !window.confirm("HIGH RISK PAIRING: A Nido Positive animal has a 60% chance of dying when bred and may infect its partner. Continue?")) return;
-    const cycle = { damId: dam.id, sireId: sire.id, stage: "cycling" as const, startedAt: Date.now(), completesAt: Date.now() + CYCLING_HOURS * 3_600_000 };
-    setProgression((current) => ({ ...current, breedingCycle: cycle }));
-    setOperationStatus("Cycling started. Progress continues while you are offline.");
-    try {
-      await patchCoreProgression({ breedingCycle: cycle, breedingMessage: "Cycling started.", breederInitials: initials });
-      window.dispatchEvent(new Event("chondro-progression-updated"));
-    } catch {
-      setProgression((current) => ({ ...current, breedingCycle: null }));
-      setOperationStatus("The breeding cycle could not be started. Refresh and try again.");
-    }
+    const first = BREEDING_STAGES[0];
+    const start = Date.now();
+    setBreedingCycle({ damId: dam.id, sireId: sire.id, stage: first.id, startedAt: start, completesAt: start + first.hours * 3_600_000 });
+    setBreedingMessage("Cycling started. Progress continues while you are offline.");
   }
 
-  async function breedSelected() {
+  function breedSelected() {
     if (!dam || !sire) return;
     if (!breederInitials) {
       setInitialsPrompt(true);
       setInitialsStatus("");
       return;
     }
-    await startBreedingCycle(breederInitials);
+    startBreedingCycle();
+  }
+
+  function paySeasonCare() {
+    if (seasonCarePaid === season || cash < seasonCareCost) return;
+    setCash((value) => value - seasonCareCost);
+    setSeasonCarePaid(season);
+    setBreedingMessage(`Season ${season} food and care provided for ${money(seasonCareCost)}.`);
   }
 
   async function claimBreederInitials() {
@@ -1141,19 +1239,8 @@ export function ChondroBreederGameV3() {
     setBreederInitials(data.initials);
     setInitialsPrompt(false);
     setInitialsStatus("");
-    await startBreedingCycle(data.initials);
+    window.setTimeout(() => startBreedingCycle(), 0);
   }
-
-  useEffect(() => {
-    function onHatchDayReady() {
-      if (!breederInitials || !dam || !sire || clutch) return;
-      produceClutch(breederInitials);
-      setProgression((current) => ({ ...current, breedingCycle: null }));
-      setOperationStatus("Hatch Day is here. Your clutch is ready.");
-    }
-    window.addEventListener("chondro-hatch-day-ready", onHatchDayReady);
-    return () => window.removeEventListener("chondro-hatch-day-ready", onHatchDayReady);
-  }, [breederInitials, dam, sire, clutch]);
 
   function toggleHoldback(id: string) {
     setHoldbacks((current) =>
@@ -1199,10 +1286,14 @@ export function ChondroBreederGameV3() {
       ...sold.map((baby, index) => ({ id: baby.id, name: baby.name, value: saleItems[index].price, season })),
       ...current,
     ]);
+    const nextEligibleSeason = Math.random() < 0.5 ? season + 1 : season + 2;
+    setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));
+    setBreedingMessage(nextEligibleSeason === season + 1 ? `${clutch.dam.name} recovered in time for next season.` : `${clutch.dam.name} needs an additional recovery year before breeding again.`);
     setClutch(null);
     setHoldbacks([]);
     setDamId("");
     setSireId("");
+    setSeasonCarePaid(0);
     setSeason((current) => current + 1);
     if (sold.length) {
       setMarketStatus(`${sold.length} unheld offspring listed for ${money(total)} total.`);
@@ -1226,6 +1317,16 @@ export function ChondroBreederGameV3() {
     setTransfers([]);
     setEnclosures({ "Chondro Dojo Bin": 0, "PVC Arboreal": 0 });
     setPurchasedStoreIds([]);
+    setCareerReputation(0);
+    setFacilityRooms({ "starter-room": 1 });
+    setFacilityConstruction(null);
+    setBreedingCycle(null);
+    setGeneticTestsPending([]);
+    setFemaleRecovery({});
+    setSeasonCarePaid(0);
+    setBreedingMessage("");
+    setFavoriteIds([]);
+    setCollapsedAnimalIds([]);
     setSelectedSnakeId(null);
     try {
       window.localStorage.removeItem(LOCAL_SAVE_KEY);
@@ -1279,13 +1380,22 @@ export function ChondroBreederGameV3() {
           </div>
           <div className="rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3">
             <div className="text-[9px] uppercase tracking-[.14em] text-white/24">Capacity</div>
-            <div className="mt-1 font-semibold text-white/65">{colony.length}/{capacity} <span className="text-[10px] font-normal text-white/30">· {capacity}/{roomSlots} room slots</span></div>
+            <div className="mt-1 font-semibold text-white/65">{colony.length}/{capacity}</div>
           </div>
           <button onClick={resetGame} className="rounded-2xl border border-red-300/15 px-4 py-3 text-xs font-bold text-red-100/55">Reset game</button>
         </div>
       </div>
 
-      {operationStatus ? <div role="status" className="mt-4 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3 text-xs text-emerald-100/65">{operationStatus}</div> : null}
+      {(breedingCycle || geneticTestsPending.length || facilityConstruction) ? (
+        <div className="mt-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4">
+          <div className="text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/45">Operations Queue</div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {breedingCycle ? <div className="rounded-xl border border-amber-200/10 p-3"><div className="text-xs font-bold text-amber-100/65">{BREEDING_STAGES.find((stage) => stage.id === breedingCycle.stage)?.label}</div><div className="mt-1 text-[10px] text-white/35">{colony.find((animal) => animal.id === breedingCycle.damId)?.name ?? breedingCycle.damId} × {colony.find((animal) => animal.id === breedingCycle.sireId)?.name ?? breedingCycle.sireId} · {remainingTime(breedingCycle.completesAt - now)}</div></div> : null}
+            {geneticTestsPending.map((job) => <div key={job.snakeId} className="rounded-xl border border-sky-300/10 p-3"><div className="text-xs font-bold text-sky-100/65">Genetic Test</div><div className="mt-1 text-[10px] text-white/35">{colony.find((animal) => animal.id === job.snakeId)?.name ?? job.snakeId} · {remainingTime(job.completesAt - now)}</div></div>)}
+            {facilityConstruction ? <div className="rounded-xl border border-emerald-300/10 p-3"><div className="text-xs font-bold text-emerald-100/65">Construction</div><div className="mt-1 text-[10px] text-white/35">{ROOM_EXPANSIONS.find((room) => room.id === facilityConstruction.roomId)?.name ?? facilityConstruction.roomId} · {remainingTime(facilityConstruction.completesAt - now)}</div></div> : null}
+          </div>
+        </div>
+      ) : null}
 
       <CollapsibleGameSection label="Genetics & locality guide" detail="Subspecies tendencies · testing · phenotype grades" defaultOpen>
         <section className="panel rounded-[28px] p-6">
@@ -1300,22 +1410,23 @@ export function ChondroBreederGameV3() {
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-emerald-100/65">Most animals are ordinary.</strong><br />Zeros and single-digit traits are common. 76–100% rolls are rare even in a favored trait.</div>
-            <div className="rounded-2xl border border-sky-300/10 bg-sky-300/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-sky-100/65">Genetic testing is optional.</strong><br />The icon still shows the animal. Spend {money(GENETIC_TEST_COST)} only when you want the exact percentages.</div>
+            <div className="rounded-2xl border border-sky-300/10 bg-sky-300/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-sky-100/65">Genetic testing unlocks later.</strong><br />Reach 1,500 breeder reputation or build the Research & Conservation Wing. Once unlocked, a panel costs {money(GENETIC_TEST_COST)} and takes {GENETIC_TEST_HOURS} real hours.</div>
             <div className="rounded-2xl border border-amber-200/10 bg-amber-200/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-amber-100/65">Pure locality is its own chase.</strong><br />Same-locality pure pairings preserve a named phenotype grade. Mixing localities creates a Pure · Mixed Locality animal with no named-locality grade.</div>
           </div>
         </section>
       </CollapsibleGameSection>
 
-      <CollapsibleGameSection label="Enclosures" detail={`${capacity} installed · ${roomSlots} room slots · ${openSlots} animal spaces open`}>
+      <CollapsibleGameSection label="Enclosures" detail={`${capacity} installed · ${physicalRoomCapacity} room limit · ${openSlots} animal spaces open`}>
         <section className="panel rounded-[28px] p-6">
           <div className="section-kicker">Enclosures</div>
-          <h2 className="mt-2 text-2xl font-semibold">Buy space before you buy snakes.</h2>
+          <h2 className="mt-2 text-2xl font-semibold">Rooms set the limit. Enclosures fill the rooms.</h2>
+          <p className="mt-2 text-xs text-white/34">Your rooms can physically hold {physicalRoomCapacity} enclosures. You have {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} left.</p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {(Object.keys(enclosurePrices) as EnclosureType[]).map((type) => (
               <div key={type} className="rounded-2xl border border-white/[.06] p-4">
                 <div className="text-lg font-semibold">{type}</div>
                 <div className="mt-1 text-xs text-white/35">1 snake capacity · Owned: {enclosures[type]}</div>
-                <button disabled={cash < enclosurePrices[type] || capacity >= roomSlots} onClick={() => buyEnclosure(type)} className="mt-4 rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-[#06100c] disabled:opacity-30">{capacity >= roomSlots ? "Room full" : `Buy · ${money(enclosurePrices[type])}`}</button>
+                <button disabled={cash < enclosurePrices[type] || roomEnclosureSlots <= 0} onClick={() => buyEnclosure(type)} className="mt-4 rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-[#06100c] disabled:opacity-30">{roomEnclosureSlots <= 0 ? "Need another room" : `Buy · ${money(enclosurePrices[type])}`}</button>
               </div>
             ))}
           </div>
@@ -1394,7 +1505,12 @@ export function ChondroBreederGameV3() {
               <div className="rounded-2xl border border-white/[.06] p-4 text-xs text-white/42">Selected genetics: <span className="font-semibold text-emerald-100/60">{dam.geneticsTested && sire.geneticsTested ? "Both parents tested" : dam.geneticsTested || sire.geneticsTested ? "One parent tested" : "Both parents untested"}</span><br /><span className="mt-1 block text-white/30">Testing is not required to breed. You can select entirely by appearance.</span></div>
             </div>
           ) : null}
-          <button disabled={!dam || !sire || !!clutch || breedingCycleActive} onClick={() => void breedSelected()} className="mt-5 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a] disabled:opacity-30">{breedingCycleActive ? "Breeding cycle in progress" : "Start breeding cycle"}</button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {seasonCarePaid === season ? <span className="rounded-full border border-emerald-300/15 px-3 py-2 text-[10px] font-bold text-emerald-100/60">Season {season} care paid</span> : <button disabled={cash < seasonCareCost} onClick={paySeasonCare} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-4 py-2 text-xs font-bold text-emerald-100/65 disabled:opacity-30">Food & care · {money(seasonCareCost)}</button>}
+            {breedingCycle ? <span className="rounded-full border border-amber-200/15 px-3 py-2 text-[10px] font-black text-amber-100/70">{BREEDING_STAGES.find((stage) => stage.id === breedingCycle.stage)?.label} · {remainingTime(breedingCycle.completesAt - now)}</span> : null}
+          </div>
+          {breedingMessage ? <div role="status" className="mt-3 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{breedingMessage}</div> : null}
+          <button disabled={!dam || !sire || !!clutch || !!breedingCycle || seasonCarePaid !== season} onClick={breedSelected} className="mt-5 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a] disabled:opacity-30">{breedingCycle ? "Breeding cycle in progress" : "Start breeding cycle"}</button>
         </section>
       </CollapsibleGameSection>
 
@@ -1430,12 +1546,16 @@ export function ChondroBreederGameV3() {
         <section>
           <div className="section-kicker">Your colony</div>
           <h2 className="mt-2 text-2xl font-semibold">Animals and project material</h2>
-          <p className="mt-2 text-sm text-white/32">A genetic test costs {money(GENETIC_TEST_COST)} and permanently reveals exact trait percentages. Phenotype grades are visible without testing because locality breeders can choose to work completely by appearance and pedigree.</p>
+          <p className="mt-2 text-sm text-white/32">Phenotype grades stay visible by eye. Exact trait percentages require the genetic-testing unlock, {money(GENETIC_TEST_COST)}, and a {GENETIC_TEST_HOURS}-hour lab timer.</p>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             {colony.map((animal) => {
               const req = agingRequirement(animal);
               const growCost = agingCost(animal);
               const sell = saleValue(animal);
+              const collapsed = collapsedAnimalIds.includes(animal.id);
+              const favorite = favoriteIds.includes(animal.id);
+              const pendingTest = geneticTestsPending.find((job) => job.snakeId === animal.id);
+              const recoverySeason = Number(femaleRecovery[animal.id] ?? 0);
               return (
                 <article key={animal.id} className="panel rounded-[28px] p-5">
                   <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} />
@@ -1444,8 +1564,9 @@ export function ChondroBreederGameV3() {
                       <div className="text-xl font-semibold">{animal.name || "Unnamed snake"}</div>
                       <div className="mt-1 text-xs text-white/30">{animal.id} · {animal.sex} · {animal.classification} · Gen {animal.generation}</div>
                     </div>
-                    <div className="flex flex-wrap gap-2"><PhenotypeBadge animal={animal} /><span className="rounded-full border border-white/[.08] px-3 py-1 text-[10px] uppercase text-white/45">{animal.lifeStage}</span></div>
+                    <div className="flex flex-wrap gap-2"><PhenotypeBadge animal={animal} /><span className="rounded-full border border-white/[.08] px-3 py-1 text-[10px] uppercase text-white/45">{animal.lifeStage}</span><button type="button" onClick={() => void toggleFavorite(animal.id)} className={`rounded-full border px-3 py-1 text-[10px] font-black ${favorite ? "border-amber-200/30 bg-amber-200/[.07] text-amber-100" : "border-white/[.08] text-white/45"}`}>{favorite ? "★ Favorite" : "☆ Favorite"}</button><button type="button" onClick={() => toggleAnimalDetails(animal.id)} className="rounded-full border border-white/[.08] px-3 py-1 text-[10px] font-bold text-white/45">{collapsed ? "Show details" : "Hide details"}</button></div>
                   </div>
+                  {!collapsed ? <>
                   <div className="mt-3 text-xs text-white/35">{animal.subspecies} · {animal.locality}{isNamedLocality(animal.locality) ? ` · ${localityPurity(animal)}% locality pedigree` : ""}</div>
                   <div className="mt-1 text-xs font-semibold text-amber-100/55">Neonate color: {animal.neonateColor}</div>
                   <div className="mt-4"><TraitGrid animal={animal} /></div>
@@ -1459,12 +1580,14 @@ export function ChondroBreederGameV3() {
                     {req ? <div className="mt-2">Next stage: {req.next} · {req.mice} mice · {req.months} months · Total care/food {money(growCost)}</div> : <div className="mt-2 text-emerald-200/60">Adult · breeding eligible</div>}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {!animal.geneticsTested ? <button disabled={!geneticsUnlocked || pendingGeneticTests.has(animal.id) || cash < GENETIC_TEST_COST} onClick={() => void geneticTest(animal.id)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65 disabled:opacity-30">{pendingGeneticTests.has(animal.id) ? "Genetic test pending" : !geneticsUnlocked ? "Genetic testing locked" : `Submit genetic test · ${money(GENETIC_TEST_COST)}`}</button> : <span className="rounded-xl border border-emerald-300/10 bg-emerald-300/[.03] px-4 py-2 text-xs font-bold text-emerald-100/55">Genetics tested</span>}
+                    {!animal.geneticsTested ? pendingTest ? <span className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65">Testing · {remainingTime(pendingTest.completesAt - now)}</span> : <button disabled={!geneticsUnlocked || cash < GENETIC_TEST_COST} onClick={() => geneticTest(animal.id)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65 disabled:opacity-30">{!geneticsUnlocked ? "Genetic testing locked" : `Genetic test · ${money(GENETIC_TEST_COST)}`}</button> : <span className="rounded-xl border border-emerald-300/10 bg-emerald-300/[.03] px-4 py-2 text-xs font-bold text-emerald-100/55">Genetics tested</span>}
                     {animal.nidoStatus === "Unknown" ? <button disabled={cash < NIDO_TEST_COST} onClick={() => nidoTest(animal.id)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55 disabled:opacity-30">Nido test · {money(NIDO_TEST_COST)}</button> : null}
                     {req ? <button disabled={cash < growCost} onClick={() => ageSnake(animal)} className="rounded-xl border border-amber-200/15 bg-amber-200/[.04] px-4 py-2 text-xs font-bold text-amber-100/65 disabled:opacity-30">Raise to {req.next} · {money(growCost)}</button> : null}
                     <button onClick={() => setSelectedSnakeId(animal.id)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Pedigree</button>
-                    {animal.nidoStatus === "Positive" ? <button onClick={() => transferPositive(animal)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65">Send to specialty snake care</button> : <button disabled={!!marketBusy} onClick={() => void sellSnake(animal)} className="rounded-xl border border-emerald-300/20 bg-emerald-300/[.06] px-4 py-2 text-xs font-bold text-emerald-200/75 disabled:opacity-30">Sell · {money(sell)}</button>}
+                    {animal.sex === "Female" && recoverySeason > season ? <span className="rounded-xl border border-amber-200/10 px-4 py-2 text-xs font-bold text-amber-100/55">Recovering · eligible season {recoverySeason}</span> : null}
+                    {animal.nidoStatus === "Positive" ? <button onClick={() => transferPositive(animal)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65">Send to specialty snake care</button> : favorite ? <span className="rounded-xl border border-amber-200/15 bg-amber-200/[.04] px-4 py-2 text-xs font-bold text-amber-100/65">Favorite · sale protected</span> : <button disabled={!!marketBusy} onClick={() => void sellSnake(animal)} className="rounded-xl border border-emerald-300/20 bg-emerald-300/[.06] px-4 py-2 text-xs font-bold text-emerald-200/75 disabled:opacity-30">Sell · {money(sell)}</button>}
                   </div>
+                  </> : null}
                 </article>
               );
             })}
@@ -1571,7 +1694,7 @@ export function ChondroBreederGameV3() {
             <p className="mt-3 text-sm leading-6 text-white/42">Choose 2–5 letters. They become part of every offspring ID you produce.</p>
             <input autoFocus value={initialsInput} onChange={(event) => setInitialsInput(event.target.value.replace(/[^a-z]/gi, "").toUpperCase().slice(0, 5))} maxLength={5} placeholder="ABB" className="mt-5 h-14 w-full rounded-2xl border border-white/[.09] bg-black/25 px-4 text-center text-2xl font-black uppercase tracking-[.25em] text-amber-100 outline-none" />
             {initialsStatus ? <div role="status" className="mt-3 text-sm text-amber-100/70">{initialsStatus}</div> : null}
-            <div className="mt-6 flex justify-end gap-2"><button onClick={() => setInitialsPrompt(false)} className="rounded-xl border border-white/[.08] px-4 py-3 text-xs font-bold text-white/50">Cancel</button><button onClick={() => void claimBreederInitials()} className="rounded-xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a]">Claim initials & hatch clutch</button></div>
+            <div className="mt-6 flex justify-end gap-2"><button onClick={() => setInitialsPrompt(false)} className="rounded-xl border border-white/[.08] px-4 py-3 text-xs font-bold text-white/50">Cancel</button><button onClick={() => void claimBreederInitials()} className="rounded-xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a]">Claim initials & start cycle</button></div>
           </div>
         </div>
       ) : null}
