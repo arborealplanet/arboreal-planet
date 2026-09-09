@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PwaInstallButton } from "@/components/PwaInstallButton";
 import { fetchOwnProfile,getServerIdentity } from "@/lib/supabase-auth";
 
 const nav = [
@@ -10,7 +11,7 @@ const nav = [
   ["Snake Stocks", "/snake-stocks"],
   ["Marketplace", "/marketplace"],
   ["Community", "/community"],
-  ["The Hatchery", "/hatchery"],
+  ["Arboreal Arcade", "/hatchery"],
 ] as const;
 
 function ProfileAvatar({
@@ -65,7 +66,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="ml-auto hidden items-center gap-2 lg:ml-2 lg:flex">
+          <PwaInstallButton />
+
+          <div className="hidden items-center gap-2 lg:ml-2 lg:flex">
             {signedIn?<>
               <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-lg text-white/65 transition hover:border-emerald-300/25 hover:text-emerald-200" aria-label="Messages">✉</Link>
               <NotificationBell />
@@ -78,7 +81,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <nav className="mx-auto flex max-w-[1440px] items-center gap-2 overflow-x-auto border-t border-white/[.045] px-4 py-2 text-[10px] font-bold uppercase tracking-[.1em] text-white/42 lg:hidden sm:px-6">
           <Link href="/animals" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Animals</Link>
           <Link href="/plants" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Plants</Link>
-          <Link href="/hatchery" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Hatchery</Link>
+          <Link href="/hatchery" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Arcade</Link>
           {signedIn?<><Link href="/messages" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Messages</Link><Link href="/notifications" className="whitespace-nowrap rounded-lg border border-white/[.06] px-3 py-2">Alerts</Link><Link href="/profile" aria-label="Profile settings" title="Profile settings" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-emerald-300/15 p-0.5 normal-case"><ProfileAvatar avatarUrl={profile?.avatar_url} label={accountLabel} className="h-full w-full rounded-full" /></Link></>:<Link href="/login" className="whitespace-nowrap rounded-lg border border-emerald-300/15 px-3 py-2 text-emerald-200/70">Sign in</Link>}
         </nav>
       </header>
@@ -103,7 +106,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <footer className="border-t border-white/[.07] bg-black/10 px-5 py-10 pb-24 lg:pb-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs text-white/30 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Built for keepers, breeders and the animals behind the data.</span></div>
-          <div className="flex flex-wrap gap-5"><Link href="/animals">Animals</Link><Link href="/plants">Plants</Link><Link href="/community">Community</Link><Link href="/marketplace">Marketplace</Link></div>
+          <div className="flex flex-wrap gap-5"><Link href="/animals">Animals</Link><Link href="/plants">Plants</Link><Link href="/community">Community</Link><Link href="/marketplace">Marketplace</Link><Link href="/hatchery">Arboreal Arcade</Link></div>
         </div>
       </footer>
     </div>

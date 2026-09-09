@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { AuthHashBridge } from "@/components/AuthHashBridge";
@@ -9,7 +9,19 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: { default: "Arboreal Planet", template: "%s · Arboreal Planet" },
-  description: "A keeper-first community, animal database, marketplace and reptile market intelligence platform.",
+  description: "A keeper-first community, animal database, marketplace, reptile market intelligence platform and Arboreal Arcade.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Arboreal Planet",
+  appleWebApp: {
+    capable: true,
+    title: "Arboreal Planet",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#06100c",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
