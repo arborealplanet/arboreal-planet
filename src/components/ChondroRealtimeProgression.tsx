@@ -193,14 +193,8 @@ export function ChondroRealtimeProgression() {
       if (cycle.stage === "hatch-day") {
         await patchProgression({ breedingCycle: null, breedingMessage: "Hatch Day is ready. Open Core Game to reveal the clutch." });
         setStatus("Hatch Day is ready.");
-        window.setTimeout(() => {
-          const button = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((node) => node.textContent?.trim() === "Run breeding season");
-          if (button && !button.disabled) {
-            bypassRef.current = true;
-            button.click();
-            window.setTimeout(() => { bypassRef.current = false; }, 0);
-          }
-        }, 100);
+        window.dispatchEvent(new CustomEvent("chondro-hatch-day-ready"));
+        window.dispatchEvent(new Event("chondro-progression-updated"));
         return;
       }
 

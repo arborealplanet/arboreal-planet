@@ -59,6 +59,8 @@ export function ChondroRoomExpansionPanel() {
     void patchProgression({ facilityRooms: rooms, facilityConstruction: null })
       .then(() => {
         setStatus(`${room.name} is ready.`);
+        window.dispatchEvent(new Event("chondro-room-capacity-updated"));
+        window.dispatchEvent(new Event("chondro-progression-updated"));
         return load();
       })
       .finally(() => setBusy(false));
