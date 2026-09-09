@@ -123,7 +123,7 @@ export function ChondroPairingPlanner() {
     const projects = BREEDING_PROJECTS.filter((project) => projectCompleted(project, candidate));
     let focus = DEFAULT_TRAIT_FOCUS;
     try { focus = normalizeTraitFocus(JSON.parse(window.localStorage.getItem(TRAIT_FOCUS_STORAGE_KEY) || "null")); } catch {}
-    const focusMatch = traitFocusMatch(focus, projectedTraits);
+    const focusMatch = traitFocusMatch(projectedTraits, focus);
     return { classification, locality, generation, inheritance, projectedTraits, clutch, projects, focusMatch };
   }, [dam, sire]);
 
@@ -218,7 +218,7 @@ export function ChondroPairingPlanner() {
               </details>
 
               <div className="text-[9px] leading-4 text-white/25">Forecasts use the game’s inheritance model, including the near-lock at 0% × 0%, suppressed weak 0% outcrosses, rare upward jumps, and the difficulty of reaching 95–100%. They are planning odds, not guaranteed clutch results.</div>
-              {preview.focusMatch.matchedTargets.length ? <div className="text-[10px] text-amber-100/60">Trait Focus: {preview.focusMatch.matchedTargets.map((key) => TRAIT_FOCUS_LABELS[key]).join(", ")} · estimated score {preview.focusMatch.score}%</div> : null}
+              {preview.focusMatch.matchedTargets.length ? <div className="text-[10px] text-amber-100/60">Trait Focus: {preview.focusMatch.matchedTargets.map((target) => TRAIT_FOCUS_LABELS[target.key]).join(", ")} · estimated score {preview.focusMatch.score}%</div> : null}
               {preview.projects.length ? <div className="text-[10px] text-emerald-100/60">Mean forecast reaches: {preview.projects.map((p) => p.name).join(" · ")}</div> : null}
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={usePairing} className="rounded-xl bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a]">Use in Core Game</button>

@@ -147,9 +147,15 @@ export function ChondroRealtimeProgression() {
     }
 
     resolvingRef.current = true;
-    const stageIndex = STAGES.findIndex((stage) => stage.id === cycle.stage);
+    const resolvedCycle: BreedingCycle = cycle;
+    const resolvedDam: Snake = dam;
+    const resolvedSire: Snake = sire;
+    const stageIndex = STAGES.findIndex((stage) => stage.id === resolvedCycle.stage);
 
     async function advance() {
+      const cycle = resolvedCycle;
+      const dam = resolvedDam;
+      const sire = resolvedSire;
       if (cycle.stage === "pairing") {
         if (Math.random() > pairingChance(dam, sire)) {
           await patchProgression({ breedingCycle: null, breedingMessage: failureReason(dam, sire) });
