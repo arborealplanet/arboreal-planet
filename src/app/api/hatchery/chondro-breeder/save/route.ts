@@ -13,6 +13,8 @@ const EXTENSION_KEYS = [
   "selectedWardrobe",
   "scoutsUsedSeason",
   "scoutsUsedThisSeason",
+  "plannedPairings",
+  "projectTags",
 ] as const;
 
 async function claimTargetedBonus(token: string) {
@@ -97,7 +99,7 @@ export async function PUT(request: NextRequest) {
   const state: Record<string, unknown> = { ...incoming };
 
   // The main game component predates these systems. Preserve extension fields whenever
-  // an older autosave does not include them so career/favorite progress cannot disappear.
+  // an older autosave does not include them so career/favorite/project progress cannot disappear.
   for (const key of EXTENSION_KEYS) {
     if (!(key in incoming) && key in existing) state[key] = existing[key];
   }
@@ -106,6 +108,16 @@ export async function PUT(request: NextRequest) {
     state.favoriteIds = state.favoriteIds.map((id) => String(id).slice(0, 160)).slice(0, 500);
   } else {
     state.favoriteIds = [];
+  }
+
+  if (Array.isArray(state.plannedPairings)) state.plannedPairings = state.plannedPairings.slice(0, 30);
+  if (state.projectTags && typeof state.projectTags === "object" && !Array.isArray(state.projectTags)) {
+    const cleaned: Record<string, string[]> = {};
+    for (const [snakeId, tags] of Object.entries(state.projectTags as Record<string, unknown>)) {
+      if (!Array.isArray(tags)) continue;
+      cleaned[String(snakeId).slice(0, 160)] = tags.map((tag) => String(tag).slice(0, 40)).slice(0, 12);
+    }
+    state.projectTags = cleaned;
   }
 
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?on_conflict=user_id`, {
