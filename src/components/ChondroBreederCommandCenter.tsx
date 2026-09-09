@@ -12,11 +12,12 @@ import { ChondroBreederProgression } from "@/components/ChondroBreederProgressio
 import { ChondroBreederSocial } from "@/components/ChondroBreederSocial";
 import { ChondroBreederFacility } from "@/components/ChondroBreederFacility";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
+import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
 
 type Tab = "manage" | "career" | "projects" | "community";
 
 const tabs: Array<{ id: Tab; label: string; detail: string }> = [
-  { id: "manage", label: "Manage", detail: "Collection · favorites · trait focus" },
+  { id: "manage", label: "Manage", detail: "Pairings · collection · favorites · trait focus" },
   { id: "career", label: "Career", detail: "Facility · contracts · achievements" },
   { id: "projects", label: "Projects", detail: "Lines · progression · conservation" },
   { id: "community", label: "Community", detail: "Social breeder systems" },
@@ -54,6 +55,7 @@ export function ChondroBreederCommandCenter() {
         <div className="max-h-[72vh] overflow-y-auto p-3 sm:p-4">
           {tab === "manage" ? (
             <div className="space-y-3">
+              <CompactBlock title="Pairing Planner" defaultOpen><ChondroPairingPlanner /></CompactBlock>
               <CompactBlock title="Trait Focus"><ChondroTraitFocusPanel /></CompactBlock>
               <CompactBlock title="Favorites & Player Market"><ChondroFavoritesMarketPanel /></CompactBlock>
               <ChondroCollectionManager />
