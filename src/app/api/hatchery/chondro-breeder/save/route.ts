@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { awardEligibleLegacyBadges, normalizeLegacyBadges } from "@/lib/chondro-badges";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const MAX_SAVE_BYTES = 250_000;
@@ -25,13 +26,20 @@ const EXTENSION_KEYS = [
   "seasonCarePaid",
   "breedingMessage",
   "retiredBreeders",
+  "legacyBadges",
 ] as const;
+
+const apiHeaders = (token: string) => ({
+  apikey: SUPABASE_AUTH_KEY,
+  Authorization: `Bearer ${token}`,
+  "Content-Type": "application/json",
+});
 
 async function claimTargetedBonus(token: string) {
   try {
     await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/claim_arborealsbybunn_chondro_bonus`, {
       method: "POST",
-      headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: apiHeaders(token),
       body: "{}",
       cache: "no-store",
     });
@@ -41,7 +49,7 @@ async function claimTargetedBonus(token: string) {
 async function readExistingState(userId: string, token: string) {
   try {
     const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?user_id=eq.${encodeURIComponent(userId)}&select=state&limit=1`, {
-      headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, Accept: "application/json" },
+      headers: { ...apiHeaders(token), Accept: "application/json" },
       cache: "no-store",
     });
     if (!response.ok) return {} as Record<string, unknown>;
@@ -50,18 +58,43 @@ async function readExistingState(userId: string, token: string) {
   } catch { return {} as Record<string, unknown>; }
 }
 
+async function persistState(userId: string, token: string, state: Record<string, unknown>) {
+  return fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?on_conflict=user_id`, {
+    method: "POST",
+    headers: { ...apiHeaders(token), Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({ user_id: userId, state, version: 1, updated_at: new Date().toISOString() }),
+    cache: "no-store",
+  });
+}
+
 export async function GET() {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ authenticated: false }, { status: 401 });
   await claimTargetedBonus(identity.token);
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?user_id=eq.${encodeURIComponent(identity.user.id)}&select=state,version,updated_at&limit=1`, {
-    headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}`, Accept: "application/json" },
+    headers: { ...apiHeaders(identity.token), Accept: "application/json" },
     cache: "no-store",
   });
   if (!response.ok) return NextResponse.json({ error: "Unable to load game save." }, { status: 502 });
   const rows = (await response.json()) as Array<{ state?: unknown; version?: number; updated_at?: string }>;
   const save = rows[0] ?? null;
-  return NextResponse.json({ authenticated: true, save: save ? { state: save.state ?? {}, version: save.version ?? 1, updatedAt: save.updated_at ?? null } : null });
+  if (!save) return NextResponse.json({ authenticated: true, save: null });
+
+  const rawState = save.state && typeof save.state === "object" && !Array.isArray(save.state)
+    ? save.state as Record<string, unknown>
+    : {};
+  const legacy = awardEligibleLegacyBadges(rawState);
+  if (legacy.changed) {
+    try { await persistState(identity.user.id, identity.token, legacy.state); } catch {}
+  }
+  return NextResponse.json({
+    authenticated: true,
+    save: {
+      state: legacy.state,
+      version: save.version ?? 1,
+      updatedAt: save.updated_at ?? null,
+    },
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -84,6 +117,7 @@ export async function PUT(request: NextRequest) {
   if (Array.isArray(state.showHistory)) state.showHistory = state.showHistory.slice(0, 100);
   if (Array.isArray(state.geneticTestsPending)) state.geneticTestsPending = state.geneticTestsPending.slice(0, 50);
   if (Array.isArray(state.retiredBreeders)) state.retiredBreeders = state.retiredBreeders.slice(0, 250);
+  state.legacyBadges = normalizeLegacyBadges(state.legacyBadges);
   if (state.projectTags && typeof state.projectTags === "object" && !Array.isArray(state.projectTags)) {
     const cleaned: Record<string, string[]> = {};
     for (const [snakeId, tags] of Object.entries(state.projectTags as Record<string, unknown>)) {
@@ -93,12 +127,8 @@ export async function PUT(request: NextRequest) {
     state.projectTags = cleaned;
   }
 
-  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?on_conflict=user_id`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
-    body: JSON.stringify({ user_id: identity.user.id, state, version: 1, updated_at: new Date().toISOString() }),
-    cache: "no-store",
-  });
+  const finalState = awardEligibleLegacyBadges(state).state;
+  const response = await persistState(identity.user.id, identity.token, finalState);
   if (!response.ok) return NextResponse.json({ error: "Unable to save game." }, { status: 502 });
-  return NextResponse.json({ ok: true, savedAt: new Date().toISOString() });
+  return NextResponse.json({ ok: true, savedAt: new Date().toISOString(), legacyBadges: finalState.legacyBadges ?? [] });
 }
