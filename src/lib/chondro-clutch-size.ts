@@ -105,11 +105,12 @@ export function clutchSizeForPairing(
   const profile = CLUTCH_SIZE_PROFILES[kind];
   let size = weightedRoll(profile, random);
 
-  // Female condition matters, but pairing type remains the primary driver.
+  // Female condition can shift the roll inside the agreed range, but never raises
+  // or lowers the actual ceiling/floor for that pairing type.
   if (dam.condition === "Excellent" && random() < 0.18) size += 1;
   if (dam.condition === "Fair" && random() < 0.45) size -= 1;
 
-  return Math.max(profile.min, Math.min(profile.max + 1, size));
+  return Math.max(profile.min, Math.min(profile.max, size));
 }
 
 export function averageClutchSize(profile: ClutchSizeProfile) {
