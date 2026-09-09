@@ -948,6 +948,7 @@ export function ChondroBreederGameV3() {
     return () => { cancelled = true; };
   }, [hydrated]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!hydrated) return;
     if (facilityConstruction && facilityConstruction.completesAt <= now) {
@@ -1006,7 +1007,8 @@ export function ChondroBreederGameV3() {
         setBreedingMessage("Choose breeder initials before the clutch can be recorded.");
         return;
       }
-      produceClutch(breederInitials);
+      setClutch(createClutch(cycleDam, cycleSire, breederInitials));
+      setHoldbacks([]);
       setBreedingCycle(null);
       setBreedingMessage("Hatch Day complete. Your clutch is ready for review.");
       return;
@@ -1018,6 +1020,7 @@ export function ChondroBreederGameV3() {
       setBreedingMessage(`${nextStage.label} started.`);
     }
   }, [hydrated, now, facilityConstruction, geneticTestsPending, breedingCycle, colony, breederInitials, damId, sireId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function buyEnclosure(type: EnclosureType) {
     const price = enclosurePrices[type];
@@ -1691,7 +1694,7 @@ export function ChondroBreederGameV3() {
             <p className="mt-3 text-sm leading-6 text-white/42">Choose 2–5 letters. They become part of every offspring ID you produce.</p>
             <input autoFocus value={initialsInput} onChange={(event) => setInitialsInput(event.target.value.replace(/[^a-z]/gi, "").toUpperCase().slice(0, 5))} maxLength={5} placeholder="ABB" className="mt-5 h-14 w-full rounded-2xl border border-white/[.09] bg-black/25 px-4 text-center text-2xl font-black uppercase tracking-[.25em] text-amber-100 outline-none" />
             {initialsStatus ? <div role="status" className="mt-3 text-sm text-amber-100/70">{initialsStatus}</div> : null}
-            <div className="mt-6 flex justify-end gap-2"><button onClick={() => setInitialsPrompt(false)} className="rounded-xl border border-white/[.08] px-4 py-3 text-xs font-bold text-white/50">Cancel</button><button onClick={() => void claimBreederInitials()} className="rounded-xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a]">Claim initials & hatch clutch</button></div>
+            <div className="mt-6 flex justify-end gap-2"><button onClick={() => setInitialsPrompt(false)} className="rounded-xl border border-white/[.08] px-4 py-3 text-xs font-bold text-white/50">Cancel</button><button onClick={() => void claimBreederInitials()} className="rounded-xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a]">Claim initials & start cycle</button></div>
           </div>
         </div>
       ) : null}
