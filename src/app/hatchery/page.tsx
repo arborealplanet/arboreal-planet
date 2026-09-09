@@ -1,6 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
 import { PageIntro } from "@/components/AppShell";
-import { GreenTreePythonArt } from "@/components/ArborealArt";
 
 const achievements = ["First Clutch", "First Red Neo", "First Yellow Neo", "Three Generations", "Lineage Keeper", "Genetics Student"];
 
@@ -27,13 +27,8 @@ export default function HatcheryPage() {
               <Link href="/arcade/chondro-breeder" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Chondro Breeder</Link>
             </div>
 
-            <div className="mx-auto w-full max-w-sm">
-              <div className="relative overflow-hidden rounded-[26px] border border-amber-200/15 bg-gradient-to-b from-emerald-300/[.07] to-black/20 p-5 shadow-2xl shadow-black/25">
-                <div className="flex items-center justify-between"><span className="rounded-full border border-amber-200/15 bg-amber-200/[.06] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.15em] text-amber-100/60">Virtual</span><span className="text-[9px] font-bold uppercase tracking-[.15em] text-white/22">Collection card</span></div>
-                <div className="grid-surface mt-5 h-52 overflow-hidden rounded-2xl border border-white/[.06] bg-emerald-300/[.018]"><GreenTreePythonArt compact /></div>
-                <div className="mt-5"><div className="text-xl font-semibold">Wamena #01</div><div className="mt-1 text-xs text-white/30">Female · Red neonate · Generation 1</div></div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-white/35"><div className="rounded-xl border border-white/[.06] p-3"><div className="text-white/20">LINEAGE</div><div className="mt-1 font-semibold text-white/48">Starter pair</div></div><div className="rounded-xl border border-white/[.06] p-3"><div className="text-white/20">PROGRAM</div><div className="mt-1 font-semibold text-white/48">Foundation</div></div></div>
-              </div>
+            <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">
+              <Image src="/branding/arboreal-arcade-splash.png" alt="Arboreal Planet Arboreal Arcade" width={941} height={1672} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" priority />
             </div>
           </div>
         </div>

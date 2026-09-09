@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 function Pitcher({ left, top, scale = 1 }: { left: string; top: string; scale?: number }) {
   return (
@@ -12,13 +13,8 @@ function Pitcher({ left, top, scale = 1 }: { left: string; top: string; scale?: 
 
 export function ArborealPlanetMark({ className = "" }: { className?: string }) {
   return (
-    <div className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl border border-emerald-300/25 bg-[#07160f] shadow-[0_0_30px_rgba(52,211,153,.10)] ${className}`} aria-label="Arboreal Planet logo mark">
-      <div className="absolute h-[68%] w-[68%] rounded-full border border-emerald-200/60" />
-      <div className="absolute h-[52%] w-[52%] rounded-full border border-emerald-300/25" />
-      <div className="absolute left-[20%] top-[47%] h-[2px] w-[60%] -rotate-12 bg-emerald-200/35" />
-      <div className="absolute bottom-[17%] right-[14%] h-[40%] w-[22%] rotate-[24deg] rounded-[100%_0_100%_0] bg-emerald-400/75" />
-      <div className="absolute bottom-[20%] right-[29%] h-[32%] w-[16%] -rotate-[15deg] rounded-[100%_0_100%_0] bg-emerald-300/45" />
-      <span className="relative -translate-x-1 text-[9px] font-black tracking-[-.08em] text-white/80">AP</span>
+    <div className={`relative shrink-0 overflow-hidden rounded-xl shadow-[0_0_30px_rgba(52,211,153,.10)] ${className}`} aria-label="Arboreal Planet logo mark">
+      <Image src="/branding/arboreal-planet-app-icon.png" alt="" fill sizes="40px" className="object-cover" priority />
     </div>
   );
 }
