@@ -1,0 +1,66 @@
+name: Fix Chondro Build
+
+on:
+  push:
+    branches:
+      - gameplay-progression-prep
+    paths:
+      - .github/workflows/fix-chondro-build.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gameplay-progression-prep
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Fix TypeScript regressions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          planner_path = Path('src/components/ChondroPairingPlanner.tsx')
+          planner = planner_path.read_text()
+          planner = planner.replace(
+              'const focusMatch = traitFocusMatch(focus, projectedTraits);',
+              'const focusMatch = traitFocusMatch(projectedTraits, focus);',
+          )
+          planner = planner.replace(
+              'preview.focusMatch.matchedTargets.map((key) => TRAIT_FOCUS_LABELS[key]).join(", ")',
+              'preview.focusMatch.matchedTargets.map((target) => TRAIT_FOCUS_LABELS[target.key]).join(", ")',
+          )
+          planner_path.write_text(planner)
+
+          realtime_path = Path('src/components/ChondroRealtimeProgression.tsx')
+          realtime = realtime_path.read_text()
+          old = '''    resolvingRef.current = true;\n    const stageIndex = STAGES.findIndex((stage) => stage.id === cycle.stage);\n\n    async function advance() {\n'''
+          new = '''    resolvingRef.current = true;\n    const resolvedCycle: BreedingCycle = cycle;\n    const resolvedDam: Snake = dam;\n    const resolvedSire: Snake = sire;\n    const stageIndex = STAGES.findIndex((stage) => stage.id === resolvedCycle.stage);\n\n    async function advance() {\n      const cycle = resolvedCycle;\n      const dam = resolvedDam;\n      const sire = resolvedSire;\n'''
+          if old not in realtime:
+              raise SystemExit('Could not locate realtime narrowing block')
+          realtime = realtime.replace(old, new, 1)
+          realtime_path.write_text(realtime)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Commit verified fixes and remove temporary workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/fix-chondro-build.yml
+          git config user.name "arborealplanet"
+          git config user.email "arborealplanet@gmail.com"
+          git add -A
+          git commit -m "Fix Chondro progression build errors"
+          git push origin HEAD:gameplay-progression-prep
