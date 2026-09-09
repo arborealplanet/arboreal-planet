@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Subspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
 type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
@@ -52,6 +53,16 @@ function strengthLabel(value: number) {
 
 function strongestTrait(snake: Snake) {
   return traits.reduce((best, current) => traitValue(snake, current.key) > traitValue(snake, best.key) ? current : best, traits[0]);
+}
+
+function portraitTraits(snake: Snake) {
+  return {
+    highBlack: snake.highBlack,
+    highWhite: snake.highWhite,
+    blueStripe: snake.blueStripe,
+    yellowRetention: snake.yellowRetention,
+    blotches: snake.blotches,
+  };
 }
 
 function explainBaby(baby: Snake, dam: Snake, sire: Snake) {
@@ -131,10 +142,19 @@ export function ChondroClutchOutcomeExplainer() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {analyses.map(({ baby, analysis }) => (
               <article key={baby.id} className={`rounded-2xl border p-4 ${analysis.rare ? "border-amber-200/25 bg-amber-200/[.04]" : "border-white/[.06] bg-black/10"}`}>
-                <div className="flex items-start justify-between gap-3">
+                <ChondroSnakeIcon
+                  subspecies={baby.subspecies}
+                  name={baby.name}
+                  traits={portraitTraits(baby)}
+                  lifeStage="Hatchling"
+                  neonateColor={baby.neonateColor}
+                  compact
+                />
+                <div className="mt-3 flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-black text-white/75">{baby.name}</div>
                     <div className="mt-1 text-[10px] text-white/30">{baby.subspecies} · {baby.locality}</div>
+                    <div className={`mt-1 text-[10px] font-bold ${baby.neonateColor === "Red" ? "text-red-100/55" : "text-amber-100/55"}`}>{baby.neonateColor} neonate</div>
                   </div>
                   <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] ${analysis.rare ? "border-amber-100/20 text-amber-100/70" : "border-white/[.08] text-white/35"}`}>
                     {analysis.rare ? "Breakthrough" : analysis.headline}
