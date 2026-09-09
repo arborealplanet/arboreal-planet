@@ -23,26 +23,28 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           game_path = Path("src/components/ChondroBreederGameV3.tsx")
           page_path = Path("src/app/hatchery/chondro-breeder/page.tsx")
           game = game_path.read_text()
 
-          old = '''  const locality: SnakeLocality = sameLocality
-            ? dam.locality
-            : pureSame
-              ? "Mixed Locality"
-              : "Designer";
-          '''.replace('          ', '')
-          new = '''  const locality: SnakeLocality = sameLocality
-            ? dam.locality
-            : classification === "Designer"
-              ? "Designer"
-              : "Mixed Locality";
-          '''.replace('          ', '')
-          if old in game:
-              game = game.replace(old, new, 1)
-          elif ': classification === "Designer"' not in game:
+          pattern = re.compile(
+              r'  const locality: SnakeLocality = sameLocality\n'
+              r'    \? dam\.locality\n'
+              r'    : pureSame\n'
+              r'      \? "Mixed Locality"\n'
+              r'      : "Designer";'
+          )
+          replacement = (
+              '  const locality: SnakeLocality = sameLocality\n'
+              '    ? dam.locality\n'
+              '    : classification === "Designer"\n'
+              '      ? "Designer"\n'
+              '      : "Mixed Locality";'
+          )
+          game, count = pattern.subn(replacement, game, count=1)
+          if count == 0 and ': classification === "Designer"' not in game:
               raise SystemExit("Could not locate locality classification block")
           game_path.write_text(game)
 
