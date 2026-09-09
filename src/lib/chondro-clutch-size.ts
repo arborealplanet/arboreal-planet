@@ -28,20 +28,22 @@ export function clutchPairingKind(dam: ClutchPairingAnimal, sire: ClutchPairingA
   return "pure-same-subspecies";
 }
 
+const PURE_SAME_SUBSPECIES_WEIGHTS = [1, 3, 6, 8, 6, 3, 1];
+
 export const CLUTCH_SIZE_PROFILES: Record<ClutchPairingKind, ClutchSizeProfile> = {
   "pure-same-locality": {
     kind: "pure-same-locality",
     label: "Pure same-locality pairing",
-    min: 7,
-    max: 13,
-    weights: [1, 3, 6, 8, 6, 3, 1],
+    min: 6,
+    max: 12,
+    weights: PURE_SAME_SUBSPECIES_WEIGHTS,
   },
   "pure-same-subspecies": {
     kind: "pure-same-subspecies",
     label: "Pure same-subspecies pairing",
     min: 6,
     max: 12,
-    weights: [1, 3, 6, 8, 6, 3, 1],
+    weights: PURE_SAME_SUBSPECIES_WEIGHTS,
   },
   "pure-mixed-subspecies": {
     kind: "pure-mixed-subspecies",
