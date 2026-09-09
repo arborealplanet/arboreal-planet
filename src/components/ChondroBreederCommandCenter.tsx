@@ -16,12 +16,13 @@ import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
 import { ChondroProjectTagsPanel } from "@/components/ChondroProjectTagsPanel";
 import { ChondroSeasonSummaryPanel } from "@/components/ChondroSeasonSummaryPanel";
+import { ChondroShowsPanel } from "@/components/ChondroShowsPanel";
 
 type Tab = "manage" | "career" | "projects" | "community";
 
 const tabs: Array<{ id: Tab; label: string; detail: string }> = [
   { id: "manage", label: "Manage", detail: "Pairings · collection · clutch records · favorites" },
-  { id: "career", label: "Career", detail: "Facility · contracts · achievements · season summaries" },
+  { id: "career", label: "Career", detail: "Facility · shows · contracts · achievements" },
   { id: "projects", label: "Projects", detail: "Tags · lines · progression · conservation" },
   { id: "community", label: "Community", detail: "Social breeder systems" },
 ];
@@ -69,6 +70,7 @@ export function ChondroBreederCommandCenter() {
           {tab === "career" ? (
             <div className="space-y-3">
               <ChondroSeasonSummaryPanel />
+              <CompactBlock title="Show Circuit" defaultOpen><ChondroShowsPanel /></CompactBlock>
               <ChondroCareerSystemsPanel />
               <CompactBlock title="Achievements & Titles"><ChondroAchievementsPanel /></CompactBlock>
               <CompactBlock title="Legacy Career Progression"><ChondroBreederProgression /></CompactBlock>
