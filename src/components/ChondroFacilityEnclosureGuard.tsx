@@ -15,17 +15,6 @@ export function ChondroFacilityEnclosureGuard() {
     let cancelled = false;
     let observer: MutationObserver | null = null;
 
-    async function load() {
-      try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) {
-          saveRef.current = (data.save?.state ?? {}) as Save;
-          decorate();
-        }
-      } catch {}
-    }
-
     function enclosureSection() {
       const headings = Array.from(document.querySelectorAll("h2"));
       const heading = headings.find((node) => node.textContent?.includes("Buy space before you buy snakes"));
@@ -47,18 +36,37 @@ export function ChondroFacilityEnclosureGuard() {
         const intro = section.querySelector("h2")?.parentElement;
         intro?.appendChild(notice);
       }
-      notice.textContent = `Facility enclosure space: ${installed}/${cap} installed${full ? " · Upgrade your facility to add more enclosures." : ` · ${cap - installed} slots remaining.`}`;
+      const nextNotice = `Facility enclosure space: ${installed}/${cap} installed${full ? " · Upgrade your facility to add more enclosures." : ` · ${cap - installed} slots remaining.`}`;
+      if (notice.textContent !== nextNotice) notice.textContent = nextNotice;
 
       for (const button of Array.from(section.querySelectorAll<HTMLButtonElement>("button"))) {
-        const text = button.textContent ?? "";
-        if (!text.includes("Buy ·")) continue;
+        const currentText = button.textContent ?? "";
+        const originalText = button.dataset.facilityOriginalText ?? (currentText.includes("Buy ·") ? currentText : "");
+        if (!originalText) continue;
+        if (!button.dataset.facilityOriginalText) button.dataset.facilityOriginalText = originalText;
+
         button.dataset.facilityCapBlocked = full ? "true" : "false";
         if (full) {
-          button.disabled = true;
-          button.title = "Facility enclosure cap reached";
-          button.textContent = "Facility full";
+          if (!button.disabled) button.disabled = true;
+          if (button.title !== "Facility enclosure cap reached") button.title = "Facility enclosure cap reached";
+          if (button.textContent !== "Facility full") button.textContent = "Facility full";
+        } else {
+          if (button.disabled) button.disabled = false;
+          if (button.title) button.title = "";
+          if (button.textContent !== originalText) button.textContent = originalText;
         }
       }
+    }
+
+    async function load() {
+      try {
+        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
+        const data = await response.json();
+        if (!cancelled && response.ok) {
+          saveRef.current = (data.save?.state ?? {}) as Save;
+          decorate();
+        }
+      } catch {}
     }
 
     function onClick(event: MouseEvent) {
@@ -72,7 +80,7 @@ export function ChondroFacilityEnclosureGuard() {
 
     void load();
     document.addEventListener("click", onClick, true);
-    observer = new MutationObserver(decorate);
+    observer = new MutationObserver(() => decorate());
     observer.observe(document.body, { childList: true, subtree: true });
 
     const refresh = window.setInterval(() => {
