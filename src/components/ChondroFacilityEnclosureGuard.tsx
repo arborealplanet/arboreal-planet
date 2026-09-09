@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { facilityEnclosureCap, installedEnclosures } from "@/lib/chondro-facility-limits";
+import { installedEnclosures, roomCapacityFromSave, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 
 type Save = {
   facilityId?: string;
+  facilityRooms?: FacilityRoomState;
   enclosures?: Record<string, number>;
 };
 
@@ -25,7 +26,7 @@ export function ChondroFacilityEnclosureGuard() {
       const section = enclosureSection();
       if (!section) return;
       const installed = installedEnclosures(saveRef.current.enclosures);
-      const cap = facilityEnclosureCap(saveRef.current.facilityId);
+      const cap = roomCapacityFromSave(saveRef.current);
       const full = installed >= cap;
 
       let notice = section.querySelector<HTMLElement>("[data-facility-enclosure-limit]");
@@ -36,7 +37,7 @@ export function ChondroFacilityEnclosureGuard() {
         const intro = section.querySelector("h2")?.parentElement;
         intro?.appendChild(notice);
       }
-      const nextNotice = `Facility enclosure space: ${installed}/${cap} installed${full ? " · Upgrade your facility to add more enclosures." : ` · ${cap - installed} slots remaining.`}`;
+      const nextNotice = `Room enclosure space: ${installed}/${cap} installed${full ? " · Add another room or facility wing to install more enclosures." : ` · ${cap - installed} physical slots remaining.`}`;
       if (notice.textContent !== nextNotice) notice.textContent = nextNotice;
 
       for (const button of Array.from(section.querySelectorAll<HTMLButtonElement>("button"))) {
@@ -44,12 +45,11 @@ export function ChondroFacilityEnclosureGuard() {
         const originalText = button.dataset.facilityOriginalText ?? (currentText.includes("Buy ·") ? currentText : "");
         if (!originalText) continue;
         if (!button.dataset.facilityOriginalText) button.dataset.facilityOriginalText = originalText;
-
         button.dataset.facilityCapBlocked = full ? "true" : "false";
         if (full) {
           if (!button.disabled) button.disabled = true;
-          if (button.title !== "Facility enclosure cap reached") button.title = "Facility enclosure cap reached";
-          if (button.textContent !== "Facility full") button.textContent = "Facility full";
+          if (button.title !== "Room enclosure cap reached") button.title = "Room enclosure cap reached";
+          if (button.textContent !== "Room full") button.textContent = "Room full";
         } else {
           if (button.disabled) button.disabled = false;
           if (button.title) button.title = "";
