@@ -6,6 +6,7 @@ import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedS
 import { ChondroBreederCommandCenter } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
+import { ChondroRetiredBreedersPanel } from "@/components/ChondroRetiredBreedersPanel";
 
 type WorkspaceTab = "game" | "manage" | "guide";
 
@@ -21,7 +22,7 @@ export function ChondroBreederWorkspace() {
         <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/[.08] bg-[#07100d]/90 p-1.5 shadow-2xl backdrop-blur-xl">
           <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
             <WorkspaceButton active={tab === "game"} onClick={() => setTab("game")} label="Core Game" detail="Breed · buy · sell" />
-            <WorkspaceButton active={tab === "manage"} onClick={() => setTab("manage")} label="Manage" detail="Career · projects · collection" />
+            <WorkspaceButton active={tab === "manage"} onClick={() => setTab("manage")} label="Manage" detail="Career · projects · legacy" />
             <WorkspaceButton active={tab === "guide"} onClick={() => setTab("guide")} label="Guide" detail="Subspecies · phenotype" />
           </div>
           <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="shrink-0 rounded-xl border border-white/[.07] px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-white/40">Top ↑</button>
@@ -35,7 +36,14 @@ export function ChondroBreederWorkspace() {
             <ChondroBreederExpandedShop />
           </>
         ) : null}
-        {tab === "manage" ? <ChondroBreederCommandCenter /> : null}
+        {tab === "manage" ? (
+          <>
+            <ChondroBreederCommandCenter />
+            <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6">
+              <ChondroRetiredBreedersPanel />
+            </div>
+          </>
+        ) : null}
         {tab === "guide" ? <ChondroBreederSubspeciesPhenotypes /> : null}
       </div>
     </div>
