@@ -5,8 +5,6 @@ import { useEffect, useRef } from "react";
 type SavedSnake = { id: string; name?: string };
 type GameState = {
   colony?: SavedSnake[];
-  favorites?: string[];
-  [key: string]: unknown;
 };
 
 const STAR_CLASS = "chondro-favorite-card-star";
@@ -21,15 +19,12 @@ function starTitle(favorite: boolean) {
 
 export function ChondroFavoriteCardControls() {
   const stateRef = useRef<GameState>({});
+  const favoriteIdsRef = useRef<string[]>([]);
   const busyRef = useRef(new Set<string>());
 
   useEffect(() => {
     let cancelled = false;
     let observer: MutationObserver | null = null;
-
-    function favoriteIds() {
-      return new Set(Array.isArray(stateRef.current.favorites) ? stateRef.current.favorites : []);
-    }
 
     function findColonyArticles() {
       const headings = Array.from(document.querySelectorAll("h2"));
@@ -41,7 +36,7 @@ export function ChondroFavoriteCardControls() {
     function decorate() {
       const colony = Array.isArray(stateRef.current.colony) ? stateRef.current.colony : [];
       if (!colony.length) return;
-      const favorites = favoriteIds();
+      const favorites = new Set(favoriteIdsRef.current);
       const articles = findColonyArticles();
 
       articles.forEach((article, index) => {
@@ -54,23 +49,36 @@ export function ChondroFavoriteCardControls() {
           button = document.createElement("button");
           button.type = "button";
           button.className = `${STAR_CLASS} absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-amber-200/25 bg-black/65 text-xl leading-none text-amber-200 shadow-lg backdrop-blur transition hover:border-amber-200/60 hover:bg-amber-200/10`;
-          button.setAttribute("aria-label", `Favorite ${snake.name ?? "snake"}`);
           article.appendChild(button);
         }
 
+        const favorite = favorites.has(snake.id);
+        const nextText = starText(favorite);
+        const nextTitle = starTitle(favorite);
+        const nextPressed = favorite ? "true" : "false";
+        const nextLabel = `${nextTitle}: ${snake.name ?? "snake"}`;
+
         button.dataset.snakeId = snake.id;
-        button.textContent = starText(favorites.has(snake.id));
-        button.title = starTitle(favorites.has(snake.id));
-        button.setAttribute("aria-pressed", favorites.has(snake.id) ? "true" : "false");
+        if (button.textContent !== nextText) button.textContent = nextText;
+        if (button.title !== nextTitle) button.title = nextTitle;
+        if (button.getAttribute("aria-pressed") !== nextPressed) button.setAttribute("aria-pressed", nextPressed);
+        if (button.getAttribute("aria-label") !== nextLabel) button.setAttribute("aria-label", nextLabel);
       });
     }
 
     async function loadState() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!response.ok || cancelled) return;
-        stateRef.current = (data.save?.state ?? {}) as GameState;
+        const [saveResponse, favoritesResponse] = await Promise.all([
+          fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" }),
+          fetch("/api/hatchery/chondro-breeder/favorites", { cache: "no-store" }),
+        ]);
+        const saveData = await saveResponse.json();
+        const favoritesData = await favoritesResponse.json();
+        if (cancelled || !saveResponse.ok) return;
+        stateRef.current = (saveData.save?.state ?? {}) as GameState;
+        favoriteIdsRef.current = favoritesResponse.ok && Array.isArray(favoritesData.favoriteIds)
+          ? favoritesData.favoriteIds.map((id: unknown) => String(id))
+          : [];
         decorate();
       } catch {}
     }
@@ -79,25 +87,28 @@ export function ChondroFavoriteCardControls() {
       if (!snakeId || busyRef.current.has(snakeId)) return;
       busyRef.current.add(snakeId);
       try {
-        const current = stateRef.current;
-        const favorites = new Set(Array.isArray(current.favorites) ? current.favorites : []);
-        if (favorites.has(snakeId)) favorites.delete(snakeId);
-        else favorites.add(snakeId);
-
-        const next: GameState = { ...current, favorites: Array.from(favorites) };
-        stateRef.current = next;
+        const current = new Set(favoriteIdsRef.current);
+        const favorite = !current.has(snakeId);
+        if (favorite) current.add(snakeId);
+        else current.delete(snakeId);
+        favoriteIdsRef.current = Array.from(current);
         decorate();
 
-        const response = await fetch("/api/hatchery/chondro-breeder/save", {
-          method: "PUT",
+        const response = await fetch("/api/hatchery/chondro-breeder/favorites", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(next),
+          body: JSON.stringify({ snakeId, favorite }),
         });
+        const data = await response.json();
         if (!response.ok) {
           await loadState();
           return;
         }
-        window.dispatchEvent(new CustomEvent("arboreal-chondro-favorites-change", { detail: next.favorites }));
+        favoriteIdsRef.current = Array.isArray(data.favoriteIds)
+          ? data.favoriteIds.map((id: unknown) => String(id))
+          : [];
+        decorate();
+        window.dispatchEvent(new CustomEvent("arboreal-chondro-favorites-change", { detail: favoriteIdsRef.current }));
       } catch {
         await loadState();
       } finally {
