@@ -8,7 +8,14 @@ export async function GET() {
   if (!identity) return NextResponse.json({ authenticated: false, listings: [] }, { status: 401 });
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_player_market?status=eq.active&select=id,snake_id,seller_id,snake,price,listed_at&order=listed_at.desc&limit=60`, { headers: headers(identity.token), cache: "no-store" });
   if (!response.ok) return NextResponse.json({ error: "Unable to load the player market." }, { status: 502 });
-  return NextResponse.json({ authenticated: true, listings: await response.json() });
+  const listings = (await response.json()) as Array<Record<string, unknown> & { seller_id?: string }>;
+  return NextResponse.json({
+    authenticated: true,
+    listings: listings.map((listing) => ({
+      ...listing,
+      isMine: listing.seller_id === identity.user.id,
+    })),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -19,13 +26,15 @@ export async function POST(request: NextRequest) {
     ? "list_chondro_snake_for_player_market"
     : body.action === "buy"
       ? "buy_chondro_player_market_listing"
-      : body.action === "list-clutch"
-        ? "list_chondro_clutch_for_player_market"
-        : null;
+      : body.action === "reclaim"
+        ? "reclaim_chondro_player_market_listing"
+        : body.action === "list-clutch"
+          ? "list_chondro_clutch_for_player_market"
+          : null;
   if (!action) return NextResponse.json({ error: "Unsupported market action." }, { status: 400 });
   const payload = action === "list_chondro_snake_for_player_market"
     ? { p_snake_id: String(body.snakeId ?? "").slice(0, 160), p_price: Math.round(Number(body.price ?? 0)) }
-    : action === "buy_chondro_player_market_listing"
+    : action === "buy_chondro_player_market_listing" || action === "reclaim_chondro_player_market_listing"
       ? { p_listing_id: String(body.listingId ?? "") }
       : {
           p_clutch: body.clutch,

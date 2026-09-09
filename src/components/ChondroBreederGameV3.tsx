@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
+import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
+import { inheritTraitSet } from "@/lib/chondro-genetics";
 
 type Subspecies =
   | "Morelia azurea azurea"
@@ -442,26 +444,9 @@ function combineLocalityAncestry(a: Snake, b: Snake) {
 }
 
 function classifyPair(a: Snake, b: Snake): Classification {
-  if (a.classification !== "Pure" || b.classification !== "Pure") return "Designer";
+  if (a.classification === "Designer" || b.classification === "Designer") return "Designer";
+  if (a.classification === "Hybrid" || b.classification === "Hybrid") return "Hybrid";
   return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
-}
-
-function inheritLineTrait(
-  a: number,
-  b: number,
-  subspecies: Subspecies,
-  key: TraitKey,
-  pureSame: boolean,
-) {
-  const midpoint = (a + b) / 2;
-  const isPreferred = key !== "blotches" && preferredTraits[subspecies].includes(key);
-  const directionalLift = pureSame ? (isPreferred ? 2.5 : 0.4) : 0;
-  const ordinary = midpoint + directionalLift + (Math.random() + Math.random() - 1) * 14;
-  const breakout = Math.random() < 0.012 ? 12 + Math.random() * 24 : 0;
-  const setback = Math.random() < 0.025 ? -(5 + Math.random() * 10) : 0;
-  let raw = ordinary + breakout + setback;
-  if (raw > 85 && midpoint < 65) raw = 85 + (raw - 85) * 0.35;
-  return clamp(raw);
 }
 
 function inheritPhenotypeScore(dam: Snake, sire: Snake, sameLocality: boolean) {
@@ -491,10 +476,11 @@ function makeOffspring(
     localityPurity(sire) >= 99.9;
   const locality: SnakeLocality = sameLocality
     ? dam.locality
-    : pureSame
-      ? "Mixed Locality"
-      : "Designer";
+    : classification === "Designer"
+      ? "Designer"
+      : "Mixed Locality";
   const subspecies = pureSame ? dam.subspecies : structural.subspecies;
+  const inheritedTraits = inheritTraitSet(dam, sire);
   return {
     id: `${breederInitials}-${clutchId}-${String(index + 1).padStart(2, "0")}`,
     name: `Hatchling ${index + 1}`,
@@ -504,11 +490,11 @@ function makeOffspring(
     locality,
     neonateColor: pick(dam.neonateColor, sire.neonateColor),
     lifeStage: "Hatchling",
-    highBlack: inheritLineTrait(dam.highBlack, sire.highBlack, subspecies, "highBlack", pureSame),
-    highWhite: inheritLineTrait(dam.highWhite, sire.highWhite, subspecies, "highWhite", pureSame),
-    blueStripe: inheritLineTrait(dam.blueStripe, sire.blueStripe, subspecies, "blueStripe", pureSame),
-    yellowRetention: inheritLineTrait(dam.yellowRetention, sire.yellowRetention, subspecies, "yellowRetention", pureSame),
-    blotches: inheritLineTrait(dam.blotches ?? 0, sire.blotches ?? 0, subspecies, "blotches", pureSame),
+    highBlack: inheritedTraits.highBlack,
+    highWhite: inheritedTraits.highWhite,
+    blueStripe: inheritedTraits.blueStripe,
+    yellowRetention: inheritedTraits.yellowRetention,
+    blotches: inheritedTraits.blotches,
     geneticsTested: false,
     phenotypeScore: inheritPhenotypeScore(dam, sire, sameLocality),
     localityAncestry: combineLocalityAncestry(dam, sire),
@@ -531,7 +517,7 @@ function makeOffspring(
 
 function createClutch(dam: Snake, sire: Snake, breederInitials: string): Clutch {
   const id = `CL-${Date.now().toString(36).toUpperCase()}`;
-  const size = 5 + Math.floor(Math.random() * 5);
+  const size = clutchSizeForPairing(dam, sire);
   return {
     id,
     dam,
