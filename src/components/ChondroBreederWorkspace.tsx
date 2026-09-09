@@ -7,6 +7,7 @@ import { ChondroBreederCommandCenter } from "@/components/ChondroBreederCommandC
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
 import { ChondroRetiredBreedersPanel } from "@/components/ChondroRetiredBreedersPanel";
+import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcomeExplainer";
 
 type WorkspaceTab = "game" | "manage" | "guide";
 
@@ -33,6 +34,7 @@ export function ChondroBreederWorkspace() {
         {tab === "game" ? (
           <>
             <ChondroBreederGameV3 />
+            <ChondroClutchOutcomeExplainer />
             <ChondroBreederExpandedShop />
           </>
         ) : null}
