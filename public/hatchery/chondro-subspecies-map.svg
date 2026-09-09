@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+<title id="title">Arboreal Arcade New Guinea python distribution map</title>
+<desc id="desc">Stylized map of New Guinea showing Morelia azurea pulcher in blue, Morelia azurea azurea in orange, Morelia azurea utaraensis in yellow, and Morelia viridis in green.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06120f"/><stop offset="1" stop-color="#10251c"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity=".35"/></filter>
+</defs>
+<rect width="1400" height="900" rx="36" fill="url(#bg)"/>
+<g opacity=".12" stroke="#d9f5e4" fill="none"><path d="M0 210C260 170 470 260 690 210S1120 120 1400 190"/><path d="M0 650C240 610 430 700 670 650s470-120 730-60"/></g>
+<text x="70" y="82" fill="#f4f1e9" font-family="Georgia,serif" font-size="42" font-weight="700" letter-spacing="5">ARBOREAL ARCADE</text>
+<text x="72" y="125" fill="#9bd9b0" font-family="Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="7">CONSERVATION PROGRAM · NEW GUINEA DISTRIBUTION</text>
+<g transform="translate(115 205)" filter="url(#shadow)">
+  <path d="M120 230C170 160 260 120 360 112L520 84 685 125 818 174 930 248 1022 338 1105 430 1050 470 960 455 900 500 796 520 710 574 606 556 500 610 408 582 345 535 250 520 210 468 144 430 108 356Z" fill="#1d7f2a" stroke="#eef9f1" stroke-width="9"/>
+  <path d="M120 230C170 160 260 120 360 112L520 84 570 135 535 205 470 246 390 258 314 294 236 280 178 302 128 280Z" fill="#2387ee" stroke="#eef9f1" stroke-width="6"/>
+  <path d="M520 84 685 125 818 174 930 248 1022 338 920 351 844 321 752 305 670 278 590 246 535 205 570 135Z" fill="#ffe119" stroke="#eef9f1" stroke-width="6"/>
+  <path d="M433 62C453 42 485 40 507 55L533 78 508 98 475 93 447 82Z" fill="#ff6b0a" stroke="#eef9f1" stroke-width="6"/>
+  <path d="M72 328C54 351 50 386 67 410l26-4 15-30-11-34Z" fill="#1d7f2a" stroke="#eef9f1" stroke-width="6"/>
+  <path d="M790 635c14 14 16 38 8 64l-18 44-14-21 5-55Z" fill="#1d7f2a" stroke="#eef9f1" stroke-width="5"/>
+</g>
+<g transform="translate(935 84)">
+  <rect width="385" height="224" rx="20" fill="#06110d" stroke="#6fa582" stroke-width="2"/>
+  <text x="26" y="38" fill="#dceadf" font-family="Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="2">SUBSPECIES RANGE KEY</text>
+  <g font-family="Georgia,serif" font-size="21" fill="#f1efe9">
+    <rect x="28" y="62" width="38" height="28" rx="5" fill="#2387ee"/><text x="82" y="83">Morelia azurea pulcher</text>
+    <rect x="28" y="101" width="38" height="28" rx="5" fill="#ff6b0a"/><text x="82" y="122">Morelia azurea azurea</text>
+    <rect x="28" y="140" width="38" height="28" rx="5" fill="#ffe119"/><text x="82" y="161">Morelia azurea utaraensis</text>
+    <rect x="28" y="179" width="38" height="28" rx="5" fill="#1d7f2a"/><text x="82" y="200">Morelia viridis</text>
+  </g>
+</g>
+<g fill="#95b9a4" font-family="Arial,sans-serif" font-size="15" letter-spacing="3"><text x="72" y="830">BROAD BIOGEOGRAPHIC GAME GUIDE · NOT GPS-LEVEL PROVENANCE</text></g>
+</svg>
