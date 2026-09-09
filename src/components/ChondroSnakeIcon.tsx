@@ -2,7 +2,7 @@ type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "M
 type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
 type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 
-const TRAIT_ART_VERSION = "2026-09-08-d";
+const TRAIT_ART_VERSION = "2026-09-09-b";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.webp",
