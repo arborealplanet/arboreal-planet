@@ -12,6 +12,11 @@ const ALLOWED_KEYS = new Set([
   "lastRecoveryClutchId",
   "seasonCarePaid",
   "breedingMessage",
+  "careerReputation",
+  "claimedProjectIds",
+  "claimedContractIds",
+  "scoutsUsedSeason",
+  "scoutsUsedThisSeason",
 ]);
 
 async function readState(userId: string, token: string) {
