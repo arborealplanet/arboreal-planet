@@ -23,13 +23,13 @@ jobs:
           ref: gameplay-progression-prep
           fetch-depth: 0
       - name: Integrate genetics and clutch sizing natively
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           game_path = Path("src/components/ChondroBreederGameV3.tsx")
           page_path = Path("src/app/hatchery/chondro-breeder/page.tsx")
-
           game = game_path.read_text()
 
           import_anchor = 'import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";\n'
@@ -44,56 +44,56 @@ jobs:
               game = game.replace(import_anchor, native_imports, 1)
 
           old_classification = '''function classifyPair(a: Snake, b: Snake): Classification {
-  if (a.classification !== "Pure" || b.classification !== "Pure") return "Designer";
-  return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
-}
+            if (a.classification !== "Pure" || b.classification !== "Pure") return "Designer";
+            return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
+          }
 
-function inheritLineTrait(
-  a: number,
-  b: number,
-  subspecies: Subspecies,
-  key: TraitKey,
-  pureSame: boolean,
-) {
-  const midpoint = (a + b) / 2;
-  const isPreferred = key !== "blotches" && preferredTraits[subspecies].includes(key);
-  const directionalLift = pureSame ? (isPreferred ? 2.5 : 0.4) : 0;
-  const ordinary = midpoint + directionalLift + (Math.random() + Math.random() - 1) * 14;
-  const breakout = Math.random() < 0.012 ? 12 + Math.random() * 24 : 0;
-  const setback = Math.random() < 0.025 ? -(5 + Math.random() * 10) : 0;
-  let raw = ordinary + breakout + setback;
-  if (raw > 85 && midpoint < 65) raw = 85 + (raw - 85) * 0.35;
-  return clamp(raw);
-}
-'''
+          function inheritLineTrait(
+            a: number,
+            b: number,
+            subspecies: Subspecies,
+            key: TraitKey,
+            pureSame: boolean,
+          ) {
+            const midpoint = (a + b) / 2;
+            const isPreferred = key !== "blotches" && preferredTraits[subspecies].includes(key);
+            const directionalLift = pureSame ? (isPreferred ? 2.5 : 0.4) : 0;
+            const ordinary = midpoint + directionalLift + (Math.random() + Math.random() - 1) * 14;
+            const breakout = Math.random() < 0.012 ? 12 + Math.random() * 24 : 0;
+            const setback = Math.random() < 0.025 ? -(5 + Math.random() * 10) : 0;
+            let raw = ordinary + breakout + setback;
+            if (raw > 85 && midpoint < 65) raw = 85 + (raw - 85) * 0.35;
+            return clamp(raw);
+          }
+          '''.replace('          ', '')
           new_classification = '''function classifyPair(a: Snake, b: Snake): Classification {
-  if (a.classification === "Designer" || b.classification === "Designer") return "Designer";
-  if (a.classification === "Hybrid" || b.classification === "Hybrid") return "Hybrid";
-  return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
-}
-'''
+            if (a.classification === "Designer" || b.classification === "Designer") return "Designer";
+            if (a.classification === "Hybrid" || b.classification === "Hybrid") return "Hybrid";
+            return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
+          }
+          '''.replace('          ', '')
           if old_classification in game:
               game = game.replace(old_classification, new_classification, 1)
           elif 'function inheritLineTrait(' in game:
               raise SystemExit("Legacy inheritance function changed unexpectedly")
 
           old_locality = '''  const locality: SnakeLocality = sameLocality
-    ? dam.locality
-    : pureSame
-      ? "Mixed Locality"
-      : "Designer";
-  const subspecies = pureSame ? dam.subspecies : structural.subspecies;
-  return {
-'''
+            ? dam.locality
+            : pureSame
+              ? "Mixed Locality"
+              : "Designer";
+          const subspecies = pureSame ? dam.subspecies : structural.subspecies;
+          return {
+          '''.replace('          ', '')
           new_locality = '''  const locality: SnakeLocality = sameLocality
-    ? dam.locality
-    : classification === "Designer"
-      ? "Designer"
-      : "Mixed Locality";
-  const subspecies = pureSame ? dam.subspecies : structural.subspecies;
-  const inheritedTraits = inheritTraitSet(dam, sire);
-  return {
-'''
+            ? dam.locality
+            : classification === "Designer"
+              ? "Designer"
+              : "Mixed Locality";
+          const subspecies = pureSame ? dam.subspecies : structural.subspecies;
+          const inheritedTraits = inheritTraitSet(dam, sire);
+          return {
+          '''.replace('          ', '')
           if old_locality in game:
               game = game.replace(old_locality, new_locality, 1)
           elif 'const inheritedTraits = inheritTraitSet(dam, sire);' not in game:
@@ -111,15 +111,15 @@ function inheritLineTrait(
                   game = game.replace(old, new, 1)
 
           old_clutch = '''function createClutch(dam: Snake, sire: Snake, breederInitials: string): Clutch {
-  const id = `CL-${Date.now().toString(36).toUpperCase()}`;
-  const size = 5 + Math.floor(Math.random() * 5);
-  return {
-'''
+            const id = `CL-${Date.now().toString(36).toUpperCase()}`;
+            const size = 5 + Math.floor(Math.random() * 5);
+            return {
+          '''.replace('          ', '')
           new_clutch = '''function createClutch(dam: Snake, sire: Snake, breederInitials: string): Clutch {
-  const id = `CL-${Date.now().toString(36).toUpperCase()}`;
-  const size = clutchSizeForPairing(dam, sire);
-  return {
-'''
+            const id = `CL-${Date.now().toString(36).toUpperCase()}`;
+            const size = clutchSizeForPairing(dam, sire);
+            return {
+          '''.replace('          ', '')
           if old_clutch in game:
               game = game.replace(old_clutch, new_clutch, 1)
           elif 'const size = clutchSizeForPairing(dam, sire);' not in game:
@@ -136,13 +136,16 @@ function inheritLineTrait(
           page = page.replace('import { ChondroCoreBreedingSync } from "@/components/ChondroCoreBreedingSync";\n', '')
           page = page.replace('      <ChondroCoreBreedingSync />\n', '')
           page_path.write_text(page)
+          PY
       - name: Verify native integration markers
+        shell: bash
         run: |
           grep -q 'clutchSizeForPairing(dam, sire)' src/components/ChondroBreederGameV3.tsx
           grep -q 'inheritTraitSet(dam, sire)' src/components/ChondroBreederGameV3.tsx
-          ! grep -q 'inheritLineTrait(' src/components/ChondroBreederGameV3.tsx
-          ! grep -q 'ChondroCoreBreedingSync' src/app/hatchery/chondro-breeder/page.tsx
+          if grep -q 'inheritLineTrait(' src/components/ChondroBreederGameV3.tsx; then exit 1; fi
+          if grep -q 'ChondroCoreBreedingSync' src/app/hatchery/chondro-breeder/page.tsx; then exit 1; fi
       - name: Commit native integration
+        shell: bash
         run: |
           if git diff --quiet; then
             echo "Native breeding integration already applied."
