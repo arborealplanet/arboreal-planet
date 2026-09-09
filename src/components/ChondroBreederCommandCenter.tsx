@@ -17,12 +17,13 @@ import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTabl
 import { ChondroProjectTagsPanel } from "@/components/ChondroProjectTagsPanel";
 import { ChondroSeasonSummaryPanel } from "@/components/ChondroSeasonSummaryPanel";
 import { ChondroShowsPanel } from "@/components/ChondroShowsPanel";
+import { ChondroRoomExpansionPanel } from "@/components/ChondroRoomExpansionPanel";
 
 type Tab = "manage" | "career" | "projects" | "community";
 
 const tabs: Array<{ id: Tab; label: string; detail: string }> = [
   { id: "manage", label: "Manage", detail: "Pairings · collection · clutch records · favorites" },
-  { id: "career", label: "Career", detail: "Facility · shows · contracts · achievements" },
+  { id: "career", label: "Career", detail: "Rooms · shows · contracts · achievements" },
   { id: "projects", label: "Projects", detail: "Tags · lines · progression · conservation" },
   { id: "community", label: "Community", detail: "Social breeder systems" },
 ];
@@ -43,14 +44,7 @@ export function ChondroBreederCommandCenter() {
             </div>
             <div className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-white/[.06] bg-black/20 p-1">
               {tabs.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] transition ${tab === item.id ? "bg-white/10 text-white/80" : "text-white/35 hover:text-white/60"}`}
-                >
-                  {item.label}
-                </button>
+                <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] transition ${tab === item.id ? "bg-white/10 text-white/80" : "text-white/35 hover:text-white/60"}`}>{item.label}</button>
               ))}
             </div>
           </div>
@@ -69,8 +63,9 @@ export function ChondroBreederCommandCenter() {
 
           {tab === "career" ? (
             <div className="space-y-3">
+              <CompactBlock title="Rooms & Facility Expansion" defaultOpen><ChondroRoomExpansionPanel /></CompactBlock>
               <ChondroSeasonSummaryPanel />
-              <CompactBlock title="Show Circuit" defaultOpen><ChondroShowsPanel /></CompactBlock>
+              <CompactBlock title="Show Circuit"><ChondroShowsPanel /></CompactBlock>
               <ChondroCareerSystemsPanel />
               <CompactBlock title="Achievements & Titles"><ChondroAchievementsPanel /></CompactBlock>
               <CompactBlock title="Legacy Career Progression"><ChondroBreederProgression /></CompactBlock>
@@ -96,9 +91,7 @@ export function ChondroBreederCommandCenter() {
 function CompactBlock({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   return (
     <details open={defaultOpen} className="rounded-2xl border border-white/[.06] bg-black/10">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-white/60 [&::-webkit-details-marker]:hidden">
-        <span>{title}</span><span className="text-lg text-white/30">+</span>
-      </summary>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-white/60 [&::-webkit-details-marker]:hidden"><span>{title}</span><span className="text-lg text-white/30">+</span></summary>
       <div className="border-t border-white/[.05] p-3">{children}</div>
     </details>
   );
