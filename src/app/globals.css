@@ -102,3 +102,63 @@ button { cursor: pointer; }
 .arcade-load-progress {
   animation: arcade-load-progress 6s linear forwards;
 }
+
+/* Conservation map subspecies focus. Keep the chosen artwork intact and add a
+   soft regional glow driven by the already-selected subspecies button. */
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"]) {
+  position: relative;
+  isolation: isolate;
+}
+
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"]) > img {
+  position: relative;
+  z-index: 1;
+  transition: filter .28s ease, opacity .28s ease;
+}
+
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"])::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: clamp(86px, 17%, 122px);
+  border-radius: 18px;
+  opacity: .92;
+  transition: background .28s ease, filter .28s ease, opacity .28s ease;
+  mix-blend-mode: screen;
+}
+
+/* DOM order: Azurea, Pulcher, Utaraensis, Viridis. */
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"]):has(button:nth-child(1)[class*="bg-emerald-200"])::after {
+  background: radial-gradient(ellipse at 43% 19%, rgba(255,107,10,.88) 0 8%, rgba(255,107,10,.40) 15%, transparent 28%);
+  filter: drop-shadow(0 0 18px rgba(255,107,10,.72));
+}
+
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"]):has(button:nth-child(2)[class*="bg-emerald-200"])::after {
+  background: radial-gradient(ellipse at 24% 37%, rgba(74,169,255,.92) 0 15%, rgba(35,135,238,.42) 28%, transparent 47%);
+  filter: drop-shadow(0 0 20px rgba(35,135,238,.75));
+}
+
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"]):has(button:nth-child(3)[class*="bg-emerald-200"])::after {
+  background: radial-gradient(ellipse at 66% 31%, rgba(255,225,25,.90) 0 17%, rgba(255,225,25,.38) 31%, transparent 50%);
+  filter: drop-shadow(0 0 20px rgba(255,225,25,.70));
+}
+
+:has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"]):has(button:nth-child(4)[class*="bg-emerald-200"])::after {
+  background:
+    radial-gradient(ellipse at 56% 63%, rgba(71,214,91,.78) 0 23%, rgba(29,127,42,.36) 41%, transparent 62%),
+    radial-gradient(circle at 8% 59%, rgba(71,214,91,.62) 0 6%, transparent 14%);
+  filter: drop-shadow(0 0 20px rgba(57,230,125,.62));
+}
+
+@media (max-width: 640px) {
+  :has(> img[src$="/hatchery/chondro-subspecies-map-art.webp"])::after {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 116px;
+  }
+}
