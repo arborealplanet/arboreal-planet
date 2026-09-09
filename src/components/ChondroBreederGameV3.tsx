@@ -476,9 +476,9 @@ function makeOffspring(
     localityPurity(sire) >= 99.9;
   const locality: SnakeLocality = sameLocality
     ? dam.locality
-    : pureSame
-      ? "Mixed Locality"
-      : "Designer";
+    : classification === "Designer"
+      ? "Designer"
+      : "Mixed Locality";
   const subspecies = pureSame ? dam.subspecies : structural.subspecies;
   const inheritedTraits = inheritTraitSet(dam, sire);
   return {
