@@ -15,19 +15,16 @@ declare global {
 
 export function PwaInstallButton() {
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
-  const [isIos, setIsIos] = useState(false);
-  const [installed, setInstalled] = useState(false);
+  const [isIos] = useState(() => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent));
+  const [installed, setInstalled] = useState(() => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+    return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  });
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
     }
-
-    const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-    if (standalone) setInstalled(true);
-
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    setIsIos(ios);
 
     const onPrompt = (event: Event) => {
       event.preventDefault();
