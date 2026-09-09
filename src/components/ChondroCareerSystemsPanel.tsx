@@ -3,13 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { achievementReputation } from "@/lib/chondro-achievements";
 import { animalMeetsContract, contractsForSeason } from "@/lib/chondro-contracts";
-import { facilityEnclosureCap, installedEnclosures } from "@/lib/chondro-facility-limits";
+import { installedEnclosures, roomCapacityFromSave, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 import {
   BREEDING_PROJECTS,
-  WARDROBE_UNLOCKS,
-  facilityForId,
   marketDemandForSeason,
-  nextFacility,
   projectCompleted,
   rankForReputation,
   storeScoutCost,
@@ -41,10 +38,9 @@ type Save = {
   season: number;
   careerReputation?: number;
   facilityId?: string;
+  facilityRooms?: FacilityRoomState;
   claimedProjectIds?: string[];
   claimedContractIds?: string[];
-  ownedWardrobe?: string[];
-  selectedWardrobe?: string;
   scoutsUsedSeason?: number;
   scoutsUsedThisSeason?: number;
   [key: string]: unknown;
@@ -53,6 +49,22 @@ type Save = {
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+
+async function patchCareer(patch: Record<string, unknown>) {
+  const response = await fetch("/api/hatchery/chondro-breeder/progression", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ patch }),
+  });
+  if (!response.ok) throw new Error("career patch failed");
+  try {
+    const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+    if (raw) {
+      const local = JSON.parse(raw) as Record<string, unknown>;
+      window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify({ ...local, ...patch }));
+    }
+  } catch {}
+}
 
 export function ChondroCareerSystemsPanel() {
   const [save, setSave] = useState<Save | null>(null);
@@ -75,11 +87,8 @@ export function ChondroCareerSystemsPanel() {
   const careerRep = Number(save?.careerReputation ?? 0);
   const reputation = careerRep + achievementRep;
   const rank = rankForReputation(reputation);
-  const facility = facilityForId(save?.facilityId);
-  const upgrade = nextFacility(save?.facilityId);
-  const facilityCap = facilityEnclosureCap(save?.facilityId);
   const enclosureCount = installedEnclosures(save?.enclosures);
-  const enclosureSpaceLeft = Math.max(0, facilityCap - enclosureCount);
+  const roomCap = roomCapacityFromSave({ facilityId: save?.facilityId, facilityRooms: save?.facilityRooms });
   const claimedProjects = new Set(save?.claimedProjectIds ?? []);
   const claimedContracts = new Set(save?.claimedContractIds ?? []);
   const contracts = save ? contractsForSeason(save.season ?? 1, reputation) : [];
@@ -87,20 +96,14 @@ export function ChondroCareerSystemsPanel() {
   const scoutsUsed = save?.scoutsUsedSeason === save?.season ? Number(save?.scoutsUsedThisSeason ?? 0) : 0;
   const scoutCost = storeScoutCost(reputation, scoutsUsed);
 
-  async function persist(next: Save, message: string, reload = true) {
+  async function persistPatch(patch: Record<string, unknown>, message: string, reload = true) {
     setBusy(message);
     setStatus("");
     try {
-      window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(next));
-      const response = await fetch("/api/hatchery/chondro-breeder/save", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      if (!response.ok) throw new Error("save failed");
-      setSave(next);
+      await patchCareer(patch);
+      setSave((current) => current ? ({ ...current, ...patch } as Save) : current);
       setStatus(message);
-      if (reload) window.setTimeout(() => window.location.reload(), 250);
+      if (reload) window.setTimeout(() => window.location.reload(), 180);
     } catch {
       setStatus("That career action could not be saved.");
     } finally {
@@ -112,65 +115,33 @@ export function ChondroCareerSystemsPanel() {
     if (!save || busy || claimedProjects.has(projectId)) return;
     const project = BREEDING_PROJECTS.find((item) => item.id === projectId);
     if (!project || !produced.some((animal) => projectCompleted(project, animal))) return;
-    const next: Save = {
-      ...save,
+    void persistPatch({
       cash: save.cash + project.rewardCash,
       careerReputation: careerRep + project.rewardReputation,
       claimedProjectIds: [...(save.claimedProjectIds ?? []), project.id],
-    };
-    void persist(next, `${project.name} completed · +${money(project.rewardCash)} · +${project.rewardReputation} reputation.`);
+    }, `${project.name} completed · +${money(project.rewardCash)} · +${project.rewardReputation} reputation.`);
   }
 
   function claimContract(contractId: string) {
     if (!save || busy || claimedContracts.has(contractId)) return;
     const contract = contracts.find((item) => item.id === contractId);
     if (!contract || !known.some((animal) => animalMeetsContract(contract, animal))) return;
-    const next: Save = {
-      ...save,
+    void persistPatch({
       cash: save.cash + contract.rewardCash,
       careerReputation: careerRep + contract.rewardReputation,
       claimedContractIds: [...(save.claimedContractIds ?? []), contract.id],
-    };
-    void persist(next, `${contract.title} fulfilled · +${money(contract.rewardCash)} · +${contract.rewardReputation} reputation.`);
-  }
-
-  function buyFacility() {
-    if (!save || busy || upgrade.id === facility.id || save.cash < upgrade.purchaseCost || reputation < upgrade.reputationRequired) return;
-    const nextCap = facilityEnclosureCap(upgrade.id);
-    const next: Save = {
-      ...save,
-      cash: save.cash - upgrade.purchaseCost,
-      facilityId: upgrade.id,
-    };
-    void persist(next, `${upgrade.name} purchased. Enclosure space increased to ${nextCap}.`);
+    }, `${contract.title} fulfilled · +${money(contract.rewardCash)} · +${contract.rewardReputation} reputation.`);
   }
 
   function scoutStock() {
     if (!save || busy || save.cash < scoutCost) return;
     const seed = Math.max(1, Number(window.localStorage.getItem(SHOP_SEED_KEY) || "1")) + 1;
     window.localStorage.setItem(SHOP_SEED_KEY, String(seed));
-    const next: Save = {
-      ...save,
+    void persistPatch({
       cash: save.cash - scoutCost,
       scoutsUsedSeason: save.season,
       scoutsUsedThisSeason: scoutsUsed + 1,
-    };
-    void persist(next, `Fresh stock scouted for ${money(scoutCost)}.`);
-  }
-
-  function buyWardrobe(id: string) {
-    if (!save || busy) return;
-    const item = WARDROBE_UNLOCKS.find((entry) => entry.id === id);
-    const owned = new Set(save.ownedWardrobe ?? []);
-    if (!item || owned.has(id) || reputation < item.reputationRequired || save.cash < item.cashCost) return;
-    owned.add(id);
-    const next: Save = { ...save, cash: save.cash - item.cashCost, ownedWardrobe: [...owned], selectedWardrobe: id };
-    void persist(next, `${item.name} added to your breeder wardrobe.`);
-  }
-
-  function equipWardrobe(id: string) {
-    if (!save || !(save.ownedWardrobe ?? []).includes(id)) return;
-    void persist({ ...save, selectedWardrobe: id }, "Breeder outfit updated.", false);
+    }, `Fresh stock scouted for ${money(scoutCost)}.`);
   }
 
   if (!save) return <div className="rounded-2xl border border-white/[.06] p-4 text-xs text-white/35">Loading breeder career…</div>;
@@ -179,21 +150,10 @@ export function ChondroCareerSystemsPanel() {
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Rank" value={rank.name} detail={`${reputation.toLocaleString()} reputation`} />
-        <Stat label="Facility" value={facility.name} detail={`${enclosureCount}/${facilityCap} enclosure spaces used`} />
+        <Stat label="Animal space" value={`${enclosureCount}/${roomCap}`} detail={`${Math.max(0, roomCap - enclosureCount)} enclosure slots open`} />
         <Stat label="Cash" value={money(save.cash)} detail={`Season ${save.season}`} />
         <Stat label="Market" value={demand ? `${String(demand.hotTrait).replace(/([A-Z])/g, " $1")} hot` : "—"} detail={demand ? `${Math.round((demand.hotTraitMultiplier - 1) * 100)}% demand premium` : ""} />
       </div>
-
-      <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><div className="text-sm font-bold text-white/75">Facility progression</div><div className="mt-1 text-[11px] text-white/35">Your facility limits how many enclosures can physically fit. Enclosures still have to be purchased individually.</div></div>
-          {upgrade.id !== facility.id ? <button disabled={busy !== "" || save.cash < upgrade.purchaseCost || reputation < upgrade.reputationRequired} onClick={buyFacility} className="rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-[#07110c] disabled:opacity-30">Upgrade · {money(upgrade.purchaseCost)}</button> : <span className="text-xs font-bold text-emerald-200/65">Max facility</span>}
-        </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl border border-white/[.06] px-3 py-2 text-[10px] text-white/40">Current enclosure space: <strong className="text-white/65">{enclosureCount}/{facilityCap}</strong> · {enclosureSpaceLeft} open installation slots</div>
-          {upgrade.id !== facility.id ? <div className="rounded-xl border border-white/[.06] px-3 py-2 text-[10px] text-white/40">Next: <strong className="text-white/65">{upgrade.name}</strong> · cap {facilityEnclosureCap(upgrade.id)} enclosures · requires {upgrade.reputationRequired.toLocaleString()} rep</div> : <div className="rounded-xl border border-emerald-300/10 px-3 py-2 text-[10px] text-emerald-100/55">Maximum facility enclosure cap: {facilityCap}</div>}
-        </div>
-      </section>
 
       <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -224,22 +184,11 @@ export function ChondroCareerSystemsPanel() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
-        <div className="text-sm font-bold text-white/75">Breeder wardrobe</div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {WARDROBE_UNLOCKS.map((item) => {
-            const owned = (save.ownedWardrobe ?? []).includes(item.id);
-            const equipped = save.selectedWardrobe === item.id;
-            return <button key={item.id} disabled={busy !== "" || (!owned && (reputation < item.reputationRequired || save.cash < item.cashCost))} onClick={() => owned ? equipWardrobe(item.id) : buyWardrobe(item.id)} className={`rounded-xl border px-3 py-2 text-left text-[10px] disabled:opacity-25 ${equipped ? "border-amber-200/30 bg-amber-200/[.05] text-amber-100/75" : "border-white/[.07] text-white/45"}`}><strong className="block text-xs">{equipped ? "★ " : ""}{item.name}</strong>{owned ? "Owned · tap to equip" : `${money(item.cashCost)} · ${item.reputationRequired} rep`}</button>;
-          })}
-        </div>
-      </section>
-
       {status ? <div role="status" className="text-xs text-emerald-100/65">{status}</div> : null}
     </div>
   );
 }
 
 function Stat({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <div className="rounded-2xl border border-white/[.07] bg-white/[.02] p-4"><div className="text-[9px] uppercase tracking-[.18em] text-white/25">{label}</div><div className="mt-1 text-base font-black text-white/75">{value}</div><div className="mt-1 text-[10px] text-white/30">{detail}</div></div>;
+  return <div className="rounded-2xl border border-white/[.06] bg-black/10 p-3"><div className="text-[9px] uppercase tracking-[.14em] text-white/25">{label}</div><div className="mt-1 text-sm font-bold text-white/70">{value}</div><div className="mt-1 text-[10px] text-white/30">{detail}</div></div>;
 }
