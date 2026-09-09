@@ -15,6 +15,7 @@ const EXTENSION_KEYS = [
   "scoutsUsedThisSeason",
   "plannedPairings",
   "projectTags",
+  "showHistory",
 ] as const;
 
 async function claimTargetedBonus(token: string) {
@@ -111,6 +112,7 @@ export async function PUT(request: NextRequest) {
   }
 
   if (Array.isArray(state.plannedPairings)) state.plannedPairings = state.plannedPairings.slice(0, 30);
+  if (Array.isArray(state.showHistory)) state.showHistory = state.showHistory.slice(0, 100);
   if (state.projectTags && typeof state.projectTags === "object" && !Array.isArray(state.projectTags)) {
     const cleaned: Record<string, string[]> = {};
     for (const [snakeId, tags] of Object.entries(state.projectTags as Record<string, unknown>)) {
