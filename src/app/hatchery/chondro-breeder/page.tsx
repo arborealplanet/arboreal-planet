@@ -1,6 +1,5 @@
 import { ChondroFavoriteCardControls } from "@/components/ChondroFavoriteCardControls";
 import { ChondroFacilityEnclosureGuard } from "@/components/ChondroFacilityEnclosureGuard";
-import { ChondroCoreBreedingSync } from "@/components/ChondroCoreBreedingSync";
 import { ChondroBreederWorkspace } from "@/components/ChondroBreederWorkspace";
 
 export default function ChondroBreederPage() {
@@ -8,7 +7,6 @@ export default function ChondroBreederPage() {
     <>
       <ChondroFavoriteCardControls />
       <ChondroFacilityEnclosureGuard />
-      <ChondroCoreBreedingSync />
       <ChondroBreederWorkspace />
     </>
   );
