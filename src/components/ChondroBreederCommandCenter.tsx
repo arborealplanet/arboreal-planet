@@ -13,13 +13,16 @@ import { ChondroBreederSocial } from "@/components/ChondroBreederSocial";
 import { ChondroBreederFacility } from "@/components/ChondroBreederFacility";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
+import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
+import { ChondroProjectTagsPanel } from "@/components/ChondroProjectTagsPanel";
+import { ChondroSeasonSummaryPanel } from "@/components/ChondroSeasonSummaryPanel";
 
 type Tab = "manage" | "career" | "projects" | "community";
 
 const tabs: Array<{ id: Tab; label: string; detail: string }> = [
-  { id: "manage", label: "Manage", detail: "Pairings · collection · favorites · trait focus" },
-  { id: "career", label: "Career", detail: "Facility · contracts · achievements" },
-  { id: "projects", label: "Projects", detail: "Lines · progression · conservation" },
+  { id: "manage", label: "Manage", detail: "Pairings · collection · clutch records · favorites" },
+  { id: "career", label: "Career", detail: "Facility · contracts · achievements · season summaries" },
+  { id: "projects", label: "Projects", detail: "Tags · lines · progression · conservation" },
   { id: "community", label: "Community", detail: "Social breeder systems" },
 ];
 
@@ -56,6 +59,7 @@ export function ChondroBreederCommandCenter() {
           {tab === "manage" ? (
             <div className="space-y-3">
               <CompactBlock title="Pairing Planner" defaultOpen><ChondroPairingPlanner /></CompactBlock>
+              <CompactBlock title="Clutch History"><ChondroClutchHistoryTable /></CompactBlock>
               <CompactBlock title="Trait Focus"><ChondroTraitFocusPanel /></CompactBlock>
               <CompactBlock title="Favorites & Player Market"><ChondroFavoritesMarketPanel /></CompactBlock>
               <ChondroCollectionManager />
@@ -64,6 +68,7 @@ export function ChondroBreederCommandCenter() {
 
           {tab === "career" ? (
             <div className="space-y-3">
+              <ChondroSeasonSummaryPanel />
               <ChondroCareerSystemsPanel />
               <CompactBlock title="Achievements & Titles"><ChondroAchievementsPanel /></CompactBlock>
               <CompactBlock title="Legacy Career Progression"><ChondroBreederProgression /></CompactBlock>
@@ -73,6 +78,7 @@ export function ChondroBreederCommandCenter() {
 
           {tab === "projects" ? (
             <div className="space-y-3">
+              <CompactBlock title="Animal Project Tags" defaultOpen><ChondroProjectTagsPanel /></CompactBlock>
               <CompactBlock title="Breeder Lines" defaultOpen><ChondroBreederLines /></CompactBlock>
               <CompactBlock title="Conservation Partnerships"><ChondroConservationPartnerships /></CompactBlock>
             </div>
