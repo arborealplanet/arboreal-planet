@@ -1,4 +1,4 @@
-name: Native Chondro Breeding Integration
+name: Finalize Native Chondro Breeding Integration
 
 on:
   push:
@@ -6,110 +6,44 @@ on:
       - gameplay-progression-prep
     paths:
       - .github/workflows/native-chondro-breeding-integration.yml
-      - src/components/ChondroBreederGameV3.tsx
-      - src/app/hatchery/chondro-breeder/page.tsx
-      - src/lib/chondro-genetics.ts
-      - src/lib/chondro-clutch-size.ts
 
 permissions:
   contents: write
 
 jobs:
-  integrate:
+  finalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: gameplay-progression-prep
           fetch-depth: 0
-      - name: Integrate genetics and clutch sizing natively
+      - name: Correct hybrid locality handling and remove bridge
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           game_path = Path("src/components/ChondroBreederGameV3.tsx")
           page_path = Path("src/app/hatchery/chondro-breeder/page.tsx")
           game = game_path.read_text()
 
-          anchor = 'import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";\n'
-          if 'from "@/lib/chondro-genetics"' not in game:
-              if anchor not in game:
-                  raise SystemExit("Missing ChondroSnakeIcon import anchor")
-              game = game.replace(
-                  anchor,
-                  anchor
-                  + 'import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";\n'
-                  + 'import { inheritTraitSet } from "@/lib/chondro-genetics";\n',
-                  1,
-              )
-
-          classification_pattern = re.compile(
-              r'function classifyPair\(a: Snake, b: Snake\): Classification \{.*?\n\}\n\nfunction inheritLineTrait\(.*?\n\}\n',
-              re.S,
-          )
-          if 'function inheritLineTrait(' in game:
-              replacement = '''function classifyPair(a: Snake, b: Snake): Classification {
-            if (a.classification === "Designer" || b.classification === "Designer") return "Designer";
-            if (a.classification === "Hybrid" || b.classification === "Hybrid") return "Hybrid";
-            return a.subspecies === b.subspecies ? "Pure" : "Hybrid";
-          }
-          '''.replace('          ', '')
-              game, count = classification_pattern.subn(replacement, game, count=1)
-              if count != 1:
-                  raise SystemExit("Could not replace legacy classification/inheritance block")
-
-          old_locality_expr = '''  const locality: SnakeLocality = sameLocality
+          old = '''  const locality: SnakeLocality = sameLocality
             ? dam.locality
             : pureSame
               ? "Mixed Locality"
               : "Designer";
           '''.replace('          ', '')
-          new_locality_expr = '''  const locality: SnakeLocality = sameLocality
+          new = '''  const locality: SnakeLocality = sameLocality
             ? dam.locality
             : classification === "Designer"
               ? "Designer"
               : "Mixed Locality";
           '''.replace('          ', '')
-          if old_locality_expr in game:
-              game = game.replace(old_locality_expr, new_locality_expr, 1)
-
-          subspecies_line = '  const subspecies = pureSame ? dam.subspecies : structural.subspecies;\n'
-          if 'const inheritedTraits = inheritTraitSet(dam, sire);' not in game:
-              if subspecies_line not in game:
-                  raise SystemExit("Could not find offspring subspecies line")
-              game = game.replace(
-                  subspecies_line,
-                  subspecies_line + '  const inheritedTraits = inheritTraitSet(dam, sire);\n',
-                  1,
-              )
-
-          trait_replacements = {
-              'highBlack: inheritLineTrait(dam.highBlack, sire.highBlack, subspecies, "highBlack", pureSame),': 'highBlack: inheritedTraits.highBlack,',
-              'highWhite: inheritLineTrait(dam.highWhite, sire.highWhite, subspecies, "highWhite", pureSame),': 'highWhite: inheritedTraits.highWhite,',
-              'blueStripe: inheritLineTrait(dam.blueStripe, sire.blueStripe, subspecies, "blueStripe", pureSame),': 'blueStripe: inheritedTraits.blueStripe,',
-              'yellowRetention: inheritLineTrait(dam.yellowRetention, sire.yellowRetention, subspecies, "yellowRetention", pureSame),': 'yellowRetention: inheritedTraits.yellowRetention,',
-              'blotches: inheritLineTrait(dam.blotches ?? 0, sire.blotches ?? 0, subspecies, "blotches", pureSame),': 'blotches: inheritedTraits.blotches,',
-          }
-          for old, new in trait_replacements.items():
-              game = game.replace(old, new)
-
-          game = game.replace(
-              '  const size = 5 + Math.floor(Math.random() * 5);\n',
-              '  const size = clutchSizeForPairing(dam, sire);\n',
-              1,
-          )
-
-          if 'inheritLineTrait(' in game:
-              raise SystemExit("Legacy inheritance references remain")
-          if 'const size = 5 + Math.floor(Math.random() * 5);' in game:
-              raise SystemExit("Legacy 5-9 clutch-size roll remains")
-          if 'const inheritedTraits = inheritTraitSet(dam, sire);' not in game:
-              raise SystemExit("Native trait inheritance was not inserted")
-          if 'const size = clutchSizeForPairing(dam, sire);' not in game:
-              raise SystemExit("Native clutch-size helper was not inserted")
-
+          if old in game:
+              game = game.replace(old, new, 1)
+          elif ': classification === "Designer"' not in game:
+              raise SystemExit("Could not locate locality classification block")
           game_path.write_text(game)
 
           page = page_path.read_text()
@@ -117,22 +51,18 @@ jobs:
           page = page.replace('      <ChondroCoreBreedingSync />\n', '')
           page_path.write_text(page)
           PY
-      - name: Verify native integration markers
-        shell: bash
-        run: |
+
           grep -q 'clutchSizeForPairing(dam, sire)' src/components/ChondroBreederGameV3.tsx
           grep -q 'inheritTraitSet(dam, sire)' src/components/ChondroBreederGameV3.tsx
+          grep -q ': classification === "Designer"' src/components/ChondroBreederGameV3.tsx
           if grep -q 'inheritLineTrait(' src/components/ChondroBreederGameV3.tsx; then exit 1; fi
           if grep -q 'ChondroCoreBreedingSync' src/app/hatchery/chondro-breeder/page.tsx; then exit 1; fi
-      - name: Commit native integration
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "Native breeding integration already applied."
-            exit 0
-          fi
+
+          rm -f src/components/ChondroCoreBreedingSync.tsx
+          rm -f .github/workflows/native-chondro-breeding-integration.yml
+
           git config user.name "arborealplanet"
           git config user.email "arborealplanet@gmail.com"
-          git add src/components/ChondroBreederGameV3.tsx src/app/hatchery/chondro-breeder/page.tsx
-          git commit -m "Integrate breeding engine directly into Chondro V3"
+          git add -A
+          git commit -m "Finalize native Chondro breeding integration"
           git push origin HEAD:gameplay-progression-prep
