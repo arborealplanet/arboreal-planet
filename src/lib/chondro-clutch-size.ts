@@ -6,9 +6,7 @@ export type ClutchPairingAnimal = {
 };
 
 export type ClutchPairingKind =
-  | "pure-same-locality"
-  | "pure-same-subspecies"
-  | "pure-mixed-subspecies"
+  | "pure"
   | "hybrid"
   | "designer";
 
@@ -21,50 +19,34 @@ export type ClutchSizeProfile = {
 };
 
 export function clutchPairingKind(dam: ClutchPairingAnimal, sire: ClutchPairingAnimal): ClutchPairingKind {
+  // Any cross-subspecies pairing is a hybrid, even when both parents are individually pure.
+  if (dam.subspecies !== sire.subspecies) return "hybrid";
   if (dam.classification === "Designer" || sire.classification === "Designer") return "designer";
   if (dam.classification === "Hybrid" || sire.classification === "Hybrid") return "hybrid";
-  if (dam.subspecies !== sire.subspecies) return "pure-mixed-subspecies";
-  if (dam.locality === sire.locality && !["Designer", "Mixed Locality"].includes(dam.locality)) return "pure-same-locality";
-  return "pure-same-subspecies";
+  return "pure";
 }
 
-const PURE_SAME_SUBSPECIES_WEIGHTS = [1, 3, 6, 8, 6, 3, 1];
-
 export const CLUTCH_SIZE_PROFILES: Record<ClutchPairingKind, ClutchSizeProfile> = {
-  "pure-same-locality": {
-    kind: "pure-same-locality",
-    label: "Pure same-locality pairing",
-    min: 6,
-    max: 12,
-    weights: PURE_SAME_SUBSPECIES_WEIGHTS,
-  },
-  "pure-same-subspecies": {
-    kind: "pure-same-subspecies",
+  pure: {
+    kind: "pure",
     label: "Pure same-subspecies pairing",
     min: 6,
     max: 12,
-    weights: PURE_SAME_SUBSPECIES_WEIGHTS,
-  },
-  "pure-mixed-subspecies": {
-    kind: "pure-mixed-subspecies",
-    label: "Pure cross-subspecies pairing",
-    min: 4,
-    max: 9,
-    weights: [1, 4, 7, 6, 3, 1],
+    weights: [1, 3, 6, 8, 6, 3, 1],
   },
   hybrid: {
     kind: "hybrid",
     label: "Hybrid pairing",
-    min: 3,
+    min: 4,
     max: 8,
-    weights: [2, 6, 8, 5, 2, 1],
+    weights: [2, 6, 8, 5, 2],
   },
   designer: {
     kind: "designer",
     label: "Designer pairing",
-    min: 3,
+    min: 4,
     max: 7,
-    weights: [3, 7, 7, 3, 1],
+    weights: [3, 7, 7, 3],
   },
 };
 
