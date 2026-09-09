@@ -24,6 +24,7 @@ const EXTENSION_KEYS = [
   "lastRecoveryClutchId",
   "seasonCarePaid",
   "breedingMessage",
+  "retiredBreeders",
 ] as const;
 
 async function claimTargetedBonus(token: string) {
@@ -82,6 +83,7 @@ export async function PUT(request: NextRequest) {
   if (Array.isArray(state.plannedPairings)) state.plannedPairings = state.plannedPairings.slice(0, 30);
   if (Array.isArray(state.showHistory)) state.showHistory = state.showHistory.slice(0, 100);
   if (Array.isArray(state.geneticTestsPending)) state.geneticTestsPending = state.geneticTestsPending.slice(0, 50);
+  if (Array.isArray(state.retiredBreeders)) state.retiredBreeders = state.retiredBreeders.slice(0, 250);
   if (state.projectTags && typeof state.projectTags === "object" && !Array.isArray(state.projectTags)) {
     const cleaned: Record<string, string[]> = {};
     for (const [snakeId, tags] of Object.entries(state.projectTags as Record<string, unknown>)) {
