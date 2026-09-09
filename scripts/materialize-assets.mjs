@@ -43,7 +43,7 @@ const appAssets = [
   ["arboreal-planet-logo-compact", "public/branding/arboreal-planet-logo-compact.webp", 106938],
   ["arboreal-planet-app-icon", "public/branding/arboreal-planet-app-icon.webp", 16294],
   ["arboreal-arcade-splash", "public/branding/arboreal-arcade-splash.webp", 87670],
-  ["chondro-breeder-hero", "public/branding/chondro-breeder-hero.webp", 263954],
+  ["chondro-pattern", "public/branding/chondro-pattern.webp", 250412],
   ["chondro-subspecies-map-art", "public/hatchery/chondro-subspecies-map-art.webp", 101838],
 ];
 

@@ -8,7 +8,7 @@ const platformCards = [
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "DISCOVER", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and the topics you actually care about.", href: "/community", tag: "CONNECT", icon: "◎" },
-  { title: "Arboreal Arcade", text: "Breeder games with virtual lineages, facilities, projects and long-term progression.", href: "/hatchery", tag: "LEARN + PLAY", icon: "◈" },
+  { title: "Arboreal Arcade", text: "Breeder games with virtual lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "LEARN + PLAY", icon: "◈" },
 ];
 
 const populations = ["Biak", "Numfor", "Manokwari", "Sorong", "Wamena", "Lereh", "Cyclops", "Jayapura", "Aru", "Merauke"];
@@ -98,7 +98,7 @@ export default function Home() {
             <div className="grid gap-px bg-white/[.055] sm:grid-cols-3">{["Breeding updates", "Husbandry discussions", "Animal & plant posts"].map((item) => <div key={item} className="bg-[#08140f] p-6"><div className="text-sm font-semibold">{item}</div><p className="mt-2 text-xs leading-5 text-white/34">Feed cards will populate from real accounts once authentication and community tables are connected.</p></div>)}</div>
           </div>
           <div className="grid gap-4">
-            <Link href="/hatchery" className="panel relative overflow-hidden rounded-3xl p-6">
+            <Link href="/arcade/enter?next=%2Farcade" className="panel relative overflow-hidden rounded-3xl p-6">
               <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-amber-200/[.08] bg-amber-200/[.025]" />
               <div className="section-kicker text-amber-200/70">Arboreal Arcade</div><h2 className="mt-3 text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Build a virtual breeding operation with real-time stages, lineage, facilities, projects, shows and long-term breeder progression.</p><div className="mt-7 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Strategy · Collection</div>
             </Link>
