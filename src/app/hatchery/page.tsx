@@ -7,6 +7,19 @@ const achievements = ["First Clutch", "First Red Neo", "First Yellow Neo", "Thre
 export default function HatcheryPage() {
   return (
     <main>
+      <section className="border-b border-white/[.06] bg-black/10">
+        <div className="mx-auto max-w-[1560px] px-0 py-0 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+          <div className="relative overflow-hidden sm:rounded-[30px]">
+            <Image src="/branding/chondro-breeder-hero.webp" alt="Illustrated Chondro breeder with a green tree python and an arboreal enclosure rack" width={1600} height={900} sizes="100vw" className="aspect-[16/8] w-full object-cover sm:aspect-[16/7]" priority />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
+            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
+              <div className="text-[10px] font-black uppercase tracking-[.2em] text-emerald-100/75">Featured in Arboreal Arcade</div>
+              <div className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-5xl">Chondro Breeder</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <PageIntro
         eyebrow="Arboreal Arcade"
         title="Breed. Build. Learn. Compete."
@@ -28,7 +41,7 @@ export default function HatcheryPage() {
             </div>
 
             <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">
-              <Image src="/branding/arboreal-arcade-splash.png" alt="Arboreal Planet Arboreal Arcade" width={941} height={1672} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" priority />
+              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />
             </div>
           </div>
         </div>

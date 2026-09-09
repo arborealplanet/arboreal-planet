@@ -14,7 +14,7 @@ function Pitcher({ left, top, scale = 1 }: { left: string; top: string; scale?: 
 export function ArborealPlanetMark({ className = "" }: { className?: string }) {
   return (
     <div className={`relative shrink-0 overflow-hidden rounded-xl shadow-[0_0_30px_rgba(52,211,153,.10)] ${className}`} aria-label="Arboreal Planet logo mark">
-      <Image src="/branding/arboreal-planet-app-icon.png" alt="" fill sizes="40px" className="object-cover" priority />
+      <Image src="/branding/arboreal-planet-app-icon.webp" alt="" fill sizes="40px" className="object-cover" priority />
     </div>
   );
 }

@@ -38,6 +38,38 @@ fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(outputPath, bytes);
 console.log(`Materialized ${path.relative(root, outputPath)} from ${chunkFiles.length} verified chunks (${bytes.length} bytes)`);
 
+const appAssets = [
+  ["arboreal-planet-logo", "public/branding/arboreal-planet-logo.webp", 103602],
+  ["arboreal-planet-logo-compact", "public/branding/arboreal-planet-logo-compact.webp", 106938],
+  ["arboreal-planet-app-icon", "public/branding/arboreal-planet-app-icon.webp", 16294],
+  ["arboreal-arcade-splash", "public/branding/arboreal-arcade-splash.webp", 87670],
+  ["chondro-breeder-hero", "public/branding/chondro-breeder-hero.webp", 263954],
+  ["chondro-subspecies-map-art", "public/hatchery/chondro-subspecies-map-art.webp", 101838],
+];
+
+for (const [assetName, relativeOutput, expectedBytes] of appAssets) {
+  const assetChunksDir = path.join(root, "src/lib/brand-assets/app-assets", assetName);
+  const assetChunks = fs.readdirSync(assetChunksDir).sort((a, b) => a.localeCompare(b));
+  const assetPayload = assetChunks
+    .map((name) => fs.readFileSync(path.join(assetChunksDir, name), "utf8"))
+    .join("");
+  const assetBytes = Buffer.from(assetPayload, "base64");
+  const assetSignature = assetBytes.subarray(0, 12).toString("ascii");
+
+  if (!assetSignature.startsWith("RIFF") || !assetSignature.includes("WEBP")) {
+    throw new Error(`${assetName} is not a valid WEBP payload.`);
+  }
+  if (assetBytes.length !== expectedBytes) {
+    throw new Error(`${assetName} byte length mismatch: ${assetBytes.length}.`);
+  }
+
+  const assetOutput = path.join(root, relativeOutput);
+  fs.mkdirSync(path.dirname(assetOutput), { recursive: true });
+  fs.writeFileSync(assetOutput, assetBytes);
+}
+
+console.log(`Materialized ${appAssets.length} approved Arboreal Planet assets.`);
+
 const hatcheryAssetsDir = path.join(root, "src/lib/hatchery-assets");
 const hatcheryOutputDir = path.join(root, "public/hatchery/snakes/traits");
 

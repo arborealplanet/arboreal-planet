@@ -106,7 +106,7 @@ function OriginMap({ selected, onSelect }: { selected: Subspecies; onSelect: (va
   return (
     <div className="overflow-hidden rounded-[24px] border border-white/[.07] bg-[#071510] p-3 sm:p-5">
       <img
-        src="/hatchery/chondro-subspecies-map.png"
+        src="/hatchery/chondro-subspecies-map-art.webp"
         alt="Green Tree Python subspecies distribution map showing Morelia azurea azurea, Morelia azurea pulcher, Morelia azurea utaraensis, and Morelia viridis across New Guinea and nearby islands"
         className="block h-auto w-full rounded-[18px] object-contain"
       />
