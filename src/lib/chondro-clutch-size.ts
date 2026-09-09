@@ -6,9 +6,12 @@ export type ClutchPairingAnimal = {
 };
 
 export type ClutchPairingKind =
-  | "pure"
-  | "hybrid"
-  | "designer";
+  | "pure-pure"
+  | "hybrid-hybrid"
+  | "designer-designer"
+  | "designer-hybrid"
+  | "designer-pure"
+  | "hybrid-pure";
 
 export type ClutchSizeProfile = {
   kind: ClutchPairingKind;
@@ -18,35 +21,68 @@ export type ClutchSizeProfile = {
   weights: number[];
 };
 
+function parentClasses(dam: ClutchPairingAnimal, sire: ClutchPairingAnimal) {
+  return new Set([dam.classification, sire.classification]);
+}
+
 export function clutchPairingKind(dam: ClutchPairingAnimal, sire: ClutchPairingAnimal): ClutchPairingKind {
-  // Any cross-subspecies pairing is a hybrid, even when both parents are individually pure.
-  if (dam.subspecies !== sire.subspecies) return "hybrid";
-  if (dam.classification === "Designer" || sire.classification === "Designer") return "designer";
-  if (dam.classification === "Hybrid" || sire.classification === "Hybrid") return "hybrid";
-  return "pure";
+  const classes = parentClasses(dam, sire);
+
+  if (classes.size === 1) {
+    if (dam.classification === "Designer") return "designer-designer";
+    if (dam.classification === "Hybrid") return "hybrid-hybrid";
+    // Two individually pure animals from different subspecies produce hybrid offspring,
+    // but the parents are still a pure x pure outcross for fertility/clutch-size purposes.
+    return dam.subspecies === sire.subspecies ? "pure-pure" : "hybrid-pure";
+  }
+
+  if (classes.has("Designer") && classes.has("Pure")) return "designer-pure";
+  if (classes.has("Designer") && classes.has("Hybrid")) return "designer-hybrid";
+  return "hybrid-pure";
 }
 
 export const CLUTCH_SIZE_PROFILES: Record<ClutchPairingKind, ClutchSizeProfile> = {
-  pure: {
-    kind: "pure",
+  "pure-pure": {
+    kind: "pure-pure",
     label: "Pure same-subspecies pairing",
     min: 6,
     max: 12,
     weights: [1, 3, 6, 8, 6, 3, 1],
   },
-  hybrid: {
-    kind: "hybrid",
-    label: "Hybrid pairing",
+  "hybrid-hybrid": {
+    kind: "hybrid-hybrid",
+    label: "Hybrid × Hybrid",
     min: 4,
     max: 8,
     weights: [2, 6, 8, 5, 2],
   },
-  designer: {
-    kind: "designer",
-    label: "Designer pairing",
+  "designer-designer": {
+    kind: "designer-designer",
+    label: "Designer × Designer",
     min: 4,
     max: 7,
     weights: [3, 7, 7, 3],
+  },
+  "designer-hybrid": {
+    kind: "designer-hybrid",
+    label: "Designer × Hybrid outcross",
+    min: 5,
+    max: 8,
+    weights: [2, 6, 7, 4],
+  },
+  "designer-pure": {
+    kind: "designer-pure",
+    label: "Designer × Pure outcross",
+    min: 5,
+    max: 9,
+    weights: [1, 4, 7, 7, 3],
+  },
+  "hybrid-pure": {
+    kind: "hybrid-pure",
+    label: "Hybrid × Pure outcross",
+    min: 5,
+    max: 9,
+    weights: [1, 4, 7, 7, 3],
   },
 };
 
@@ -69,7 +105,7 @@ export function clutchSizeForPairing(
   const profile = CLUTCH_SIZE_PROFILES[kind];
   let size = weightedRoll(profile, random);
 
-  // Condition matters, but only lightly. Pairing type remains the main driver.
+  // Female condition matters, but pairing type remains the primary driver.
   if (dam.condition === "Excellent" && random() < 0.18) size += 1;
   if (dam.condition === "Fair" && random() < 0.45) size -= 1;
 
