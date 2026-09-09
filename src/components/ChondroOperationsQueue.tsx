@@ -33,10 +33,11 @@ function remaining(ms: number) {
 
 export function ChondroOperationsQueue() {
   const [save, setSave] = useState<Save | null>(null);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setNow(Date.now());
     async function load() {
       try {
         const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
