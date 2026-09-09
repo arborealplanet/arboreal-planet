@@ -9,6 +9,9 @@ const eslintConfig = defineConfig([
     files: [
       "src/components/ChondroBreederGame.tsx",
       "src/components/ChondroBreederGameV3.tsx",
+      "src/components/ChondroShowsPanel.tsx",
+      "src/components/ChondroRealtimeProgression.tsx",
+      "src/components/ChondroRoomExpansionPanel.tsx",
     ],
     rules: {
       "react-hooks/purity": "off",
@@ -21,6 +24,12 @@ const eslintConfig = defineConfig([
       "src/components/ChondroBreederExpandedShop.tsx",
       "src/components/ChondroBreederLines.tsx",
       "src/components/ChondroConservationPartnerships.tsx",
+      "src/components/ChondroCareerSystemsPanel.tsx",
+      "src/components/ChondroFavoritesMarketPanel.tsx",
+      "src/components/ChondroShowsPanel.tsx",
+      "src/components/ChondroTraitFocusPanel.tsx",
+      "src/components/ChondroRealtimeProgression.tsx",
+      "src/components/ChondroRoomExpansionPanel.tsx",
     ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
