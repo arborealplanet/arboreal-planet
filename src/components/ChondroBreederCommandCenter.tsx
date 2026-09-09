@@ -8,9 +8,7 @@ import { ChondroCollectionManager } from "@/components/ChondroCollectionManager"
 import { ChondroAchievementsPanel } from "@/components/ChondroAchievementsPanel";
 import { ChondroCareerSystemsPanel } from "@/components/ChondroCareerSystemsPanel";
 import { ChondroBreederLines } from "@/components/ChondroBreederLines";
-import { ChondroBreederProgression } from "@/components/ChondroBreederProgression";
 import { ChondroBreederSocial } from "@/components/ChondroBreederSocial";
-import { ChondroBreederFacility } from "@/components/ChondroBreederFacility";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
@@ -68,8 +66,6 @@ export function ChondroBreederCommandCenter() {
               <CompactBlock title="Show Circuit"><ChondroShowsPanel /></CompactBlock>
               <ChondroCareerSystemsPanel />
               <CompactBlock title="Achievements & Titles"><ChondroAchievementsPanel /></CompactBlock>
-              <CompactBlock title="Legacy Career Progression"><ChondroBreederProgression /></CompactBlock>
-              <CompactBlock title="Facility Detail"><ChondroBreederFacility /></CompactBlock>
             </div>
           ) : null}
 
