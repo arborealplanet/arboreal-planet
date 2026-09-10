@@ -1,51 +1,27 @@
 type NavIconId = "home" | "breeding" | "colony" | "clutches" | "market";
 
-export function ChondroBreederNavIcon({ id, className = "h-6 w-6" }: { id: NavIconId; className?: string }) {
-  const base = {
-    className,
-    viewBox: "0 0 24 24",
-    "aria-hidden": true,
-  };
-
-  if (id === "home") {
-    return (
-      <svg {...base} fill="currentColor">
-        <path d="M11.05 2.83a1.5 1.5 0 0 1 1.9 0l8.1 6.6a1 1 0 0 1-.63 1.77h-1.08v8.05a1.75 1.75 0 0 1-1.75 1.75h-3.8v-5.85a1.8 1.8 0 0 0-3.6 0V21h-3.8a1.75 1.75 0 0 1-1.75-1.75V11.2H3.58a1 1 0 0 1-.63-1.77l8.1-6.6Z" />
-      </svg>
-    );
-  }
-
-  if (id === "breeding") {
-    return (
-      <svg {...base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4.2 6.3c2.8-2 6-.9 7.8 2.2 1.8-3.1 5-4.2 7.8-2.2 3 2.2 2.1 6.1-.2 8.5-2 2.1-4.7 4-7.6 6.2-2.9-2.2-5.6-4.1-7.6-6.2-2.3-2.4-3.2-6.3-.2-8.5Z" />
-        <path d="M8.2 8.6c1.6.1 2.8.8 3.8 2.1 1-1.3 2.2-2 3.8-2.1" />
-      </svg>
-    );
-  }
-
-  if (id === "colony") {
-    return (
-      <svg {...base} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M19.94 6.02c-2.55-2.62-7.66-2.3-10.7.13C6.2 8.57 6.4 11.52 8.1 13.2c1.52 1.51 3.8 1.4 5.6.69 1.66-.66 3.34-.44 3.86.7.5 1.1-.42 2.45-2.08 3.04-2.03.72-4.72.25-6.22-1.25a1.2 1.2 0 1 0-1.7 1.7c2.2 2.2 5.95 2.86 8.72 1.88 3.22-1.14 4.92-4.12 3.48-6.73-1.33-2.42-4.45-2.95-6.94-1.97-1.17.46-2.4.5-3.02-.11-.62-.62-.63-1.87.93-3.11 2.08-1.66 5.58-1.95 7.5-.15a1.2 1.2 0 0 0 1.71-1.87Z" />
-        <circle cx="17.7" cy="7.35" r="1.2" fill="#030806" />
-      </svg>
-    );
-  }
-
-  if (id === "clutches") {
-    return (
-      <svg {...base} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M8.5 2.6c-1.15 0-4.8 5.52-4.8 10.03 0 4.34 2.15 7.07 5.37 7.07 3.22 0 5.38-2.73 5.38-7.07C14.45 8.12 9.65 2.6 8.5 2.6Z" />
-        <path d="M15.6 6.1c-.42 0-.98.57-1.58 1.43 1.24 2.37 1.88 4.68 1.88 6.88 0 1.9-.39 3.52-1.1 4.8.39.12.8.19 1.23.19 2.7 0 4.57-2.3 4.57-5.96 0-3.8-3.98-7.34-5-7.34Z" opacity=".72" />
-      </svg>
-    );
-  }
-
+function Badge({ children, className }: { children: React.ReactNode; className: string }) {
   return (
-    <svg {...base} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4.1 3.2h15.8l1.7 5.2a2.25 2.25 0 0 1-3.8 2.17A2.25 2.25 0 0 1 14 10.6a2.25 2.25 0 0 1-4 0 2.25 2.25 0 0 1-3.8-.03A2.25 2.25 0 0 1 2.4 8.4l1.7-5.2Z" />
-      <path d="M4.2 11.6V20a1 1 0 0 0 1 1h13.6a1 1 0 0 0 1-1v-8.4a3.7 3.7 0 0 1-2 .15 3.68 3.68 0 0 1-3.8.03 3.68 3.68 0 0 1-4 0 3.68 3.68 0 0 1-3.8-.03 3.7 3.7 0 0 1-2-.15Zm5.2 4.05h5.2V21H9.4v-5.35Z" />
+    <svg className={className} viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="16" cy="16" r="13" strokeWidth="1.7" opacity=".28" />
+      <path d="M7.2 24.2c3.4 2.5 6.5 3.2 8.8 3.2 2.6 0 5.8-.8 8.9-3.3" strokeWidth="1.4" opacity=".38" />
+      {children}
     </svg>
   );
+}
+
+export function ChondroBreederNavIcon({ id, className = "h-7 w-7" }: { id: NavIconId; className?: string }) {
+  if (id === "home") {
+    return <Badge className={className}><path d="M8.7 15.4 16 9l7.3 6.4v8.2H18v-5h-4v5H8.7v-8.2Z" strokeWidth="2.5" /><path d="M21.3 10.2c2-1.7 3.5-1.5 4.4-.9-.1 2.4-1.3 3.8-3.8 4.1" strokeWidth="1.9" /></Badge>;
+  }
+  if (id === "breeding") {
+    return <Badge className={className}><path d="M7.6 12.5c3.6-3.5 7.1-1.3 8.4 1.2 1.3-2.5 4.8-4.7 8.4-1.2 3.6 3.5-.2 7.5-8.4 12.2-8.2-4.7-12-8.7-8.4-12.2Z" strokeWidth="2.35" /><path d="M11.3 14.1c1.7-.6 3.3.1 4.7 1.6 1.4-1.5 3-2.2 4.7-1.6" strokeWidth="1.7" /></Badge>;
+  }
+  if (id === "colony") {
+    return <Badge className={className}><path d="M23.5 10.2c-4.4-2.8-10.8-.7-11.4 3-.4 2.6 2.2 4.4 5.2 3.4 3.9-1.3 6.9.6 6 3.6-1 3.3-6.4 4.5-10.6 2.4-2.4-1.2-4-3.1-4.3-5.2" strokeWidth="2.55" /><path d="M22.7 10.1c1.6.5 2.3 1.5 2.4 2.8-1.5.4-2.7.1-3.6-.9" strokeWidth="1.8" /><circle cx="22.2" cy="10.4" r=".8" fill="currentColor" stroke="none" /></Badge>;
+  }
+  if (id === "clutches") {
+    return <Badge className={className}><path d="M12.4 10.2c-2.4 2.9-4 6-4 8.7 0 3.1 1.8 5.2 4.5 5.2 2.8 0 4.7-2.2 4.7-5.3 0-2.8-2.3-6.4-5.2-8.6Z" strokeWidth="2.15" /><path d="M20.3 12.4c-2 2.5-3.3 5.2-3.3 7.5 0 2.7 1.5 4.5 3.9 4.5 2.4 0 4-1.9 4-4.6 0-2.4-2-5.5-4.6-7.4Z" strokeWidth="2.15" /><path d="M9.4 8.8c1.8-1.2 3.5-1.5 5.2-.8" strokeWidth="1.5" opacity=".55" /></Badge>;
+  }
+  return <Badge className={className}><path d="M8.2 13.2h15.6l-1.1-4H9.3l-1.1 4Z" strokeWidth="2.3" /><path d="M9.5 14v9.6h13V14" strokeWidth="2.3" /><path d="M13.1 23.5v-5.7h5.8v5.7" strokeWidth="2.1" /><path d="M7.5 13.1c0 1.8 1.2 3 2.7 3 1.2 0 2.1-.6 2.6-1.6.5 1 1.5 1.6 2.7 1.6s2.2-.6 2.7-1.6c.5 1 1.4 1.6 2.6 1.6 1.5 0 2.7-1.2 2.7-3" strokeWidth="1.8" /></Badge>;
 }
