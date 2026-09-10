@@ -28,6 +28,28 @@ const slugByTrait: Record<TraitKey, string> = {
   blotches: "blotches",
 };
 
+// Only trait families listed here are allowed to override a sharp base portrait.
+// This lets us upgrade artwork one family at a time without accidentally
+// re-enabling low-resolution legacy files for other snakes.
+const verifiedTraitArtBySubspecies: Record<ChondroSubspecies, readonly TraitKey[]> = {
+  "Morelia azurea azurea": [
+    "highBlack",
+    "highWhite",
+    "blueStripe",
+    "yellowRetention",
+    "blotches",
+  ],
+  "Morelia azurea pulcher": [
+    "highBlack",
+    "highWhite",
+    "blueStripe",
+    "yellowRetention",
+    "blotches",
+  ],
+  "Morelia azurea utaraensis": ["blueStripe", "yellowRetention"],
+  "Morelia viridis": [],
+};
+
 const withVersion = (src: string) => `${src}?v=${TRAIT_ART_VERSION}`;
 
 function portraitTier(value: number) {
@@ -46,54 +68,20 @@ function traitValue(traits: PortraitTraits, key: TraitKey) {
 function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
   if (!traits) return baseArtBySubspecies[subspecies];
 
-  // Viridis stays on its native-resolution base portrait until its legacy
-  // trait WebPs are rebuilt at matching quality.
-  if (subspecies === "Morelia viridis") {
-    return baseArtBySubspecies[subspecies];
-  }
+  const allowedTraits = verifiedTraitArtBySubspecies[subspecies];
+  if (allowedTraits.length === 0) return baseArtBySubspecies[subspecies];
 
-  // Restore the full existing trait matrix for Azurea and Pulcher.
-  if (
-    subspecies === "Morelia azurea azurea" ||
-    subspecies === "Morelia azurea pulcher"
-  ) {
-    const blue = traitValue(traits, "blueStripe");
-    if (blue >= 100) {
-      return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-blue-100.webp`;
-    }
+  const entries = allowedTraits.map(
+    key => [key, traitValue(traits, key)] as const,
+  );
+  const [trait, value] = entries.reduce(
+    (best, current) => (current[1] > best[1] ? current : best),
+    entries[0],
+  );
+  const tier = portraitTier(value);
+  if (tier === null) return baseArtBySubspecies[subspecies];
 
-    const entries = (Object.keys(slugByTrait) as TraitKey[]).map(
-      key => [key, traitValue(traits, key)] as const,
-    );
-    const [trait, value] = entries.reduce(
-      (best, current) => (current[1] > best[1] ? current : best),
-      entries[0],
-    );
-    const tier = portraitTier(value);
-    if (tier === null) return baseArtBySubspecies[subspecies];
-    return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
-  }
-
-  // Utaraensis: restore the high-blue and high-yellow portrait tiers the user
-  // specifically relies on, while keeping other legacy low-resolution trait
-  // overrides disabled until their art is rebuilt.
-  if (subspecies === "Morelia azurea utaraensis") {
-    const blue = traitValue(traits, "blueStripe");
-    const yellow = traitValue(traits, "yellowRetention");
-    const blueTier = portraitTier(blue);
-    const yellowTier = portraitTier(yellow);
-
-    if (blueTier === null && yellowTier === null) {
-      return baseArtBySubspecies[subspecies];
-    }
-
-    const trait = blue >= yellow ? "blue" : "yellow";
-    const tier = blue >= yellow ? blueTier : yellowTier;
-    if (tier === null) return baseArtBySubspecies[subspecies];
-    return `/hatchery/snakes/traits/utaraensis-${trait}-${tier}.webp`;
-  }
-
-  return baseArtBySubspecies[subspecies];
+  return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
 }
 
 function neonatePortraitArt(subspecies: ChondroSubspecies, neonateColor: NeonateColor) {
