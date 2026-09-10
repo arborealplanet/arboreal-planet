@@ -29,8 +29,9 @@ jobs:
             .asset-native1254-q50/ut-04.txt \
             .asset-native1254-q50/ut-05.txt \
             .asset-native1254-q50/ut-06.txt \
-            .asset-native1254-q50/ut-07a.txt \
-            .asset-native1254-q50/ut-07b.txt \
+            .asset-native1254-q50/ut-07-1.txt \
+            .asset-native1254-q50/ut-07-2.txt \
+            .asset-native1254-q50/ut-07-3.txt \
             .asset-native1254-q50/ut-08.txt \
             .asset-native1254-q50/ut-09.txt \
             .asset-native1254-q50/ut-10.txt \
