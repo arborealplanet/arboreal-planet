@@ -70,6 +70,37 @@ for (const [assetName, relativeOutput, expectedBytes] of appAssets) {
 
 console.log(`Materialized ${appAssets.length} approved Arboreal Planet assets.`);
 
+const homeVideoChunksDir = path.join(root, "src/lib/brand-assets/chondro-home-video");
+const homeVideoChunks = fs
+  .readdirSync(homeVideoChunksDir)
+  .filter((name) => /^\d+\.txt$/.test(name))
+  .sort((a, b) => a.localeCompare(b));
+
+if (homeVideoChunks.length !== 4) {
+  throw new Error(`Expected 4 Chondro homepage video chunks, found ${homeVideoChunks.length}.`);
+}
+
+const homeVideoPayload = homeVideoChunks
+  .map((name) => fs.readFileSync(path.join(homeVideoChunksDir, name), "utf8").trim())
+  .join("");
+
+if (homeVideoPayload.length !== 78972) {
+  throw new Error(`Chondro homepage video payload length mismatch: ${homeVideoPayload.length}.`);
+}
+
+const homeVideoBytes = Buffer.from(homeVideoPayload, "base64");
+if (homeVideoBytes.subarray(4, 8).toString("ascii") !== "ftyp") {
+  throw new Error("Chondro homepage video payload is not a valid MP4 file.");
+}
+if (homeVideoBytes.length !== 59229) {
+  throw new Error(`Chondro homepage video byte length mismatch: ${homeVideoBytes.length}.`);
+}
+
+const homeVideoOutput = path.join(root, "public/branding/chondro-breeder-home.mp4");
+fs.mkdirSync(path.dirname(homeVideoOutput), { recursive: true });
+fs.writeFileSync(homeVideoOutput, homeVideoBytes);
+console.log(`Materialized ${path.relative(root, homeVideoOutput)} (${homeVideoBytes.length} bytes).`);
+
 const hatcheryAssetsDir = path.join(root, "src/lib/hatchery-assets");
 const hatcheryOutputDir = path.join(root, "public/hatchery/snakes/traits");
 
