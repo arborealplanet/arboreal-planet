@@ -70,7 +70,7 @@ export async function getServerIdentity() {
 }
 
 export async function fetchOwnProfile(token: string, userId: string) {
-  const fields = "id,username,display_name,bio,location,avatar_url,banner_url,accent_color,profile_visibility,seller_enabled,role,website_url,instagram_url,facebook_url";
+  const fields = "id,username,display_name,bio,location,avatar_url,banner_url,accent_color,profile_visibility,seller_enabled,role,website_url,instagram_url,facebook_url,seller_verification_status,seller_verification_requested_at,seller_verified_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=${fields}`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, Accept: "application/json" },
     cache: "no-store",
