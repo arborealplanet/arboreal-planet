@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs && node scripts/patch-chondro-map-highlight.mjs && node scripts/patch-chondro-screen-mode.mjs && node scripts/patch-chondro-store-standalone.mjs && node scripts/patch-chondro-home-dashboard.mjs",
+    "predev": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs && node scripts/patch-chondro-map-highlight.mjs && node scripts/patch-chondro-screen-mode.mjs && node scripts/patch-chondro-store-standalone.mjs && node scripts/patch-chondro-save-events.mjs && node scripts/patch-chondro-home-dashboard.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs && node scripts/patch-chondro-map-highlight.mjs && node scripts/patch-chondro-screen-mode.mjs && node scripts/patch-chondro-store-standalone.mjs && node scripts/patch-chondro-home-dashboard.mjs",
+    "prebuild": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs && node scripts/patch-chondro-map-highlight.mjs && node scripts/patch-chondro-screen-mode.mjs && node scripts/patch-chondro-store-standalone.mjs && node scripts/patch-chondro-save-events.mjs && node scripts/patch-chondro-home-dashboard.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -19,7 +19,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react-dom": "^20",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
