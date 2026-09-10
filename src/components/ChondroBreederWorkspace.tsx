@@ -149,7 +149,6 @@ function BreedingScreen() {
     <>
       <ScreenHeading eyebrow="Reproduction" title="Breeding" detail="Prepare breeders, choose the pair and follow the active reproductive cycle." />
       <ChondroBreedingFocusHeader />
-      <ChondroBreederManagementView section="breeding" />
       <ChondroBreederGameV3 />
       <ChondroClutchOutcomeExplainer />
     </>
@@ -182,7 +181,6 @@ function MarketScreen() {
     <>
       <ScreenHeading eyebrow="Exchange" title="Market" detail="Shop daily offers, review player listings and move animals into or out of the program." />
       <ChondroBreederExpandedShop />
-      <ChondroBreederManagementView section="market" />
     </>
   );
 }
