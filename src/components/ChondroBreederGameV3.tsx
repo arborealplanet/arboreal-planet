@@ -143,12 +143,7 @@ const localitySubspecies: Record<Locality, Subspecies> = {
   Merauke: "Morelia viridis",
 };
 const allLocalities = Object.keys(localitySubspecies) as Locality[];
-const preferredTraits: Record<Subspecies, TraitKey[]> = {
-  "Morelia azurea azurea": ["highBlack", "yellowRetention"],
-  "Morelia azurea pulcher": ["yellowRetention", "blueStripe"],
-  "Morelia azurea utaraensis": ["blueStripe", "highWhite"],
-  "Morelia viridis": ["highWhite", "highBlack"],
-};
+const preferredTraits = CHONDRO_SPECIES_PROFILE.traits.preferredByTaxon as Record<Subspecies, TraitKey[]>;
 const traitRows: [string, TraitKey][] = [
   ["High Black", "highBlack"],
   ["High White", "highWhite"],
