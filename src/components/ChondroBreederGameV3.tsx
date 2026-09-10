@@ -7,7 +7,7 @@ import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
 import { breedingReputationGain, marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
 import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
-import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor } from "@/lib/breeder-species-profiles";
+import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor, needsExtraRecoveryYear, normalizeNeonateColorFor, randomNeonateColorFor } from "@/lib/breeder-species-profiles";
 
 type Subspecies =
   | "Morelia azurea azurea"
@@ -120,14 +120,8 @@ const STARTING_CASH = 30000;
 const NIDO_TEST_COST = 125;
 const GENETIC_TEST_COST = 350;
 const GENETIC_TEST_HOURS = 12;
-const SEASON_CARE_PER_ADULT = 180;
-const BREEDING_STAGES: Array<{ id: BreedingStage; label: string; hours: number }> = [
-  { id: "cycling", label: "Cycling", hours: 4 },
-  { id: "pairing", label: "Pairing", hours: 8 },
-  { id: "laying", label: "Laying", hours: 12 },
-  { id: "incubation", label: "Incubation", hours: 24 },
-  { id: "hatch-day", label: "Hatch Day", hours: 2 },
-];
+const SEASON_CARE_PER_ADULT = CHONDRO_SPECIES_PROFILE.reproduction.seasonCarePerAdult;
+const BREEDING_STAGES = CHONDRO_SPECIES_PROFILE.reproduction.stages as Array<{ id: BreedingStage; label: string; hours: number }>;
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const DAY_MS = 86_400_000;
 const enclosurePrices: Record<EnclosureType, number> = {
@@ -192,13 +186,6 @@ function pairingFailureReason(dam: Snake, sire: Snake) {
   if (dam.condition === "Fair") return "The female did not cycle strongly enough to complete the pairing.";
   if (sire.condition === "Fair") return "The male showed poor breeding interest this cycle.";
   return Math.random() < 0.5 ? "No successful lock was observed." : "The female was unreceptive and the pairing was stopped.";
-}
-function femaleNeedsRecoveryYear(dam: Snake, clutchSize: number) {
-  let chance = 0.28 + Math.max(0, clutchSize - 6) * 0.06;
-  if (dam.condition === "Excellent") chance -= 0.12;
-  if (dam.condition === "Fair") chance += 0.20;
-  chance = Math.max(0.12, Math.min(0.80, chance));
-  return Math.random() < chance;
 }
 const pick = <T,>(a: T, b: T) => (Math.random() < 0.5 ? a : b);
 const tailFor = (s: Subspecies) =>
@@ -317,7 +304,7 @@ function makeSnake(
     source,
     subspecies,
     locality,
-    neonateColor: subspecies === "Morelia viridis" ? "Yellow" : neonateColor,
+    neonateColor: normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, neonateColor),
     lifeStage,
     highBlack: clamp(traits.highBlack),
     highWhite: clamp(traits.highWhite),
@@ -398,7 +385,7 @@ function storeForEpoch(epoch: number): StoreSnake[] {
     const isHybrid = i === 8 || (i > 5 && random() < 0.25);
     const source: Source = random() < 0.48 ? "Import" : "Captive Bred";
     const sex: Sex = random() < 0.5 ? "Male" : "Female";
-    const neonateColor: "Red" | "Yellow" = random() < 0.38 ? "Red" : "Yellow";
+    const neonateColor = randomNeonateColorFor(CHONDRO_SPECIES_PROFILE, random);
     const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
     const lifeStage = stages[Math.floor(random() * stages.length)];
     const a = allLocalities[Math.floor(random() * allLocalities.length)];
@@ -539,7 +526,9 @@ function makeOffspring(
     source: "Captive Bred",
     subspecies,
     locality,
-    neonateColor: pureSame && subspecies === "Morelia viridis" ? "Yellow" : pick(dam.neonateColor, sire.neonateColor),
+    neonateColor: pureSame
+      ? normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, pick(dam.neonateColor, sire.neonateColor))
+      : pick(dam.neonateColor, sire.neonateColor),
     lifeStage: "Hatchling",
     highBlack: inheritedTraits.highBlack,
     highWhite: inheritedTraits.highWhite,
@@ -630,7 +619,9 @@ function normalizeSnake(raw: Snake): Snake {
     ...raw,
     subspecies,
     locality,
-    neonateColor: raw.classification === "Pure" && subspecies === "Morelia viridis" ? "Yellow" : raw.neonateColor,
+    neonateColor: raw.classification === "Pure"
+      ? normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, raw.neonateColor)
+      : raw.neonateColor,
     highBlack: Number(raw.highBlack ?? 0),
     highWhite: Number(raw.highWhite ?? 0),
     blueStripe: Number(raw.blueStripe ?? 0),
@@ -1283,7 +1274,11 @@ export function ChondroBreederGameV3() {
       clutch.offspring.reduce((sum, baby) => sum + breedingReputationGain(baby), 0),
     );
     setCareerReputation((current) => current + clutchReputation);
-    const needsExtraRecovery = femaleNeedsRecoveryYear(clutch.dam, clutch.offspring.length);
+    const needsExtraRecovery = needsExtraRecoveryYear(
+      CHONDRO_SPECIES_PROFILE,
+      clutch.dam.condition,
+      clutch.offspring.length,
+    );
     const nextEligibleSeason = needsExtraRecovery ? season + 2 : season + 1;
     setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));
     setBreedingMessage(
