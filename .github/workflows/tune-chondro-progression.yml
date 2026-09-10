@@ -20,7 +20,6 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           path = Path('src/components/ChondroBreederGameV3.tsx')
           text = path.read_text()
 
@@ -30,57 +29,19 @@ jobs:
               raise SystemExit('Unexpected progression import count')
           text = text.replace(old_import, new_import, 1)
 
-          marker = '''function pairingFailureReason(dam: Snake, sire: Snake) {
-  if (dam.condition === "Fair") return "The female did not cycle strongly enough to complete the pairing.";
-  if (sire.condition === "Fair") return "The male showed poor breeding interest this cycle.";
-  return Math.random() < 0.5 ? "No successful lock was observed." : "The female was unreceptive and the pairing was stopped.";
-}
-'''
-          helper = marker + '''function femaleNeedsRecoveryYear(dam: Snake, clutchSize: number) {
-  let chance = 0.28 + Math.max(0, clutchSize - 6) * 0.06;
-  if (dam.condition === "Excellent") chance -= 0.12;
-  if (dam.condition === "Fair") chance += 0.20;
-  chance = Math.max(0.12, Math.min(0.80, chance));
-  return Math.random() < chance;
-}
-'''
+          marker = 'function pairingFailureReason(dam: Snake, sire: Snake) {\n  if (dam.condition === "Fair") return "The female did not cycle strongly enough to complete the pairing.";\n  if (sire.condition === "Fair") return "The male showed poor breeding interest this cycle.";\n  return Math.random() < 0.5 ? "No successful lock was observed." : "The female was unreceptive and the pairing was stopped.";\n}\n'
+          helper = marker + 'function femaleNeedsRecoveryYear(dam: Snake, clutchSize: number) {\n  let chance = 0.28 + Math.max(0, clutchSize - 6) * 0.06;\n  if (dam.condition === "Excellent") chance -= 0.12;\n  if (dam.condition === "Fair") chance += 0.20;\n  chance = Math.max(0.12, Math.min(0.80, chance));\n  return Math.random() < chance;\n}\n'
           if text.count(marker) != 1:
               raise SystemExit('Unexpected pairing helper marker count')
           text = text.replace(marker, helper, 1)
 
-          dead = '''  function produceClutch(initials: string) {
-    if (!dam || !sire) return;
-    setClutch(createClutch(dam, sire, initials));
-    setHoldbacks([]);
-  }
-
-'''
+          dead = '  function produceClutch(initials: string) {\n    if (!dam || !sire) return;\n    setClutch(createClutch(dam, sire, initials));\n    setHoldbacks([]);\n  }\n\n'
           if text.count(dead) != 1:
               raise SystemExit('Unexpected produceClutch count')
           text = text.replace(dead, '', 1)
 
-          old_block = '''    setColony((current) => [...current, ...kept]);
-    setClutchHistory((current) => [{ ...clutch, season, holdbackIds: [...holdbacks] }, ...current]);
-    const nextEligibleSeason = Math.random() < 0.5 ? season + 1 : season + 2;
-    setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));
-    setBreedingMessage(nextEligibleSeason === season + 1 ? `${clutch.dam.name} recovered in time for next season.` : `${clutch.dam.name} needs an additional recovery year before breeding again.`);
-'''
-          new_block = '''    setColony((current) => [...current, ...kept]);
-    setClutchHistory((current) => [{ ...clutch, season, holdbackIds: [...holdbacks] }, ...current]);
-    const clutchReputation = Math.min(
-      250,
-      clutch.offspring.reduce((sum, baby) => sum + breedingReputationGain(baby), 0),
-    );
-    setCareerReputation((current) => current + clutchReputation);
-    const needsExtraRecovery = femaleNeedsRecoveryYear(clutch.dam, clutch.offspring.length);
-    const nextEligibleSeason = needsExtraRecovery ? season + 2 : season + 1;
-    setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));
-    setBreedingMessage(
-      needsExtraRecovery
-        ? `${clutch.dam.name} needs an additional recovery year after this ${clutch.offspring.length}-egg clutch. +${clutchReputation} breeder reputation.`
-        : `${clutch.dam.name} recovered in time for next season. +${clutchReputation} breeder reputation.`,
-    );
-'''
+          old_block = '    setColony((current) => [...current, ...kept]);\n    setClutchHistory((current) => [{ ...clutch, season, holdbackIds: [...holdbacks] }, ...current]);\n    const nextEligibleSeason = Math.random() < 0.5 ? season + 1 : season + 2;\n    setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));\n    setBreedingMessage(nextEligibleSeason === season + 1 ? `${clutch.dam.name} recovered in time for next season.` : `${clutch.dam.name} needs an additional recovery year before breeding again.`);\n'
+          new_block = '    setColony((current) => [...current, ...kept]);\n    setClutchHistory((current) => [{ ...clutch, season, holdbackIds: [...holdbacks] }, ...current]);\n    const clutchReputation = Math.min(\n      250,\n      clutch.offspring.reduce((sum, baby) => sum + breedingReputationGain(baby), 0),\n    );\n    setCareerReputation((current) => current + clutchReputation);\n    const needsExtraRecovery = femaleNeedsRecoveryYear(clutch.dam, clutch.offspring.length);\n    const nextEligibleSeason = needsExtraRecovery ? season + 2 : season + 1;\n    setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));\n    setBreedingMessage(\n      needsExtraRecovery\n        ? `${clutch.dam.name} needs an additional recovery year after this ${clutch.offspring.length}-egg clutch. +${clutchReputation} breeder reputation.`\n        : `${clutch.dam.name} recovered in time for next season. +${clutchReputation} breeder reputation.`,\n    );\n'
           if text.count(old_block) != 1:
               raise SystemExit('Unexpected clutch recovery block count')
           text = text.replace(old_block, new_block, 1)
