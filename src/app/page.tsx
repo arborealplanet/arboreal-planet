@@ -8,7 +8,7 @@ const platformCards = [
   { title: "Plant Database", text: "Nepenthes, bromeliads and terrarium cultivation knowledge.", href: "/plants", tag: "PLANTS", icon: "⌁" },
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "DISCOVER", icon: "▣" },
-  { title: "Community", text: "Follow keepers, animals, plants and the topics you actually care about.", href: "/community", tag: "CONNECT", icon: "◎" },
+  { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
   { title: "Arboreal Arcade", text: "Breeder games with virtual lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "LEARN + PLAY", icon: "◈" },
 ];
 
@@ -29,10 +29,10 @@ export default function Home() {
           <div className="relative z-10">
             <div className="section-kicker">The arboreal keeper network</div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[.98] tracking-[-.05em] text-white sm:text-6xl lg:text-[72px]">
-              One ecosystem for the animals <span className="text-emerald-300">above the ground.</span>
+              Reptile keeping, market data and community <span className="text-emerald-300">in one platform.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-white/52">
-              Arboreal Planet brings keepers, species knowledge, plant cultivation, listings, community activity and reptile market intelligence together without flattening them into the same thing.
+              Arboreal Planet connects species records, plant cultivation, marketplace listings, keeper activity and reptile market intelligence while keeping each source of information clearly separated.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/community" className="rounded-xl bg-emerald-300 px-5 py-3.5 text-sm font-bold text-[#06100c] transition hover:bg-emerald-200">Explore the network</Link>
@@ -53,12 +53,12 @@ export default function Home() {
                 <div className="absolute inset-x-0 bottom-0 h-[94%]"><GreenTreePythonArt /></div>
                 <div className="absolute left-5 top-5 rounded-full border border-emerald-300/15 bg-black/25 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/70">Green Tree Python · Reference Species</div>
                 <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
-                  <div><div className="text-xs italic text-white/35">Morelia viridis complex</div><div className="mt-1 text-xl font-semibold">Animal data ↔ market data</div></div>
+                  <div><div className="text-xs italic text-white/35">Morelia viridis complex</div><div className="mt-1 text-xl font-semibold">Species records and market context</div></div>
                   <Link href="/animals/green-tree-python" className="rounded-xl border border-white/[.09] bg-black/30 px-3 py-2 text-[10px] font-bold text-white/60 backdrop-blur">OPEN RECORD →</Link>
                 </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4">
-                {[["Current evidence","131"],["Sold evidence","340"],["Public origins","2"],["Fake prices","0"]].map(([label,value],i)=><div key={label} className={`p-4 ${i<3?"border-r border-white/[.055]":""}`}><div className="text-[8px] font-bold uppercase tracking-[.14em] text-white/23">{label}</div><div className="mt-2 text-xl font-semibold text-white/65">{value}</div></div>)}
+                {[["Origin groups","2"],["Price method","Median"],["Locality views","Enabled"],["Source review","Required"]].map(([label,value],i)=><div key={label} className={`p-4 ${i<3?"border-r border-white/[.055]":""}`}><div className="text-[8px] font-bold uppercase tracking-[.14em] text-white/23">{label}</div><div className="mt-2 text-xl font-semibold text-white/65">{value}</div></div>)}
               </div>
               <Link href="/snake-stocks" className="flex items-center justify-between border-t border-white/[.06] bg-emerald-300/[.035] px-5 py-4 text-xs font-bold text-emerald-200/70"><span>SNAKE STOCKS · TRACK · COMPARE · DISCOVER</span><span>↗</span></Link>
             </div>
@@ -68,8 +68,8 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Six spaces. One identity.</h2></div>
-          <p className="max-w-md text-sm leading-6 text-white/38">Each system can grow without turning navigation into a wall of competing products.</p>
+          <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Core sections</h2></div>
+          <p className="max-w-md text-sm leading-6 text-white/38">Browse reference data, marketplace listings, community activity, market tools and the Arboreal Arcade from one navigation.</p>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {platformCards.map((card) => (
@@ -87,7 +87,7 @@ export default function Home() {
             <div className="section-kicker">Reference animal</div>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Green Tree Python</h2>
             <p className="mt-2 text-sm italic text-white/32">Morelia viridis complex · Arboreal Planet market grouping</p>
-            <p className="mt-6 max-w-xl text-base leading-7 text-white/48">This is the first animal going all the way through the system: animal record → locality structure → origin terminology → marketplace → Snake Stocks → community context.</p>
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/48">Green Tree Python is the first fully connected animal record, linking locality structure, origin terminology, marketplace listings, Snake Stocks and relevant community activity.</p>
             <div className="mt-7 flex flex-wrap gap-2">{populations.map((name) => <span key={name} className="rounded-full border border-white/[.08] bg-white/[.02] px-3 py-1.5 text-xs text-white/45">{name}</span>)}</div>
             <Link href="/animals/green-tree-python" className="mt-7 w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link>
           </div>
@@ -100,13 +100,13 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
           <div className="panel overflow-hidden rounded-3xl">
-            <div className="flex items-center justify-between border-b border-white/[.06] p-5"><div><div className="section-kicker">Community</div><h2 className="mt-2 text-2xl font-semibold">Keeper activity without filler.</h2></div><Link href="/community" className="text-xs font-bold text-emerald-300">EXPLORE →</Link></div>
-            <div className="grid gap-px bg-white/[.055] sm:grid-cols-3">{["Breeding updates", "Husbandry discussions", "Animal & plant posts"].map((item) => <div key={item} className="bg-[#08140f] p-6"><div className="text-sm font-semibold">{item}</div><p className="mt-2 text-xs leading-5 text-white/34">Feed cards will populate from real accounts once authentication and community tables are connected.</p></div>)}</div>
+            <div className="flex items-center justify-between border-b border-white/[.06] p-5"><div><div className="section-kicker">Community</div><h2 className="mt-2 text-2xl font-semibold">Recent keeper activity</h2></div><Link href="/community" className="text-xs font-bold text-emerald-300">EXPLORE →</Link></div>
+            <div className="grid gap-px bg-white/[.055] sm:grid-cols-3">{["Breeding updates", "Husbandry discussions", "Animal & plant posts"].map((item) => <div key={item} className="bg-[#08140f] p-6"><div className="text-sm font-semibold">{item}</div><p className="mt-2 text-xs leading-5 text-white/34">Community posts from Arboreal Planet accounts appear in this section.</p></div>)}</div>
           </div>
           <div className="grid gap-4">
             <Link href="/arcade/enter?next=%2Farcade" className="panel relative overflow-hidden rounded-3xl p-6">
               <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-amber-200/[.08] bg-amber-200/[.025]" />
-              <div className="section-kicker text-amber-200/70">Arboreal Arcade</div><h2 className="mt-3 text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Build a virtual breeding operation with real-time stages, lineage, facilities, projects, shows and long-term breeder progression.</p><div className="mt-7 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Strategy · Collection</div>
+              <div className="section-kicker text-amber-200/70">Arboreal Arcade</div><h2 className="mt-3 text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Manage a virtual chondro breeding program with breeding stages, lineage, facilities, projects and long-term progression.</p><div className="mt-7 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Strategy · Collection</div>
             </Link>
             <ArborealsByBunnBadge />
           </div>
