@@ -19,6 +19,7 @@ type Snake = {
 };
 type Clutch = { id?: string; dam?: Snake; sire?: Snake; offspring?: Snake[] };
 type Save = { clutch?: Clutch | null; clutchEstablished?: boolean; holdbacks?: string[] };
+type ClutchAction = "establish" | "toggle-holdback" | "finish";
 
 function strongestTrait(animal: Snake) {
   const rows = [
@@ -29,6 +30,10 @@ function strongestTrait(animal: Snake) {
     ["Blotches", Number(animal.blotches ?? 0)],
   ] as const;
   return rows.reduce((best, row) => row[1] > best[1] ? row : best, rows[0]);
+}
+
+function dispatchClutchAction(action: ClutchAction, snakeId?: string) {
+  window.dispatchEvent(new CustomEvent("arboreal-chondro-clutch-action", { detail: { action, snakeId } }));
 }
 
 export function ChondroActiveClutchShowcase() {
@@ -59,6 +64,10 @@ export function ChondroActiveClutchShowcase() {
   const holdbacks = useMemo(() => new Set(save.holdbacks ?? []), [save.holdbacks]);
   if (!clutch || !offspring.length) return null;
 
+  const establishmentCost = 150 + offspring.length * 75;
+  const holdbackCount = holdbacks.size;
+  const marketCount = Math.max(0, offspring.length - holdbackCount);
+
   return (
     <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
       <div className="overflow-hidden rounded-[30px] border border-amber-200/12 bg-[radial-gradient(circle_at_25%_0%,rgba(251,191,36,.08),transparent_38%),#07100c]">
@@ -66,12 +75,26 @@ export function ChondroActiveClutchShowcase() {
           <div>
             <div className="text-[9px] font-black uppercase tracking-[.17em] text-amber-100/50">Active clutch</div>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] text-white/90">{clutch.dam?.name ?? "Dam"} × {clutch.sire?.name ?? "Sire"}</h2>
-            <p className="mt-2 text-sm text-white/44">{offspring.length} offspring · {save.clutchEstablished ? "established and ready for individual decisions" : "establish the clutch before holdback or sale decisions"}</p>
+            <p className="mt-2 text-sm text-white/44">{offspring.length} offspring · {save.clutchEstablished ? `${holdbackCount} holdback${holdbackCount === 1 ? "" : "s"} · ${marketCount} headed to market` : "establish the clutch before individual decisions"}</p>
           </div>
           <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.13em] ${save.clutchEstablished ? "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/70" : "border-amber-200/18 bg-amber-200/[.045] text-amber-100/70"}`}>
             {save.clutchEstablished ? "Established" : "Establishment pending"}
           </div>
         </div>
+
+        {!save.clutchEstablished ? (
+          <div className="border-b border-white/[.055] bg-amber-200/[.025] p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-bold text-amber-100/80">Establish the clutch together</div>
+                <div className="mt-1 text-xs leading-5 text-white/40">One payment covers the shared establishment period before you choose individual holdbacks or sales.</div>
+              </div>
+              <button type="button" onClick={() => dispatchClutchAction("establish")} className="rounded-2xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a] transition hover:bg-amber-100">
+                Establish clutch · ${establishmentCost.toLocaleString()}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="p-4 sm:p-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -79,13 +102,13 @@ export function ChondroActiveClutchShowcase() {
               const strongest = strongestTrait(baby);
               const isHoldback = holdbacks.has(baby.id);
               return (
-                <article key={baby.id} className={`rounded-[22px] border p-3 ${isHoldback ? "border-emerald-300/22 bg-emerald-300/[.035]" : "border-white/[.065] bg-black/14"}`}>
+                <article key={baby.id} className={`rounded-[22px] border p-3 transition ${isHoldback ? "border-emerald-300/22 bg-emerald-300/[.035]" : "border-white/[.065] bg-black/14"}`}>
                   <div className="rounded-[18px] border border-white/[.045] bg-black/18 p-2">
                     <ChondroSnakeIcon
                       subspecies={baby.subspecies as never}
                       name={baby.name}
                       traits={{ highBlack: Number(baby.highBlack ?? 0), highWhite: Number(baby.highWhite ?? 0), blueStripe: Number(baby.blueStripe ?? 0), yellowRetention: Number(baby.yellowRetention ?? 0), blotches: Number(baby.blotches ?? 0) }}
-                      lifeStage="Hatchling"
+                      lifeStage={save.clutchEstablished ? "Neonate" : "Hatchling"}
                       neonateColor={baby.neonateColor}
                     />
                   </div>
@@ -100,10 +123,30 @@ export function ChondroActiveClutchShowcase() {
                     <span className={baby.neonateColor === "Red" ? "text-red-100/62" : "text-amber-100/62"}>{baby.neonateColor ?? "Yellow"} neonate</span>
                     <span className="text-white/34">{baby.geneticsTested ? `${strongest[0]} ${strongest[1]}%` : "Traits untested"}</span>
                   </div>
+                  <button
+                    type="button"
+                    disabled={!save.clutchEstablished}
+                    onClick={() => dispatchClutchAction("toggle-holdback", baby.id)}
+                    className={`mt-3 w-full rounded-xl border px-3 py-2.5 text-[10px] font-black uppercase tracking-[.08em] transition disabled:cursor-not-allowed disabled:opacity-30 ${isHoldback ? "border-emerald-300/20 bg-emerald-300/[.07] text-emerald-100/78" : "border-white/[.08] bg-white/[.025] text-white/52 hover:border-emerald-300/16 hover:text-white/78"}`}
+                  >
+                    {!save.clutchEstablished ? "Establish first" : isHoldback ? "Keep as holdback" : "Mark as holdback"}
+                  </button>
                 </article>
               );
             })}
           </div>
+
+          {save.clutchEstablished ? (
+            <div className="mt-5 flex flex-col gap-3 rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.025] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-bold text-white/72">Ready to close this clutch?</div>
+                <div className="mt-1 text-xs text-white/38">{holdbackCount} stay in your colony · {marketCount} will be listed · then the season advances.</div>
+              </div>
+              <button type="button" onClick={() => dispatchClutchAction("finish")} className="rounded-2xl bg-emerald-300 px-5 py-3 text-xs font-black text-[#06100c] transition hover:bg-emerald-200">
+                List unheld & advance season
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
