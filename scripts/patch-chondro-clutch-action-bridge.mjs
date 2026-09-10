@@ -15,8 +15,8 @@ if (!source.includes(marker)) {
 
 const bridge = `  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    function handleClutchAction(event) {
-      const detail = event.detail ?? {};
+    function handleClutchAction(event: Event) {
+      const detail = (event as CustomEvent<{ action?: string; snakeId?: string }>).detail ?? {};
       if (detail.action === "establish") {
         payClutchEstablishment();
         return;
