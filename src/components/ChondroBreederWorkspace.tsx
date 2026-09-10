@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
@@ -23,9 +23,9 @@ type ViewMeta = {
 };
 
 const views: Array<{ id: WorkspaceView } & ViewMeta> = [
-  { id: "home", label: "Breeder Desk", detail: "Program overview", icon: "⌂" },
+  { id: "home", label: "Home", detail: "Breeder command center", icon: "⌂" },
   { id: "breeding", label: "Breeding", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
-  { id: "colony", label: "Colony", detail: "Animals, records and retired breeders", icon: "◎" },
+  { id: "colony", label: "Colony", detail: "Animals and breeder records", icon: "◎" },
   { id: "clutches", label: "Clutches", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
   { id: "market", label: "Market", detail: "Acquire, list and track animals", icon: "$" },
   { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
@@ -35,203 +35,180 @@ const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "guide", label: "Field Guide", detail: "Subspecies, locality and phenotype reference", icon: "?" },
 ];
 
+const dockViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];
+
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
   const active = views.find((item) => item.id === view) ?? views[0];
-  const inWindow = view !== "home";
 
   function openView(next: WorkspaceView) {
     setView(next);
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   }
 
-  function closeWindow() {
-    setView("home");
-    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
-  }
-
-  useEffect(() => {
-    if (!inWindow) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") closeWindow();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [inWindow]);
-
   return (
-    <div className="min-h-screen bg-[#030806] text-white">
-      <header className="sticky top-0 z-[70] border-b border-white/[.06] bg-[#030806]/96 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[62px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[68px] sm:px-5">
+    <div className="min-h-[100dvh] bg-[#030806] pb-[calc(86px+env(safe-area-inset-bottom))] text-white">
+      <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#030806]/96 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[60px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[66px] sm:px-5">
           <Link
             href="/"
             aria-label="Exit Chondro Breeder and return to Arboreal Planet"
-            title="Exit to Arboreal Planet"
-            className="group grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/[.06] bg-white/[.025] transition hover:border-emerald-300/20 hover:bg-white/[.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
+            title="Return to Arboreal Planet"
+            className="group grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/[.07] bg-white/[.025] transition hover:border-emerald-300/20 hover:bg-white/[.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
           >
             <ArborealPlanetMark className="h-9 w-9 transition group-hover:scale-[1.03]" />
           </Link>
 
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/45">Chondro Breeder</div>
-            <div className="mt-0.5 truncate text-sm font-semibold text-white/78">{inWindow ? active.label : "Breeder Desk"}</div>
+            <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/44">Chondro Breeder</div>
+            <div className="mt-0.5 truncate text-sm font-semibold text-white/80">{active.label}</div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            {inWindow ? (
-              <button
-                type="button"
-                onClick={closeWindow}
-                className="rounded-xl border border-white/[.08] bg-white/[.035] px-3 py-2 text-[10px] font-black uppercase tracking-[.1em] text-white/58 transition hover:bg-white/[.065] hover:text-white/82"
-              >
-                Close window
-              </button>
-            ) : (
-              <span className="hidden rounded-full border border-emerald-300/10 bg-emerald-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.14em] text-emerald-100/50 sm:block">Game running</span>
-            )}
+          <div className="ml-auto hidden items-center gap-2 sm:flex">
+            <div className="rounded-full border border-emerald-300/10 bg-emerald-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.14em] text-emerald-100/48">Game running</div>
           </div>
         </div>
       </header>
 
-      {!inWindow ? <BreederDesktop onOpen={openView} /> : <GameWindow active={active} onClose={closeWindow}>{renderWorkspace(view)}</GameWindow>}
+      <main>
+        {view === "home" ? <BreederHome onOpen={openView} /> : null}
+        {view === "breeding" ? <BreedingScreen /> : null}
+        {view === "colony" ? <ColonyScreen /> : null}
+        {view === "clutches" ? <ClutchesScreen /> : null}
+        {view === "market" ? <MarketScreen /> : null}
+        {view === "career" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="career" /></SecondaryScreen> : null}
+        {view === "projects" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="projects" /></SecondaryScreen> : null}
+        {view === "conservation" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroConservationPartnerships /></SecondaryScreen> : null}
+        {view === "community" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="community" /></SecondaryScreen> : null}
+        {view === "guide" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederSubspeciesPhenotypes /></SecondaryScreen> : null}
+      </main>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(72px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.08] bg-[#030806]/97 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl lg:bottom-4 lg:h-[72px] lg:max-w-[680px] lg:rounded-[22px] lg:border lg:px-3 lg:pb-1.5"
+        aria-label="Chondro Breeder navigation"
+      >
+        {dockViews.map((id) => {
+          const item = views.find((entry) => entry.id === id)!;
+          const selected = view === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => openView(id)}
+              aria-current={selected ? "page" : undefined}
+              className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[9px] font-bold uppercase tracking-[.04em] transition sm:text-[10px] ${selected ? "bg-emerald-300/[.08] text-emerald-200" : "text-white/38 hover:bg-white/[.035] hover:text-white/68"}`}
+            >
+              <span className={`grid h-8 w-8 place-items-center rounded-xl text-base transition ${selected ? "bg-emerald-300/[.12] text-emerald-200" : "bg-white/[.025]"}`}>{item.icon}</span>
+              <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
 
-function BreederDesktop({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
-  const primary: WorkspaceView[] = ["breeding", "colony", "clutches", "market"];
-  const secondary: WorkspaceView[] = ["career", "projects", "conservation", "community", "guide"];
-
+function ScreenHeading({ eyebrow, title, detail }: { eyebrow: string; title: string; detail: string }) {
   return (
-    <main className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
-      <div className="relative overflow-hidden rounded-[30px] border border-white/[.07] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.32)]">
-        <div className="absolute inset-0 opacity-35 [background:radial-gradient(circle_at_20%_0%,rgba(52,211,153,.15),transparent_34%),radial-gradient(circle_at_90%_20%,rgba(16,185,129,.08),transparent_28%)]" />
-        <div className="relative p-3 sm:p-5">
+    <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 sm:pt-7">
+      <div className="border-b border-white/[.055] pb-4">
+        <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/42">{eyebrow}</div>
+        <h1 className="mt-2 text-2xl font-semibold tracking-[-.035em] text-white sm:text-3xl">{title}</h1>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-white/42">{detail}</p>
+      </div>
+    </div>
+  );
+}
+
+function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
+  const tools: WorkspaceView[] = ["career", "projects", "conservation", "community", "guide"];
+  return (
+    <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
+      <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
+        <div className="p-3 sm:p-5">
           <ChondroPatternBanner compact />
-          <div className="mt-4 grid gap-4 xl:grid-cols-[1.25fr_.75fr]">
-            <section className="rounded-[26px] border border-white/[.07] bg-black/20 p-4 sm:p-6">
-              <div className="section-kicker">Breeder Desk</div>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h1 className="text-3xl font-semibold tracking-[-.045em] text-white sm:text-4xl">Chondro Breeder</h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-white/46">Choose a workstation to manage the breeding program. Each system opens as its own focused game window and closes back to this desk.</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.035] px-4 py-3 text-left sm:text-right">
-                  <div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-100/45">Program status</div>
-                  <div className="mt-1 text-sm font-semibold text-white/72">Active breeder file</div>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {primary.map((id) => {
-                  const item = views.find((entry) => entry.id === id)!;
-                  return <DesktopApp key={id} item={item} onClick={() => onOpen(id)} featured />;
-                })}
-              </div>
-            </section>
-
-            <aside className="rounded-[26px] border border-white/[.07] bg-black/20 p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="section-kicker">Program tools</div>
-                  <h2 className="mt-2 text-lg font-semibold text-white/82">Other workstations</h2>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-[.12em] text-white/25">5 apps</span>
-              </div>
-              <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
-                {secondary.map((id) => {
-                  const item = views.find((entry) => entry.id === id)!;
-                  return <DesktopApp key={id} item={item} onClick={() => onOpen(id)} />;
-                })}
-              </div>
-            </aside>
-          </div>
+          <section className="mt-4 rounded-[24px] border border-white/[.06] bg-black/18 p-4 sm:p-6">
+            <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/44">Breeder command center</div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-white sm:text-4xl">Your breeding program</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">Use the game dock for the four systems you move between most. Everything else lives here when you need it.</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {tools.map((id) => {
+                const item = views.find((entry) => entry.id === id)!;
+                return <ToolCard key={id} item={item} onClick={() => onOpen(id)} />;
+              })}
+            </div>
+          </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
-function GameWindow({ active, onClose, children }: { active: ViewMeta; onClose: () => void; children: React.ReactNode }) {
+function BreedingScreen() {
   return (
-    <main className="mx-auto max-w-[1500px] px-2 py-2 sm:px-4 sm:py-4">
-      <section className="min-h-[calc(100vh-82px)] overflow-hidden rounded-[24px] border border-white/[.08] bg-[#050c09] shadow-[0_30px_100px_rgba(0,0,0,.42)] sm:rounded-[30px]">
-        <div className="sticky top-[62px] z-50 flex min-h-[58px] items-center gap-3 border-b border-white/[.065] bg-[#07100d]/96 px-3 backdrop-blur-xl sm:top-[68px] sm:px-5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[.07] bg-white/[.03] text-sm text-emerald-200/70">{active.icon}</span>
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold tracking-[-.02em] text-white/86 sm:text-lg">{active.label}</h1>
-            <p className="hidden truncate text-[11px] text-white/38 sm:block">{active.detail}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={`Close ${active.label}`}
-            className="ml-auto grid h-9 w-9 place-items-center rounded-xl border border-white/[.07] bg-white/[.025] text-lg text-white/42 transition hover:bg-white/[.06] hover:text-white/80"
-          >
-            ×
-          </button>
-        </div>
-        <div className="pb-8">{children}</div>
-      </section>
-    </main>
+    <>
+      <ScreenHeading eyebrow="Reproduction" title="Breeding" detail="Prepare breeders, choose the pair and follow the active reproductive cycle." />
+      <ChondroBreedingFocusHeader />
+      <ChondroBreederManagementView section="breeding" />
+      <ChondroBreederGameV3 />
+      <ChondroClutchOutcomeExplainer />
+    </>
   );
 }
 
-function renderWorkspace(view: WorkspaceView) {
-  if (view === "breeding") {
-    return (
-      <>
-        <ChondroBreedingFocusHeader />
-        <ChondroBreederManagementView section="breeding" />
-        <ChondroBreederGameV3 />
-        <ChondroClutchOutcomeExplainer />
-      </>
-    );
-  }
-  if (view === "colony") {
-    return (
-      <>
-        <ChondroBreederManagementView section="colony" />
-        <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div>
-      </>
-    );
-  }
-  if (view === "clutches") {
-    return (
+function ColonyScreen() {
+  return (
+    <>
+      <ScreenHeading eyebrow="Collection" title="Colony" detail="Inspect active animals, pairing material, lineage and retired breeders." />
+      <ChondroBreederManagementView section="colony" />
+      <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div>
+    </>
+  );
+}
+
+function ClutchesScreen() {
+  return (
+    <>
+      <ScreenHeading eyebrow="Offspring" title="Clutches" detail="Review active and historical clutch records without leaving the breeder app." />
       <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
         <div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div>
       </section>
-    );
-  }
-  if (view === "market") {
-    return (
-      <>
-        <ChondroBreederExpandedShop />
-        <ChondroBreederManagementView section="market" />
-      </>
-    );
-  }
-  if (view === "career") return <ChondroBreederManagementView section="career" />;
-  if (view === "projects") return <ChondroBreederManagementView section="projects" />;
-  if (view === "conservation") return <ChondroConservationPartnerships />;
-  if (view === "community") return <ChondroBreederManagementView section="community" />;
-  if (view === "guide") return <ChondroBreederSubspeciesPhenotypes />;
-  return null;
+    </>
+  );
 }
 
-function DesktopApp({ item, onClick, featured = false }: { item: ViewMeta; onClick: () => void; featured?: boolean }) {
+function MarketScreen() {
+  return (
+    <>
+      <ScreenHeading eyebrow="Exchange" title="Market" detail="Shop daily offers, review player listings and move animals into or out of the program." />
+      <ChondroBreederExpandedShop />
+      <ChondroBreederManagementView section="market" />
+    </>
+  );
+}
+
+function SecondaryScreen({ active, onBack, children }: { active: ViewMeta; onBack: () => void; children: React.ReactNode }) {
+  return (
+    <>
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6">
+        <button type="button" onClick={onBack} className="secondary-action px-3 py-2 text-[10px]">← Breeder Home</button>
+      </div>
+      <ScreenHeading eyebrow="Breeder tools" title={active.label} detail={active.detail} />
+      <div>{children}</div>
+    </>
+  );
+}
+
+function ToolCard({ item, onClick }: { item: ViewMeta; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group flex text-left transition hover:-translate-y-0.5 ${featured ? "min-h-[150px] flex-col rounded-[22px] border border-white/[.075] bg-white/[.03] p-4 hover:border-emerald-300/20 hover:bg-white/[.05]" : "min-h-[74px] items-center gap-3 rounded-2xl border border-white/[.06] bg-white/[.02] p-3.5 hover:border-white/[.11] hover:bg-white/[.04]"}`}
+      className="group flex min-h-[112px] flex-col items-start rounded-[20px] border border-white/[.065] bg-white/[.025] p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/18 hover:bg-white/[.045]"
     >
-      <span className={`grid shrink-0 place-items-center border border-white/[.075] bg-black/25 text-emerald-200/72 ${featured ? "h-11 w-11 rounded-[15px] text-lg" : "h-9 w-9 rounded-xl text-sm"}`}>{item.icon}</span>
-      <span className={featured ? "mt-auto" : "min-w-0 flex-1"}>
-        <span className={`block font-bold text-white/80 ${featured ? "text-base" : "text-sm"}`}>{item.label}</span>
-        <span className={`mt-1 block text-white/40 ${featured ? "text-xs leading-5" : "truncate text-[11px]"}`}>{item.detail}</span>
-      </span>
-      {!featured ? <span className="ml-auto text-xs text-emerald-200/42 transition group-hover:translate-x-0.5 group-hover:text-emerald-200/70">→</span> : null}
+      <span className="grid h-10 w-10 place-items-center rounded-[14px] border border-white/[.07] bg-black/25 text-base text-emerald-200/70">{item.icon}</span>
+      <span className="mt-auto pt-4 text-sm font-bold text-white/80">{item.label}</span>
+      <span className="mt-1 text-[11px] leading-4 text-white/38">{item.detail}</span>
     </button>
   );
 }
