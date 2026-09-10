@@ -12,11 +12,25 @@ if (!workspace.includes('import { ChondroClutchStageArt } from "@/components/Cho
     'import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";\nimport { ChondroClutchStageArt } from "@/components/ChondroClutchStageArt";\n',
   );
 }
+if (!workspace.includes('import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";')) {
+  workspace = workspace.replace(
+    'import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";\n',
+    'import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";\nimport { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";\n',
+  );
+}
 
 const homeNeedle = '          <ChondroPatternBanner compact />\n';
-const homeArt = `          <ChondroPatternBanner compact />\n\n          <section className="mt-4 overflow-hidden rounded-[24px] border border-emerald-300/10 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.09),transparent_44%),#030806]">\n            <div className="grid items-center gap-4 p-4 sm:grid-cols-[180px_1fr] sm:p-5">\n              <div className="mx-auto overflow-hidden rounded-[20px] border border-white/[.07] bg-black/30 shadow-[0_18px_44px_rgba(0,0,0,.28)]">\n                <Image src="/hatchery/game/fresh-eggs.webp" alt="Illustrated green tree python clutch in the Arboreal Planet style" width={220} height={220} className="h-auto w-full" priority />\n              </div>\n              <div>\n                <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/50">Your program is alive</div>\n                <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-white sm:text-2xl">Breed, incubate, hatch and build a lineage.</h2>\n                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">The breeder now uses the same illustrated visual language as Arboreal Planet instead of relying on status panels alone.</p>\n              </div>\n            </div>\n          </section>\n`;
-if (!workspace.includes('/hatchery/game/fresh-eggs.webp') && workspace.includes(homeNeedle)) {
+const homeArt = `          <ChondroPatternBanner compact />\n\n          <section className="mt-4 overflow-hidden rounded-[24px] border border-emerald-300/10 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.09),transparent_44%),#030806]">\n            <div className="grid items-center gap-4 p-4 sm:grid-cols-[180px_1fr] sm:p-5">\n              <div className="grid grid-cols-2 gap-2">\n                <div className="overflow-hidden rounded-[18px] border border-white/[.07] bg-black/30 shadow-[0_18px_44px_rgba(0,0,0,.28)]">\n                  <Image src="/hatchery/game/hatching.webp" alt="Illustrated green tree python hatchlings emerging" width={220} height={220} className="h-auto w-full" priority />\n                </div>\n                <div className="overflow-hidden rounded-[18px] border border-white/[.07] bg-black/30 shadow-[0_18px_44px_rgba(0,0,0,.28)]">\n                  <Image src="/hatchery/game/neonates.webp" alt="Illustrated red and yellow green tree python neonates" width={220} height={220} className="h-auto w-full" priority />\n                </div>\n              </div>\n              <div>\n                <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/50">Your program is alive</div>\n                <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-white sm:text-2xl">Breed, incubate, hatch and build a lineage.</h2>\n                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">The breeder now puts the Arboreal Planet artwork directly into the game instead of hiding it behind occasional states.</p>\n              </div>\n            </div>\n          </section>\n`;
+if (!workspace.includes('Your program is alive') && workspace.includes(homeNeedle)) {
   workspace = workspace.replace(homeNeedle, homeArt);
+}
+
+const headingNeedle = '      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />\n';
+if (!workspace.includes('<ChondroBreederScreenArt screen={view} />') && workspace.includes(headingNeedle)) {
+  workspace = workspace.replace(
+    headingNeedle,
+    `${headingNeedle}      {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}\n`,
+  );
 }
 
 const clutchNeedle = '      {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}\n';
@@ -25,12 +39,6 @@ if (!workspace.includes('<ChondroClutchStageArt />') && workspace.includes(clutc
     clutchNeedle,
     `${clutchNeedle}      {view === "clutches" ? <ChondroClutchStageArt /> : null}\n`,
   );
-}
-
-const colonyNeedle = '      <ChondroBreederGameV3 screen={view} />\n';
-const colonyArt = `      {view === "colony" ? (\n        <section className="mx-auto max-w-7xl px-4 pt-5 sm:px-6">\n          <div className="overflow-hidden rounded-[26px] border border-emerald-300/10 bg-[radial-gradient(circle_at_left,rgba(52,211,153,.08),transparent_40%),#06100c]">\n            <div className="grid items-center gap-4 p-4 sm:grid-cols-[180px_1fr] sm:p-5">\n              <div className="mx-auto overflow-hidden rounded-[20px] border border-white/[.07] bg-black/30">\n                <Image src="/hatchery/game/pvc-enclosure.webp" alt="Illustrated Chondro Dojo enclosure with white PVC perches" width={360} height={360} className="h-auto w-full" />\n              </div>\n              <div>\n                <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/48">Chondro Dojo housing</div>\n                <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-white">Your colony lives in purpose-built arboreal housing.</h2>\n                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/42">Enclosure capacity and animal management now share the same visual language as the rest of the breeder game.</p>\n              </div>\n            </div>\n          </div>\n        </section>\n      ) : null}\n      <ChondroBreederGameV3 screen={view} />\n`;
-if (!workspace.includes('/hatchery/game/pvc-enclosure.webp') && workspace.includes(colonyNeedle)) {
-  workspace = workspace.replace(colonyNeedle, colonyArt);
 }
 
 const careerNeedle = '        {view === "career" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="career" /></SecondaryScreen> : null}\n';
@@ -44,10 +52,10 @@ fs.writeFileSync(workspaceFile, workspace);
 const hatcheryFile = "src/app/hatchery/page.tsx";
 let hatchery = fs.readFileSync(hatcheryFile, "utf8");
 const splashNeedle = '              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />\n';
-const splashReplacement = `              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />\n              <div className="border-t border-white/[.06] bg-[#030806] p-3">\n                <div className="grid grid-cols-[88px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">\n                  <Image src="/hatchery/game/fresh-eggs.webp" alt="Chondro Breeder illustrated clutch art" width={220} height={220} className="h-auto w-full rounded-[14px]" />\n                  <div>\n                    <div className="text-[9px] font-bold uppercase tracking-[.16em] text-emerald-200/50">Inside the game</div>\n                    <div className="mt-1 text-sm font-semibold text-white/72">Clutches now use Arboreal Planet game art.</div>\n                  </div>\n                </div>\n              </div>\n`;
-if (!hatchery.includes('Clutches now use Arboreal Planet game art.') && hatchery.includes(splashNeedle)) {
+const splashReplacement = `              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />\n              <div className="border-t border-white/[.06] bg-[#030806] p-3">\n                <div className="grid grid-cols-[88px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">\n                  <Image src="/hatchery/game/hatching.webp" alt="Chondro Breeder illustrated hatching art" width={220} height={220} className="h-auto w-full rounded-[14px]" />\n                  <div>\n                    <div className="text-[9px] font-bold uppercase tracking-[.16em] text-emerald-200/50">Inside the game</div>\n                    <div className="mt-1 text-sm font-semibold text-white/72">Breeding, housing, clutches and the store now use Arboreal Planet game art.</div>\n                  </div>\n                </div>\n              </div>\n`;
+if (!hatchery.includes('Breeding, housing, clutches and the store now use Arboreal Planet game art.') && hatchery.includes(splashNeedle)) {
   hatchery = hatchery.replace(splashNeedle, splashReplacement);
 }
 fs.writeFileSync(hatcheryFile, hatchery);
 
-console.log("Applied approved Chondro visual assets to breeder Home, Colony, state-aware Clutches, Career, and the Arcade feature card.");
+console.log("Applied approved Chondro visual assets across Home, Breed, Colony, Clutches, Store, Career, and the Arcade feature card.");
