@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-09-g";
+const TRAIT_ART_VERSION = "2026-09-09-h";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -43,34 +43,12 @@ function traitValue(traits: PortraitTraits, key: TraitKey) {
 }
 
 function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
-  // Utaraensis and Viridis now have native-resolution base portraits. Their
-  // existing trait WebPs are much smaller and were silently replacing the
-  // sharp base image whenever a trait reached 70%+, making the snake appear
-  // blurry again. Keep these two on the high-resolution base art until their
-  // trait matrix is rebuilt at matching resolution.
-  if (
-    !traits ||
-    subspecies === "Morelia azurea utaraensis" ||
-    subspecies === "Morelia viridis"
-  ) {
-    return baseArtBySubspecies[subspecies];
-  }
-
-  const blue = traitValue(traits, "blueStripe");
-  if (blue >= 100) {
-    return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-blue-100.webp`;
-  }
-
-  const entries = (Object.keys(slugByTrait) as TraitKey[]).map(
-    key => [key, traitValue(traits, key)] as const,
-  );
-  const [trait, value] = entries.reduce(
-    (best, current) => (current[1] > best[1] ? current : best),
-    entries[0],
-  );
-  const tier = portraitTier(value);
-  if (tier === null) return baseArtBySubspecies[subspecies];
-  return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
+  // Quality guard: the current adult trait matrix is made from legacy small
+  // WebPs. Do not allow those files to replace the sharper base portraits.
+  // Trait percentages and game logic remain active; only the portrait swap is
+  // paused until each trait asset is rebuilt at native/high resolution.
+  void traits;
+  return baseArtBySubspecies[subspecies];
 }
 
 function neonatePortraitArt(subspecies: ChondroSubspecies, neonateColor: NeonateColor) {
