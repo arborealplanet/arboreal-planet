@@ -10,8 +10,11 @@ import { ChondroRetiredBreedersPanel } from "@/components/ChondroRetiredBreeders
 import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcomeExplainer";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroBreedingFocusHeader } from "@/components/ChondroBreedingFocusHeader";
+import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
+import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
+import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
 
-type WorkspaceView = "home" | "breeding" | "colony" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
+type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
 
 type ViewMeta = {
   label: string;
@@ -21,8 +24,9 @@ type ViewMeta = {
 
 const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "home", label: "Home", detail: "Breeder overview", icon: "⌂" },
-  { id: "breeding", label: "Breeding", detail: "Cycles & clutches", icon: "◇" },
-  { id: "colony", label: "Colony", detail: "Animals & records", icon: "◎" },
+  { id: "breeding", label: "Breeding", detail: "Cycles & pairings", icon: "◇" },
+  { id: "colony", label: "Colony", detail: "Active animals", icon: "◎" },
+  { id: "clutches", label: "Clutches", detail: "History & outcomes", icon: "◫" },
   { id: "market", label: "Market", detail: "Buy & sell", icon: "$" },
   { id: "career", label: "Career", detail: "Facility & shows", icon: "↗" },
   { id: "projects", label: "Projects", detail: "Lines & goals", icon: "◈" },
@@ -72,6 +76,12 @@ export function ChondroBreederWorkspace() {
         {view === "breeding" ? (
           <>
             <ChondroBreedingFocusHeader />
+            <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+              <div className="panel rounded-[28px] p-4 sm:p-5">
+                <div className="section-kicker">Pair planning</div>
+                <div className="mt-3"><ChondroPairingPlanner /></div>
+              </div>
+            </section>
             <ChondroBreederGameV3 />
             <ChondroClutchOutcomeExplainer />
           </>
@@ -82,7 +92,22 @@ export function ChondroBreederWorkspace() {
             <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div>
           </>
         ) : null}
-        {view === "market" ? <ChondroBreederExpandedShop /> : null}
+        {view === "clutches" ? (
+          <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+            <div className="panel rounded-[28px] p-4 sm:p-5">
+              <div className="section-kicker">Clutch records</div>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Past pairings, outcomes and holdbacks</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/48">Open any record for the full clutch detail view without mixing historical records into the active colony workspace.</p>
+              <div className="mt-5"><ChondroClutchHistoryTable /></div>
+            </div>
+          </section>
+        ) : null}
+        {view === "market" ? (
+          <>
+            <ChondroBreederExpandedShop />
+            <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><ChondroFavoritesMarketPanel /></section>
+          </>
+        ) : null}
         {view === "career" ? <ChondroBreederManagementView section="career" /> : null}
         {view === "projects" ? <ChondroBreederManagementView section="projects" /> : null}
         {view === "conservation" ? <ChondroConservationPartnerships /> : null}
@@ -94,7 +119,7 @@ export function ChondroBreederWorkspace() {
 }
 
 function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
-  const primary: WorkspaceView[] = ["breeding", "colony", "market"];
+  const primary: WorkspaceView[] = ["breeding", "colony", "clutches", "market"];
   const secondary: WorkspaceView[] = ["career", "projects", "conservation", "community", "guide"];
   return (
     <section className="mx-auto max-w-7xl px-5 py-6 sm:px-6">
@@ -102,8 +127,8 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
         <div className="panel rounded-[28px] p-5 sm:p-6">
           <div className="section-kicker">Breeder overview</div>
           <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-[-.04em] text-white">Manage the breeding program from one clear workspace.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Breeding, colony management and the market are separated into focused areas, with career, projects, conservation and reference tools available from the same navigation.</p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Active breeding, colony records, clutch history and market activity each have their own workspace, with career, projects, conservation and reference tools one click away.</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {primary.map((id) => {
               const item = views.find((entry) => entry.id === id)!;
               return <HomeCard key={id} item={item} onClick={() => onOpen(id)} featured />;
