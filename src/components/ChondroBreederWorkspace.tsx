@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
-import { ChondroBreederManagementView, type BreederManagementSection } from "@/components/ChondroBreederCommandCenter";
+import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
 import { ChondroRetiredBreedersPanel } from "@/components/ChondroRetiredBreedersPanel";
 import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcomeExplainer";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
+import { ChondroBreedingFocusHeader } from "@/components/ChondroBreedingFocusHeader";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
 
@@ -70,6 +71,7 @@ export function ChondroBreederWorkspace() {
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
         {view === "breeding" ? (
           <>
+            <ChondroBreedingFocusHeader />
             <ChondroBreederGameV3 />
             <ChondroClutchOutcomeExplainer />
           </>
@@ -98,9 +100,9 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
     <section className="mx-auto max-w-7xl px-5 py-6 sm:px-6">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
         <div className="panel rounded-[28px] p-5 sm:p-6">
-          <div className="section-kicker">Breeder command</div>
-          <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-[-.04em] text-white">Run the program without digging through nested tabs.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Breeding, colony management and the market are now separate workspaces. Career systems, projects, conservation and reference material stay one click away.</p>
+          <div className="section-kicker">Breeder overview</div>
+          <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-[-.04em] text-white">Manage the breeding program from one clear workspace.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Breeding, colony management and the market are separated into focused areas, with career, projects, conservation and reference tools available from the same navigation.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {primary.map((id) => {
               const item = views.find((entry) => entry.id === id)!;
