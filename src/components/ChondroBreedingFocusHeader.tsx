@@ -38,12 +38,14 @@ export function ChondroBreedingFocusHeader() {
     const timer = window.setInterval(tick, 30_000);
     window.addEventListener("chondro-conservation-updated", refresh);
     window.addEventListener("arboreal-chondro-favorites-change", refresh);
+    window.addEventListener("arboreal-chondro-breeder-save-change", refresh);
     return () => {
       active = false;
       window.clearTimeout(firstTick);
       window.clearInterval(timer);
       window.removeEventListener("chondro-conservation-updated", refresh);
       window.removeEventListener("arboreal-chondro-favorites-change", refresh);
+      window.removeEventListener("arboreal-chondro-breeder-save-change", refresh);
     };
   }, []);
 
