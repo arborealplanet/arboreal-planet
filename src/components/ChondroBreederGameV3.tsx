@@ -456,7 +456,7 @@ function storeForEpoch(epoch: number): StoreSnake[] {
       : 0;
     const price =
       Math.round(
-        (((source === "Import" ? 900 : 2050) +
+        (((snake.source === "Import" ? 900 : 2050) +
           (isHybrid ? 750 : 0) +
           (snake.neonateColor === "Red" ? 600 : 0) +
           (pretested ? 425 : 0) +
@@ -1132,12 +1132,10 @@ export function ChondroBreederGameV3() {
         setMarketStatus(data.error ?? "This snake could not be listed.");
         return;
       }
-      setCash((current) => current + value);
-      setSales((current) => [{ id: a.id, name: a.name, value, season }, ...current]);
       setColony((current) => current.filter((item) => item.id !== a.id));
       if (damId === a.id) setDamId("");
       if (sireId === a.id) setSireId("");
-      setMarketStatus(`${a.name} is now available to every player.`);
+      setMarketStatus(`${a.name} is listed for ${money(value)}. You will be paid after another player buys it.`);
       void refreshPlayerMarket();
     } catch {
       setMarketStatus("The player market is temporarily unavailable.");
@@ -1282,11 +1280,6 @@ export function ChondroBreederGameV3() {
     }
     setColony((current) => [...current, ...kept]);
     setClutchHistory((current) => [{ ...clutch, season, holdbackIds: [...holdbacks] }, ...current]);
-    setCash((current) => current + total);
-    setSales((current) => [
-      ...sold.map((baby, index) => ({ id: baby.id, name: baby.name, value: saleItems[index].price, season })),
-      ...current,
-    ]);
     const nextEligibleSeason = Math.random() < 0.5 ? season + 1 : season + 2;
     setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));
     setBreedingMessage(nextEligibleSeason === season + 1 ? `${clutch.dam.name} recovered in time for next season.` : `${clutch.dam.name} needs an additional recovery year before breeding again.`);
@@ -1297,7 +1290,7 @@ export function ChondroBreederGameV3() {
     setSeasonCarePaid(0);
     setSeason((current) => current + 1);
     if (sold.length) {
-      setMarketStatus(`${sold.length} unheld offspring listed for ${money(total)} total.`);
+      setMarketStatus(`${sold.length} unheld offspring listed at ${money(total)} combined asking price. Proceeds become claimable after buyers purchase them.`);
       void refreshPlayerMarket();
     }
   }
