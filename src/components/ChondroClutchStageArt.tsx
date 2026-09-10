@@ -45,13 +45,19 @@ function chooseArt(save: LooseSave | null, now: number): StageArt {
   }
 
   if (save.clutch?.offspring?.length) {
+    if (save.clutchEstablished) {
+      return {
+        src: "/hatchery/game/neonates.webp",
+        eyebrow: "Established clutch",
+        title: "Red and yellow neonates are established",
+        detail: "The clutch has completed establishment and the neonates are ready for individual animal management.",
+      };
+    }
     return {
-      src: "/hatchery/game/near-hatch-eggs.webp",
-      eyebrow: save.clutchEstablished ? "Established clutch" : "Hatch window",
-      title: save.clutchEstablished ? "The clutch is established" : "Hatchlings are arriving",
-      detail: save.clutchEstablished
-        ? "The clutch has moved beyond incubation and into individual animal management."
-        : "The eggs are at the end of incubation. Finish hatch-day and establishment decisions here.",
+      src: "/hatchery/game/hatching.webp",
+      eyebrow: "Hatch window",
+      title: "The neonates are emerging",
+      detail: "The clutch has hatched. Complete the bulk establishment step before naming, holding back or selling individual animals.",
     };
   }
 
@@ -60,10 +66,10 @@ function chooseArt(save: LooseSave | null, now: number): StageArt {
 
   if (stage === "hatch-day") {
     return {
-      src: "/hatchery/game/near-hatch-eggs.webp",
+      src: "/hatchery/game/hatching.webp",
       eyebrow: "Hatch day",
-      title: "The clutch is beginning to pip",
-      detail: "Cracks and pips mark the final stretch before the neonates emerge.",
+      title: "Red and yellow neonates are beginning to emerge",
+      detail: "The clutch has reached hatch day. The next step is getting the hatchlings through establishment as a group.",
     };
   }
 
@@ -77,7 +83,7 @@ function chooseArt(save: LooseSave | null, now: number): StageArt {
         src: "/hatchery/game/near-hatch-eggs.webp",
         eyebrow: "Late incubation",
         title: "The clutch is getting close",
-        detail: "Incubation is well advanced. The visual state now reflects the approaching hatch window.",
+        detail: "Incubation is well advanced. Cracks and pips will mark the approaching hatch window.",
       };
     }
     return {
