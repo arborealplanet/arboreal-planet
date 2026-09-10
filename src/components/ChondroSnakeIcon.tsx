@@ -85,7 +85,8 @@ function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits
 }
 
 function neonatePortraitArt(subspecies: ChondroSubspecies, neonateColor: NeonateColor) {
-  return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${neonateColor.toLowerCase()}.webp`;
+  const effectiveColor: NeonateColor = subspecies === "Morelia viridis" ? "Yellow" : neonateColor;
+  return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${effectiveColor.toLowerCase()}.webp`;
 }
 
 export function ChondroSnakeIcon({
