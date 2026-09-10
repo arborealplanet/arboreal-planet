@@ -35,6 +35,8 @@ export function ChondroFavoritesMarketPanel() {
   const [colony, setColony] = useState<SnakeLite[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [pendingProceeds, setPendingProceeds] = useState(0);
+  const [pendingSaleCount, setPendingSaleCount] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
 
@@ -51,6 +53,8 @@ export function ChondroFavoritesMarketPanel() {
       setColony(Array.isArray(save.save?.state?.colony) ? save.save.state.colony : []);
       setFavoriteIds(Array.isArray(favorites.favoriteIds) ? favorites.favoriteIds : []);
       setListings(Array.isArray(market.listings) ? market.listings : []);
+      setPendingProceeds(Math.max(0, Number(market.pendingProceeds ?? 0)));
+      setPendingSaleCount(Math.max(0, Number(market.pendingSaleCount ?? 0)));
     } catch {
       setStatus("Unable to refresh favorites and market listings.");
     }
@@ -107,17 +111,52 @@ export function ChondroFavoritesMarketPanel() {
     }
   }
 
+  async function claimProceeds() {
+    if (pendingProceeds <= 0 || busy) return;
+    setBusy("proceeds");
+    setStatus("");
+    try {
+      const response = await fetch("/api/hatchery/chondro-breeder/player-market", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "claim-proceeds" }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setStatus(data.error ?? "Market proceeds could not be claimed.");
+        return;
+      }
+      const total = Math.max(0, Number(data.result?.total ?? 0));
+      const count = Math.max(0, Number(data.result?.claimedCount ?? 0));
+      setStatus(count > 0 ? `${money(total)} collected from ${count} completed market sale${count === 1 ? "" : "s"}.` : "No completed market sales are waiting to be claimed.");
+      await refresh();
+      window.setTimeout(() => window.location.reload(), 350);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <section className="panel mt-5 rounded-2xl p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-bold text-white/80">Favorites & Market Recovery</div>
+          <div className="text-sm font-bold text-white/80">Favorites & Player Market</div>
           <div className="mt-1 max-w-3xl text-[11px] leading-5 text-white/40">
-            Favorite important animals to protect them from accidental sale. Your own active player-market listings can also be reclaimed for the same amount of game cash you received when listing them.
+            Favorite important animals to protect them from accidental sale. Listing a snake does not pay immediately; game cash becomes claimable after another player actually buys it. Unsold listings can be reclaimed at no charge if you have enclosure space.
           </div>
         </div>
-        <div className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-white/45">
-          {favoriteIds.length} favorites
+        <div className="flex flex-wrap gap-2">
+          <div className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-white/45">
+            {favoriteIds.length} favorites
+          </div>
+          <button
+            type="button"
+            disabled={pendingProceeds <= 0 || busy !== null}
+            onClick={() => void claimProceeds()}
+            className="rounded-full border border-amber-200/20 bg-amber-200/[.05] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-amber-100/75 disabled:opacity-30"
+          >
+            {pendingProceeds > 0 ? `Claim ${money(pendingProceeds)} · ${pendingSaleCount} sold` : "No proceeds waiting"}
+          </button>
         </div>
       </div>
 
@@ -156,7 +195,7 @@ export function ChondroFavoritesMarketPanel() {
               <div key={listing.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.06] bg-white/[.015] px-3 py-2">
                 <div className="min-w-0">
                   <div className="truncate text-xs font-semibold text-white/75">{listing.snake.name}</div>
-                  <div className="mt-0.5 text-[10px] text-white/30">Listed at {money(listing.price)}</div>
+                  <div className="mt-0.5 text-[10px] text-white/30">Listed at {money(listing.price)} · awaiting buyer</div>
                 </div>
                 <button
                   type="button"
@@ -164,7 +203,7 @@ export function ChondroFavoritesMarketPanel() {
                   onClick={() => void reclaim(listing)}
                   className="shrink-0 rounded-lg border border-emerald-300/20 bg-emerald-300/[.05] px-3 py-1.5 text-[10px] font-bold text-emerald-100/75"
                 >
-                  Buy Back
+                  Reclaim
                 </button>
               </div>
             )) : <div className="text-xs text-white/30">You do not have any active player-market listings.</div>}
