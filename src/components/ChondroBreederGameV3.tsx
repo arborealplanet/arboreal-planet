@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
+import { marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
 import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 
 type Subspecies =
@@ -572,7 +573,7 @@ function createClutch(dam: Snake, sire: Snake, breederInitials: string): Clutch 
   };
 }
 
-function saleValue(a: Snake) {
+function saleValue(a: Snake, season: number) {
   const traits = [a.highBlack, a.highWhite, a.blueStripe, a.yellowRetention, a.blotches ?? 0];
   const strongest = Math.max(...traits);
   const avg = traits.reduce((s, v) => s + v, 0) / traits.length;
@@ -594,6 +595,7 @@ function saleValue(a: Snake) {
   if (a.nidoStatus === "Negative") value *= 1.08;
   if (a.nidoStatus === "Unknown") value *= 0.9;
   if (a.condition === "Fair") value *= 0.82;
+  value *= marketMultiplierForAnimal(marketDemandForSeason(season), a);
   return Math.max(250, Math.round(value / 25) * 25);
 }
 
@@ -1118,7 +1120,7 @@ export function ChondroBreederGameV3() {
 
   async function sellSnake(a: Snake) {
     if (a.nidoStatus === "Positive" || marketBusy) return;
-    const value = saleValue(a);
+    const value = saleValue(a, season);
     setMarketBusy(a.id);
     setMarketStatus("");
     try {
@@ -1255,7 +1257,7 @@ export function ChondroBreederGameV3() {
     if (!clutch || marketBusy) return;
     const kept = clutch.offspring.filter((baby) => holdbacks.includes(baby.id));
     const sold = clutch.offspring.filter((baby) => !holdbacks.includes(baby.id));
-    const saleItems = sold.map((baby) => ({ snakeId: baby.id, price: saleValue(baby) }));
+    const saleItems = sold.map((baby) => ({ snakeId: baby.id, price: saleValue(baby, season) }));
     const total = saleItems.reduce((sum, item) => sum + item.price, 0);
     if (sold.length) {
       setMarketBusy("clutch");
@@ -1523,7 +1525,7 @@ export function ChondroBreederGameV3() {
                     <div className="mt-3 flex flex-wrap items-center gap-2"><span className="font-semibold text-white/75">{baby.name}</span><PhenotypeBadge animal={baby} /></div>
                     <div className="mt-1 text-[10px] text-white/30">{baby.sex} · Hatchling · {baby.classification} · {baby.locality}</div>
                     <div className="mt-3 text-[10px] text-white/35">Genetics untested · percentages hidden</div>
-                    <div className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-amber-100/50">{kept ? "Holdback selected" : `Will list · ${money(saleValue(baby))}`}</div>
+                    <div className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-amber-100/50">{kept ? "Holdback selected" : `Will list · ${money(saleValue(baby, season))}`}</div>
                   </button>
                 );
               })}
@@ -1545,7 +1547,7 @@ export function ChondroBreederGameV3() {
             {colony.map((animal) => {
               const req = agingRequirement(animal);
               const growCost = agingCost(animal);
-              const sell = saleValue(animal);
+              const sell = saleValue(animal, season);
               const collapsed = collapsedAnimalIds.includes(animal.id);
               const favorite = favoriteIds.includes(animal.id);
               const pendingTest = geneticTestsPending.find((job) => job.snakeId === animal.id);
