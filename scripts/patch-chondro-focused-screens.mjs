@@ -6,12 +6,17 @@ let game = fs.readFileSync(gameFile, "utf8");
 if (!game.includes("hideLegacySectionForFocusedScreen")) {
   game = game.replace(
     'function CollapsibleGameSection({\n',
-    'function hideLegacySectionForFocusedScreen(activeScreen: BreederGameScreen, label: string) {\n  const value = label.toLowerCase();\n  if (activeScreen === "colony" && (value.includes("your colony") || value.includes("genetics & locality"))) return true;\n  if (activeScreen === "clutches" && value.includes("program records")) return true;\n  if (activeScreen === "market" && value.includes("daily snake store")) return true;\n  return false;\n}\n\nfunction CollapsibleGameSection({\n',
+    'function hideLegacySectionForFocusedScreen(activeScreen: BreederGameScreen, label: string) {\n  const value = label.toLowerCase();\n  if (activeScreen === "colony" && (value.includes("your colony") || value.includes("genetics & locality"))) return true;\n  if (activeScreen === "clutches" && (value.includes("program records") || value.includes("active clutch"))) return true;\n  if (activeScreen === "market" && value.includes("daily snake store")) return true;\n  return false;\n}\n\nfunction CollapsibleGameSection({\n',
   );
 
   game = game.replace(
     '  const targetScreen = sectionScreen(label);\n  if (activeScreen !== "all" && targetScreen !== "shared" && targetScreen !== activeScreen) return null;\n',
     '  const targetScreen = sectionScreen(label);\n  if (activeScreen !== "all" && targetScreen !== "shared" && targetScreen !== activeScreen) return null;\n  if (hideLegacySectionForFocusedScreen(activeScreen, label)) return null;\n',
+  );
+} else {
+  game = game.replace(
+    'if (activeScreen === "clutches" && value.includes("program records")) return true;',
+    'if (activeScreen === "clutches" && (value.includes("program records") || value.includes("active clutch"))) return true;',
   );
 }
 
