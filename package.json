@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs",
+    "predev": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs && node scripts/patch-chondro-map-highlight.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs",
+    "prebuild": "node scripts/materialize-assets.mjs && node scripts/patch-chondro-breeding-flow.mjs && node scripts/cleanup-product-copy.mjs && node scripts/patch-chondro-map-highlight.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
