@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
-import { marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
+import { breedingReputationGain, marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
 import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 
 type Subspecies =
@@ -193,6 +193,13 @@ function pairingFailureReason(dam: Snake, sire: Snake) {
   if (dam.condition === "Fair") return "The female did not cycle strongly enough to complete the pairing.";
   if (sire.condition === "Fair") return "The male showed poor breeding interest this cycle.";
   return Math.random() < 0.5 ? "No successful lock was observed." : "The female was unreceptive and the pairing was stopped.";
+}
+function femaleNeedsRecoveryYear(dam: Snake, clutchSize: number) {
+  let chance = 0.28 + Math.max(0, clutchSize - 6) * 0.06;
+  if (dam.condition === "Excellent") chance -= 0.12;
+  if (dam.condition === "Fair") chance += 0.20;
+  chance = Math.max(0.12, Math.min(0.80, chance));
+  return Math.random() < chance;
 }
 const pick = <T,>(a: T, b: T) => (Math.random() < 0.5 ? a : b);
 const tailFor = (s: Subspecies) =>
@@ -1179,12 +1186,6 @@ export function ChondroBreederGameV3() {
     if (sireId === a.id) setSireId("");
   }
 
-  function produceClutch(initials: string) {
-    if (!dam || !sire) return;
-    setClutch(createClutch(dam, sire, initials));
-    setHoldbacks([]);
-  }
-
   function startBreedingCycle() {
     if (!dam || !sire || clutch || breedingCycle) return;
     if (seasonCarePaid !== season) {
@@ -1282,9 +1283,19 @@ export function ChondroBreederGameV3() {
     }
     setColony((current) => [...current, ...kept]);
     setClutchHistory((current) => [{ ...clutch, season, holdbackIds: [...holdbacks] }, ...current]);
-    const nextEligibleSeason = Math.random() < 0.5 ? season + 1 : season + 2;
+    const clutchReputation = Math.min(
+      250,
+      clutch.offspring.reduce((sum, baby) => sum + breedingReputationGain(baby), 0),
+    );
+    setCareerReputation((current) => current + clutchReputation);
+    const needsExtraRecovery = femaleNeedsRecoveryYear(clutch.dam, clutch.offspring.length);
+    const nextEligibleSeason = needsExtraRecovery ? season + 2 : season + 1;
     setFemaleRecovery((current) => ({ ...current, [clutch.dam.id]: nextEligibleSeason }));
-    setBreedingMessage(nextEligibleSeason === season + 1 ? `${clutch.dam.name} recovered in time for next season.` : `${clutch.dam.name} needs an additional recovery year before breeding again.`);
+    setBreedingMessage(
+      needsExtraRecovery
+        ? `${clutch.dam.name} needs an additional recovery year after this ${clutch.offspring.length}-egg clutch. +${clutchReputation} breeder reputation.`
+        : `${clutch.dam.name} recovered in time for next season. +${clutchReputation} breeder reputation.`,
+    );
     setClutch(null);
     setHoldbacks([]);
     setDamId("");
