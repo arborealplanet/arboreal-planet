@@ -458,7 +458,7 @@ function storeForEpoch(epoch: number): StoreSnake[] {
       Math.round(
         (((source === "Import" ? 900 : 2050) +
           (isHybrid ? 750 : 0) +
-          (neonateColor === "Red" ? 600 : 0) +
+          (snake.neonateColor === "Red" ? 600 : 0) +
           (pretested ? 425 : 0) +
           (geneticsTested ? 350 : 0) +
           visibleTraitPremium +
