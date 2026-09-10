@@ -10,6 +10,13 @@ if (!source.includes('import { ChondroBreederHomeStatus } from "@/components/Cho
   );
 }
 
+if (!source.includes('import { ChondroGameNotifications } from "@/components/ChondroGameNotifications";')) {
+  source = source.replace(
+    'import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";\n',
+    'import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";\nimport { ChondroGameNotifications } from "@/components/ChondroGameNotifications";\n',
+  );
+}
+
 source = source.replace(
   '{ id: "colony", label: "Colony", detail: "Animals and breeder records", icon: "◎" },',
   '{ id: "colony", label: "Colony", navLabel: "Snakes", detail: "Animals and breeder records", icon: "◎" },',
@@ -28,10 +35,17 @@ if (source.includes(bannerNeedle) && !source.includes('<ChondroBreederHomeStatus
   );
 }
 
+if (!source.includes('<ChondroGameNotifications />')) {
+  source = source.replace(
+    '      <nav\n        className="fixed inset-x-0 bottom-0',
+    '      <ChondroGameNotifications />\n\n      <nav\n        className="fixed inset-x-0 bottom-0',
+  );
+}
+
 source = source.replace(
   'The four main game systems stay one tap away in the dock. Career, projects, conservation, breeder network and reference tools live here when you need them.',
   'Your next recommended move stays at the top. The dock handles the main game loop while career, projects, conservation, breeder network and reference tools stay here when you need them.',
 );
 
 fs.writeFileSync(file, source);
-console.log("Applied guided Chondro Breeder home dashboard and dock refinements.");
+console.log("Applied guided Chondro Breeder home dashboard, activity notifications and dock refinements.");
