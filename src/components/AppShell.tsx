@@ -54,7 +54,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
             <ArborealPlanetMark className="h-10 w-10" />
             <div>
               <div className="text-[15px] font-extrabold tracking-[.17em] sm:text-base">ARBOREAL PLANET</div>
-              <div className="mt-0.5 text-[8px] font-semibold tracking-[.27em] text-emerald-300/55 sm:text-[9px]">PEOPLE · DATA · CONSERVATION</div>
+              <div className="mt-0.5 text-[8px] font-semibold tracking-[.27em] text-emerald-300/55 sm:text-[9px]">COMMUNITY · REFERENCE · MARKET DATA</div>
             </div>
           </Link>
 
@@ -104,7 +104,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
       <footer className="border-t border-white/[.07] bg-black/10 px-5 py-10 pb-24 lg:pb-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs text-white/30 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Built for keepers, breeders and the animals behind the data.</span></div>
+          <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Community, reference data and market tools for reptile keepers.</span></div>
           <div className="flex flex-wrap gap-5"><Link href="/animals">Animals</Link><Link href="/plants">Plants</Link><Link href="/community">Community</Link><Link href="/marketplace">Marketplace</Link><Link href="/arcade/enter?next=%2Farcade">Arboreal Arcade</Link></div>
         </div>
       </footer>
