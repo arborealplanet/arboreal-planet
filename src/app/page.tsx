@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
 import { ArborealsByBunnBadge } from "@/components/BrandVisuals";
+import { ChondroBreederPreview } from "@/components/ChondroBreederPreview";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 
 const platformCards = [
@@ -104,9 +105,19 @@ export default function Home() {
             <div className="grid gap-px bg-white/[.055] sm:grid-cols-3">{["Breeding updates", "Husbandry discussions", "Animal & plant posts"].map((item) => <div key={item} className="bg-[#08140f] p-6"><div className="text-sm font-semibold">{item}</div><p className="mt-2 text-xs leading-5 text-white/34">Community posts from Arboreal Planet accounts appear in this section.</p></div>)}</div>
           </div>
           <div className="grid gap-4">
-            <Link href="/arcade/enter?next=%2Farcade" className="panel relative overflow-hidden rounded-3xl p-6">
-              <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-amber-200/[.08] bg-amber-200/[.025]" />
-              <div className="section-kicker text-amber-200/70">Arboreal Arcade</div><h2 className="mt-3 text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Manage a virtual chondro breeding program with breeding stages, lineage, facilities, projects and long-term progression.</p><div className="mt-7 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Strategy · Collection</div>
+            <Link href="/arcade/enter?next=%2Farcade" className="panel group relative overflow-hidden rounded-3xl p-4 transition hover:border-amber-200/20 sm:p-5">
+              <ChondroBreederPreview />
+              <div className="px-1 pb-1 pt-5">
+                <div className="section-kicker text-amber-200/70">Arboreal Arcade</div>
+                <div className="mt-2 flex items-end justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-semibold">Chondro Breeder</h2>
+                    <p className="mt-3 max-w-sm text-sm leading-6 text-white/42">Manage a virtual chondro breeding program with breeding stages, lineage, facilities, projects and long-term progression.</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-amber-200/70 transition group-hover:text-amber-100">PLAY →</span>
+                </div>
+                <div className="mt-5 inline-flex rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/42">Virtual · Strategy · Collection</div>
+              </div>
             </Link>
             <ArborealsByBunnBadge />
           </div>
