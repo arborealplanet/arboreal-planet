@@ -34,6 +34,13 @@ if (!workspace.includes('import { ChondroFavoritesMarketPanel } from "@/componen
   );
 }
 
+if (!workspace.includes('import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";')) {
+  workspace = workspace.replace(
+    'import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";\n',
+    'import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";\nimport { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";\n',
+  );
+}
+
 workspace = workspace.replace(
   '{view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}',
   '{view === "colony" ? <><div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroCollectionManager /></div><div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div></> : null}',
@@ -46,7 +53,7 @@ workspace = workspace.replace(
 
 workspace = workspace.replace(
   'clutches: { eyebrow: "Offspring", title: "Clutches", detail: "Manage the active clutch and review historical clutch records." },',
-  'clutches: { eyebrow: "Offspring", title: "Clutches", detail: "Work the active clutch here, then use the record section below for completed breeding history." },',
+  'clutches: { eyebrow: "Offspring", title: "Clutches", detail: "See the active clutch first, make establishment and holdback decisions, then review completed breeding history below." },',
 );
 
 workspace = workspace.replace(
@@ -58,10 +65,18 @@ const oldMarketOrder = `      <ChondroBreederGameV3 screen={view} />
       {view === "market" ? <ChondroBreederExpandedShop /> : null}
       {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}`;
 const newMarketOrder = `      {view === "market" ? <ChondroBreederExpandedShop /> : null}
+      {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}
       <ChondroBreederGameV3 screen={view} />
       {view === "market" ? <ChondroFavoritesMarketPanel /> : null}
       {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}`;
 if (workspace.includes(oldMarketOrder)) workspace = workspace.replace(oldMarketOrder, newMarketOrder);
+
+if (!workspace.includes('{view === "clutches" ? <ChondroActiveClutchShowcase /> : null}')) {
+  workspace = workspace.replace(
+    '      {view === "market" ? <ChondroBreederExpandedShop /> : null}\n      <ChondroBreederGameV3 screen={view} />',
+    '      {view === "market" ? <ChondroBreederExpandedShop /> : null}\n      {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}\n      <ChondroBreederGameV3 screen={view} />',
+  );
+}
 
 fs.writeFileSync(workspaceFile, workspace);
 console.log("Focused Chondro colony, clutch and store screens around dedicated UI components.");
