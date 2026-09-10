@@ -19,6 +19,12 @@ if (!workspace.includes('Clutch room') && workspace.includes(clutchNeedle)) {
   workspace = workspace.replace(clutchNeedle, clutchArt);
 }
 
+const careerNeedle = '        {view === "career" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="career" /></SecondaryScreen> : null}\n';
+const careerArt = `        {view === "career" ? (\n          <SecondaryScreen active={active} onBack={() => openView("home")}>\n            <section className="mx-auto mb-5 max-w-7xl px-4 sm:px-6">\n              <div className="overflow-hidden rounded-[26px] border border-amber-200/10 bg-[radial-gradient(circle_at_left,rgba(251,191,36,.08),transparent_36%),#06100c]">\n                <div className="grid items-center gap-4 p-4 sm:grid-cols-[170px_1fr] sm:p-5">\n                  <div className="mx-auto overflow-hidden rounded-[20px] border border-white/[.07] bg-black/30">\n                    <Image src="/hatchery/game/incubator.webp" alt="Illustrated Chondro Breeder incubator" width={560} height={560} className="h-auto w-full" />\n                  </div>\n                  <div>\n                    <div className="text-[9px] font-black uppercase tracking-[.17em] text-amber-100/50">Facility progression</div>\n                    <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-white">Build the operation behind the breeding program.</h2>\n                    <p className="mt-2 max-w-2xl text-sm leading-6 text-white/42">Capacity, incubation and research upgrades now have a visual home alongside the career systems.</p>\n                  </div>\n                </div>\n              </div>\n            </section>\n            <ChondroBreederManagementView section="career" />\n          </SecondaryScreen>\n        ) : null}\n`;
+if (!workspace.includes('/hatchery/game/incubator.webp') && workspace.includes(careerNeedle)) {
+  workspace = workspace.replace(careerNeedle, careerArt);
+}
+
 fs.writeFileSync(workspaceFile, workspace);
 
 const hatcheryFile = "src/app/hatchery/page.tsx";
@@ -30,4 +36,4 @@ if (!hatchery.includes('Clutches now use Arboreal Planet game art.') && hatchery
 }
 fs.writeFileSync(hatcheryFile, hatchery);
 
-console.log("Applied approved Chondro visual assets to breeder Home, Clutches, and the Arcade feature card.");
+console.log("Applied approved Chondro visual assets to breeder Home, Clutches, Career, and the Arcade feature card.");
