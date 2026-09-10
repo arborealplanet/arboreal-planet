@@ -20,7 +20,7 @@ const stages = [
 
 export function ChondroBreedingFocusHeader() {
   const [save, setSave] = useState<Save>({});
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -32,6 +32,7 @@ export function ChondroBreedingFocusHeader() {
       } catch {}
     }
     void load();
+    setNow(Date.now());
     const refresh = () => void load();
     window.addEventListener("chondro-conservation-updated", refresh);
     window.addEventListener("arboreal-chondro-favorites-change", refresh);
@@ -52,7 +53,7 @@ export function ChondroBreedingFocusHeader() {
     const sire = colony.find((animal) => animal.id === cycle?.sireId)?.name;
     return dam && sire ? `${dam} × ${sire}` : null;
   }, [save.colony, cycle?.damId, cycle?.sireId]);
-  const remaining = cycle?.completesAt ? Math.max(0, cycle.completesAt - now) : 0;
+  const remaining = cycle?.completesAt && now ? Math.max(0, cycle.completesAt - now) : 0;
   const hours = Math.floor(remaining / 3_600_000);
   const minutes = Math.ceil((remaining % 3_600_000) / 60_000);
   const clutchCount = Array.isArray(save.clutch?.offspring) ? save.clutch!.offspring!.length : 0;
