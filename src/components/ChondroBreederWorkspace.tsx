@@ -35,7 +35,7 @@ const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "guide", label: "Guide", detail: "Subspecies & traits", icon: "?" },
 ];
 
-const mobileViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];
+const primaryViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];
 
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
@@ -47,8 +47,8 @@ export function ChondroBreederWorkspace() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050c09] pb-[calc(82px+env(safe-area-inset-bottom))] lg:pb-12">
-      <header className="sticky top-0 z-50 border-b border-white/[.07] bg-[#050c09]/95 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#050c09] pb-[calc(92px+env(safe-area-inset-bottom))]">
+      <header className="sticky top-0 z-50 border-b border-white/[.07] bg-[#050c09]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[64px] max-w-7xl items-center gap-3 px-4 sm:min-h-[70px] sm:px-6">
           <Link href="/" aria-label="Exit Chondro Breeder and return to Arboreal Planet" className="group flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40">
             <ArborealPlanetMark className="h-10 w-10 transition group-hover:scale-[1.03]" />
@@ -70,16 +70,6 @@ export function ChondroBreederWorkspace() {
 
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-5">
         <ChondroPatternBanner compact />
-      </div>
-
-      <div className="sticky top-[64px] z-40 mx-auto mt-3 hidden max-w-7xl px-4 sm:top-[70px] sm:px-6 lg:block">
-        <div className="rounded-3xl border border-white/[.08] bg-[#07100d]/94 p-2 shadow-[0_18px_50px_rgba(0,0,0,.32)] backdrop-blur-xl">
-          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar">
-            {views.map((item) => (
-              <WorkspaceButton key={item.id} active={view === item.id} onClick={() => openView(item.id)} {...item} />
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
@@ -127,12 +117,12 @@ export function ChondroBreederWorkspace() {
         {view === "guide" ? <ChondroBreederSubspeciesPhenotypes /> : null}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(70px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.08] bg-[#050c09]/97 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-18px_50px_rgba(0,0,0,.3)] backdrop-blur-xl lg:hidden" aria-label="Chondro Breeder navigation">
-        {mobileViews.map((id) => {
+      <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto grid h-[calc(72px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.08] bg-[#050c09]/97 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-18px_50px_rgba(0,0,0,.3)] backdrop-blur-xl lg:bottom-4 lg:h-[72px] lg:max-w-[680px] lg:rounded-2xl lg:border lg:px-3 lg:pb-1.5" aria-label="Chondro Breeder navigation">
+        {primaryViews.map((id) => {
           const item = views.find((entry) => entry.id === id)!;
           const selected = view === id;
           return (
-            <button key={id} type="button" onClick={() => openView(id)} aria-current={selected ? "page" : undefined} className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[9px] font-bold uppercase tracking-[.04em] transition ${selected ? "text-emerald-200" : "text-white/38"}`}>
+            <button key={id} type="button" onClick={() => openView(id)} aria-current={selected ? "page" : undefined} className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[9px] font-bold uppercase tracking-[.04em] transition sm:text-[10px] ${selected ? "bg-emerald-300/[.07] text-emerald-200" : "text-white/38 hover:bg-white/[.035] hover:text-white/68"}`}>
               <span className={`grid h-8 w-8 place-items-center rounded-xl text-base transition ${selected ? "bg-emerald-300/[.12] text-emerald-200" : "bg-white/[.025]"}`}>{item.icon}</span>
               <span className="truncate">{item.label}</span>
             </button>
@@ -181,20 +171,6 @@ function HomeCard({ item, onClick, featured = false }: { item: ViewMeta; onClick
         <span className="mt-1 block text-xs text-white/42">{item.detail}</span>
       </span>
       <span className="text-xs text-emerald-200/55 transition group-hover:translate-x-0.5">→</span>
-    </button>
-  );
-}
-
-function WorkspaceButton({ active, onClick, label, detail, icon }: { active: boolean; onClick: () => void } & ViewMeta) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? "page" : undefined}
-      className={`min-w-[118px] shrink-0 rounded-2xl px-3 py-2.5 text-left transition ${active ? "bg-emerald-300 text-[#06100c] shadow-[0_8px_24px_rgba(57,230,125,.14)]" : "text-white/48 hover:bg-white/[.045] hover:text-white/72"}`}
-    >
-      <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[.1em]"><span className="text-sm">{icon}</span>{label}</span>
-      <span className="mt-1 block text-[9px] opacity-65">{detail}</span>
     </button>
   );
 }
