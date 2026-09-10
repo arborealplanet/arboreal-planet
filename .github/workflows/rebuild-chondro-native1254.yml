@@ -22,8 +22,41 @@ jobs:
         run: |
           set -euo pipefail
 
-          cat .asset-native1254-q50/ut-*.txt | base64 --decode > public/hatchery/snakes/utaraensis.avif
-          cat .asset-native1254-q50/vi-*.txt | base64 --decode > public/hatchery/snakes/viridis.avif
+          cat \
+            .asset-native1254-q50/ut-01.txt \
+            .asset-native1254-q50/ut-02.txt \
+            .asset-native1254-q50/ut-03.txt \
+            .asset-native1254-q50/ut-04.txt \
+            .asset-native1254-q50/ut-05.txt \
+            .asset-native1254-q50/ut-06.txt \
+            .asset-native1254-q50/ut-07a.txt \
+            .asset-native1254-q50/ut-07b.txt \
+            .asset-native1254-q50/ut-08.txt \
+            .asset-native1254-q50/ut-09.txt \
+            .asset-native1254-q50/ut-10.txt \
+            .asset-native1254-q50/ut-11.txt \
+            .asset-native1254-q50/ut-12.txt \
+            .asset-native1254-q50/ut-13.txt \
+            | base64 --decode > public/hatchery/snakes/utaraensis.avif
+
+          cat \
+            .asset-native1254-q50/vi-01.txt \
+            .asset-native1254-q50/vi-02a.txt \
+            .asset-native1254-q50/vi-02b.txt \
+            .asset-native1254-q50/vi-03.txt \
+            .asset-native1254-q50/vi-04.txt \
+            .asset-native1254-q50/vi-05.txt \
+            .asset-native1254-q50/vi-06.txt \
+            .asset-native1254-q50/vi-07.txt \
+            .asset-native1254-q50/vi-08.txt \
+            .asset-native1254-q50/vi-09.txt \
+            .asset-native1254-q50/vi-10.txt \
+            .asset-native1254-q50/vi-11.txt \
+            .asset-native1254-q50/vi-12.txt \
+            .asset-native1254-q50/vi-13.txt \
+            .asset-native1254-q50/vi-14.txt \
+            .asset-native1254-q50/vi-15.txt \
+            | base64 --decode > public/hatchery/snakes/viridis.avif
 
           test "$(stat -c%s public/hatchery/snakes/utaraensis.avif)" -eq 86147
           test "$(stat -c%s public/hatchery/snakes/viridis.avif)" -eq 99098
