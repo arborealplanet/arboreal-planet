@@ -82,11 +82,12 @@ export function ChondroPlayerMarket() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const first = window.setTimeout(() => void refresh(), 0);
     const timer = window.setInterval(() => void refresh(), 20_000);
     const onSave = () => void refresh();
     window.addEventListener("arboreal-chondro-breeder-save-change", onSave);
     return () => {
+      window.clearTimeout(first);
       window.clearInterval(timer);
       window.removeEventListener("arboreal-chondro-breeder-save-change", onSave);
     };
