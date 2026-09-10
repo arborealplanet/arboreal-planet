@@ -51,10 +51,26 @@ export function clearAuthCookies(response: NextResponse) {
 export async function getServerIdentity() {
   const store = await cookies();
   const token = store.get(ACCESS_COOKIE)?.value;
-  if (!token) return null;
-  const user = await verifyAccessToken(token);
-  if (!user) return null;
-  return { token, user };
+  const refreshToken = store.get(REFRESH_COOKIE)?.value;
+
+  if (token) {
+    const user = await verifyAccessToken(token);
+    if (user) return { token, user };
+  }
+
+  // The proxy refreshes cookies on protected routes, but that refreshed cookie is
+  // written to the response and is not always visible to the current server render.
+  // Falling back to the refresh token prevents a valid session from appearing logged
+  // out for one request while the new cookies are being issued.
+  if (refreshToken) {
+    const session = await refreshAuthSession(refreshToken);
+    if (session?.access_token) {
+      const user = session.user ?? await verifyAccessToken(session.access_token);
+      if (user) return { token: session.access_token, user };
+    }
+  }
+
+  return null;
 }
 
 export async function fetchOwnProfile(token: string, userId: string) {
