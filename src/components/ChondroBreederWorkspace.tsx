@@ -15,6 +15,7 @@ import { ChondroBreedingFocusHeader } from "@/components/ChondroBreedingFocusHea
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
+type CoreView = "breeding" | "colony" | "clutches" | "market";
 
 type ViewMeta = {
   label: string;
@@ -36,6 +37,7 @@ const views: Array<{ id: WorkspaceView } & ViewMeta> = [
 ];
 
 const dockViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];
+const coreViews = new Set<WorkspaceView>(["breeding", "colony", "clutches", "market"]);
 
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
@@ -72,10 +74,7 @@ export function ChondroBreederWorkspace() {
 
       <main>
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
-        {view === "breeding" ? <BreedingScreen /> : null}
-        {view === "colony" ? <ColonyScreen /> : null}
-        {view === "clutches" ? <ClutchesScreen /> : null}
-        {view === "market" ? <MarketScreen /> : null}
+        {coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}
         {view === "career" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="career" /></SecondaryScreen> : null}
         {view === "projects" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="projects" /></SecondaryScreen> : null}
         {view === "conservation" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroConservationPartnerships /></SecondaryScreen> : null}
@@ -130,7 +129,7 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
           <section className="mt-4 rounded-[24px] border border-white/[.06] bg-black/18 p-4 sm:p-6">
             <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/44">Breeder command center</div>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-white sm:text-4xl">Your breeding program</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">Use the game dock for the four systems you move between most. Everything else lives here when you need it.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">Breeding, Colony, Clutches and Market now open only the controls that belong to that part of the game. Supporting systems stay here so the main loop remains clean.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {tools.map((id) => {
                 const item = views.find((entry) => entry.id === id)!;
@@ -144,43 +143,24 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
   );
 }
 
-function BreedingScreen() {
-  return (
-    <>
-      <ScreenHeading eyebrow="Reproduction" title="Breeding" detail="Prepare breeders, choose the pair and follow the active reproductive cycle." />
-      <ChondroBreedingFocusHeader />
-      <ChondroBreederGameV3 />
-      <ChondroClutchOutcomeExplainer />
-    </>
-  );
-}
+function CoreGameScreen({ view }: { view: CoreView }) {
+  const config: Record<CoreView, { eyebrow: string; title: string; detail: string }> = {
+    breeding: { eyebrow: "Reproduction", title: "Breeding", detail: "Prepare breeders, choose the pair and follow the active reproductive cycle." },
+    colony: { eyebrow: "Collection", title: "Colony", detail: "Inspect active animals, testing, care, enclosure capacity and retired breeders." },
+    clutches: { eyebrow: "Offspring", title: "Clutches", detail: "Manage the active clutch and review historical clutch records." },
+    market: { eyebrow: "Exchange", title: "Market", detail: "Shop offers, review player listings and move animals into or out of the program." },
+  };
+  const active = config[view];
 
-function ColonyScreen() {
   return (
     <>
-      <ScreenHeading eyebrow="Collection" title="Colony" detail="Inspect active animals, pairing material, lineage and retired breeders." />
-      <ChondroBreederManagementView section="colony" />
-      <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div>
-    </>
-  );
-}
-
-function ClutchesScreen() {
-  return (
-    <>
-      <ScreenHeading eyebrow="Offspring" title="Clutches" detail="Review active and historical clutch records without leaving the breeder app." />
-      <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
-        <div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div>
-      </section>
-    </>
-  );
-}
-
-function MarketScreen() {
-  return (
-    <>
-      <ScreenHeading eyebrow="Exchange" title="Market" detail="Shop daily offers, review player listings and move animals into or out of the program." />
-      <ChondroBreederExpandedShop />
+      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />
+      {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
+      <ChondroBreederGameV3 screen={view} />
+      {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}
+      {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}
+      {view === "clutches" ? <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div></section> : null}
+      {view === "market" ? <ChondroBreederExpandedShop /> : null}
     </>
   );
 }
