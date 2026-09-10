@@ -1,0 +1,51 @@
+name: Refactor Chondro trait profile
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move trait tendencies to species profile
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/components/ChondroBreederGameV3.tsx')
+          text = path.read_text()
+          old = '''const preferredTraits: Record<Subspecies, TraitKey[]> = {
+            "Morelia azurea azurea": ["highBlack", "yellowRetention"],
+            "Morelia azurea pulcher": ["yellowRetention", "blueStripe"],
+            "Morelia azurea utaraensis": ["blueStripe", "highWhite"],
+            "Morelia viridis": ["highWhite", "highBlack"],
+          };'''.replace('          ', '')
+          new = 'const preferredTraits = CHONDRO_SPECIES_PROFILE.traits.preferredByTaxon as Record<Subspecies, TraitKey[]>;'
+          if text.count(old) != 1:
+              raise SystemExit(f'preferred trait block mismatch: {text.count(old)}')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+
+      - name: Validate
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/refactor-chondro-trait-profile.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ChondroBreederGameV3.tsx .github/workflows/refactor-chondro-trait-profile.yml
+          git commit -m "Use species profile for Chondro trait tendencies"
+          git push
