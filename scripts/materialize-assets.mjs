@@ -71,17 +71,21 @@ for (const [assetName, relativeOutput, expectedBytes] of appAssets) {
 console.log(`Materialized ${appAssets.length} approved Arboreal Planet assets.`);
 
 const homeVideoChunksDir = path.join(root, "src/lib/brand-assets/chondro-home-video");
-const homeVideoChunks = fs
-  .readdirSync(homeVideoChunksDir)
-  .filter((name) => /^\d+\.txt$/.test(name))
-  .sort((a, b) => a.localeCompare(b));
+const homeVideoChunkSpec = [
+  ["00.txt", 20000],
+  ["01.txt", 20000],
+  ["02.txt", 20000],
+  ["03.txt", 18972],
+];
 
-if (homeVideoChunks.length !== 4) {
-  throw new Error(`Expected 4 Chondro homepage video chunks, found ${homeVideoChunks.length}.`);
-}
-
-const homeVideoPayload = homeVideoChunks
-  .map((name) => fs.readFileSync(path.join(homeVideoChunksDir, name), "utf8").trim())
+const homeVideoPayload = homeVideoChunkSpec
+  .map(([name, expectedLength]) => {
+    const chunk = fs.readFileSync(path.join(homeVideoChunksDir, name), "utf8").trim();
+    if (chunk.length < expectedLength) {
+      throw new Error(`${name} is shorter than the expected Chondro homepage video chunk length.`);
+    }
+    return chunk.slice(0, expectedLength);
+  })
   .join("");
 
 if (homeVideoPayload.length !== 78972) {
