@@ -19,15 +19,16 @@ type CoreView = "breeding" | "colony" | "clutches" | "market";
 
 type ViewMeta = {
   label: string;
+  navLabel?: string;
   detail: string;
   icon: string;
 };
 
 const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "home", label: "Home", detail: "Breeder command center", icon: "⌂" },
-  { id: "breeding", label: "Breeding", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
+  { id: "breeding", label: "Breeding", navLabel: "Breed", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
   { id: "colony", label: "Colony", detail: "Animals and breeder records", icon: "◎" },
-  { id: "clutches", label: "Clutches", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
+  { id: "clutches", label: "Clutches", navLabel: "Clutch", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
   { id: "market", label: "Store", detail: "Buy chondros and use the player market", icon: "$" },
   { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
   { id: "projects", label: "Projects", detail: "Lines, traits and breeding goals", icon: "◈" },
@@ -49,7 +50,7 @@ export function ChondroBreederWorkspace() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#030806] pb-[calc(86px+env(safe-area-inset-bottom))] text-white">
+    <div className="min-h-[100dvh] bg-[#030806] pb-[calc(96px+env(safe-area-inset-bottom))] text-white">
       <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#030806]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[60px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[66px] sm:px-5">
           <Link
@@ -83,7 +84,7 @@ export function ChondroBreederWorkspace() {
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(72px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.08] bg-[#030806]/97 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl lg:bottom-4 lg:h-[72px] lg:max-w-[680px] lg:rounded-[22px] lg:border lg:px-3 lg:pb-1.5"
+        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(80px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-2.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-4 lg:bottom-4 lg:h-[78px] lg:max-w-[720px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2"
         aria-label="Chondro Breeder navigation"
       >
         {dockViews.map((id) => {
@@ -95,10 +96,10 @@ export function ChondroBreederWorkspace() {
               type="button"
               onClick={() => openView(id)}
               aria-current={selected ? "page" : undefined}
-              className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[9px] font-bold uppercase tracking-[.04em] transition sm:text-[10px] ${selected ? "bg-emerald-300/[.08] text-emerald-200" : "text-white/38 hover:bg-white/[.035] hover:text-white/68"}`}
+              className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-1 text-[8px] font-bold uppercase tracking-[.025em] transition sm:text-[9px] ${selected ? "bg-emerald-300/[.09] text-emerald-100" : "text-white/38 hover:bg-white/[.035] hover:text-white/68"}`}
             >
-              <span className={`grid h-8 w-8 place-items-center rounded-xl text-base transition ${selected ? "bg-emerald-300/[.12] text-emerald-200" : "bg-white/[.025]"}`}>{item.icon}</span>
-              <span className="truncate">{item.label}</span>
+              <span className={`grid h-8 w-8 place-items-center rounded-xl text-[15px] transition sm:h-9 sm:w-9 sm:text-base ${selected ? "bg-emerald-300/[.13] text-emerald-200" : "bg-white/[.025]"}`}>{item.icon}</span>
+              <span className="max-w-full truncate leading-none">{item.navLabel ?? item.label}</span>
             </button>
           );
         })}
@@ -166,8 +167,13 @@ function CoreGameScreen({ view }: { view: CoreView }) {
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
       {view === "market" ? (
         <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
-          <div className="rounded-[24px] border border-amber-200/15 bg-amber-200/[.035] px-4 py-3 text-sm text-amber-50/70">
-            <strong className="text-amber-100">Snake Store:</strong> rotating chondros are below. Purchases use your breeder cash and require an open enclosure.
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[24px] border border-amber-200/15 bg-amber-200/[.035] px-4 py-3 text-sm text-amber-50/70">
+              <strong className="text-amber-100">Snake Store:</strong> rotating chondros are below. Purchases use your breeder cash and require an open enclosure.
+            </div>
+            <div className="rounded-[24px] border border-emerald-300/12 bg-emerald-300/[.03] px-4 py-3 text-xs leading-5 text-white/48">
+              <strong className="text-emerald-100/80">48-hour market fallback:</strong> player listings that remain unsold for two days are cleared automatically at 85% of their asking price. Pure subspecies animals are acquired by the conservation program and count toward the shared conservation goal, but the seller receives no personal conservation credit. Other animals are placed through the game&apos;s NPC pet market.
+            </div>
           </div>
         </div>
       ) : null}
