@@ -3,16 +3,37 @@ import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/s
 
 const headers = (token: string) => ({ apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" });
 
+async function runMarketSettlement(token: string) {
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/settle_chondro_market_cycle`, {
+    method: "POST",
+    headers: headers(token),
+    body: "{}",
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  return response.json() as Promise<{
+    clearedCount?: number;
+    petSales?: number;
+    conservationAcquisitions?: number;
+    sellerPayoutTotal?: number;
+    payoutRate?: number;
+  }>;
+}
+
 export async function GET() {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ authenticated: false, listings: [], pendingProceeds: 0, pendingSaleCount: 0 }, { status: 401 });
+
+  // Settlement is idempotent. Any market visit can clear listings that have reached
+  // the 48-hour fallback window, so the system does not depend on a separate cron job.
+  const settlement = await runMarketSettlement(identity.token);
 
   const [marketResponse, proceedsResponse] = await Promise.all([
     fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_player_market?status=eq.active&select=id,snake_id,seller_id,snake,price,listed_at&order=listed_at.desc&limit=60`, {
       headers: headers(identity.token),
       cache: "no-store",
     }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_player_market?seller_id=eq.${encodeURIComponent(identity.user.id)}&status=eq.sold&payout_claimed_at=is.null&select=price`, {
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_player_market?seller_id=eq.${encodeURIComponent(identity.user.id)}&status=eq.sold&payout_claimed_at=is.null&select=price,sale_channel,original_price`, {
       headers: headers(identity.token),
       cache: "no-store",
     }),
@@ -22,14 +43,19 @@ export async function GET() {
 
   const listings = (await marketResponse.json()) as Array<Record<string, unknown> & { seller_id?: string }>;
   const proceedsRows = proceedsResponse.ok
-    ? await proceedsResponse.json() as Array<{ price?: number }>
+    ? await proceedsResponse.json() as Array<{ price?: number; sale_channel?: string | null; original_price?: number | null }>
     : [];
   const pendingProceeds = proceedsRows.reduce((sum, row) => sum + Math.max(0, Number(row.price ?? 0)), 0);
+  const fallbackSaleCount = proceedsRows.filter((row) => row.sale_channel === "npc_pet" || row.sale_channel === "conservation").length;
+  const conservationSaleCount = proceedsRows.filter((row) => row.sale_channel === "conservation").length;
 
   return NextResponse.json({
     authenticated: true,
     pendingProceeds,
     pendingSaleCount: proceedsRows.length,
+    fallbackSaleCount,
+    conservationSaleCount,
+    settlement,
     listings: listings.map((listing) => ({
       ...listing,
       isMine: listing.seller_id === identity.user.id,
