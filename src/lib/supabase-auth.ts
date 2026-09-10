@@ -58,10 +58,6 @@ export async function getServerIdentity() {
     if (user) return { token, user };
   }
 
-  // The proxy refreshes cookies on protected routes, but that refreshed cookie is
-  // written to the response and is not always visible to the current server render.
-  // Falling back to the refresh token prevents a valid session from appearing logged
-  // out for one request while the new cookies are being issued.
   if (refreshToken) {
     const session = await refreshAuthSession(refreshToken);
     if (session?.access_token) {
@@ -74,7 +70,8 @@ export async function getServerIdentity() {
 }
 
 export async function fetchOwnProfile(token: string, userId: string) {
-  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,username,display_name,bio,location,avatar_url,banner_url,accent_color,profile_visibility,seller_enabled,role`, {
+  const fields = "id,username,display_name,bio,location,avatar_url,banner_url,accent_color,profile_visibility,seller_enabled,role,website_url,instagram_url,facebook_url";
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=${fields}`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, Accept: "application/json" },
     cache: "no-store",
   });

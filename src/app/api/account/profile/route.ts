@@ -9,6 +9,23 @@ function cleanText(value: unknown, max: number) {
   return text ? text.slice(0, max) : null;
 }
 
+function normalizeUrl(value: unknown, provider?: "instagram" | "facebook") {
+  let text = String(value ?? "").trim();
+  if (!text) return null;
+  if (provider === "instagram" && text.startsWith("@")) text = `https://instagram.com/${text.slice(1)}`;
+  if (!/^https?:\/\//i.test(text)) text = `https://${text}`;
+  try {
+    const url = new URL(text);
+    if (!new Set(["http:", "https:"]).has(url.protocol) || url.username || url.password) return false;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (provider === "instagram" && !(host === "instagram.com" || host.endsWith(".instagram.com"))) return false;
+    if (provider === "facebook" && !(host === "facebook.com" || host.endsWith(".facebook.com") || host === "fb.com")) return false;
+    return url.toString().slice(0, 1000);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,6 +44,13 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Username must be 3–30 characters and use only letters, numbers, dots, dashes, or underscores." }, { status: 400 });
   }
 
+  const website = normalizeUrl(body.website_url);
+  const instagram = normalizeUrl(body.instagram_url, "instagram");
+  const facebook = normalizeUrl(body.facebook_url, "facebook");
+  if (website === false) return NextResponse.json({ error: "Website must be a valid web address." }, { status: 400 });
+  if (instagram === false) return NextResponse.json({ error: "Instagram must be an instagram.com link or @handle." }, { status: 400 });
+  if (facebook === false) return NextResponse.json({ error: "Facebook must be a facebook.com link." }, { status: 400 });
+
   const accent = String(body.accent_color ?? "emerald").toLowerCase();
   const allowed = {
     username,
@@ -35,6 +59,9 @@ export async function PATCH(request: Request) {
     location: cleanText(body.location, 120),
     avatar_url: cleanText(body.avatar_url, 1000),
     banner_url: cleanText(body.banner_url, 1000),
+    website_url: website,
+    instagram_url: instagram,
+    facebook_url: facebook,
     accent_color: ACCENTS.has(accent) ? accent : "emerald",
     profile_visibility: body.profile_visibility === "private" ? "private" : "public",
     seller_enabled: Boolean(body.seller_enabled),

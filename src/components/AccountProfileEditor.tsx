@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Profile = {
@@ -14,10 +14,26 @@ type Profile = {
   profile_visibility?: string | null;
   seller_enabled?: boolean;
   role?: string | null;
+  website_url?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
 };
 
 type MediaField = "avatar_url" | "banner_url";
 type MediaBucket = "avatars" | "profile-banners";
+
+const ACCENTS = [
+  ["arboreal", "Arboreal", "#8fd34f"],
+  ["emerald", "Emerald", "#6ee7b7"],
+  ["jungle", "Jungle", "#4ade80"],
+  ["blue", "Blue", "#60a5fa"],
+  ["purple", "Purple", "#c084fc"],
+  ["red", "Red", "#fb7185"],
+  ["orange", "Orange", "#fb923c"],
+  ["gold", "Gold", "#facc15"],
+  ["teal", "Teal", "#2dd4bf"],
+  ["neutral", "Neutral", "#d1d5db"],
+] as const;
 
 export function AccountProfileEditor({ email, initial }: { email: string; initial: Profile }) {
   const router = useRouter();
@@ -25,6 +41,7 @@ export function AccountProfileEditor({ email, initial }: { email: string; initia
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<MediaField | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const accent = useMemo(() => ACCENTS.find(([id]) => id === (profile.accent_color ?? "emerald")) ?? ACCENTS[1], [profile.accent_color]);
 
   async function persistProfile(nextProfile: Profile) {
     const response = await fetch("/api/account/profile", {
@@ -62,11 +79,9 @@ export function AccountProfileEditor({ email, initial }: { email: string; initia
       const form = new FormData();
       form.append("file", file);
       form.append("bucket", bucket);
-
       const response = await fetch("/api/account/media", { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.publicUrl) throw new Error(data.error ?? "Upload failed.");
-
       const nextProfile = { ...profile, [field]: data.publicUrl };
       setProfile(nextProfile);
       await persistProfile(nextProfile);
@@ -84,7 +99,8 @@ export function AccountProfileEditor({ email, initial }: { email: string; initia
     setSaving(true);
     setMessage(null);
     try {
-      await persistProfile(profile);
+      const data = await persistProfile(profile);
+      if (data.profile) setProfile(data.profile as Profile);
       setMessage("Profile saved.");
       router.refresh();
     } catch (error) {
@@ -95,12 +111,8 @@ export function AccountProfileEditor({ email, initial }: { email: string; initia
   }
 
   async function logout() {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
-      router.push("/login");
-      router.refresh();
-    }
+    try { await fetch("/api/auth/logout", { method: "POST" }); }
+    finally { router.push("/login"); router.refresh(); }
   }
 
   const input = "w-full rounded-2xl border border-white/[.08] bg-black/15 px-4 py-3 text-sm text-white/75 outline-none focus:border-emerald-300/25";
@@ -108,51 +120,26 @@ export function AccountProfileEditor({ email, initial }: { email: string; initia
 
   return (
     <div className="grid gap-5 lg:grid-cols-[.82fr_1.18fr]">
-      <div className="panel overflow-hidden rounded-3xl">
-        <div
-          className="relative h-40 bg-white/[.025] bg-cover bg-center"
-          style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : undefined}
-        >
+      <div className="panel overflow-hidden rounded-3xl" style={{ borderTopColor: accent[2], borderTopWidth: 2 }}>
+        <div className="relative h-40 bg-white/[.025] bg-cover bg-center" style={profile.banner_url ? { backgroundImage: `linear-gradient(to bottom,transparent 55%,rgba(6,16,12,.58)),url(${profile.banner_url})` } : { backgroundImage: `linear-gradient(135deg,${accent[2]}22,transparent 55%)` }}>
           <label className={`absolute right-4 top-4 rounded-xl border border-white/[.1] bg-black/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[.1em] text-white/70 ${mediaBusy ? "cursor-wait opacity-60" : "cursor-pointer hover:border-emerald-300/25 hover:text-white"}`}>
             {uploading === "banner_url" ? "Uploading…" : "Change banner"}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              disabled={mediaBusy}
-              onChange={(event) => upload(event, "profile-banners", "banner_url")}
-            />
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={mediaBusy} onChange={(event) => upload(event, "profile-banners", "banner_url")} />
           </label>
         </div>
 
         <div className="relative p-6 pt-14">
           <div className="absolute -top-12 left-6 h-24 w-24 overflow-hidden rounded-3xl border-4 border-[#07110d] bg-white/[.05]">
-            {profile.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt="Profile avatar" className="h-full w-full object-cover" />
-            ) : (
-              <div className="grid h-full w-full place-items-center text-2xl text-white/15">AP</div>
-            )}
+            {profile.avatar_url ? <img src={profile.avatar_url} alt="Profile avatar" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-2xl text-white/15">AP</div>}
           </div>
-
-          <label className={`absolute left-32 top-3 text-[10px] font-bold uppercase tracking-[.1em] text-emerald-300 ${mediaBusy ? "cursor-wait opacity-55" : "cursor-pointer hover:text-emerald-200"}`}>
+          <label className={`absolute left-32 top-3 text-[10px] font-bold uppercase tracking-[.1em] ${mediaBusy ? "cursor-wait opacity-55" : "cursor-pointer"}`} style={{ color: accent[2] }}>
             {uploading === "avatar_url" ? "Uploading…" : "Upload avatar"}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              disabled={mediaBusy}
-              onChange={(event) => upload(event, "avatars", "avatar_url")}
-            />
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={mediaBusy} onChange={(event) => upload(event, "avatars", "avatar_url")} />
           </label>
-
           <div className="text-xs text-white/28">{email}</div>
           <div className="mt-2 text-2xl font-semibold">{profile.display_name || "Arboreal Planet member"}</div>
           <div className="mt-1 text-sm text-white/35">@{profile.username || "choose-a-username"}</div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/[.07] px-3 py-1.5 text-[10px] uppercase text-white/35">{profile.role || "user"}</span>
-            <span className="rounded-full border border-white/[.07] px-3 py-1.5 text-[10px] uppercase text-white/35">{profile.profile_visibility || "public"}</span>
-          </div>
+          <div className="mt-5 flex flex-wrap gap-2"><span className="rounded-full border border-white/[.07] px-3 py-1.5 text-[10px] uppercase text-white/35">{profile.role || "user"}</span><span className="rounded-full border border-white/[.07] px-3 py-1.5 text-[10px] uppercase text-white/35">{profile.profile_visibility || "public"}</span></div>
           <p className="mt-4 text-[11px] leading-5 text-white/32">Avatar and banner changes save as soon as the upload finishes. JPG, PNG, and WebP are supported.</p>
         </div>
       </div>
@@ -160,42 +147,29 @@ export function AccountProfileEditor({ email, initial }: { email: string; initia
       <div className="panel rounded-3xl p-6">
         <div className="section-kicker">Profile settings</div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label>
-            <span className="mb-2 block text-xs text-white/35">Display name</span>
-            <input className={input} value={profile.display_name ?? ""} onChange={(event) => setProfile({ ...profile, display_name: event.target.value })} />
-          </label>
-          <label>
-            <span className="mb-2 block text-xs text-white/35">Username</span>
-            <input className={input} value={profile.username ?? ""} onChange={(event) => setProfile({ ...profile, username: event.target.value })} />
-          </label>
-          <label className="sm:col-span-2">
-            <span className="mb-2 block text-xs text-white/35">Bio</span>
-            <textarea className={`${input} min-h-28`} value={profile.bio ?? ""} onChange={(event) => setProfile({ ...profile, bio: event.target.value })} />
-          </label>
-          <label>
-            <span className="mb-2 block text-xs text-white/35">Location</span>
-            <input className={input} value={profile.location ?? ""} onChange={(event) => setProfile({ ...profile, location: event.target.value })} />
-          </label>
-          <label>
-            <span className="mb-2 block text-xs text-white/35">Profile visibility</span>
-            <select className={input} value={profile.profile_visibility ?? "public"} onChange={(event) => setProfile({ ...profile, profile_visibility: event.target.value })}>
-              <option value="public">Public</option>
-              <option value="private">Private</option>
-            </select>
-          </label>
+          <label><span className="mb-2 block text-xs text-white/35">Display name</span><input className={input} maxLength={80} value={profile.display_name ?? ""} onChange={(event) => setProfile({ ...profile, display_name: event.target.value })} /></label>
+          <label><span className="mb-2 block text-xs text-white/35">Username</span><input className={input} maxLength={30} value={profile.username ?? ""} onChange={(event) => setProfile({ ...profile, username: event.target.value })} /></label>
+          <label className="sm:col-span-2"><span className="mb-2 block text-xs text-white/35">Bio</span><textarea className={`${input} min-h-28`} maxLength={600} value={profile.bio ?? ""} onChange={(event) => setProfile({ ...profile, bio: event.target.value })} /></label>
+          <label><span className="mb-2 block text-xs text-white/35">Location</span><input className={input} maxLength={120} value={profile.location ?? ""} onChange={(event) => setProfile({ ...profile, location: event.target.value })} /></label>
+          <label><span className="mb-2 block text-xs text-white/35">Profile visibility</span><select className={input} value={profile.profile_visibility ?? "public"} onChange={(event) => setProfile({ ...profile, profile_visibility: event.target.value })}><option value="public">Public</option><option value="private">Private</option></select></label>
+          <label className="sm:col-span-2"><span className="mb-2 block text-xs text-white/35">Website</span><input className={input} inputMode="url" placeholder="yourwebsite.com" value={profile.website_url ?? ""} onChange={(event) => setProfile({ ...profile, website_url: event.target.value })} /></label>
+          <label><span className="mb-2 block text-xs text-white/35">Instagram</span><input className={input} placeholder="@handle or instagram.com/handle" value={profile.instagram_url ?? ""} onChange={(event) => setProfile({ ...profile, instagram_url: event.target.value })} /></label>
+          <label><span className="mb-2 block text-xs text-white/35">Facebook</span><input className={input} placeholder="facebook.com/page" value={profile.facebook_url ?? ""} onChange={(event) => setProfile({ ...profile, facebook_url: event.target.value })} /></label>
         </div>
 
-        <label className="mt-4 flex items-center gap-3 rounded-2xl border border-white/[.06] p-4 text-sm text-white/45">
-          <input type="checkbox" checked={Boolean(profile.seller_enabled)} onChange={(event) => setProfile({ ...profile, seller_enabled: event.target.checked })} /> Enable seller profile
-        </label>
+        <div className="mt-5">
+          <div className="text-xs text-white/35">Profile accent</div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {ACCENTS.map(([id, label, color]) => {
+              const selected = (profile.accent_color ?? "emerald") === id;
+              return <button key={id} type="button" onClick={() => setProfile({ ...profile, accent_color: id })} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-[10px] font-bold transition ${selected ? "bg-white/[.06] text-white" : "border-white/[.06] text-white/42 hover:bg-white/[.03]"}`} style={{ borderColor: selected ? color : undefined }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />{label}</button>;
+            })}
+          </div>
+        </div>
 
+        <label className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[.06] p-4 text-sm text-white/45"><input type="checkbox" checked={Boolean(profile.seller_enabled)} onChange={(event) => setProfile({ ...profile, seller_enabled: event.target.checked })} /> Enable seller profile</label>
         {message ? <div className="mt-4 text-xs text-emerald-200/65" aria-live="polite">{message}</div> : null}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button onClick={save} disabled={saving || mediaBusy} className="rounded-xl bg-emerald-300 px-5 py-3 text-xs font-black uppercase tracking-[.12em] text-[#06100c] disabled:cursor-not-allowed disabled:opacity-60">
-            {saving ? "Saving…" : "Save profile"}
-          </button>
-          <button onClick={logout} className="rounded-xl border border-white/[.08] px-5 py-3 text-xs font-bold text-white/45">Log out</button>
-        </div>
+        <div className="mt-6 flex flex-wrap gap-3"><button onClick={save} disabled={saving || mediaBusy} className="rounded-xl bg-emerald-300 px-5 py-3 text-xs font-black uppercase tracking-[.12em] text-[#06100c] disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Saving…" : "Save profile"}</button><button onClick={logout} className="rounded-xl border border-white/[.08] px-5 py-3 text-xs font-bold text-white/45">Log out</button></div>
       </div>
     </div>
   );
