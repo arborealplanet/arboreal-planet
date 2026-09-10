@@ -29,7 +29,7 @@ export default function HatcheryPage() {
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-100/55">Featured game</div>
               <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Chondro Breeder</h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Manage breeding pairs, lineage, facility capacity, health risk, research and shows. Real-time timers continue while you are away, and each generation becomes part of the program's recorded history.</p>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Manage breeding pairs, lineage, facility capacity, health risk, research and shows. Real-time timers continue while you are away, and each generation becomes part of the program&apos;s recorded history.</p>
               <div className="mt-7 flex flex-wrap gap-2">{["Cycling", "Pairing", "Gestation", "Incubation", "Hatch Day", "Lineage", "Facilities", "Research"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
               <Link href="/arcade/chondro-breeder" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Chondro Breeder</Link>
             </div>
