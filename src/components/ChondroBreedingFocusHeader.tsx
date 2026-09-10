@@ -32,13 +32,15 @@ export function ChondroBreedingFocusHeader() {
       } catch {}
     }
     void load();
-    setNow(Date.now());
     const refresh = () => void load();
+    const tick = () => setNow(Date.now());
+    const firstTick = window.setTimeout(tick, 0);
+    const timer = window.setInterval(tick, 30_000);
     window.addEventListener("chondro-conservation-updated", refresh);
     window.addEventListener("arboreal-chondro-favorites-change", refresh);
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => {
       active = false;
+      window.clearTimeout(firstTick);
       window.clearInterval(timer);
       window.removeEventListener("chondro-conservation-updated", refresh);
       window.removeEventListener("arboreal-chondro-favorites-change", refresh);
