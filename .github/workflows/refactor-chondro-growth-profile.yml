@@ -1,0 +1,58 @@
+name: Refactor Chondro growth profile
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move growth rules to species profile
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/components/ChondroBreederGameV3.tsx')
+          text = path.read_text()
+
+          anchor = 'import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";\n'
+          addition = anchor + 'import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor } from "@/lib/breeder-species-profiles";\n'
+          if text.count(anchor) != 1:
+              raise SystemExit('growth import anchor mismatch')
+          text = text.replace(anchor, addition, 1)
+
+          old_costs = 'const RODENT_COST = 2.5;\nconst CARE_PER_YEAR = 1500;\n'
+          if text.count(old_costs) != 1:
+              raise SystemExit('growth cost constants mismatch')
+          text = text.replace(old_costs, '', 1)
+
+          old_req = 'function agingRequirement(a: Snake) {\n  if (a.lifeStage === "Adult") return null;\n  if (a.lifeStage === "Hatchling") return { next: "Neonate" as LifeStage, mice: 25, months: 6 };\n  if (a.lifeStage === "Neonate") return { next: "Subadult" as LifeStage, mice: 150, months: 36 };\n  if (a.sex === "Female") return { next: "Adult" as LifeStage, mice: 100, months: 24 };\n  return { next: "Adult" as LifeStage, mice: 25, months: 6 };\n}\nfunction agingCost(a: Snake) {\n  const req = agingRequirement(a);\n  return req\n    ? Math.round((req.mice * RODENT_COST + (req.months / 12) * CARE_PER_YEAR) * 100) / 100\n    : 0;\n}\n'
+          new_req = 'function agingRequirement(a: Snake) {\n  const requirement = growthRequirementFor(CHONDRO_SPECIES_PROFILE, a.lifeStage, a.sex);\n  return requirement\n    ? { next: requirement.next as LifeStage, mice: requirement.feederUnits, months: requirement.months }\n    : null;\n}\nfunction agingCost(a: Snake) {\n  return growthCostFor(CHONDRO_SPECIES_PROFILE, a.lifeStage, a.sex);\n}\n'
+          if text.count(old_req) != 1:
+              raise SystemExit('aging requirement block mismatch')
+          text = text.replace(old_req, new_req, 1)
+          path.write_text(text)
+          PY
+
+      - name: Validate
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/refactor-chondro-growth-profile.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ChondroBreederGameV3.tsx .github/workflows/refactor-chondro-growth-profile.yml
+          git commit -m "Use species profile for Chondro growth rules"
+          git push
