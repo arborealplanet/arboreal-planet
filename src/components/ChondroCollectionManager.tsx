@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { ChondroFocusOverlay } from "@/components/ChondroFocusOverlay";
+import { ChondroAnimalRecordActions } from "@/components/ChondroAnimalRecordActions";
 
 type Snake = {
   id: string;
@@ -60,7 +61,12 @@ export function ChondroCollectionManager() {
     void load();
     const refresh = () => void load();
     window.addEventListener("arboreal-chondro-favorites-change", refresh);
-    return () => { cancelled = true; window.removeEventListener("arboreal-chondro-favorites-change", refresh); };
+    window.addEventListener("arboreal-chondro-breeder-save-change", refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("arboreal-chondro-favorites-change", refresh);
+      window.removeEventListener("arboreal-chondro-breeder-save-change", refresh);
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -95,7 +101,7 @@ export function ChondroCollectionManager() {
           <div>
             <div className="section-kicker">Colony</div>
             <h2 className="mt-2 text-2xl font-semibold">Find an animal, then open its record.</h2>
-            <p className="mt-2 text-sm text-white/48">Filters stay compact. Detailed animal information now opens in a dedicated drawer instead of expanding the page.</p>
+            <p className="mt-2 text-sm text-white/48">Filters stay compact. Detailed animal information opens in a dedicated drawer so the collection itself stays easy to scan.</p>
           </div>
           <div className="text-right"><div className="text-2xl font-black text-white">{filtered.length}</div><div className="text-[10px] uppercase tracking-[.16em] text-white/36">of {animals.length} animals</div></div>
         </div>
@@ -156,6 +162,7 @@ function AnimalDetail({ animal, favorite, animals }: { animal: Snake; favorite: 
 
   return (
     <div className="space-y-5">
+      <ChondroAnimalRecordActions key={animal.id} animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} favorite={favorite} />
       <div className="rounded-[24px] border border-white/[.07] bg-[radial-gradient(circle_at_50%_35%,rgba(57,230,125,.08),transparent_45%),rgba(0,0,0,.18)] p-5">
         <div className="mx-auto max-w-[360px]"><ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} /></div>
         <div className="mt-4 flex flex-wrap justify-center gap-2 text-[10px] font-bold uppercase tracking-[.1em]">
