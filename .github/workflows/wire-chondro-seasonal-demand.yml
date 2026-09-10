@@ -43,8 +43,9 @@ jobs:
           text = text.replace(old_tail, new_tail, 1)
 
           replacements = [
-              ('const value = saleValue(a);', 'const value = saleValue(a, season);', 1),
-              ('price: saleValue(baby)', 'price: saleValue(baby, season)', 1),
+              ('saleValue(a)', 'saleValue(a, season)', 1),
+              ('saleValue(baby)', 'saleValue(baby, season)', 2),
+              ('saleValue(animal)', 'saleValue(animal, season)', 1),
           ]
           for old, new, expected in replacements:
               count = text.count(old)
