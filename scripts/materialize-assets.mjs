@@ -131,3 +131,30 @@ if (fs.existsSync(hatcheryAssetsDir)) {
 
   console.log(`Materialized ${hatcheryFiles.length} Chondro Breeder trait icons.`);
 }
+
+const hatcheryUiAssetsDir = path.join(root, "src/lib/hatchery-ui-assets");
+const hatcheryUiOutputDir = path.join(root, "public/hatchery/game");
+
+if (fs.existsSync(hatcheryUiAssetsDir)) {
+  const uiFiles = fs
+    .readdirSync(hatcheryUiAssetsDir)
+    .filter((name) => name.endsWith(".b64"))
+    .sort((a, b) => a.localeCompare(b));
+
+  fs.mkdirSync(hatcheryUiOutputDir, { recursive: true });
+
+  for (const name of uiFiles) {
+    const payload = fs.readFileSync(path.join(hatcheryUiAssetsDir, name), "utf8").trim();
+    const imageBytes = Buffer.from(payload, "base64");
+    const imageSignature = imageBytes.subarray(0, 12).toString("ascii");
+
+    if (!imageSignature.startsWith("RIFF") || !imageSignature.includes("WEBP")) {
+      throw new Error(`${name} is not a valid Chondro game WEBP payload.`);
+    }
+
+    const outputName = `${path.basename(name, ".b64")}.webp`;
+    fs.writeFileSync(path.join(hatcheryUiOutputDir, outputName), imageBytes);
+  }
+
+  console.log(`Materialized ${uiFiles.length} Chondro Breeder UI art assets.`);
+}
