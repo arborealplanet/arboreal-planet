@@ -28,7 +28,7 @@ const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "breeding", label: "Breeding", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
   { id: "colony", label: "Colony", detail: "Animals and breeder records", icon: "◎" },
   { id: "clutches", label: "Clutches", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
-  { id: "market", label: "Market", detail: "Acquire, list and track animals", icon: "$" },
+  { id: "market", label: "Store", detail: "Buy chondros and use the player market", icon: "$" },
   { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
   { id: "projects", label: "Projects", detail: "Lines, traits and breeding goals", icon: "◈" },
   { id: "conservation", label: "Conservation", detail: "Regional conservation program", icon: "⌁" },
@@ -126,10 +126,18 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
         <div className="p-3 sm:p-5">
           <ChondroPatternBanner compact />
+
+          <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <QuickAction title="Breed a pair" detail="Select adult breeders and start a reproductive cycle." icon="◇" onClick={() => onOpen("breeding")} />
+            <QuickAction title="Manage colony" detail="Inspect, test, raise and organize your animals." icon="◎" onClick={() => onOpen("colony")} />
+            <QuickAction title="Review clutches" detail="Handle active offspring and clutch records." icon="◉" onClick={() => onOpen("clutches")} />
+            <QuickAction title="Buy chondros" detail="Open the snake store and player listings." icon="$" onClick={() => onOpen("market")} emphasized />
+          </section>
+
           <section className="mt-4 rounded-[24px] border border-white/[.06] bg-black/18 p-4 sm:p-6">
             <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/44">Breeder command center</div>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-white sm:text-4xl">Your breeding program</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">Breeding, Colony, Clutches and Market now open only the controls that belong to that part of the game. Supporting systems stay here so the main loop remains clean.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">The four main game systems stay one tap away in the dock. Career, projects, conservation, breeder network and reference tools live here when you need them.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {tools.map((id) => {
                 const item = views.find((entry) => entry.id === id)!;
@@ -148,7 +156,7 @@ function CoreGameScreen({ view }: { view: CoreView }) {
     breeding: { eyebrow: "Reproduction", title: "Breeding", detail: "Prepare breeders, choose the pair and follow the active reproductive cycle." },
     colony: { eyebrow: "Collection", title: "Colony", detail: "Inspect active animals, testing, care, enclosure capacity and retired breeders." },
     clutches: { eyebrow: "Offspring", title: "Clutches", detail: "Manage the active clutch and review historical clutch records." },
-    market: { eyebrow: "Exchange", title: "Market", detail: "Shop offers, review player listings and move animals into or out of the program." },
+    market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Buy chondros from rotating game inventory or browse animals listed by other breeders." },
   };
   const active = config[view];
 
@@ -156,11 +164,18 @@ function CoreGameScreen({ view }: { view: CoreView }) {
     <>
       <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
+      {view === "market" ? (
+        <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+          <div className="rounded-[24px] border border-amber-200/15 bg-amber-200/[.035] px-4 py-3 text-sm text-amber-50/70">
+            <strong className="text-amber-100">Snake Store:</strong> rotating chondros are below. Purchases use your breeder cash and require an open enclosure.
+          </div>
+        </div>
+      ) : null}
       <ChondroBreederGameV3 screen={view} />
+      {view === "market" ? <ChondroBreederExpandedShop /> : null}
       {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}
       {view === "clutches" ? <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div></section> : null}
-      {view === "market" ? <ChondroBreederExpandedShop /> : null}
     </>
   );
 }
@@ -174,6 +189,22 @@ function SecondaryScreen({ active, onBack, children }: { active: ViewMeta; onBac
       <ScreenHeading eyebrow="Breeder tools" title={active.label} detail={active.detail} />
       <div>{children}</div>
     </>
+  );
+}
+
+function QuickAction({ title, detail, icon, onClick, emphasized = false }: { title: string; detail: string; icon: string; onClick: () => void; emphasized?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex min-h-[118px] items-start gap-3 rounded-[22px] border p-4 text-left transition hover:-translate-y-0.5 ${emphasized ? "border-amber-200/20 bg-amber-200/[.04] hover:border-amber-200/35 hover:bg-amber-200/[.065]" : "border-white/[.065] bg-white/[.025] hover:border-emerald-300/18 hover:bg-white/[.045]"}`}
+    >
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-[14px] border text-base ${emphasized ? "border-amber-200/20 bg-amber-200/[.06] text-amber-100" : "border-white/[.07] bg-black/25 text-emerald-200/70"}`}>{icon}</span>
+      <span>
+        <span className="block text-sm font-bold text-white/82">{title}</span>
+        <span className="mt-1 block text-[11px] leading-5 text-white/40">{detail}</span>
+      </span>
+    </button>
   );
 }
 
