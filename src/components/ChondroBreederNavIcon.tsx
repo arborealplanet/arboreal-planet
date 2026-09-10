@@ -1,32 +1,55 @@
 type NavIconId = "home" | "breeding" | "colony" | "clutches" | "market";
 
-export function ChondroBreederNavIcon({ id, className = "h-5 w-5" }: { id: NavIconId; className?: string }) {
+export function ChondroBreederNavIcon({ id, className = "h-6 w-6" }: { id: NavIconId; className?: string }) {
   const common = {
     className,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
+    viewBox: "0 0 32 32",
+    fill: "currentColor",
     "aria-hidden": true,
   };
 
   if (id === "home") {
-    return <svg {...common}><path d="M3.5 10.8 12 3.8l8.5 7"/><path d="M5.5 9.4V20h13V9.4"/><path d="M9.5 20v-6h5v6"/></svg>;
+    return (
+      <svg {...common}>
+        <path d="M4.2 14.3 16 4.4l11.8 9.9a1.5 1.5 0 0 1-1.9 2.3l-.9-.8v10.4a1.8 1.8 0 0 1-1.8 1.8h-5.1v-8.5h-4.2V28H8.8A1.8 1.8 0 0 1 7 26.2V15.8l-.9.8a1.5 1.5 0 1 1-1.9-2.3Z" />
+      </svg>
+    );
   }
 
   if (id === "breeding") {
-    return <svg {...common}><path d="M8.4 4.2c-2.2 0-4 1.7-4 3.9 0 4.6 7.6 9.6 7.6 9.6s7.6-5 7.6-9.6c0-2.2-1.8-3.9-4-3.9-1.5 0-2.8.8-3.6 2-.8-1.2-2.1-2-3.6-2Z"/><path d="M8.5 10.7c1.2-.9 2.3-.9 3.5 0s2.3.9 3.5 0"/></svg>;
+    return (
+      <svg {...common}>
+        <path d="M10.2 5.1c3.2 0 5.8 2.4 5.8 5.5 0 4.5-4 7.2-7 9.1-1.5 1-2.5 2-2.5 3.3 0 1.4 1.2 2.4 2.9 2.4 1.2 0 2.3-.4 3.3-1.2l2.1 2.4a8.3 8.3 0 0 1-5.5 2c-3.8 0-6.5-2.2-6.5-5.5 0-3.2 2.2-5.1 4.9-6.9 2.7-1.8 4.6-3.3 4.6-5.5 0-1.4-1-2.4-2.4-2.4-1.6 0-2.8 1.2-2.8 2.8H3.6c0-3.4 2.8-6 6.6-6Zm11.6 0c3.8 0 6.6 2.6 6.6 6h-3.5c0-1.6-1.2-2.8-2.8-2.8-1.4 0-2.4 1-2.4 2.4 0 2.2 1.9 3.7 4.6 5.5 2.7 1.8 4.9 3.7 4.9 6.9 0 3.3-2.7 5.5-6.5 5.5a8.3 8.3 0 0 1-5.5-2l2.1-2.4c1 .8 2.1 1.2 3.3 1.2 1.7 0 2.9-1 2.9-2.4 0-1.3-1-2.3-2.5-3.3-3-1.9-7-4.6-7-9.1 0-3.1 2.6-5.5 5.8-5.5Z" />
+        <circle cx="9.9" cy="10.5" r="1.1" fill="#030806" />
+        <circle cx="22.1" cy="10.5" r="1.1" fill="#030806" />
+      </svg>
+    );
   }
 
   if (id === "colony") {
-    return <svg {...common}><path d="M4.2 14.2c2.1-5.4 5.5-8.1 10-8.1 3.5 0 5.6 1.8 5.6 4.2 0 2.2-1.8 3.8-4.4 3.8H9.8c-2.3 0-3.7 1.2-3.7 2.8 0 1.7 1.5 2.9 3.6 2.9 2.4 0 4.1-1 5.2-3"/><circle cx="16.5" cy="9.2" r=".8" fill="currentColor" stroke="none"/></svg>;
+    return (
+      <svg {...common}>
+        <path d="M4 22.5h24v3.2H4z" opacity=".55" />
+        <path d="M6.2 18.7c1.5-6.4 5.5-10.2 11.1-10.2 5.3 0 9.1 2.8 9.1 6.6 0 3.3-2.8 5.7-6.7 5.7h-7c-1.7 0-2.8.7-2.8 1.8 0 1.2 1.2 2 3 2 2.4 0 4.3-.8 5.8-2.5l2.8 2.2c-2.2 2.7-5.1 4-8.8 4-4.2 0-7.3-2.2-7.3-5.5 0-3.1 2.6-5.1 6.8-5.1h7.1c2.1 0 3.5-1 3.5-2.6 0-1.8-1.9-3.1-4.6-3.1-3.8 0-6.5 2.6-7.7 7.4l-4.3-.7Z" />
+        <circle cx="21.9" cy="14.4" r="1.05" fill="#030806" />
+      </svg>
+    );
   }
 
   if (id === "clutches") {
-    return <svg {...common}><ellipse cx="8" cy="13" rx="3.2" ry="4.7"/><ellipse cx="15.8" cy="12.4" rx="3.2" ry="4.7"/><path d="M11 18.4c.7 1.1 2 1.8 3.6 1.8 2.7 0 4.8-1.7 4.8-4"/></svg>;
+    return (
+      <svg {...common}>
+        <path d="M9.1 5.2c-3.5 4.4-5.4 8.3-5.4 12.1 0 5 3.2 8.5 7.5 8.5s7.4-3.4 7.4-8.5c0-3.9-2-7.8-5.5-12.1a2.6 2.6 0 0 0-4 0Z" />
+        <path d="M20.2 9.1c-2.7 3.6-4.2 6.8-4.2 9.8 0 4.2 2.7 7.1 6.4 7.1s6.4-2.9 6.4-7.1c0-3-1.5-6.2-4.3-9.8a2.7 2.7 0 0 0-4.3 0Z" opacity=".58" />
+      </svg>
+    );
   }
 
-  return <svg {...common}><path d="M5 8.5h14l-1 11H6l-1-11Z"/><path d="M8.3 8.5V6.7A3.7 3.7 0 0 1 12 3a3.7 3.7 0 0 1 3.7 3.7v1.8"/><path d="M9.2 13.4h5.6M12 10.9v5"/></svg>;
+  return (
+    <svg {...common}>
+      <path d="M5 12.2h22l-1.7-6.1H6.7L5 12.2Zm1.3 2.6v11A2.2 2.2 0 0 0 8.5 28h15a2.2 2.2 0 0 0 2.2-2.2v-11h-4.2v5.1h-4.2v-5.1h-2.6v5.1h-4.2v-5.1H6.3Z" />
+      <path d="M4.2 12.2h23.6v2.9H4.2z" opacity=".62" />
+      <path d="M11 22.2h10V28H11z" opacity=".42" />
+    </svg>
+  );
 }
