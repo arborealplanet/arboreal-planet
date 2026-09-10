@@ -10,16 +10,19 @@ export function AdminSellerVerification() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
-    const response = await fetch("/api/admin/seller-verification", { cache: "no-store" });
-    const data = await response.json().catch(() => ({}));
-    setRows(response.ok ? data.rows ?? [] : []);
-    if (!response.ok) setMessage(data.error ?? "Could not load seller verification requests.");
-    setLoading(false);
-  }
-
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/admin/seller-verification", { cache: "no-store" })
+      .then(async (response) => ({ response, data: await response.json().catch(() => ({})) }))
+      .then(({ response, data }) => {
+        if (!active) return;
+        setRows(response.ok ? data.rows ?? [] : []);
+        if (!response.ok) setMessage(data.error ?? "Could not load seller verification requests.");
+      })
+      .catch(() => { if (active) setMessage("Could not load seller verification requests."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   async function review(userId: string, decision: "verified" | "rejected") {
     setBusy(userId);
