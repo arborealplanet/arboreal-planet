@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { achievementReputation } from "@/lib/chondro-achievements";
 import { animalMeetsContract, contractsForSeason } from "@/lib/chondro-contracts";
 import { installedEnclosures, roomCapacityFromSave, type FacilityRoomState } from "@/lib/chondro-facility-limits";
+import { CHONDRO_LONG_TERM_PROJECTS } from "@/lib/chondro-longevity";
 import {
   BREEDING_PROJECTS,
   marketDemandForSeason,
@@ -48,6 +49,7 @@ type Save = {
 
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
+const ALL_BREEDING_PROJECTS = [...BREEDING_PROJECTS, ...CHONDRO_LONG_TERM_PROJECTS];
 const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 
 async function patchCareer(patch: Record<string, unknown>) {
@@ -95,6 +97,7 @@ export function ChondroCareerSystemsPanel() {
   const demand = save ? marketDemandForSeason(save.season ?? 1) : null;
   const scoutsUsed = save?.scoutsUsedSeason === save?.season ? Number(save?.scoutsUsedThisSeason ?? 0) : 0;
   const scoutCost = storeScoutCost(reputation, scoutsUsed);
+  const completedProjectCount = ALL_BREEDING_PROJECTS.filter((project) => claimedProjects.has(project.id)).length;
 
   async function persistPatch(patch: Record<string, unknown>, message: string, reload = true) {
     setBusy(message);
@@ -113,7 +116,7 @@ export function ChondroCareerSystemsPanel() {
 
   function claimProject(projectId: string) {
     if (!save || busy || claimedProjects.has(projectId)) return;
-    const project = BREEDING_PROJECTS.find((item) => item.id === projectId);
+    const project = ALL_BREEDING_PROJECTS.find((item) => item.id === projectId);
     if (!project || !produced.some((animal) => projectCompleted(project, animal))) return;
     void persistPatch({
       cash: save.cash + project.rewardCash,
@@ -152,7 +155,7 @@ export function ChondroCareerSystemsPanel() {
         <Stat label="Rank" value={rank.name} detail={`${reputation.toLocaleString()} reputation`} />
         <Stat label="Animal space" value={`${enclosureCount}/${roomCap}`} detail={`${Math.max(0, roomCap - enclosureCount)} enclosure slots open`} />
         <Stat label="Cash" value={money(save.cash)} detail={`Season ${save.season}`} />
-        <Stat label="Market" value={demand ? `${String(demand.hotTrait).replace(/([A-Z])/g, " $1")} hot` : "—"} detail={demand ? `${Math.round((demand.hotTraitMultiplier - 1) * 100)}% demand premium` : ""} />
+        <Stat label="Project legacy" value={`${completedProjectCount}/${ALL_BREEDING_PROJECTS.length}`} detail="career breeding projects complete" />
       </div>
 
       <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
@@ -162,30 +165,58 @@ export function ChondroCareerSystemsPanel() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
-        <div className="text-sm font-bold text-white/75">Breeding projects</div>
-        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {BREEDING_PROJECTS.map((project) => {
-            const done = claimedProjects.has(project.id);
-            const ready = !done && produced.some((animal) => projectCompleted(project, animal));
-            return <div key={project.id} className={`rounded-xl border p-3 ${done ? "border-emerald-300/20 bg-emerald-300/[.03]" : ready ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06]"}`}><div className="text-xs font-bold text-white/70">{project.name}</div><div className="mt-1 text-[10px] leading-4 text-white/35">{project.description}</div><div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] text-emerald-100/55">{money(project.rewardCash)} · +{project.rewardReputation} rep</span><button disabled={!ready || busy !== ""} onClick={() => claimProject(project.id)} className="rounded-lg border border-white/[.08] px-2 py-1 text-[9px] font-bold text-white/55 disabled:opacity-25">{done ? "Claimed" : ready ? "Claim" : "In progress"}</button></div></div>;
-          })}
-        </div>
-      </section>
+      <ProjectSection title="Breeding projects" detail="Career targets that reward deliberate selective breeding." projects={BREEDING_PROJECTS} produced={produced} claimedProjects={claimedProjects} busy={busy} claimProject={claimProject} />
+
+      <ProjectSection title="Legacy projects" detail="Late-game goals intended to take multiple generations and keep mature saves moving." projects={CHONDRO_LONG_TERM_PROJECTS} produced={produced} claimedProjects={claimedProjects} busy={busy} claimProject={claimProject} />
 
       <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
-        <div className="text-sm font-bold text-white/75">Current client contracts</div>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div><div className="text-sm font-bold text-white/75">Current client contracts</div><div className="mt-1 text-[10px] text-white/30">Contracts rotate with the season, so a long-running program keeps getting different short-term targets.</div></div>
+          {demand ? <div className="text-[10px] text-amber-100/55">Market: {String(demand.hotTrait).replace(/([A-Z])/g, " $1").trim()} hot · +{Math.round((demand.hotTraitMultiplier - 1) * 100)}%</div> : null}
+        </div>
         <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
           {contracts.map((contract) => {
             const done = claimedContracts.has(contract.id);
             const ready = !done && known.some((animal) => animalMeetsContract(contract, animal));
-            return <div key={contract.id} className={`rounded-xl border p-3 ${done ? "border-emerald-300/20" : ready ? "border-amber-200/25" : "border-white/[.06]"}`}><div className="text-[9px] uppercase tracking-[.14em] text-white/25">{contract.client}</div><div className="mt-1 text-xs font-bold text-white/70">{contract.title}</div><div className="mt-1 text-[10px] text-white/35">Expires season {contract.expiresSeason}</div><div className="mt-2 text-[10px] text-emerald-100/55">{money(contract.rewardCash)} · +{contract.rewardReputation} rep</div><button disabled={!ready || busy !== ""} onClick={() => claimContract(contract.id)} className="mt-2 rounded-lg border border-white/[.08] px-2 py-1 text-[9px] font-bold text-white/55 disabled:opacity-25">{done ? "Fulfilled" : ready ? "Fulfill" : "No match yet"}</button></div>;
+            return <div key={contract.id} className={`rounded-xl border p-3 ${done ? "border-emerald-300/20" : ready ? "border-amber-200/25" : "border-white/[.06]"}`}><div className="text-[9px] uppercase tracking-[.14em] text-white/25">{contract.client}</div><div className="mt-1 text-xs font-bold text-white/70">{contract.title}</div><div className="mt-1 text-[10px] leading-4 text-white/35">{contract.description}</div><div className="mt-1 text-[10px] text-white/30">Expires season {contract.expiresSeason}</div><div className="mt-2 text-[10px] text-emerald-100/55">{money(contract.rewardCash)} · +{contract.rewardReputation} rep</div><button disabled={!ready || busy !== ""} onClick={() => claimContract(contract.id)} className="mt-2 rounded-lg border border-white/[.08] px-2 py-1 text-[9px] font-bold text-white/55 disabled:opacity-25">{done ? "Fulfilled" : ready ? "Fulfill" : "No match yet"}</button></div>;
           })}
         </div>
       </section>
 
       {status ? <div role="status" className="text-xs text-emerald-100/65">{status}</div> : null}
     </div>
+  );
+}
+
+function ProjectSection({
+  title,
+  detail,
+  projects,
+  produced,
+  claimedProjects,
+  busy,
+  claimProject,
+}: {
+  title: string;
+  detail: string;
+  projects: typeof BREEDING_PROJECTS;
+  produced: Snake[];
+  claimedProjects: Set<string>;
+  busy: string;
+  claimProject: (id: string) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
+      <div className="text-sm font-bold text-white/75">{title}</div>
+      <div className="mt-1 text-[10px] text-white/30">{detail}</div>
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {projects.map((project) => {
+          const done = claimedProjects.has(project.id);
+          const ready = !done && produced.some((animal) => projectCompleted(project, animal));
+          return <div key={project.id} className={`rounded-xl border p-3 ${done ? "border-emerald-300/20 bg-emerald-300/[.03]" : ready ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06]"}`}><div className="text-xs font-bold text-white/70">{project.name}</div><div className="mt-1 text-[10px] leading-4 text-white/35">{project.description}</div><div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] text-emerald-100/55">{money(project.rewardCash)} · +{project.rewardReputation} rep</span><button disabled={!ready || busy !== ""} onClick={() => claimProject(project.id)} className="rounded-lg border border-white/[.08] px-2 py-1 text-[9px] font-bold text-white/55 disabled:opacity-25">{done ? "Claimed" : ready ? "Claim" : "In progress"}</button></div></div>;
+        })}
+      </div>
+    </section>
   );
 }
 
