@@ -32,7 +32,12 @@ collection = collection.replace(
 if (!collection.includes('<ChondroAnimalRecordActions')) {
   collection = collection.replace(
     '  return (\n    <div className="space-y-5">\n      <div className="rounded-[24px]',
-    '  return (\n    <div className="space-y-5">\n      <ChondroAnimalRecordActions animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} favorite={favorite} />\n      <div className="rounded-[24px]',
+    '  return (\n    <div className="space-y-5">\n      <ChondroAnimalRecordActions key={animal.id} animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} favorite={favorite} />\n      <div className="rounded-[24px]',
+  );
+} else {
+  collection = collection.replace(
+    '<ChondroAnimalRecordActions animalId={animal.id}',
+    '<ChondroAnimalRecordActions key={animal.id} animalId={animal.id}',
   );
 }
 fs.writeFileSync(collectionFile, collection);
@@ -68,7 +73,7 @@ workspace = workspace.replace(
 
 workspace = workspace.replace(
   'colony: { eyebrow: "Collection", title: "Colony", detail: "Inspect active animals, testing, care, enclosure capacity and retired breeders." },',
-  'colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for naming, notes, pedigree and detailed records; enclosure capacity stays above the collection." },',
+  'colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for naming, testing, notes, sale, retirement and detailed records; enclosure capacity stays above the collection." },',
 );
 
 workspace = workspace.replace(
