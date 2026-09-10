@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-09-f";
+const TRAIT_ART_VERSION = "2026-09-09-g";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -43,7 +43,18 @@ function traitValue(traits: PortraitTraits, key: TraitKey) {
 }
 
 function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
-  if (!traits) return baseArtBySubspecies[subspecies];
+  // Utaraensis and Viridis now have native-resolution base portraits. Their
+  // existing trait WebPs are much smaller and were silently replacing the
+  // sharp base image whenever a trait reached 70%+, making the snake appear
+  // blurry again. Keep these two on the high-resolution base art until their
+  // trait matrix is rebuilt at matching resolution.
+  if (
+    !traits ||
+    subspecies === "Morelia azurea utaraensis" ||
+    subspecies === "Morelia viridis"
+  ) {
+    return baseArtBySubspecies[subspecies];
+  }
 
   const blue = traitValue(traits, "blueStripe");
   if (blue >= 100) {
