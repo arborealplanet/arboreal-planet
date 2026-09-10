@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ReactNode } from "react";
 import { ChondroTraitFocusPanel } from "@/components/ChondroTraitFocusPanel";
 import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
@@ -9,7 +8,6 @@ import { ChondroAchievementsPanel } from "@/components/ChondroAchievementsPanel"
 import { ChondroCareerSystemsPanel } from "@/components/ChondroCareerSystemsPanel";
 import { ChondroBreederLines } from "@/components/ChondroBreederLines";
 import { ChondroBreederSocial } from "@/components/ChondroBreederSocial";
-import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
 import { ChondroProjectTagsPanel } from "@/components/ChondroProjectTagsPanel";
@@ -17,78 +15,80 @@ import { ChondroSeasonSummaryPanel } from "@/components/ChondroSeasonSummaryPane
 import { ChondroShowsPanel } from "@/components/ChondroShowsPanel";
 import { ChondroRoomExpansionPanel } from "@/components/ChondroRoomExpansionPanel";
 
-type Tab = "manage" | "career" | "projects" | "community";
+export type BreederManagementSection = "colony" | "career" | "projects" | "community";
 
-const tabs: Array<{ id: Tab; label: string; detail: string }> = [
-  { id: "manage", label: "Manage", detail: "Pairings · collection · clutch records · favorites" },
-  { id: "career", label: "Career", detail: "Rooms · shows · contracts · achievements" },
-  { id: "projects", label: "Projects", detail: "Tags · lines · progression · conservation" },
-  { id: "community", label: "Community", detail: "Breeder social features" },
-];
+const meta: Record<BreederManagementSection, { eyebrow: string; title: string; detail: string }> = {
+  colony: { eyebrow: "Colony", title: "Animals & breeding records", detail: "Pairings, collection management, clutch history, trait focus and favorites." },
+  career: { eyebrow: "Career", title: "Facility & progression", detail: "Rooms, show circuit, contracts, season results and achievements." },
+  projects: { eyebrow: "Projects", title: "Breeding projects", detail: "Project tags and breeder lines without burying them inside another tab set." },
+  community: { eyebrow: "Breeder network", title: "Community", detail: "Social features for the Chondro Breeder player network." },
+};
 
-export function ChondroBreederCommandCenter() {
-  const [tab, setTab] = useState<Tab>("manage");
-  const active = tabs.find((item) => item.id === tab) ?? tabs[0];
-
+export function ChondroBreederManagementView({ section }: { section: BreederManagementSection }) {
+  const active = meta[section];
   return (
     <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
-      <div className="panel overflow-hidden rounded-[28px]">
-        <div className="border-b border-white/[.06] px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="section-kicker">Breeder management</div>
-              <div className="mt-1 text-sm font-bold text-white/70">{active.label}</div>
-              <div className="mt-1 text-[10px] text-white/30">{active.detail}</div>
-            </div>
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-white/[.06] bg-black/20 p-1">
-              {tabs.map((item) => (
-                <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] transition ${tab === item.id ? "bg-white/10 text-white/80" : "text-white/35 hover:text-white/60"}`}>{item.label}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="max-h-[72vh] overflow-y-auto p-3 sm:p-4">
-          {tab === "manage" ? (
-            <div className="space-y-3">
-              <CompactBlock title="Pairing Planner" defaultOpen><ChondroPairingPlanner /></CompactBlock>
-              <CompactBlock title="Clutch History"><ChondroClutchHistoryTable /></CompactBlock>
-              <CompactBlock title="Trait Focus"><ChondroTraitFocusPanel /></CompactBlock>
-              <CompactBlock title="Favorites & Player Market"><ChondroFavoritesMarketPanel /></CompactBlock>
-              <ChondroCollectionManager />
-            </div>
-          ) : null}
-
-          {tab === "career" ? (
-            <div className="space-y-3">
-              <CompactBlock title="Rooms & Facility Expansion" defaultOpen><ChondroRoomExpansionPanel /></CompactBlock>
-              <ChondroSeasonSummaryPanel />
-              <CompactBlock title="Show Circuit"><ChondroShowsPanel /></CompactBlock>
-              <ChondroCareerSystemsPanel />
-              <CompactBlock title="Achievements & Titles"><ChondroAchievementsPanel /></CompactBlock>
-            </div>
-          ) : null}
-
-          {tab === "projects" ? (
-            <div className="space-y-3">
-              <CompactBlock title="Animal Project Tags" defaultOpen><ChondroProjectTagsPanel /></CompactBlock>
-              <CompactBlock title="Breeder Lines" defaultOpen><ChondroBreederLines /></CompactBlock>
-              <CompactBlock title="Conservation Partnerships"><ChondroConservationPartnerships /></CompactBlock>
-            </div>
-          ) : null}
-
-          {tab === "community" ? <ChondroBreederSocial /> : null}
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="section-kicker">{active.eyebrow}</div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-.03em] text-white sm:text-3xl">{active.title}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/48">{active.detail}</p>
         </div>
       </div>
+
+      {section === "colony" ? (
+        <div className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
+          <div className="space-y-4">
+            <FocusCard title="Pairing Planner" defaultOpen><ChondroPairingPlanner /></FocusCard>
+            <FocusCard title="Collection" defaultOpen><ChondroCollectionManager /></FocusCard>
+          </div>
+          <div className="space-y-4">
+            <FocusCard title="Clutch History" defaultOpen><ChondroClutchHistoryTable /></FocusCard>
+            <FocusCard title="Trait Focus"><ChondroTraitFocusPanel /></FocusCard>
+            <FocusCard title="Favorites & Player Market"><ChondroFavoritesMarketPanel /></FocusCard>
+          </div>
+        </div>
+      ) : null}
+
+      {section === "career" ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-4">
+            <FocusCard title="Rooms & Facility Expansion" defaultOpen><ChondroRoomExpansionPanel /></FocusCard>
+            <ChondroSeasonSummaryPanel />
+          </div>
+          <div className="space-y-4">
+            <FocusCard title="Show Circuit" defaultOpen><ChondroShowsPanel /></FocusCard>
+            <ChondroCareerSystemsPanel />
+            <FocusCard title="Achievements & Titles"><ChondroAchievementsPanel /></FocusCard>
+          </div>
+        </div>
+      ) : null}
+
+      {section === "projects" ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <FocusCard title="Animal Project Tags" defaultOpen><ChondroProjectTagsPanel /></FocusCard>
+          <FocusCard title="Breeder Lines" defaultOpen><ChondroBreederLines /></FocusCard>
+        </div>
+      ) : null}
+
+      {section === "community" ? <ChondroBreederSocial /> : null}
     </section>
   );
 }
 
-function CompactBlock({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
+/** Compatibility wrapper for older imports. */
+export function ChondroBreederCommandCenter() {
+  return <ChondroBreederManagementView section="colony" />;
+}
+
+function FocusCard({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   return (
-    <details open={defaultOpen} className="rounded-2xl border border-white/[.06] bg-black/10">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-white/60 [&::-webkit-details-marker]:hidden"><span>{title}</span><span className="text-lg text-white/30">+</span></summary>
-      <div className="border-t border-white/[.05] p-3">{children}</div>
+    <details open={defaultOpen} className="panel overflow-hidden rounded-3xl">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-bold text-white/72 [&::-webkit-details-marker]:hidden">
+        <span>{title}</span>
+        <span className="grid h-7 w-7 place-items-center rounded-full border border-white/[.08] text-sm text-white/38">+</span>
+      </summary>
+      <div className="border-t border-white/[.05] p-3 sm:p-4">{children}</div>
     </details>
   );
 }
