@@ -27,6 +27,13 @@ if (!workspace.includes('import { ChondroCollectionManager } from "@/components/
   );
 }
 
+if (!workspace.includes('import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";')) {
+  workspace = workspace.replace(
+    'import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";\n',
+    'import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";\nimport { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";\n',
+  );
+}
+
 workspace = workspace.replace(
   '{view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}',
   '{view === "colony" ? <><div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroCollectionManager /></div><div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div></> : null}',
@@ -46,6 +53,15 @@ workspace = workspace.replace(
   'market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Buy chondros from rotating game inventory or browse animals listed by other breeders." },',
   'market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Browse one clear game inventory below, then use the player market for breeder-to-breeder listings." },',
 );
+
+const oldMarketOrder = `      <ChondroBreederGameV3 screen={view} />
+      {view === "market" ? <ChondroBreederExpandedShop /> : null}
+      {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}`;
+const newMarketOrder = `      {view === "market" ? <ChondroBreederExpandedShop /> : null}
+      <ChondroBreederGameV3 screen={view} />
+      {view === "market" ? <ChondroFavoritesMarketPanel /> : null}
+      {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}`;
+if (workspace.includes(oldMarketOrder)) workspace = workspace.replace(oldMarketOrder, newMarketOrder);
 
 fs.writeFileSync(workspaceFile, workspace);
 console.log("Focused Chondro colony, clutch and store screens around dedicated UI components.");
