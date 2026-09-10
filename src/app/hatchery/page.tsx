@@ -31,7 +31,7 @@ export default function HatcheryPage() {
               <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Chondro Breeder</h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Start small, choose a breeding strategy, build your colony and shape the lines that follow. Real-time breeding stages, facility space, disease risk, projects, shows and long-term progression make each program develop differently.</p>
               <div className="mt-7 flex flex-wrap gap-2">{["Cycling", "Pairing", "Incubation", "Hatch Day", "Lineage", "Facilities", "Shows", "Research"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
-              <Link href="/arcade/enter?next=%2Farcade%2Fchondro-breeder" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Chondro Breeder</Link>
+              <Link href="/arcade/chondro-breeder" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Chondro Breeder</Link>
             </div>
 
             <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">

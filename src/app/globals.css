@@ -100,7 +100,7 @@ button { cursor: pointer; }
 }
 
 .arcade-load-progress {
-  animation: arcade-load-progress 6s linear forwards;
+  animation: arcade-load-progress 3s linear forwards;
 }
 
 /* Conservation map subspecies focus. Keep the chosen artwork intact and add a

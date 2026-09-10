@@ -9,7 +9,7 @@ export function ArcadeTransition({ destination }: { destination: "/arcade" | "/a
 
   useEffect(() => {
     router.prefetch(destination);
-    const timer = window.setTimeout(() => router.replace(destination), 6000);
+    const timer = window.setTimeout(() => router.replace(destination), 3000);
     return () => window.clearTimeout(timer);
   }, [destination, router]);
 
