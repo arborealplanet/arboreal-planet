@@ -17,6 +17,26 @@ if (!game.includes("hideLegacySectionForFocusedScreen")) {
 
 fs.writeFileSync(gameFile, game);
 
+const collectionFile = "src/components/ChondroCollectionManager.tsx";
+let collection = fs.readFileSync(collectionFile, "utf8");
+if (!collection.includes('import { ChondroAnimalRecordActions } from "@/components/ChondroAnimalRecordActions";')) {
+  collection = collection.replace(
+    'import { ChondroFocusOverlay } from "@/components/ChondroFocusOverlay";\n',
+    'import { ChondroFocusOverlay } from "@/components/ChondroFocusOverlay";\nimport { ChondroAnimalRecordActions } from "@/components/ChondroAnimalRecordActions";\n',
+  );
+}
+collection = collection.replace(
+  '    window.addEventListener("arboreal-chondro-favorites-change", refresh);\n    return () => { cancelled = true; window.removeEventListener("arboreal-chondro-favorites-change", refresh); };',
+  '    window.addEventListener("arboreal-chondro-favorites-change", refresh);\n    window.addEventListener("arboreal-chondro-breeder-save-change", refresh);\n    return () => { cancelled = true; window.removeEventListener("arboreal-chondro-favorites-change", refresh); window.removeEventListener("arboreal-chondro-breeder-save-change", refresh); };',
+);
+if (!collection.includes('<ChondroAnimalRecordActions')) {
+  collection = collection.replace(
+    '  return (\n    <div className="space-y-5">\n      <div className="rounded-[24px]',
+    '  return (\n    <div className="space-y-5">\n      <ChondroAnimalRecordActions animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} favorite={favorite} />\n      <div className="rounded-[24px]',
+  );
+}
+fs.writeFileSync(collectionFile, collection);
+
 const workspaceFile = "src/components/ChondroBreederWorkspace.tsx";
 let workspace = fs.readFileSync(workspaceFile, "utf8");
 
@@ -48,7 +68,7 @@ workspace = workspace.replace(
 
 workspace = workspace.replace(
   'colony: { eyebrow: "Collection", title: "Colony", detail: "Inspect active animals, testing, care, enclosure capacity and retired breeders." },',
-  'colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for pedigree and detailed records; enclosure capacity stays above the collection." },',
+  'colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for naming, notes, pedigree and detailed records; enclosure capacity stays above the collection." },',
 );
 
 workspace = workspace.replace(
