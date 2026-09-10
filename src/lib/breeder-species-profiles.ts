@@ -2,6 +2,12 @@ export type BreederLifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 export type BreederSex = "Male" | "Female";
 export type BreederCondition = "Excellent" | "Good" | "Fair";
 export type NeonateColor = "Red" | "Yellow";
+export type BreederTraitKey =
+  | "highBlack"
+  | "highWhite"
+  | "blueStripe"
+  | "yellowRetention"
+  | "blotches";
 
 export type GrowthStep = {
   next: BreederLifeStage;
@@ -44,12 +50,17 @@ export type SpeciesNeonateProfile = {
   allowedColorsByTaxon: Record<string, NeonateColor[]>;
 };
 
+export type SpeciesTraitProfile = {
+  preferredByTaxon: Record<string, BreederTraitKey[]>;
+};
+
 export type BreederSpeciesProfile = {
   id: string;
   displayName: string;
   growth: SpeciesGrowthProfile;
   reproduction: SpeciesReproductionProfile;
   neonates: SpeciesNeonateProfile;
+  traits: SpeciesTraitProfile;
 };
 
 export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
@@ -88,6 +99,14 @@ export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
     redChance: 0.38,
     allowedColorsByTaxon: {
       "Morelia viridis": ["Yellow"],
+    },
+  },
+  traits: {
+    preferredByTaxon: {
+      "Morelia azurea azurea": ["highBlack", "yellowRetention"],
+      "Morelia azurea pulcher": ["yellowRetention", "blueStripe"],
+      "Morelia azurea utaraensis": ["blueStripe", "highWhite"],
+      "Morelia viridis": ["highWhite", "highBlack"],
     },
   },
 };
