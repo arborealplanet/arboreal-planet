@@ -1,5 +1,7 @@
 export type BreederLifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 export type BreederSex = "Male" | "Female";
+export type BreederCondition = "Excellent" | "Good" | "Fair";
+export type NeonateColor = "Red" | "Yellow";
 
 export type GrowthStep = {
   next: BreederLifeStage;
@@ -15,10 +17,39 @@ export type SpeciesGrowthProfile = {
   annualCareCost: number;
 };
 
+export type BreedingStageDefinition = {
+  id: string;
+  label: string;
+  hours: number;
+};
+
+export type SpeciesRecoveryProfile = {
+  baseExtraYearChance: number;
+  clutchSizeBaseline: number;
+  chancePerAdditionalOffspring: number;
+  excellentConditionAdjustment: number;
+  fairConditionAdjustment: number;
+  minimumChance: number;
+  maximumChance: number;
+};
+
+export type SpeciesReproductionProfile = {
+  stages: BreedingStageDefinition[];
+  seasonCarePerAdult: number;
+  recovery: SpeciesRecoveryProfile;
+};
+
+export type SpeciesNeonateProfile = {
+  redChance: number;
+  allowedColorsByTaxon: Record<string, NeonateColor[]>;
+};
+
 export type BreederSpeciesProfile = {
   id: string;
   displayName: string;
   growth: SpeciesGrowthProfile;
+  reproduction: SpeciesReproductionProfile;
+  neonates: SpeciesNeonateProfile;
 };
 
 export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
@@ -33,6 +64,31 @@ export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
     },
     feederUnitCost: 2.5,
     annualCareCost: 1500,
+  },
+  reproduction: {
+    stages: [
+      { id: "cycling", label: "Cycling", hours: 4 },
+      { id: "pairing", label: "Pairing", hours: 8 },
+      { id: "laying", label: "Laying", hours: 12 },
+      { id: "incubation", label: "Incubation", hours: 24 },
+      { id: "hatch-day", label: "Hatch Day", hours: 2 },
+    ],
+    seasonCarePerAdult: 180,
+    recovery: {
+      baseExtraYearChance: 0.28,
+      clutchSizeBaseline: 6,
+      chancePerAdditionalOffspring: 0.06,
+      excellentConditionAdjustment: -0.12,
+      fairConditionAdjustment: 0.20,
+      minimumChance: 0.12,
+      maximumChance: 0.80,
+    },
+  },
+  neonates: {
+    redChance: 0.38,
+    allowedColorsByTaxon: {
+      "Morelia viridis": ["Yellow"],
+    },
   },
 };
 
@@ -61,4 +117,37 @@ export function growthCostFor(
         100,
     ) / 100
   );
+}
+
+export function normalizeNeonateColorFor(
+  profile: BreederSpeciesProfile,
+  taxon: string,
+  requested: NeonateColor,
+): NeonateColor {
+  const allowed = profile.neonates.allowedColorsByTaxon[taxon];
+  if (!allowed?.length || allowed.includes(requested)) return requested;
+  return allowed[0];
+}
+
+export function randomNeonateColorFor(
+  profile: BreederSpeciesProfile,
+  random: () => number = Math.random,
+): NeonateColor {
+  return random() < profile.neonates.redChance ? "Red" : "Yellow";
+}
+
+export function needsExtraRecoveryYear(
+  profile: BreederSpeciesProfile,
+  condition: BreederCondition,
+  clutchSize: number,
+  random: () => number = Math.random,
+) {
+  const recovery = profile.reproduction.recovery;
+  let chance =
+    recovery.baseExtraYearChance +
+    Math.max(0, clutchSize - recovery.clutchSizeBaseline) * recovery.chancePerAdditionalOffspring;
+  if (condition === "Excellent") chance += recovery.excellentConditionAdjustment;
+  if (condition === "Fair") chance += recovery.fairConditionAdjustment;
+  chance = Math.max(recovery.minimumChance, Math.min(recovery.maximumChance, chance));
+  return random() < chance;
 }
