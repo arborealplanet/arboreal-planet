@@ -23,7 +23,7 @@ const tabs: Array<{ id: Tab; label: string; detail: string }> = [
   { id: "manage", label: "Manage", detail: "Pairings · collection · clutch records · favorites" },
   { id: "career", label: "Career", detail: "Rooms · shows · contracts · achievements" },
   { id: "projects", label: "Projects", detail: "Tags · lines · progression · conservation" },
-  { id: "community", label: "Community", detail: "Social breeder systems" },
+  { id: "community", label: "Community", detail: "Breeder social features" },
 ];
 
 export function ChondroBreederCommandCenter() {
@@ -36,7 +36,7 @@ export function ChondroBreederCommandCenter() {
         <div className="border-b border-white/[.06] px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="section-kicker">Breeder command center</div>
+              <div className="section-kicker">Breeder management</div>
               <div className="mt-1 text-sm font-bold text-white/70">{active.label}</div>
               <div className="mt-1 text-[10px] text-white/30">{active.detail}</div>
             </div>
