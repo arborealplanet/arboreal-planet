@@ -1,0 +1,51 @@
+name: Rebuild native Chondro base assets
+
+on:
+  push:
+    branches:
+      - asset-native1254-final
+    paths:
+      - '.github/workflows/rebuild-chondro-native1254.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rebuild native-resolution base portraits
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat .asset-native1254-q50/ut-*.txt | base64 --decode > public/hatchery/snakes/utaraensis.avif
+          cat .asset-native1254-q50/vi-*.txt | base64 --decode > public/hatchery/snakes/viridis.avif
+
+          test "$(stat -c%s public/hatchery/snakes/utaraensis.avif)" -eq 86147
+          test "$(stat -c%s public/hatchery/snakes/viridis.avif)" -eq 99098
+
+          echo "8b1effa0bc624ad0aaf4f389d42e7373ea84ba8d729f2d79ad31071c8a00ce85  public/hatchery/snakes/utaraensis.avif" | sha256sum -c -
+          echo "53f75391f8f4d56d811551375459d18664206cc9bb6f557bbc372b0a7e11f1f7  public/hatchery/snakes/viridis.avif" | sha256sum -c -
+
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/components/ChondroSnakeIcon.tsx')
+          text = path.read_text()
+          old = 'const TRAIT_ART_VERSION = "2026-09-09-e";'
+          new = 'const TRAIT_ART_VERSION = "2026-09-09-f";'
+          if old not in text:
+              raise SystemExit('expected cache version not found')
+          path.write_text(text.replace(old, new))
+          PY
+
+          rm -rf .asset-native1254-q50 .asset-native1254
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/hatchery/snakes/utaraensis.avif public/hatchery/snakes/viridis.avif src/components/ChondroSnakeIcon.tsx .asset-native1254-q50 .asset-native1254
+          git commit -m 'Install native-resolution Utaraensis and Viridis portraits'
+          git push
