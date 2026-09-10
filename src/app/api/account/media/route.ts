@@ -47,5 +47,28 @@ export async function POST(request: Request) {
   }
 
   const publicUrl = `${SUPABASE_AUTH_URL}/storage/v1/object/public/${bucket}/${path}`;
-  return NextResponse.json({ ok: true, path, publicUrl });
+  const field = bucket === "avatars" ? "avatar_url" : "banner_url";
+  const persist = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(identity.user.id)}`, {
+    method: "PATCH",
+    headers: {
+      apikey: SUPABASE_AUTH_KEY,
+      Authorization: `Bearer ${identity.token}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({ [field]: publicUrl, updated_at: new Date().toISOString() }),
+    cache: "no-store",
+  });
+
+  const saved = await persist.json().catch(() => null);
+  if (!persist.ok || !Array.isArray(saved) || saved.length === 0) {
+    await fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/${bucket}/${path}`, {
+      method: "DELETE",
+      headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}` },
+      cache: "no-store",
+    }).catch(() => null);
+    return NextResponse.json({ error: "Image uploaded but could not be attached to your profile. Please try again.", detail: saved }, { status: persist.ok ? 409 : persist.status });
+  }
+
+  return NextResponse.json({ ok: true, path, publicUrl, profile: saved[0] });
 }
