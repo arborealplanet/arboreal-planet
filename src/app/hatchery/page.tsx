@@ -36,6 +36,15 @@ export default function HatcheryPage() {
 
             <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">
               <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />
+              <div className="border-t border-white/[.06] bg-[#030806] p-3">
+                <div className="grid grid-cols-[88px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">
+                  <Image src="/hatchery/game/fresh-eggs.webp" alt="Chondro Breeder illustrated clutch art" width={220} height={220} className="h-auto w-full rounded-[14px]" />
+                  <div>
+                    <div className="text-[9px] font-bold uppercase tracking-[.16em] text-emerald-200/50">Inside the game</div>
+                    <div className="mt-1 text-sm font-semibold text-white/72">Clutches now use Arboreal Planet game art.</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -66,8 +75,30 @@ export default function HatcheryPage() {
 
       <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="panel-soft rounded-3xl p-6"><div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div><h3 className="mt-3 text-xl font-semibold text-white/65">Research & Genetics</h3><p className="mt-2 text-sm leading-6 text-white/32">Genetic testing unlocks later in the breeder career, takes real time and expands as the operation grows.</p></div>
-          <div className="panel-soft rounded-3xl p-6"><div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div><h3 className="mt-3 text-xl font-semibold text-white/65">Rooms & Facility Growth</h3><p className="mt-2 text-sm leading-6 text-white/32">Add reptile rooms, breeding rooms, grow-out space and research capacity as the collection expands.</p></div>
+          <div className="panel-soft overflow-hidden rounded-3xl">
+            <div className="grid items-center gap-4 p-5 sm:grid-cols-[130px_1fr] sm:p-6">
+              <div className="overflow-hidden rounded-[20px] border border-emerald-300/10 bg-black/30">
+                <Image src="/hatchery/game/fresh-eggs.webp" alt="Illustrated Chondro Breeder clutch" width={560} height={560} className="h-auto w-full" />
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div>
+                <h3 className="mt-3 text-xl font-semibold text-white/65">Breeding & Genetics</h3>
+                <p className="mt-2 text-sm leading-6 text-white/32">Pairing, clutch development and genetic testing become part of a visual breeding program instead of living only in tables and timers.</p>
+              </div>
+            </div>
+          </div>
+          <div className="panel-soft overflow-hidden rounded-3xl">
+            <div className="grid items-center gap-4 p-5 sm:grid-cols-[130px_1fr] sm:p-6">
+              <div className="overflow-hidden rounded-[20px] border border-amber-200/10 bg-black/30">
+                <Image src="/hatchery/game/incubator.webp" alt="Illustrated Chondro Breeder incubator" width={560} height={560} className="h-auto w-full" />
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div>
+                <h3 className="mt-3 text-xl font-semibold text-white/65">Rooms & Facility Growth</h3>
+                <p className="mt-2 text-sm leading-6 text-white/32">Add breeder capacity, incubation and research infrastructure as the collection expands.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
