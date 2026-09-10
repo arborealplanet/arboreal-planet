@@ -1,6 +1,12 @@
 type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
-type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
-type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
+type PortraitTraits = {
+  highBlack?: number;
+  highWhite?: number;
+  blueStripe?: number;
+  blue?: number;
+  yellowRetention?: number;
+  blotches?: number;
+};
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
@@ -19,28 +25,8 @@ const slugBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea utaraensis": "utaraensis",
   "Morelia viridis": "viridis",
 };
-const slugByTrait: Record<TraitKey, string> = {
-  highBlack: "high-black",
-  highWhite: "high-white",
-  blueStripe: "blue",
-  yellowRetention: "yellow",
-  blotches: "blotches",
-};
 
 const withVersion = (src: string) => `${src}?v=${TRAIT_ART_VERSION}`;
-
-function portraitTier(value: number) {
-  if (value >= 100) return 100;
-  if (value >= 95) return 95;
-  if (value >= 85) return 85;
-  if (value >= 70) return 70;
-  return null;
-}
-
-function traitValue(traits: PortraitTraits, key: TraitKey) {
-  if (key === "blueStripe") return Number(traits.blueStripe ?? traits.blue ?? 0);
-  return Number(traits[key] ?? 0);
-}
 
 function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
   // Quality guard: the current adult trait matrix is made from legacy small
