@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-const timeRanges = ["1M", "3M", "6M", "1Y", "5Y", "ALL"];
+const timeRanges = ["1M", "3M", "1Y", "3Y", "5Y", "10Y", "ALL"];
 const origins = ["All origins", "Captive Bred", "Import"];
 const colors = ["All neo colors", "Red", "Yellow"];
 const sexes = ["All sexes", "Female", "Male"];
@@ -66,7 +66,7 @@ export function SnakeStocksExplorer() {
     const bits = [marketGroup, locality, origin, neoColor, sex, age].filter(
       (value) => !value.startsWith("All ") && value !== "All market groups"
     );
-    return bits.length ? bits.join(" · ") : "Entire Green Tree Python market structure";
+    return bits.length ? bits.join(" · ") : "Entire Green Tree Python market";
   }, [marketGroup, locality, origin, neoColor, sex, age]);
 
   return (
@@ -75,10 +75,10 @@ export function SnakeStocksExplorer() {
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-300/65">Green Tree Python</div>
           <h2 className="mt-1.5 text-2xl font-semibold">Morelia viridis complex market explorer</h2>
-          <p className="mt-2 text-xs text-white/30">Layout mode only. Market-group selection now controls which locality filters are available, so animals cannot accidentally drift into the wrong subspecies deck.</p>
+          <p className="mt-2 text-xs text-white/30">Filter market observations by subspecies group, locality, origin, neonate color, sex and age.</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <span className="rounded-full border border-amber-300/15 bg-amber-300/[.04] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.13em] text-amber-100/55">No dataset loaded</span>
+          <span className="rounded-full border border-amber-300/15 bg-amber-300/[.04] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.13em] text-amber-100/55">Dataset pending review</span>
           <div className="inline-flex w-fit rounded-xl border border-white/[.07] bg-black/15 p-1 text-[11px] font-bold">
             {(["FOR SALE", "SOLD HISTORY"] as const).map((item) => (
               <button key={item} onClick={() => setMode(item)} className={`rounded-lg px-4 py-2 transition ${mode === item ? "bg-emerald-300 text-[#06100c]" : "text-white/38 hover:text-white/60"}`}>{item}</button>
@@ -122,8 +122,8 @@ export function SnakeStocksExplorer() {
         <div className="absolute inset-0 grid place-items-center px-6 text-center">
           <div className="max-w-md">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/15 bg-emerald-300/[.05] text-lg text-emerald-200/60">↗</div>
-            <div className="mt-4 text-base font-semibold text-white/62">Layout preview only</div>
-            <p className="mt-2 text-xs leading-5 text-white/30">The next clean dataset will plug into this filter hierarchy. Until then, no price line, count or market statistic is displayed.</p>
+            <div className="mt-4 text-base font-semibold text-white/62">Market data pending</div>
+            <p className="mt-2 text-xs leading-5 text-white/30">Price lines and summary statistics will appear after the replacement dataset completes source review and normalization.</p>
           </div>
         </div>
         <div className="absolute inset-x-5 bottom-5 flex justify-between text-[9px] text-white/18"><span>OLDER</span><span>RECENT</span></div>
@@ -131,7 +131,7 @@ export function SnakeStocksExplorer() {
 
       <div className="flex flex-col gap-2 border-t border-white/[.06] bg-black/10 px-5 py-4 text-[10px] leading-5 text-white/28 sm:flex-row sm:items-center sm:justify-between">
         <span>Market group → locality → origin → sex / age / neonate color</span>
-        <span className="font-bold uppercase tracking-[.12em] text-emerald-300/45">Structure before data</span>
+        <span className="font-bold uppercase tracking-[.12em] text-emerald-300/45">Median-first analysis</span>
       </div>
     </div>
   );
