@@ -2,14 +2,11 @@
 
 import type { ReactNode } from "react";
 import { ChondroTraitFocusPanel } from "@/components/ChondroTraitFocusPanel";
-import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
 import { ChondroAchievementsPanel } from "@/components/ChondroAchievementsPanel";
 import { ChondroCareerSystemsPanel } from "@/components/ChondroCareerSystemsPanel";
 import { ChondroBreederLines } from "@/components/ChondroBreederLines";
 import { ChondroBreederSocial } from "@/components/ChondroBreederSocial";
-import { ChondroPairingPlanner } from "@/components/ChondroPairingPlanner";
-import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
 import { ChondroProjectTagsPanel } from "@/components/ChondroProjectTagsPanel";
 import { ChondroSeasonSummaryPanel } from "@/components/ChondroSeasonSummaryPanel";
 import { ChondroShowsPanel } from "@/components/ChondroShowsPanel";
@@ -18,9 +15,9 @@ import { ChondroRoomExpansionPanel } from "@/components/ChondroRoomExpansionPane
 export type BreederManagementSection = "colony" | "career" | "projects" | "community";
 
 const meta: Record<BreederManagementSection, { eyebrow: string; title: string; detail: string }> = {
-  colony: { eyebrow: "Colony", title: "Animals & breeding records", detail: "Pairings, collection management, clutch history, trait focus and favorites." },
+  colony: { eyebrow: "Colony", title: "Animals", detail: "Search, inspect and manage your active breeding animals without mixing in clutch, market or career systems." },
   career: { eyebrow: "Career", title: "Facility & progression", detail: "Rooms, show circuit, contracts, season results and achievements." },
-  projects: { eyebrow: "Projects", title: "Breeding projects", detail: "Project tags and breeder lines without burying them inside another tab set." },
+  projects: { eyebrow: "Projects", title: "Breeding projects", detail: "Project tags, breeder lines and phenotype goals in one focused workspace." },
   community: { eyebrow: "Breeder network", title: "Community", detail: "Social features for the Chondro Breeder player network." },
 };
 
@@ -36,19 +33,7 @@ export function ChondroBreederManagementView({ section }: { section: BreederMana
         </div>
       </div>
 
-      {section === "colony" ? (
-        <div className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
-          <div className="space-y-4">
-            <FocusCard title="Pairing Planner" defaultOpen><ChondroPairingPlanner /></FocusCard>
-            <FocusCard title="Collection" defaultOpen><ChondroCollectionManager /></FocusCard>
-          </div>
-          <div className="space-y-4">
-            <FocusCard title="Clutch History" defaultOpen><ChondroClutchHistoryTable /></FocusCard>
-            <FocusCard title="Trait Focus"><ChondroTraitFocusPanel /></FocusCard>
-            <FocusCard title="Favorites & Player Market"><ChondroFavoritesMarketPanel /></FocusCard>
-          </div>
-        </div>
-      ) : null}
+      {section === "colony" ? <ChondroCollectionManager /> : null}
 
       {section === "career" ? (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -66,7 +51,10 @@ export function ChondroBreederManagementView({ section }: { section: BreederMana
 
       {section === "projects" ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          <FocusCard title="Animal Project Tags" defaultOpen><ChondroProjectTagsPanel /></FocusCard>
+          <div className="space-y-4">
+            <FocusCard title="Animal Project Tags" defaultOpen><ChondroProjectTagsPanel /></FocusCard>
+            <FocusCard title="Trait Focus"><ChondroTraitFocusPanel /></FocusCard>
+          </div>
           <FocusCard title="Breeder Lines" defaultOpen><ChondroBreederLines /></FocusCard>
         </div>
       ) : null}
