@@ -7,6 +7,7 @@ import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
 import { breedingReputationGain, marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
 import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
+import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor } from "@/lib/breeder-species-profiles";
 
 type Subspecies =
   | "Morelia azurea azurea"
@@ -128,8 +129,6 @@ const BREEDING_STAGES: Array<{ id: BreedingStage; label: string; hours: number }
   { id: "hatch-day", label: "Hatch Day", hours: 2 },
 ];
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
-const RODENT_COST = 2.5;
-const CARE_PER_YEAR = 1500;
 const DAY_MS = 86_400_000;
 const enclosurePrices: Record<EnclosureType, number> = {
   "Chondro Dojo Bin": 225,
@@ -607,17 +606,13 @@ function saleValue(a: Snake, season: number) {
 }
 
 function agingRequirement(a: Snake) {
-  if (a.lifeStage === "Adult") return null;
-  if (a.lifeStage === "Hatchling") return { next: "Neonate" as LifeStage, mice: 25, months: 6 };
-  if (a.lifeStage === "Neonate") return { next: "Subadult" as LifeStage, mice: 150, months: 36 };
-  if (a.sex === "Female") return { next: "Adult" as LifeStage, mice: 100, months: 24 };
-  return { next: "Adult" as LifeStage, mice: 25, months: 6 };
+  const requirement = growthRequirementFor(CHONDRO_SPECIES_PROFILE, a.lifeStage, a.sex);
+  return requirement
+    ? { next: requirement.next as LifeStage, mice: requirement.feederUnits, months: requirement.months }
+    : null;
 }
 function agingCost(a: Snake) {
-  const req = agingRequirement(a);
-  return req
-    ? Math.round((req.mice * RODENT_COST + (req.months / 12) * CARE_PER_YEAR) * 100) / 100
-    : 0;
+  return growthCostFor(CHONDRO_SPECIES_PROFILE, a.lifeStage, a.sex);
 }
 
 function isGameSave(value: unknown): value is GameSave {
