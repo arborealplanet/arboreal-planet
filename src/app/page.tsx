@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
 import { ArborealsByBunnBadge } from "@/components/BrandVisuals";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 
@@ -19,7 +20,12 @@ export default function Home() {
       <section className="noise-surface relative overflow-hidden border-b border-white/[.06]">
         <div className="pointer-events-none absolute -right-24 top-16 h-[520px] w-[520px] rounded-full border border-emerald-300/[.06] bg-emerald-400/[.025]" />
         <div className="pointer-events-none absolute right-20 top-40 h-64 w-64 rounded-full bg-emerald-300/[.04] blur-3xl" />
-        <div className="mx-auto grid min-h-[720px] max-w-7xl items-center gap-12 px-5 py-16 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:py-20">
+
+        <div className="relative z-10 mx-auto flex max-w-7xl justify-center px-5 pt-5 sm:px-6 sm:pt-7 lg:pt-8">
+          <HomeLogoAnimation />
+        </div>
+
+        <div className="mx-auto grid min-h-[650px] max-w-7xl items-center gap-12 px-5 pb-16 pt-4 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:pb-20 lg:pt-2">
           <div className="relative z-10">
             <div className="section-kicker">The arboreal keeper network</div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[.98] tracking-[-.05em] text-white sm:text-6xl lg:text-[72px]">
@@ -39,8 +45,23 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative z-10 flex min-h-[560px] items-center justify-center">
-            <HomeLogoAnimation />
+          <div className="relative z-10 min-h-[560px]">
+            <div className="absolute -left-4 top-8 h-20 w-20 opacity-55 sm:h-28 sm:w-28"><PitcherPlantArt /></div>
+            <div className="panel relative overflow-hidden rounded-[34px] border-emerald-300/10">
+              <div className="relative h-[365px] overflow-hidden border-b border-white/[.06] bg-[radial-gradient(circle_at_60%_40%,rgba(57,230,125,.08),transparent_34%),linear-gradient(160deg,#0b1b13,#07100c)] sm:h-[410px]">
+                <div className="absolute inset-0 grid-surface opacity-35" />
+                <div className="absolute inset-x-0 bottom-0 h-[94%]"><GreenTreePythonArt /></div>
+                <div className="absolute left-5 top-5 rounded-full border border-emerald-300/15 bg-black/25 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/70">Green Tree Python · Reference Species</div>
+                <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
+                  <div><div className="text-xs italic text-white/35">Morelia viridis complex</div><div className="mt-1 text-xl font-semibold">Animal data ↔ market data</div></div>
+                  <Link href="/animals/green-tree-python" className="rounded-xl border border-white/[.09] bg-black/30 px-3 py-2 text-[10px] font-bold text-white/60 backdrop-blur">OPEN RECORD →</Link>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4">
+                {[["Current evidence","131"],["Sold evidence","340"],["Public origins","2"],["Fake prices","0"]].map(([label,value],i)=><div key={label} className={`p-4 ${i<3?"border-r border-white/[.055]":""}`}><div className="text-[8px] font-bold uppercase tracking-[.14em] text-white/23">{label}</div><div className="mt-2 text-xl font-semibold text-white/65">{value}</div></div>)}
+              </div>
+              <Link href="/snake-stocks" className="flex items-center justify-between border-t border-white/[.06] bg-emerald-300/[.035] px-5 py-4 text-xs font-bold text-emerald-200/70"><span>SNAKE STOCKS · TRACK · COMPARE · DISCOVER</span><span>↗</span></Link>
+            </div>
           </div>
         </div>
       </section>
