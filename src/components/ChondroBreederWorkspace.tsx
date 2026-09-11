@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
+import { ChondroBreederNavIcon } from "@/components/ChondroBreederNavIcon";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
@@ -57,7 +58,7 @@ export function ChondroBreederWorkspace() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#030806] pb-[calc(96px+env(safe-area-inset-bottom))] text-white">
+    <div className="min-h-[100dvh] bg-[#030806] pb-[calc(104px+env(safe-area-inset-bottom))] text-white">
       <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#030806]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[60px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[66px] sm:px-5">
           <Link
@@ -93,7 +94,7 @@ export function ChondroBreederWorkspace() {
       <ChondroGameNotifications />
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(80px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-2.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-4 lg:bottom-4 lg:h-[78px] lg:max-w-[760px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2"
+        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(88px+env(safe-area-inset-bottom))] grid-cols-5 gap-1.5 border-t border-white/[.08] bg-[#030806]/97 px-2.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-4 lg:bottom-4 lg:h-[86px] lg:max-w-[800px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2"
         aria-label="Chondro Breeder navigation"
       >
         {dockViews.map((id) => {
@@ -107,7 +108,9 @@ export function ChondroBreederWorkspace() {
               aria-current={selected ? "page" : undefined}
               className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-1 text-[8px] font-bold uppercase tracking-[.025em] transition sm:text-[9px] ${selected ? "bg-emerald-300/[.09] text-emerald-100" : "text-white/38 hover:bg-white/[.035] hover:text-white/68"}`}
             >
-              <span className={`grid h-8 w-8 place-items-center rounded-xl text-[15px] transition sm:h-9 sm:w-9 sm:text-base ${selected ? "bg-emerald-300/[.13] text-emerald-200" : "bg-white/[.025]"}`}>{item.icon}</span>
+              <span className={`grid h-10 w-10 place-items-center rounded-2xl transition sm:h-11 sm:w-11 ${selected ? "bg-emerald-300/[.15] text-emerald-100 shadow-[0_0_22px_rgba(110,231,183,.12)]" : "bg-white/[.025] text-white/42"}`}>
+                <ChondroBreederNavIcon id={id as "home" | "breeding" | "colony" | "clutches" | "market"} className="h-[23px] w-[23px] sm:h-6 sm:w-6" />
+              </span>
               <span className="max-w-full truncate leading-none">{item.navLabel ?? item.label}</span>
             </button>
           );
