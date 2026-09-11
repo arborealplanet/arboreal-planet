@@ -16,7 +16,7 @@ function replaceOnce(find, replacement, label) {
 
 replaceOnce(
   'type BreedingStage = "cycling" | "pairing" | "laying" | "incubation" | "hatch-day";',
-  'type BreedingStage = "cycling" | "pairing" | "gestation" | "separate-pair" | "pre-lay" | "laying" | "incubation" | "hatch-day";',
+  'type BreedingStage = "cycling" | "pairing" | "development" | "incubation";',
   "breeding stage union",
 );
 
@@ -45,6 +45,12 @@ replaceOnce(
 );
 
 replaceOnce(
+  '        setBreedingCycle(chosen.breedingCycle ?? null);\n',
+  '        const savedCycle = chosen.breedingCycle ?? null;\n        if (savedCycle) {\n          const legacyStage = String(savedCycle.stage);\n          const migratedStage: BreedingStage =\n            legacyStage === "cycling" || legacyStage === "pairing" || legacyStage === "incubation"\n              ? legacyStage as BreedingStage\n              : legacyStage === "hatch-day"\n                ? "incubation"\n                : "development";\n          setBreedingCycle({ ...savedCycle, stage: migratedStage });\n        } else {\n          setBreedingCycle(null);\n        }\n',
+  "legacy breeding stage migration",
+);
+
+replaceOnce(
   '        setBreedingMessage(chosen.breedingMessage ?? "");\n',
   '        setBreedingMessage(chosen.breedingMessage ?? "");\n        // Grandfather already-hatched clutches from older saves so players do not lose progress.\n        setClutchEstablished(chosen.clutchEstablished ?? Boolean(chosen.clutch));\n',
   "load establishment state",
@@ -66,6 +72,24 @@ replaceOnce(
   '      if (Math.random() > pairingChance(cycleDam, cycleSire)) {\n        setBreedingCycle(null);\n        setBreedingMessage(pairingFailureReason(cycleDam, cycleSire));\n        return;\n      }',
   '      if (Math.random() > pairingChance(cycleDam, cycleSire)) {\n        const pairingStage = BREEDING_STAGES.find((stage) => stage.id === "pairing");\n        const retryHours = pairingStage?.hours ?? 8;\n        setBreedingCycle({ ...breedingCycle, stage: "pairing", completesAt: Date.now() + retryHours * 3_600_000 });\n        setBreedingMessage(`${pairingFailureReason(cycleDam, cycleSire)} The pair remains in the breeding window at cycling temperatures; another pairing attempt has started without re-cycling.`);\n        return;\n      }',
   "pairing retry without recyling",
+);
+
+replaceOnce(
+  '    if (breedingCycle.stage === "hatch-day") {',
+  '    if (breedingCycle.stage === "incubation") {',
+  "hatch after incubation",
+);
+
+replaceOnce(
+  '      setBreedingMessage("Hatch Day complete. Your clutch is ready for review.");',
+  '      setBreedingMessage("Incubation complete. The clutch hatched and now needs to be established.");',
+  "hatch notification",
+);
+
+replaceOnce(
+  '      setBreedingMessage(`${nextStage.label} started.`);',
+  '      setBreedingMessage(nextStage.id === "development" ? "Pairing successful. The pair has separated naturally and development has started." : nextStage.id === "incubation" ? "Development complete. The eggs were laid and moved into the incubator. Incubation has started." : `${nextStage.label} started.`);',
+  "stage transition notifications",
 );
 
 replaceOnce(
@@ -135,4 +159,4 @@ replaceOnce(
 );
 
 fs.writeFileSync(file, source);
-console.log("Applied corrected Chondro breeding cycle and bulk clutch establishment flow.");
+console.log("Applied simplified Chondro breeding cycle and bulk clutch establishment flow.");
