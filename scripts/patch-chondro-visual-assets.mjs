@@ -57,13 +57,4 @@ if (!workspace.includes('/hatchery/game/incubator.webp') && workspace.includes(c
 
 fs.writeFileSync(workspaceFile, workspace);
 
-const hatcheryFile = "src/app/hatchery/page.tsx";
-let hatchery = fs.readFileSync(hatcheryFile, "utf8");
-const splashNeedle = '              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />\n';
-const splashReplacement = `              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />\n              <div className="border-t border-white/[.06] bg-[#030806] p-3">\n                <div className="grid grid-cols-[96px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">\n                  <Image src="/hatchery/game/hatching.webp" alt="Chondro Breeder illustrated hatching art" width={220} height={220} className="h-auto w-full rounded-[14px]" />\n                  <div>\n                    <div className="text-[9px] font-bold uppercase tracking-[.16em] text-emerald-200/50">Inside the game</div>\n                    <div className="mt-1 text-sm font-semibold text-white/72">Breeding, housing, clutches and the store now use Arboreal Planet game art.</div>\n                  </div>\n                </div>\n              </div>\n`;
-if (!hatchery.includes('Breeding, housing, clutches and the store now use Arboreal Planet game art.') && hatchery.includes(splashNeedle)) {
-  hatchery = hatchery.replace(splashNeedle, splashReplacement);
-}
-fs.writeFileSync(hatcheryFile, hatchery);
-
-console.log("Applied approved Chondro visual assets across Home, Breed, Colony, Clutches, Store, Career, and the Arcade feature card.");
+console.log("Applied approved Chondro visual assets to the breeder workspace. Arcade page visuals are now source-native.");
