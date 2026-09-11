@@ -22,14 +22,10 @@ type Snapshot = {
 
 function stageName(stage: string) {
   const labels: Record<string, string> = {
-    cycling: "Cycling",
-    pairing: "Pairing",
-    gestation: "Development",
-    "separate-pair": "Separate Pair",
-    "pre-lay": "Pre-Lay",
-    laying: "Laying",
+    cycling: "Cycle",
+    pairing: "Pair",
+    development: "Develop",
     incubation: "Incubation",
-    "hatch-day": "Hatch Day",
   };
   return labels[stage] ?? stage;
 }
@@ -73,7 +69,7 @@ export function ChondroGameNotifications() {
           const pets = Number(settlement?.petSales ?? 0);
           show(`Market sweep complete: ${count} listing${count === 1 ? "" : "s"} cleared${conservation ? ` · ${conservation} to conservation` : ""}${pets ? ` · ${pets} pet sale${pets === 1 ? "" : "s"}` : ""}.`);
         } else if (previous.current) {
-          if (snapshot.clutchCount > previous.current.clutchCount) show(`Clutch hatched: ${snapshot.clutchCount} offspring are ready in Clutches.`);
+          if (snapshot.clutchCount > previous.current.clutchCount) show(`Clutch hatched: ${snapshot.clutchCount} offspring now need to be established.`);
           else if (snapshot.stage && snapshot.stage !== previous.current.stage) show(`Breeding advanced to ${stageName(snapshot.stage)}.`);
           else if (snapshot.pendingTests < previous.current.pendingTests) show("Genetic test results are ready.");
           else if (!snapshot.construction && previous.current.construction) show("Facility construction is complete.");
