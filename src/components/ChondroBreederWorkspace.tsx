@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
@@ -16,6 +17,8 @@ import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcome
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroBreedingFocusHeader } from "@/components/ChondroBreedingFocusHeader";
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
+import { ChondroClutchStageArt } from "@/components/ChondroClutchStageArt";
+import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
 import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
 import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
@@ -84,7 +87,29 @@ export function ChondroBreederWorkspace() {
       <main>
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
         {coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}
-        {view === "career" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="career" /></SecondaryScreen> : null}
+        {view === "career" ? (
+          <SecondaryScreen active={active} onBack={() => openView("home")}>
+            <section className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">
+              <div className="overflow-hidden rounded-[30px] border border-amber-200/12 bg-[#06100c] shadow-[0_24px_70px_rgba(0,0,0,.22)]">
+                <div className="grid lg:min-h-[300px] lg:grid-cols-[minmax(300px,42%)_1fr]">
+                  <div className="relative min-h-[250px] overflow-hidden border-b border-white/[.06] bg-black/35 lg:min-h-full lg:border-b-0 lg:border-r">
+                    <Image src="/hatchery/game/incubator.webp" alt="Illustrated Chondro Breeder incubator" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover" />
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_52%,rgba(3,8,6,.64)_100%)] lg:bg-[linear-gradient(90deg,transparent_60%,rgba(6,16,12,.75)_100%)]" />
+                  </div>
+                  <div className="relative flex items-center overflow-hidden p-5 sm:p-7 lg:p-9">
+                    <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-200/[.055] blur-3xl" />
+                    <div className="relative">
+                      <div className="text-[9px] font-black uppercase tracking-[.19em] text-amber-100/55">Facility progression</div>
+                      <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em] text-white sm:text-3xl">Build the operation behind the breeding program.</h2>
+                      <p className="mt-3 max-w-xl text-sm leading-6 text-white/48 sm:text-[15px]">Capacity, incubation and research upgrades now have a visual home alongside the career systems.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <ChondroBreederManagementView section="career" />
+          </SecondaryScreen>
+        ) : null}
         {view === "projects" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="projects" /></SecondaryScreen> : null}
         {view === "conservation" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroConservationPartnerships /></SecondaryScreen> : null}
         {view === "community" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="community" /></SecondaryScreen> : null}
@@ -139,6 +164,29 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
         <div className="p-3 sm:p-5">
           <ChondroPatternBanner compact />
+
+          <section className="mt-4 overflow-hidden rounded-[30px] border border-emerald-300/12 bg-[#030806] shadow-[0_24px_70px_rgba(0,0,0,.28)]">
+            <div className="grid lg:grid-cols-[minmax(330px,46%)_1fr]">
+              <div className="grid min-h-[260px] grid-cols-2 gap-px bg-white/[.06] lg:min-h-[360px]">
+                <div className="relative overflow-hidden bg-black/35">
+                  <Image src="/hatchery/game/hatching.webp" alt="Illustrated green tree python hatchlings emerging" fill sizes="(max-width: 1024px) 50vw, 23vw" className="object-cover" priority />
+                </div>
+                <div className="relative overflow-hidden bg-black/35">
+                  <Image src="/hatchery/game/neonates.webp" alt="Illustrated red and yellow green tree python neonates" fill sizes="(max-width: 1024px) 50vw, 23vw" className="object-cover" priority />
+                </div>
+              </div>
+              <div className="relative flex items-center overflow-hidden p-5 sm:p-7 lg:p-9">
+                <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-emerald-300/[.06] blur-3xl" />
+                <div className="relative">
+                  <div className="text-[9px] font-black uppercase tracking-[.19em] text-emerald-200/55">Your program is alive</div>
+                  <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em] text-white sm:text-3xl">Breed, incubate, hatch and build a lineage.</h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48 sm:text-[15px]">The Chondro Breeder artwork is part of the main experience. Move between breeding, colony, clutch and store screens to see the program progress visually.</p>
+                  <div className="mt-5 h-px w-24 bg-gradient-to-r from-emerald-300/45 to-transparent" />
+                </div>
+              </div>
+            </div>
+          </section>
+
           <ChondroBreederHomeStatus onOpen={(next) => onOpen(next)} />
 
           <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -177,7 +225,9 @@ function CoreGameScreen({ view }: { view: CoreView }) {
   return (
     <>
       <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />
+      {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
+      {view === "clutches" ? <ChondroClutchStageArt /> : null}
       {view === "colony" ? <ChondroColonyOverview /> : null}
       {view === "market" ? (
         <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
@@ -197,7 +247,7 @@ function CoreGameScreen({ view }: { view: CoreView }) {
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroCollectionManager /></div> : null}
       <ChondroBreederGameV3 screen={view} />
       {view === "market" ? <ChondroFavoritesMarketPanel /> : null}
-      {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}
+      {view === "clutches" ? <ChondroClutchOutcomeExplainer /> : null}
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}
       {view === "clutches" ? <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div></section> : null}
     </>
