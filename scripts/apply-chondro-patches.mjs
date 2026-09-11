@@ -13,7 +13,6 @@ const patches = [
   "scripts/patch-chondro-focused-screens.mjs",
   "scripts/patch-chondro-player-market-screen.mjs",
   "scripts/patch-chondro-clutch-action-bridge.mjs",
-  "scripts/patch-chondro-home-dashboard.mjs",
   "scripts/patch-chondro-nav-and-neonate-colors.mjs",
   "scripts/patch-chondro-reset-safety.mjs",
   "scripts/patch-chondro-visual-assets.mjs",
