@@ -15,6 +15,10 @@ import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcome
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroBreedingFocusHeader } from "@/components/ChondroBreedingFocusHeader";
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
+import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
+import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
+import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
+import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
 import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
@@ -161,9 +165,9 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
 function CoreGameScreen({ view }: { view: CoreView }) {
   const config: Record<CoreView, { eyebrow: string; title: string; detail: string }> = {
     breeding: { eyebrow: "Reproduction", title: "Breeding", detail: "Prepare breeders, choose the pair and follow the active reproductive cycle." },
-    colony: { eyebrow: "Collection", title: "Colony", detail: "Inspect active animals, testing, care, enclosure capacity and retired breeders." },
-    clutches: { eyebrow: "Offspring", title: "Clutches", detail: "Manage the active clutch and review historical clutch records." },
-    market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Buy chondros from rotating game inventory or browse animals listed by other breeders." },
+    colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for naming, testing, notes, sale, retirement and detailed records. Enclosure management follows below the collection." },
+    clutches: { eyebrow: "Offspring", title: "Clutches", detail: "See the active clutch first, make establishment and holdback decisions, then review completed breeding history below." },
+    market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Browse rotating game inventory first, then shop breeder-to-breeder listings and manage your seller activity." },
   };
   const active = config[view];
 
@@ -184,8 +188,12 @@ function CoreGameScreen({ view }: { view: CoreView }) {
           </div>
         </div>
       ) : null}
-      <ChondroBreederGameV3 screen={view} />
       {view === "market" ? <ChondroBreederExpandedShop /> : null}
+      {view === "market" ? <ChondroPlayerMarket /> : null}
+      {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}
+      {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroCollectionManager /></div> : null}
+      <ChondroBreederGameV3 screen={view} />
+      {view === "market" ? <ChondroFavoritesMarketPanel /> : null}
       {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}
       {view === "clutches" ? <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div></section> : null}
