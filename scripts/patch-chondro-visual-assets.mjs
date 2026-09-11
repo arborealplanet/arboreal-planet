@@ -41,6 +41,14 @@ if (!workspace.includes('<ChondroClutchStageArt />') && workspace.includes(clutc
   );
 }
 
+const clutchOutcomeNeedle = '      {view === "breeding" ? <ChondroClutchOutcomeExplainer /> : null}\n';
+if (workspace.includes(clutchOutcomeNeedle)) {
+  workspace = workspace.replace(
+    clutchOutcomeNeedle,
+    '      {view === "clutches" ? <ChondroClutchOutcomeExplainer /> : null}\n',
+  );
+}
+
 const careerNeedle = '        {view === "career" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederManagementView section="career" /></SecondaryScreen> : null}\n';
 const careerArt = `        {view === "career" ? (\n          <SecondaryScreen active={active} onBack={() => openView("home")}>\n            <section className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">\n              <div className="overflow-hidden rounded-[30px] border border-amber-200/12 bg-[#06100c] shadow-[0_24px_70px_rgba(0,0,0,.22)]">\n                <div className="grid lg:min-h-[300px] lg:grid-cols-[minmax(300px,42%)_1fr]">\n                  <div className="relative min-h-[250px] overflow-hidden border-b border-white/[.06] bg-black/35 lg:min-h-full lg:border-b-0 lg:border-r">\n                    <Image src="/hatchery/game/incubator.webp" alt="Illustrated Chondro Breeder incubator" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover" />\n                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_52%,rgba(3,8,6,.64)_100%)] lg:bg-[linear-gradient(90deg,transparent_60%,rgba(6,16,12,.75)_100%)]" />\n                  </div>\n                  <div className="relative flex items-center overflow-hidden p-5 sm:p-7 lg:p-9">\n                    <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-200/[.055] blur-3xl" />\n                    <div className="relative">\n                      <div className="text-[9px] font-black uppercase tracking-[.19em] text-amber-100/55">Facility progression</div>\n                      <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em] text-white sm:text-3xl">Build the operation behind the breeding program.</h2>\n                      <p className="mt-3 max-w-xl text-sm leading-6 text-white/48 sm:text-[15px]">Capacity, incubation and research upgrades now have a visual home alongside the career systems.</p>\n                    </div>\n                  </div>\n                </div>\n              </div>\n            </section>\n            <ChondroBreederManagementView section="career" />\n          </SecondaryScreen>\n        ) : null}\n`;
 if (!workspace.includes('/hatchery/game/incubator.webp') && workspace.includes(careerNeedle)) {
