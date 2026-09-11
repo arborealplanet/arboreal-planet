@@ -15,7 +15,6 @@ const patches = [
   "scripts/patch-chondro-clutch-action-bridge.mjs",
   "scripts/patch-chondro-nav-and-neonate-colors.mjs",
   "scripts/patch-chondro-reset-safety.mjs",
-  "scripts/patch-chondro-visual-assets.mjs",
 ];
 
 for (const patch of patches) {
@@ -49,12 +48,17 @@ const checks = [
   {
     file: "src/components/ChondroBreederWorkspace.tsx",
     markers: [
+      'import Image from "next/image";',
       'import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";',
       'import { ChondroGameNotifications } from "@/components/ChondroGameNotifications";',
       'import { ChondroBreederNavIcon } from "@/components/ChondroBreederNavIcon";',
       'import { ChondroClutchStageArt } from "@/components/ChondroClutchStageArt";',
+      'import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";',
       'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
       "<ChondroColonyOverview />",
+      "<ChondroClutchStageArt />",
+      "Your program is alive",
+      "/hatchery/game/incubator.webp",
     ],
   },
   {
