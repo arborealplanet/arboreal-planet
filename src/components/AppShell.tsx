@@ -33,24 +33,27 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   const header = (
     <header className="sticky top-0 z-50 border-b border-white/[.065] bg-[#06100c]/88 shadow-[0_10px_35px_rgba(0,0,0,.12)] backdrop-blur-xl">
-      <div className="mx-auto flex min-h-[64px] max-w-[1440px] items-center gap-3 px-4 sm:min-h-[72px] sm:gap-5 sm:px-6">
-        <Link href="/" className="group flex min-w-fit items-center gap-3 rounded-xl focus-visible:outline-none">
-          <ArborealPlanetMark className="h-10 w-10 transition duration-200 group-hover:scale-[1.03]" />
-          <div>
-            <div className="text-[14px] font-extrabold tracking-[.15em] sm:text-base">ARBOREAL PLANET</div>
-            <div className="mt-0.5 hidden text-[8px] font-semibold tracking-[.22em] text-emerald-300/55 sm:block sm:text-[9px]">COMMUNITY · REFERENCE · MARKET DATA</div>
+      <div className="mx-auto flex min-h-[60px] max-w-[1440px] items-center gap-2 px-3 sm:min-h-[72px] sm:gap-5 sm:px-6">
+        <Link href="/" aria-label="Arboreal Planet home" className="group flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none">
+          <ArborealPlanetMark className="h-10 w-10 shrink-0 transition duration-200 group-hover:scale-[1.03]" />
+          <div className="hidden min-w-0 sm:block">
+            <div className="truncate text-[14px] font-extrabold tracking-[.15em] sm:text-base">ARBOREAL PLANET</div>
+            <div className="mt-0.5 hidden text-[8px] font-semibold tracking-[.22em] text-emerald-300/55 md:block sm:text-[9px]">COMMUNITY · REFERENCE · MARKET DATA</div>
           </div>
         </Link>
 
-        <nav className="ml-auto hidden items-center gap-1 text-[13px] font-semibold text-white/60 lg:flex">
+        <nav aria-label="Primary" className="ml-auto hidden items-center gap-1 text-[13px] font-semibold text-white/60 lg:flex">
           {nav.map(([label, href]) => (
             <Link key={href} href={href} className="rounded-xl px-3 py-2.5 transition hover:bg-white/[.04] hover:text-white">{label}</Link>
           ))}
         </nav>
 
-        <PwaInstallButton />
+        <div className="ml-auto flex items-center gap-2 lg:ml-2">
+          <PwaInstallButton />
+          {signedIn&&<div className="lg:hidden"><NotificationBell /></div>}
+        </div>
 
-        <div className="hidden items-center gap-2 lg:ml-2 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           {signedIn?<>
             <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.025] text-lg text-white/60 transition hover:border-emerald-300/20 hover:bg-emerald-300/[.03] hover:text-emerald-200" aria-label="Messages">✉</Link>
             <NotificationBell />
@@ -61,14 +64,14 @@ export async function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <nav className="mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/[.04] px-4 py-2 text-center text-[10px] font-bold uppercase tracking-[.08em] text-white/50 lg:hidden sm:px-6">
-        {nav.slice(0,4).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5">{label}</Link>)}
+      <nav aria-label="Browse" className="hide-scrollbar mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/[.04] px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[.08em] text-white/50 lg:hidden sm:px-6">
+        {nav.slice(0,4).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
       </nav>
     </header>
   );
 
   const mobileNav = (
-    <nav className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(66px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.07] bg-[#06100c]/96 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 text-center text-[9px] font-semibold uppercase text-white/48 shadow-[0_-12px_30px_rgba(0,0,0,.16)] backdrop-blur-xl lg:hidden">
+    <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(66px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.07] bg-[#06100c]/96 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 text-center text-[9px] font-semibold uppercase text-white/48 shadow-[0_-12px_30px_rgba(0,0,0,.16)] backdrop-blur-xl lg:hidden">
       <Link href="/community" className="mobile-nav-item"><span className="mobile-nav-icon">◎</span><span className="mobile-nav-label">Community</span></Link>
       <Link href="/marketplace" className="mobile-nav-item"><span className="mobile-nav-icon">▣</span><span className="mobile-nav-label">Market</span></Link>
       <Link href="/arcade/enter?next=%2Farcade" className="mobile-nav-item text-emerald-300"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-300/[.09] text-[18px]">◈</span><span className="mobile-nav-label">Arcade</span></Link>
