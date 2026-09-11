@@ -8,6 +8,8 @@ import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedS
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
+import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";
+import { ChondroGameNotifications } from "@/components/ChondroGameNotifications";
 import { ChondroRetiredBreedersPanel } from "@/components/ChondroRetiredBreedersPanel";
 import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcomeExplainer";
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
@@ -28,7 +30,7 @@ type ViewMeta = {
 const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "home", label: "Home", detail: "Breeder command center", icon: "⌂" },
   { id: "breeding", label: "Breeding", navLabel: "Breed", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
-  { id: "colony", label: "Colony", detail: "Animals and breeder records", icon: "◎" },
+  { id: "colony", label: "Colony", navLabel: "Snakes", detail: "Animals and breeder records", icon: "◎" },
   { id: "clutches", label: "Clutches", navLabel: "Clutch", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
   { id: "market", label: "Store", detail: "Buy chondros and use the player market", icon: "$" },
   { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
@@ -84,8 +86,10 @@ export function ChondroBreederWorkspace() {
         {view === "guide" ? <SecondaryScreen active={active} onBack={() => openView("home")}><ChondroBreederSubspeciesPhenotypes /></SecondaryScreen> : null}
       </main>
 
+      <ChondroGameNotifications />
+
       <nav
-        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(80px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-2.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-4 lg:bottom-4 lg:h-[78px] lg:max-w-[720px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2"
+        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(80px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-2.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-4 lg:bottom-4 lg:h-[78px] lg:max-w-[760px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2"
         aria-label="Chondro Breeder navigation"
       >
         {dockViews.map((id) => {
@@ -128,6 +132,7 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
         <div className="p-3 sm:p-5">
           <ChondroPatternBanner compact />
+          <ChondroBreederHomeStatus onOpen={(next) => onOpen(next)} />
 
           <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <QuickAction title="Breed a pair" detail="Select adult breeders and start a reproductive cycle." icon="◇" onClick={() => onOpen("breeding")} />
@@ -139,7 +144,7 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
           <section className="mt-4 rounded-[24px] border border-white/[.06] bg-black/18 p-4 sm:p-6">
             <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/44">Breeder command center</div>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-white sm:text-4xl">Your breeding program</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">The four main game systems stay one tap away in the dock. Career, projects, conservation, breeder network and reference tools live here when you need them.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">Your next recommended move stays at the top. The dock handles the main game loop while career, projects, conservation, breeder network and reference tools stay here when you need them.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {tools.map((id) => {
                 const item = views.find((entry) => entry.id === id)!;
