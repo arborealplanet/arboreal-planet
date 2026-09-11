@@ -78,14 +78,10 @@ export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
   },
   reproduction: {
     stages: [
-      { id: "cycling", label: "Cycling", hours: 4 },
-      { id: "pairing", label: "Pairing", hours: 8 },
-      { id: "gestation", label: "Gestation · Watch for Off-Feed", hours: 12 },
-      { id: "separate-pair", label: "Separate Pair", hours: 1 },
-      { id: "pre-lay", label: "Egg Development · Ovulation / Pre-Lay", hours: 12 },
-      { id: "laying", label: "Laying", hours: 6 },
+      { id: "cycling", label: "Cycle", hours: 4 },
+      { id: "pairing", label: "Pair", hours: 8 },
+      { id: "development", label: "Develop", hours: 24 },
       { id: "incubation", label: "Incubation", hours: 24 },
-      { id: "hatch-day", label: "Hatch Day", hours: 2 },
     ],
     seasonCarePerAdult: 180,
     recovery: {
