@@ -30,18 +30,18 @@ export default function HatcheryPage() {
               <div className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-100/55">Featured game</div>
               <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Chondro Breeder</h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Manage breeding pairs, lineage, facility capacity, health risk, research and shows. Real-time timers continue while you are away, and each generation becomes part of the program&apos;s recorded history.</p>
-              <div className="mt-7 flex flex-wrap gap-2">{["Cycling", "Pairing", "Gestation", "Incubation", "Hatch Day", "Lineage", "Facilities", "Research"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
+              <div className="mt-7 flex flex-wrap gap-2">{["Cycle", "Pair", "Develop", "Incubation", "Establishment", "Lineage", "Facilities", "Research"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
               <Link href="/arcade/chondro-breeder" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Chondro Breeder</Link>
             </div>
 
             <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">
               <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />
               <div className="border-t border-white/[.06] bg-[#030806] p-3">
-                <div className="grid grid-cols-[88px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">
-                  <Image src="/hatchery/game/fresh-eggs.webp" alt="Chondro Breeder illustrated clutch art" width={220} height={220} className="h-auto w-full rounded-[14px]" />
+                <div className="grid grid-cols-[96px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">
+                  <Image src="/hatchery/game/hatching.webp" alt="Chondro Breeder illustrated hatching art" width={220} height={220} className="h-auto w-full rounded-[14px]" />
                   <div>
                     <div className="text-[9px] font-bold uppercase tracking-[.16em] text-emerald-200/50">Inside the game</div>
-                    <div className="mt-1 text-sm font-semibold text-white/72">Clutches now use Arboreal Planet game art.</div>
+                    <div className="mt-1 text-sm font-semibold text-white/72">Breeding, housing, clutches and the store use Arboreal Planet game art.</div>
                   </div>
                 </div>
               </div>
@@ -52,7 +52,7 @@ export default function HatcheryPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-14 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[["1 · BUILD", "Start with a limited collection, facility capacity and operating budget."],["2 · PAIR", "Plan pairings around lineage, locality, phenotype, condition, health and breeding goals."],["3 · MANAGE", "Breeding, incubation, testing and construction continue on real-time timers while you are away."],["4 · EXPAND", "Keep holdbacks, establish lines, enter shows, expand rooms and unlock research tools."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
+          {[["1 · BUILD", "Start with a limited collection, facility capacity and operating budget."],["2 · PAIR", "Plan pairings around lineage, locality, phenotype, condition, health and breeding goals."],["3 · MANAGE", "Cycle, Pair, Develop, Incubation, testing and construction continue on real-time timers while you are away."],["4 · EXPAND", "Establish clutches, keep holdbacks, build lines, enter shows, expand rooms and unlock research tools."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
         </div>
       </section>
 
@@ -83,7 +83,7 @@ export default function HatcheryPage() {
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div>
                 <h3 className="mt-3 text-xl font-semibold text-white/65">Breeding & Genetics</h3>
-                <p className="mt-2 text-sm leading-6 text-white/32">Pairing, clutch development and genetic testing become part of a visual breeding program instead of living only in tables and timers.</p>
+                <p className="mt-2 text-sm leading-6 text-white/32">Cycle, pair, development, incubation, clutch establishment and genetic testing become part of a visual breeding program instead of living only in tables and timers.</p>
               </div>
             </div>
           </div>
