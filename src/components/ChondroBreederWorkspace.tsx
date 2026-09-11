@@ -13,6 +13,7 @@ import { ChondroClutchOutcomeExplainer } from "@/components/ChondroClutchOutcome
 import { ChondroConservationPartnerships } from "@/components/ChondroConservationPartnerships";
 import { ChondroBreedingFocusHeader } from "@/components/ChondroBreedingFocusHeader";
 import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTable";
+import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
 type CoreView = "breeding" | "colony" | "clutches" | "market";
@@ -165,6 +166,7 @@ function CoreGameScreen({ view }: { view: CoreView }) {
     <>
       <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
+      {view === "colony" ? <ChondroColonyOverview /> : null}
       {view === "market" ? (
         <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
           <div className="grid gap-3 md:grid-cols-2">
