@@ -22,7 +22,15 @@ type StageArt = {
   eyebrow: string;
   title: string;
   detail: string;
+  phase: number;
 };
+
+const clutchPhases = [
+  { label: "Incubate", detail: "Eggs laid and placed in the incubator" },
+  { label: "Hatch", detail: "Incubation finishes and neonates emerge" },
+  { label: "Establish", detail: "Raise the clutch together before individual actions" },
+  { label: "Manage", detail: "Choose holdbacks and list the remaining neonates" },
+] as const;
 
 function readSave(): LooseSave | null {
   if (typeof window === "undefined") return null;
@@ -34,44 +42,45 @@ function readSave(): LooseSave | null {
   }
 }
 
+function normalizeStage(stage: string) {
+  if (stage === "gestation" || stage === "separate-pair" || stage === "pre-lay" || stage === "laying") return "development";
+  if (stage === "hatch-day") return "incubation";
+  return stage;
+}
+
 function chooseArt(save: LooseSave | null, now: number): StageArt {
   if (!save) {
     return {
       src: "/hatchery/game/fresh-eggs.webp",
       eyebrow: "Clutch room",
-      title: "From laying to establishment",
-      detail: "Your active clutch artwork will follow reproductive progress as the cycle advances.",
+      title: "Incubate, hatch, establish, manage",
+      detail: "Once development finishes, eggs are laid and incubation begins the same day. After hatch, establish the clutch as a group before making individual decisions.",
+      phase: -1,
     };
   }
 
-  if (save.clutch?.offspring?.length) {
+  const clutchCount = Array.isArray(save.clutch?.offspring) ? save.clutch!.offspring!.length : 0;
+  if (clutchCount > 0) {
     if (save.clutchEstablished) {
       return {
         src: "/hatchery/game/neonates.webp",
         eyebrow: "Established clutch",
-        title: "Red and yellow neonates are established",
-        detail: "The clutch has completed establishment and the neonates are ready for individual animal management.",
+        title: `${clutchCount} neonate${clutchCount === 1 ? "" : "s"} ready for management`,
+        detail: "The clutch is established. You can now choose holdbacks and move the remaining neonates to the player market.",
+        phase: 3,
       };
     }
     return {
       src: "/hatchery/game/hatching.webp",
-      eyebrow: "Hatch window",
-      title: "The neonates are emerging",
-      detail: "The clutch has hatched. Complete the bulk establishment step before naming, holding back or selling individual animals.",
+      eyebrow: "Hatched clutch",
+      title: `${clutchCount} hatchling${clutchCount === 1 ? "" : "s"} need establishment`,
+      detail: "Incubation is complete and the clutch has hatched. Establish the group before naming, holding back or selling individual animals.",
+      phase: 2,
     };
   }
 
   const cycle = save.breedingCycle;
-  const stage = cycle?.stage ?? "";
-
-  if (stage === "hatch-day") {
-    return {
-      src: "/hatchery/game/hatching.webp",
-      eyebrow: "Hatch day",
-      title: "Red and yellow neonates are beginning to emerge",
-      detail: "The clutch has reached hatch day. The next step is getting the hatchlings through establishment as a group.",
-    };
-  }
+  const stage = normalizeStage(cycle?.stage ?? "");
 
   if (stage === "incubation") {
     const started = Number(cycle?.startedAt ?? 0);
@@ -83,31 +92,35 @@ function chooseArt(save: LooseSave | null, now: number): StageArt {
         src: "/hatchery/game/near-hatch-eggs.webp",
         eyebrow: "Late incubation",
         title: "The clutch is getting close",
-        detail: "Incubation is well advanced. Cracks and pips will mark the approaching hatch window.",
+        detail: "Incubation is well advanced. When the timer finishes, the clutch hatches and moves directly into the establishment step.",
+        phase: 0,
       };
     }
     return {
       src: "/hatchery/game/fresh-eggs.webp",
       eyebrow: "Incubation",
-      title: "The clutch is developing",
-      detail: "Keep the clutch stable while the incubation timer progresses.",
+      title: "Eggs laid and incubation underway",
+      detail: "The lay event has already happened. Keep the clutch stable while the incubation timer runs; hatch follows when it finishes.",
+      phase: 0,
     };
   }
 
-  if (stage === "laying" || stage === "pre-lay") {
+  if (stage === "development") {
     return {
       src: "/hatchery/game/fresh-eggs.webp",
-      eyebrow: stage === "laying" ? "Laying" : "Pre-lay",
-      title: stage === "laying" ? "Eggs are being laid" : "Prepare for the clutch",
-      detail: "The reproductive cycle is entering the clutch phase.",
+      eyebrow: "Development",
+      title: "Waiting for the lay event",
+      detail: "The successful pairing is in development. When that timer finishes, the lay notification appears and incubation starts immediately.",
+      phase: -1,
     };
   }
 
   return {
     src: "/hatchery/game/fresh-eggs.webp",
     eyebrow: "Clutch room",
-    title: "Follow the clutch from laying through establishment",
-    detail: "The clutch art changes with the active reproductive stage instead of remaining a static decoration.",
+    title: "No active clutch yet",
+    detail: "Complete Cycle, Pair and Develop. The clutch screen becomes active when eggs are laid and incubation begins.",
+    phase: -1,
   };
 }
 
@@ -133,15 +146,40 @@ export function ChondroClutchStageArt() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-5 sm:px-6">
-      <div className="overflow-hidden rounded-[26px] border border-emerald-300/10 bg-[radial-gradient(circle_at_left,rgba(16,185,129,.08),transparent_36%),#06100c] shadow-[0_18px_60px_rgba(0,0,0,.18)]">
-        <div className="grid items-center gap-4 p-4 sm:grid-cols-[180px_1fr] sm:p-5">
-          <div className="mx-auto overflow-hidden rounded-[20px] border border-white/[.07] bg-black/30">
-            <Image src={art.src} alt="Chondro Breeder clutch progression illustration" width={560} height={560} className="h-auto w-full" />
+      <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-[radial-gradient(circle_at_left,rgba(16,185,129,.08),transparent_36%),#06100c] shadow-[0_18px_60px_rgba(0,0,0,.18)]">
+        <div className="grid items-stretch lg:grid-cols-[minmax(260px,36%)_1fr]">
+          <div className="relative min-h-[270px] overflow-hidden border-b border-white/[.06] bg-black/30 lg:min-h-[360px] lg:border-b-0 lg:border-r">
+            <Image src={art.src} alt="Chondro Breeder clutch progression illustration" fill sizes="(max-width: 1024px) 100vw, 36vw" className="object-cover" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(3,8,6,.72)_100%)] lg:bg-[linear-gradient(90deg,transparent_58%,rgba(6,16,12,.62)_100%)]" />
           </div>
-          <div>
+
+          <div className="flex flex-col justify-center p-5 sm:p-7 lg:p-8">
             <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/48">{art.eyebrow}</div>
-            <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-white">{art.title}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/42">{art.detail}</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] text-white sm:text-3xl">{art.title}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/44">{art.detail}</p>
+
+            <div className="mt-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {clutchPhases.map((phase, index) => {
+                const complete = art.phase > index;
+                const active = art.phase === index;
+                return (
+                  <div
+                    key={phase.label}
+                    className={`rounded-2xl border p-3 ${active ? "border-emerald-300/25 bg-emerald-300/[.07]" : complete ? "border-emerald-300/10 bg-emerald-300/[.025]" : "border-white/[.06] bg-black/10"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`grid h-6 w-6 place-items-center rounded-full border text-[10px] font-black ${active || complete ? "border-emerald-300/20 text-emerald-100" : "border-white/[.08] text-white/28"}`}>{complete ? "✓" : index + 1}</span>
+                      <span className={`text-xs font-bold ${active ? "text-emerald-100" : complete ? "text-emerald-100/55" : "text-white/42"}`}>{phase.label}</span>
+                    </div>
+                    <div className="mt-2 text-[10px] leading-4 text-white/30">{phase.detail}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-amber-200/10 bg-amber-200/[.025] px-4 py-3 text-[11px] leading-5 text-amber-50/48">
+              <strong className="text-amber-100/72">No extra lay timer:</strong> laying is a milestone at the end of Develop. The eggs enter Incubation immediately, and hatch occurs when Incubation completes.
+            </div>
           </div>
         </div>
       </div>
