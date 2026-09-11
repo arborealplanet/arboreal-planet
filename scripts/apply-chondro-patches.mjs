@@ -17,7 +17,6 @@ const patches = [
   "scripts/patch-chondro-nav-and-neonate-colors.mjs",
   "scripts/patch-chondro-reset-safety.mjs",
   "scripts/patch-chondro-visual-assets.mjs",
-  "scripts/patch-chondro-colony-overview.mjs",
 ];
 
 for (const patch of patches) {
