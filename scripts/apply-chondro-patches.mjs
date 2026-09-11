@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const patches = [
@@ -37,4 +38,43 @@ for (const patch of patches) {
   }
 }
 
-console.log("\n[Chondro setup] All materializers and compatibility patches completed successfully.");
+const checks = [
+  {
+    file: "src/components/ChondroBreederGameV3.tsx",
+    markers: [
+      'type BreedingStage = "cycling" | "pairing" | "development" | "incubation";',
+      "const latestSaveRef = useRef<GameSave | null>(null);",
+      "CLUTCH_ESTABLISH_BASE_COST",
+      "Incubation complete. The clutch hatched and now needs to be established.",
+    ],
+  },
+  {
+    file: "src/components/ChondroBreederWorkspace.tsx",
+    markers: [
+      'import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";',
+      'import { ChondroGameNotifications } from "@/components/ChondroGameNotifications";',
+      'import { ChondroBreederNavIcon } from "@/components/ChondroBreederNavIcon";',
+      'import { ChondroClutchStageArt } from "@/components/ChondroClutchStageArt";',
+      'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
+      "<ChondroColonyOverview />",
+    ],
+  },
+  {
+    file: "src/components/ChondroBreederExpandedShop.tsx",
+    markers: [
+      'subspecies === "Morelia viridis" ? "Yellow"',
+    ],
+  },
+];
+
+for (const check of checks) {
+  const source = fs.readFileSync(check.file, "utf8");
+  for (const marker of check.markers) {
+    if (!source.includes(marker)) {
+      console.error(`\n[Chondro setup] Validation failed: ${check.file} is missing expected output:\n${marker}`);
+      process.exit(1);
+    }
+  }
+}
+
+console.log("\n[Chondro setup] All materializers, compatibility patches and output validations completed successfully.");
