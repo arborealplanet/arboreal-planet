@@ -29,16 +29,28 @@ const screenArt: Record<Screen, { src: string; eyebrow: string; title: string; d
 export function ChondroBreederScreenArt({ screen }: { screen: Screen }) {
   const art = screenArt[screen];
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
-      <div className="overflow-hidden rounded-[26px] border border-emerald-300/10 bg-[radial-gradient(circle_at_left,rgba(52,211,153,.085),transparent_38%),#06100c] shadow-[0_18px_54px_rgba(0,0,0,.18)]">
-        <div className="grid items-center gap-4 p-4 sm:grid-cols-[180px_1fr] sm:p-5">
-          <div className="mx-auto w-full max-w-[180px] overflow-hidden rounded-[20px] border border-white/[.07] bg-black/30">
-            <Image src={art.src} alt={art.alt} width={560} height={560} className="h-auto w-full" />
+    <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-5">
+      <div className="overflow-hidden rounded-[30px] border border-emerald-300/12 bg-[#06100c] shadow-[0_24px_70px_rgba(0,0,0,.24)]">
+        <div className="grid lg:min-h-[280px] lg:grid-cols-[minmax(300px,42%)_1fr]">
+          <div className="relative min-h-[220px] overflow-hidden border-b border-white/[.06] bg-black/35 sm:min-h-[260px] lg:min-h-full lg:border-b-0 lg:border-r">
+            <Image
+              src={art.src}
+              alt={art.alt}
+              fill
+              sizes="(max-width: 1024px) 100vw, 42vw"
+              className="object-cover"
+              priority={screen === "breeding"}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_46%,rgba(3,8,6,.68)_100%)] lg:bg-[linear-gradient(90deg,transparent_58%,rgba(6,16,12,.78)_100%)]" />
           </div>
-          <div>
-            <div className="text-[9px] font-black uppercase tracking-[.17em] text-emerald-200/50">{art.eyebrow}</div>
-            <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-white sm:text-2xl">{art.title}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/44">{art.detail}</p>
+          <div className="relative flex items-center overflow-hidden p-5 sm:p-7 lg:p-9">
+            <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-emerald-300/[.055] blur-3xl" />
+            <div className="relative max-w-2xl">
+              <div className="text-[9px] font-black uppercase tracking-[.19em] text-emerald-200/55">{art.eyebrow}</div>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em] text-white sm:text-3xl">{art.title}</h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/48 sm:text-[15px]">{art.detail}</p>
+              <div className="mt-5 h-px w-20 bg-gradient-to-r from-emerald-300/45 to-transparent" />
+            </div>
           </div>
         </div>
       </div>
