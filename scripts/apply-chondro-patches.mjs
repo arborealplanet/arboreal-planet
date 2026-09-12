@@ -8,7 +8,6 @@ const patches = [
   "scripts/cleanup-product-copy.mjs",
   "scripts/patch-chondro-map-highlight.mjs",
   "scripts/patch-chondro-screen-mode.mjs",
-  "scripts/patch-chondro-store-standalone.mjs",
   "scripts/patch-chondro-save-events.mjs",
   "scripts/patch-chondro-focused-screens.mjs",
   "scripts/patch-chondro-player-market-screen.mjs",
@@ -69,6 +68,7 @@ const checks = [
       "const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;",
       "Next shop refresh",
       "Inventory rotates automatically every 24 hours.",
+      "Loading snake store…",
     ],
   },
 ];
