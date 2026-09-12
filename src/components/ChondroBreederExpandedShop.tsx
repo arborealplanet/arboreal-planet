@@ -48,6 +48,8 @@ type GameSave = { cash: number; colony: Snake[]; enclosures: Record<string, numb
 
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
+const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
+const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitySubspecies: Record<Locality, Subspecies> = {
   Biak: "Morelia azurea azurea",
@@ -71,6 +73,14 @@ const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+}
+
+function formatCountdown(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }
 
 function rng(seed: number) {
@@ -115,7 +125,7 @@ function makeRandomOffer(seed: number, index: number, random: () => number, effe
   const localities = localitiesBySubspecies[subspecies];
   const locality = localities[Math.floor(random() * localities.length)];
   const sex: Sex = random() < 0.5 ? "Male" : "Female";
-  const neonateColor: "Red" | "Yellow" = random() < 0.4 ? "Red" : "Yellow";
+  const neonateColor: "Red" | "Yellow" = subspecies === "Morelia viridis" ? "Yellow" : random() < 0.4 ? "Red" : "Yellow";
   const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
   const lifeStage = stages[Math.floor(random() * stages.length)];
   const geneticsTested = random() < 0.22;
@@ -227,6 +237,8 @@ export function ChondroBreederExpandedShop() {
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [refreshAt, setRefreshAt] = useState(0);
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -246,8 +258,54 @@ export function ChondroBreederExpandedShop() {
   }, []);
 
   useEffect(() => {
-    const stored = Number(window.localStorage.getItem(SHOP_SEED_KEY) || "1");
-    window.setTimeout(() => setSeed(Number.isFinite(stored) && stored > 0 ? stored : 1), 0);
+    const current = Date.now();
+    let storedSeed = Number(window.localStorage.getItem(SHOP_SEED_KEY) || "1");
+    if (!Number.isFinite(storedSeed) || storedSeed < 1) storedSeed = 1;
+
+    let storedRefreshAt = Number(window.localStorage.getItem(SHOP_REFRESH_AT_KEY) || "0");
+    if (!Number.isFinite(storedRefreshAt) || storedRefreshAt <= 0) {
+      storedRefreshAt = current + SHOP_REFRESH_MS;
+    } else if (current >= storedRefreshAt) {
+      const rotations = Math.floor((current - storedRefreshAt) / SHOP_REFRESH_MS) + 1;
+      storedSeed += rotations;
+      storedRefreshAt += rotations * SHOP_REFRESH_MS;
+    }
+
+    window.localStorage.setItem(SHOP_SEED_KEY, String(storedSeed));
+    window.localStorage.setItem(SHOP_REFRESH_AT_KEY, String(storedRefreshAt));
+    window.setTimeout(() => {
+      setSeed(storedSeed);
+      setRefreshAt(storedRefreshAt);
+      setNow(current);
+    }, 0);
+
+    const rotationTimer = window.setInterval(() => {
+      const tickNow = Date.now();
+      setNow(tickNow);
+      let deadline = Number(window.localStorage.getItem(SHOP_REFRESH_AT_KEY) || "0");
+      let currentSeed = Number(window.localStorage.getItem(SHOP_SEED_KEY) || "1");
+      if (!Number.isFinite(currentSeed) || currentSeed < 1) currentSeed = 1;
+      if (!Number.isFinite(deadline) || deadline <= 0) {
+        deadline = tickNow + SHOP_REFRESH_MS;
+        window.localStorage.setItem(SHOP_REFRESH_AT_KEY, String(deadline));
+        setRefreshAt(deadline);
+        return;
+      }
+      if (tickNow < deadline) {
+        setRefreshAt(deadline);
+        return;
+      }
+      const rotations = Math.floor((tickNow - deadline) / SHOP_REFRESH_MS) + 1;
+      const nextSeed = currentSeed + rotations;
+      const nextDeadline = deadline + rotations * SHOP_REFRESH_MS;
+      window.localStorage.setItem(SHOP_SEED_KEY, String(nextSeed));
+      window.localStorage.setItem(SHOP_REFRESH_AT_KEY, String(nextDeadline));
+      setSeed(nextSeed);
+      setRefreshAt(nextDeadline);
+      setPage(0);
+      setStatus("The daily shop refreshed automatically. A new set of listings is available.");
+    }, 1000);
+
     let cancelled = false;
     async function load() {
       let local: GameSave | null = null;
@@ -271,12 +329,13 @@ export function ChondroBreederExpandedShop() {
       if (!cancelled) setSave(local);
     }
     void load();
-    const timer = window.setInterval(load, 5000);
+    const dataTimer = window.setInterval(load, 5000);
     const onConservation = () => void load();
     window.addEventListener("chondro-conservation-updated", onConservation);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      window.clearInterval(rotationTimer);
+      window.clearInterval(dataTimer);
       window.removeEventListener("chondro-conservation-updated", onConservation);
     };
   }, []);
@@ -287,14 +346,7 @@ export function ChondroBreederExpandedShop() {
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
   const visible = offers.slice(page * 5, page * 5 + 5);
   const pageCount = Math.ceil(offers.length / 5);
-
-  function refreshShop() {
-    const next = seed + 1;
-    setSeed(next);
-    setPage(0);
-    window.localStorage.setItem(SHOP_SEED_KEY, String(next));
-    setStatus("Shop refreshed. Community conservation effects were applied to the new import pool.");
-  }
+  const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
 
   async function buy(offer: Offer) {
     if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
@@ -325,9 +377,16 @@ export function ChondroBreederExpandedShop() {
         <div>
           <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
           <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
-          <p className="mt-1 text-xs text-white/35">The A++ utaraensis pair is pinned first. Community conservation stewardship now influences subspecies representation and phenotype quality among imported animals.</p>
+          <p className="mt-1 text-xs text-white/35">The A++ utaraensis pair is pinned first. Community conservation stewardship influences subspecies representation and phenotype quality among imported animals.</p>
         </div>
-        <button type="button" onClick={refreshShop} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-black text-sky-100/75">Refresh shop</button>
+        <div className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-right">
+          <div className="text-[9px] font-black uppercase tracking-[.14em] text-sky-100/45">Next shop refresh</div>
+          <div className="mt-1 tabular-nums text-sm font-black text-sky-100/80">{formatCountdown(refreshRemaining)}</div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-white/[.055] bg-black/10 px-3 py-2 text-[10px] leading-5 text-white/38">
+        Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return.
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
