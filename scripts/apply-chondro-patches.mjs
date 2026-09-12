@@ -65,6 +65,10 @@ const checks = [
     file: "src/components/ChondroBreederExpandedShop.tsx",
     markers: [
       'subspecies === "Morelia viridis" ? "Yellow"',
+      'const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";',
+      "const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;",
+      "Next shop refresh",
+      "Inventory rotates automatically every 24 hours.",
     ],
   },
 ];
