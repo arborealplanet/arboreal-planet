@@ -8,8 +8,6 @@ const patches = [
   "scripts/cleanup-product-copy.mjs",
   "scripts/patch-chondro-screen-mode.mjs",
   "scripts/patch-chondro-save-events.mjs",
-  "scripts/patch-chondro-nav-and-neonate-colors.mjs",
-  "scripts/patch-chondro-reset-safety.mjs",
 ];
 
 for (const patch of patches) {
@@ -42,6 +40,10 @@ const checks = [
       "hideLegacySectionForFocusedScreen",
       'arboreal-chondro-market-action',
       'arboreal-chondro-clutch-action',
+      'subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"',
+      'const [resetMenuOpen, setResetMenuOpen] = useState(false);',
+      'aria-label="Open game options"',
+      'Type RESET CHONDRO BREEDER exactly to continue.',
     ],
   },
   {
