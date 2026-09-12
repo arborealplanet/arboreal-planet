@@ -9,9 +9,6 @@ const patches = [
   "scripts/patch-chondro-map-highlight.mjs",
   "scripts/patch-chondro-screen-mode.mjs",
   "scripts/patch-chondro-save-events.mjs",
-  "scripts/patch-chondro-focused-screens.mjs",
-  "scripts/patch-chondro-player-market-screen.mjs",
-  "scripts/patch-chondro-clutch-action-bridge.mjs",
   "scripts/patch-chondro-nav-and-neonate-colors.mjs",
   "scripts/patch-chondro-reset-safety.mjs",
 ];
@@ -42,6 +39,10 @@ const checks = [
       "const latestSaveRef = useRef<GameSave | null>(null);",
       "CLUTCH_ESTABLISH_BASE_COST",
       "Incubation complete. The clutch hatched and now needs to be established.",
+      "BreederGameScreenContext",
+      "hideLegacySectionForFocusedScreen",
+      'arboreal-chondro-market-action',
+      'arboreal-chondro-clutch-action',
     ],
   },
   {
