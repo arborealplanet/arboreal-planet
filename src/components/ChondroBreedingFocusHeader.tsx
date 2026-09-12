@@ -18,11 +18,57 @@ type Save = {
 
 type StageId = "cycling" | "pairing" | "development" | "incubation";
 
+type ProcessGuide = {
+  id: string;
+  label: string;
+  kicker: string;
+  summary: string;
+  body: string;
+};
+
 const stages: Array<{ id: StageId; label: string; short: string; detail: string }> = [
   { id: "cycling", label: "Cycle", short: "1", detail: "Prepare the female and bring the pair into breeding condition." },
   { id: "pairing", label: "Pair", short: "2", detail: "Run the pairing window until a successful breeding is confirmed." },
   { id: "development", label: "Develop", short: "3", detail: "The pair separates naturally while the female develops the clutch." },
   { id: "incubation", label: "Incubation", short: "4", detail: "Eggs are laid, moved directly into the incubator, and run to hatch." },
+];
+
+const processGuides: ProcessGuide[] = [
+  {
+    id: "cycling",
+    label: "Cycling",
+    kicker: "Prepare the female",
+    summary: "Condition the female, reduce feeding, and gradually bring night temperatures into the low 70s °F.",
+    body: "Once the female is at proper breeding size and condition, reduce food intake while gradually lowering nighttime temperatures until nights are in the low 70s °F. Maintain the reduced feeding and cooler-night cycle for roughly 2–3 weeks. At that point, the animals should be ready to begin pairing.",
+  },
+  {
+    id: "pairing",
+    label: "Pairing",
+    kicker: "Introduce the pair",
+    summary: "House the male and female together while maintaining the cooler cycle and reduced feeding schedule.",
+    body: "Place the male and female together and continue the cooler nighttime temperatures and reduced food intake. A pairing may last anywhere from several weeks to several months depending on the animals. Continue observing the pair until successful breeding behavior is confirmed and the female begins moving into development.",
+  },
+  {
+    id: "development",
+    label: "Development",
+    kicker: "Female develops the clutch",
+    summary: "After successful breeding, the pair will often separate naturally while the female develops the eggs.",
+    body: "Once the snakes have successfully bred, they will usually begin separating on their own while the female develops the clutch. At this point the male can be removed. The female then carries the developing eggs until she is ready to lay, which is treated as the milestone that moves the game directly into Incubation.",
+  },
+  {
+    id: "incubation",
+    label: "Incubation",
+    kicker: "Eggs are laid",
+    summary: "Candle the eggs, orient the embryos upward, and move the clutch into stable incubation conditions.",
+    body: "After the female lays, candle the eggs and position each viable egg with the embryo facing upward. Place the clutch into the incubator and maintain roughly 86.3–87.5 °F. Green Tree Python eggs commonly run around 50 days to hatch, give or take, so the game treats hatch as the completion event for the Incubation stage.",
+  },
+  {
+    id: "establish",
+    label: "Establish the snakes",
+    kicker: "Teach the neonates to feed",
+    summary: "Work with the hatchlings until they reliably strike, eat, and continue feeding on their own.",
+    body: "After hatch, the neonates still need to become reliable feeders. Work with each baby until it learns to strike prey and eat consistently on its own. A commonly used benchmark is about 15 successful independent meals before considering a young chondro established. In the game, establishment is the final clutch milestone before individual holdback or sale decisions.",
+  },
 ];
 
 function normalizeStage(stage?: string): StageId | null {
@@ -152,6 +198,31 @@ export function ChondroBreedingFocusHeader() {
               <span className="text-white/18">→</span>
               <span className="rounded-full border border-amber-200/12 bg-amber-200/[.03] px-3 py-2 text-amber-100/60">Establish clutch</span>
             </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <div className="px-1 pb-1">
+              <div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-100/42">Breeding process guide</div>
+              <p className="mt-1 text-[11px] leading-5 text-white/30">Open any section for a more detailed explanation of what is happening during that part of the program.</p>
+            </div>
+            {processGuides.map((guide, index) => (
+              <details key={guide.id} className="group overflow-hidden rounded-[18px] border border-white/[.06] bg-black/12 open:border-emerald-300/14 open:bg-emerald-300/[.025]">
+                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-[10px] font-black ${guide.id === "establish" ? "border-amber-200/15 text-amber-100/62" : "border-emerald-300/12 text-emerald-100/55"}`}>{index < 4 ? index + 1 : "✓"}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-xs font-black uppercase tracking-[.08em] text-white/68">{guide.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-[.11em] text-white/24">{guide.kicker}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] leading-4 text-white/34">{guide.summary}</p>
+                  </div>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/[.07] text-sm text-white/30 transition group-open:rotate-45 group-open:border-emerald-300/15 group-open:text-emerald-100/55">+</span>
+                </summary>
+                <div className="border-t border-white/[.05] px-4 py-4 pl-[3.75rem] text-xs leading-6 text-white/46">
+                  {guide.body}
+                </div>
+              </details>
+            ))}
           </div>
         </div>
       </div>
