@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Sex = "Male" | "Female";
@@ -51,19 +50,6 @@ const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
 const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
-const localitySubspecies: Record<Locality, Subspecies> = {
-  Biak: "Morelia azurea azurea",
-  Numfor: "Morelia azurea azurea",
-  Manokwari: "Morelia azurea pulcher",
-  Sorong: "Morelia azurea pulcher",
-  Timika: "Morelia azurea pulcher",
-  Cyclops: "Morelia azurea utaraensis",
-  Jayapura: "Morelia azurea utaraensis",
-  Lereh: "Morelia azurea utaraensis",
-  Wamena: "Morelia azurea utaraensis",
-  Aru: "Morelia viridis",
-  Merauke: "Morelia viridis",
-};
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
   "Morelia azurea azurea": ["Biak", "Numfor"],
   "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],
@@ -229,7 +215,6 @@ function parseSave(value: unknown): GameSave | null {
 }
 
 export function ChondroBreederExpandedShop() {
-  const [mount, setMount] = useState<HTMLElement | null>(null);
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [conservation, setConservation] = useState<ConservationRow[]>([]);
@@ -239,23 +224,6 @@ export function ChondroBreederExpandedShop() {
   const [status, setStatus] = useState("");
   const [refreshAt, setRefreshAt] = useState(0);
   const [now, setNow] = useState(0);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const heading = [...document.querySelectorAll("h2")].find((node) => node.textContent?.includes("Most are ordinary. The special ones matter."));
-      const section = heading?.closest("section");
-      if (!section) return;
-      const existing = section.querySelector<HTMLElement>("[data-expanded-shop-mount]");
-      if (existing) { setMount(existing); return; }
-      const node = document.createElement("div");
-      node.dataset.expandedShopMount = "true";
-      node.className = "mt-6";
-      const originalStore = section.querySelector<HTMLElement>(".mx-auto.mt-6.max-w-2xl");
-      section.insertBefore(node, originalStore ?? null);
-      setMount(node);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const current = Date.now();
@@ -369,58 +337,61 @@ export function ChondroBreederExpandedShop() {
     }
   }
 
-  if (!mount || !save) return null;
+  if (!save) {
+    return <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="rounded-[24px] border border-white/[.06] bg-white/[.02] p-5 text-sm text-white/40">Loading snake store…</div></div>;
+  }
 
-  return createPortal(
-    <div className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
-          <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
-          <p className="mt-1 text-xs text-white/35">The A++ utaraensis pair is pinned first. Community conservation stewardship influences subspecies representation and phenotype quality among imported animals.</p>
+  return (
+    <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+      <div className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
+            <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
+            <p className="mt-1 text-xs text-white/35">The A++ utaraensis pair is pinned first. Community conservation stewardship influences subspecies representation and phenotype quality among imported animals.</p>
+          </div>
+          <div className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-right">
+            <div className="text-[9px] font-black uppercase tracking-[.14em] text-sky-100/45">Next shop refresh</div>
+            <div className="mt-1 tabular-nums text-sm font-black text-sky-100/80">{formatCountdown(refreshRemaining)}</div>
+          </div>
         </div>
-        <div className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-right">
-          <div className="text-[9px] font-black uppercase tracking-[.14em] text-sky-100/45">Next shop refresh</div>
-          <div className="mt-1 tabular-nums text-sm font-black text-sky-100/80">{formatCountdown(refreshRemaining)}</div>
+
+        <div className="mt-3 rounded-xl border border-white/[.055] bg-black/10 px-3 py-2 text-[10px] leading-5 text-white/38">
+          Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return.
         </div>
-      </div>
 
-      <div className="mt-3 rounded-xl border border-white/[.055] bg-black/10 px-3 py-2 text-[10px] leading-5 text-white/38">
-        Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return.
-      </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {visible.map((offer) => {
+            const sold = purchased.has(offer.id);
+            const effect = conservation.find((row) => row.subspecies === offer.subspecies);
+            return (
+              <article key={offer.id} className={`rounded-2xl border p-3 ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}>
+                <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }} compact />
+                <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
+                <div className="mt-1 text-[10px] text-white/32">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
+                <div className="mt-1 text-[10px] font-semibold text-red-100/65">Neonate color: {offer.neonateColor}</div>
+                {offer.specialLabel ? <div className="mt-2 rounded-full border border-amber-200/20 px-2 py-1 text-center text-[9px] font-black uppercase text-amber-100/75">{offer.specialLabel}</div> : null}
+                {offer.source === "Import" && effect && Number(effect.stewardship_score) > 0 ? <div className="mt-2 text-[9px] font-semibold text-emerald-100/55">Conservation-supported import · stewardship {Number(effect.stewardship_score).toFixed(1)}</div> : null}
+                <div className="mt-3 rounded-xl border border-white/[.06] p-2 text-[10px] leading-5 text-white/42">
+                  {offer.geneticsTested ? `HB ${offer.highBlack}% · HW ${offer.highWhite}% · Blue ${offer.blueStripe}% · Yellow ${offer.yellowRetention}%` : "Genetics untested · percentages hidden"}<br />
+                  Nido: <span className={offer.nidoStatus === "Negative" ? "text-emerald-200/70" : "text-white/45"}>{offer.nidoStatus}</span>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">{sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {visible.map((offer) => {
-          const sold = purchased.has(offer.id);
-          const effect = conservation.find((row) => row.subspecies === offer.subspecies);
-          return (
-            <article key={offer.id} className={`rounded-2xl border p-3 ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}>
-              <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }} compact />
-              <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
-              <div className="mt-1 text-[10px] text-white/32">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
-              <div className="mt-1 text-[10px] font-semibold text-red-100/65">Neonate color: {offer.neonateColor}</div>
-              {offer.specialLabel ? <div className="mt-2 rounded-full border border-amber-200/20 px-2 py-1 text-center text-[9px] font-black uppercase text-amber-100/75">{offer.specialLabel}</div> : null}
-              {offer.source === "Import" && effect && Number(effect.stewardship_score) > 0 ? <div className="mt-2 text-[9px] font-semibold text-emerald-100/55">Conservation-supported import · stewardship {Number(effect.stewardship_score).toFixed(1)}</div> : null}
-              <div className="mt-3 rounded-xl border border-white/[.06] p-2 text-[10px] leading-5 text-white/42">
-                {offer.geneticsTested ? `HB ${offer.highBlack}% · HW ${offer.highWhite}% · Blue ${offer.blueStripe}% · Yellow ${offer.yellowRetention}%` : "Genetics untested · percentages hidden"}<br />
-                Nido: <span className={offer.nidoStatus === "Negative" ? "text-emerald-200/70" : "text-white/45"}>{offer.nidoStatus}</span>
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">{sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}</button>
-              </div>
-            </article>
-          );
-        })}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <button type="button" onClick={() => setPage((value) => (value - 1 + pageCount) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">← Previous 5</button>
+          <div className="text-xs text-white/32">Page {page + 1} of {pageCount} · {openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</div>
+          <button type="button" onClick={() => setPage((value) => (value + 1) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Next 5 →</button>
+        </div>
+        {status ? <div role="status" className="mt-3 text-xs text-sky-100/65">{status}</div> : null}
       </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={() => setPage((value) => (value - 1 + pageCount) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">← Previous 5</button>
-        <div className="text-xs text-white/32">Page {page + 1} of {pageCount} · {openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</div>
-        <button type="button" onClick={() => setPage((value) => (value + 1) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Next 5 →</button>
-      </div>
-      {status ? <div role="status" className="mt-3 text-xs text-sky-100/65">{status}</div> : null}
-    </div>,
-    mount,
+    </div>
   );
 }
