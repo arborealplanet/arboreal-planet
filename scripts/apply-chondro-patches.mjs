@@ -6,7 +6,6 @@ const patches = [
   "scripts/materialize-chondro-game-assets.mjs",
   "scripts/patch-chondro-breeding-flow.mjs",
   "scripts/cleanup-product-copy.mjs",
-  "scripts/patch-chondro-map-highlight.mjs",
   "scripts/patch-chondro-screen-mode.mjs",
   "scripts/patch-chondro-save-events.mjs",
   "scripts/patch-chondro-nav-and-neonate-colors.mjs",
@@ -70,6 +69,15 @@ const checks = [
       "Next shop refresh",
       "Inventory rotates automatically every 24 hours.",
       "Loading snake store…",
+    ],
+  },
+  {
+    file: "src/components/ChondroConservationPartnerships.tsx",
+    markers: [
+      "const mapSpotlight",
+      "radial-gradient(circle at",
+      "aria-pressed={active(subspecies)}",
+      "Selected program",
     ],
   },
 ];
