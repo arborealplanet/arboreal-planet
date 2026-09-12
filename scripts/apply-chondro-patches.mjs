@@ -4,10 +4,7 @@ import { spawnSync } from "node:child_process";
 const patches = [
   "scripts/materialize-assets.mjs",
   "scripts/materialize-chondro-game-assets.mjs",
-  "scripts/patch-chondro-breeding-flow.mjs",
   "scripts/cleanup-product-copy.mjs",
-  "scripts/patch-chondro-screen-mode.mjs",
-  "scripts/patch-chondro-save-events.mjs",
 ];
 
 for (const patch of patches) {
@@ -43,6 +40,8 @@ const checks = [
       'aria-label="Open game options"',
       'confirmation !== "RESET CHONDRO BREEDER"',
       'subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"',
+      "updatedAt: Date.now()",
+      "keepalive: true",
     ],
   },
   {
@@ -93,4 +92,4 @@ for (const check of checks) {
   }
 }
 
-console.log("\n[Chondro setup] All materializers, compatibility patches and output validations completed successfully.");
+console.log("\n[Chondro setup] Source-native Chondro game validation completed successfully.");
