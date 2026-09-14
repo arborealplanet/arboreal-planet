@@ -88,6 +88,14 @@ const checks = [
     ],
   },
   {
+    file: "src/components/ChondroPlayerMarket.tsx",
+    markers: [
+      'import { animalHousingCapacity } from "@/lib/chondro-facility-limits";',
+      "const capacity = animalHousingCapacity(save.enclosures);",
+      "Open animal spaces",
+    ],
+  },
+  {
     file: "src/components/ChondroBreederExpandedShop.tsx",
     markers: [
       'subspecies === "Morelia viridis" ? "Yellow"',
