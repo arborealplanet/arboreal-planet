@@ -37,6 +37,7 @@ const checks = [
       "hideLegacySectionForFocusedScreen",
       'arboreal-chondro-market-action',
       'arboreal-chondro-clutch-action',
+      'arboreal-chondro-enclosure-action',
       'aria-label="Open game options"',
       'confirmation !== "RESET CHONDRO BREEDER"',
       'subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"',
@@ -80,6 +81,10 @@ const checks = [
       "Next shop refresh",
       "Inventory rotates automatically every 24 hours.",
       "Loading snake store…",
+      'type EnclosureType = "Chondro Dojo Bin" | "PVC Arboreal";',
+      'arboreal-chondro-enclosure-action',
+      "/hatchery/game/pvc-enclosure.webp",
+      "Buy housing before you buy snakes.",
     ],
   },
   {
