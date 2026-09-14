@@ -109,15 +109,15 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
   const conservationTotal = (conservation.status ?? []).reduce((sum, row) => sum + Number(row.contribution_count ?? 0), 0);
 
   const next = useMemo(() => {
-    if (activeClutch) return { view: "clutches" as CoreView, eyebrow: "Next action", title: save.clutchEstablished ? "Review the active clutch" : "Establish the active clutch", detail: `${activeClutch} offspring are waiting in Clutches.` };
-    if (cycle) return { view: "breeding" as CoreView, eyebrow: "Breeding in progress", title: stageLabel(cycle.stage), detail: cycle.completesAt && now ? `${remaining(cycle.completesAt - now)} remaining in the current stage.` : "Your breeding cycle is active." };
-    if (!colony.length) return { view: "market" as CoreView, eyebrow: "Next action", title: "Buy your first chondros", detail: "Open the Store and start building your breeding colony." };
-    if (capacity <= colony.length) return { view: "market" as CoreView, eyebrow: "Capacity warning", title: "Add enclosure capacity", detail: "Open the Store for a Chondro Dojo Pair or PVC enclosure before adding another snake." };
+    if (activeClutch) return { view: "clutches" as CoreView, eyebrow: "Next action", title: save.clutchEstablished ? "Review the active clutch" : "Establish the active clutch", detail: `${activeClutch} virtual offspring are waiting in Clutches.` };
+    if (cycle) return { view: "breeding" as CoreView, eyebrow: "Breeding in progress", title: stageLabel(cycle.stage), detail: cycle.completesAt && now ? `${remaining(cycle.completesAt - now)} remaining in the current stage.` : "Your virtual breeding cycle is active." };
+    if (!colony.length) return { view: "market" as CoreView, eyebrow: "Next action", title: "Buy your first chondros", detail: "Open the Store and start building your virtual breeding colony." };
+    if (capacity <= colony.length) return { view: "market" as CoreView, eyebrow: "Capacity warning", title: "Add enclosure capacity", detail: "Open the Store for a Chondro Dojo Pair or PVC enclosure before adding another virtual snake." };
     if (save.seasonCarePaid !== (save.season ?? 1)) return { view: "breeding" as CoreView, eyebrow: "Next action", title: "Prepare for the season", detail: "Provide seasonal food and care before beginning a breeding cycle." };
     const adultFemale = colony.some((animal) => animal.sex === "Female" && animal.lifeStage === "Adult");
     const adultMale = colony.some((animal) => animal.sex === "Male" && animal.lifeStage === "Adult");
     if (!adultFemale || !adultMale) return { view: "colony" as CoreView, eyebrow: "Next action", title: "Develop your breeding group", detail: "Raise or acquire an adult male and female before pairing." };
-    return { view: "breeding" as CoreView, eyebrow: "Ready to breed", title: "Select your next pair", detail: "Your colony has the basic pieces needed to begin another cycle." };
+    return { view: "breeding" as CoreView, eyebrow: "Ready to breed", title: "Select your next pair", detail: "Your virtual colony has the basic pieces needed to begin another cycle." };
   }, [activeClutch, capacity, colony, cycle, now, save.clutchEstablished, save.season, save.seasonCarePaid]);
 
   return (
@@ -127,7 +127,10 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
         onClick={() => onOpen(next.view)}
         className="group rounded-[24px] border border-emerald-300/16 bg-emerald-300/[.045] p-5 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/28 hover:bg-emerald-300/[.065] sm:p-6"
       >
-        <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-100/52">{next.eyebrow}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-100/52">{next.eyebrow}</div>
+          <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-2 py-0.5 text-[7px] font-black uppercase tracking-[.1em] text-emerald-100/58">Virtual game</span>
+        </div>
         <div className="mt-2 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-[-.035em] text-white/90">{next.title}</h2>
@@ -138,8 +141,8 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
       </button>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
-        <StatusStat label="Cash" value={money(Number(save.cash ?? 0))} />
-        <StatusStat label="Colony" value={`${colony.length}/${capacity}`} />
+        <StatusStat label="Game cash" value={money(Number(save.cash ?? 0))} />
+        <StatusStat label="Virtual colony" value={`${colony.length}/${capacity}`} />
         <StatusStat label="Season" value={String(save.season ?? 1)} />
         <StatusStat label="Pending tests" value={String(pendingTests.length)} />
       </div>
@@ -147,9 +150,9 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
       <div className="rounded-[24px] border border-white/[.06] bg-black/18 p-4 lg:col-span-2">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] text-white/38">
           <button type="button" onClick={() => onOpen("market")} className="transition hover:text-white/70"><strong className="text-white/58">Player listings:</strong> {ownListings.length}{sweepRemaining !== null ? ` · next fallback in ${remaining(sweepRemaining)}` : ""}</button>
-          <button type="button" onClick={() => onOpen("market")} className="transition hover:text-white/70"><strong className="text-white/58">Unclaimed sales:</strong> {market.pendingSaleCount ?? 0} · {money(Number(market.pendingProceeds ?? 0))}</button>
-          <button type="button" onClick={() => onOpen("conservation")} className="transition hover:text-white/70"><strong className="text-white/58">Conservation total:</strong> {conservationTotal} animals</button>
-          {activeClutch ? <button type="button" onClick={() => onOpen("clutches")} className="transition hover:text-white/70"><strong className="text-white/58">Active clutch:</strong> {activeClutch} offspring</button> : null}
+          <button type="button" onClick={() => onOpen("market")} className="transition hover:text-white/70"><strong className="text-white/58">Unclaimed game sales:</strong> {market.pendingSaleCount ?? 0} · {money(Number(market.pendingProceeds ?? 0))}</button>
+          <button type="button" onClick={() => onOpen("conservation")} className="transition hover:text-white/70"><strong className="text-white/58">Conservation total:</strong> {conservationTotal} virtual animals</button>
+          {activeClutch ? <button type="button" onClick={() => onOpen("clutches")} className="transition hover:text-white/70"><strong className="text-white/58">Active clutch:</strong> {activeClutch} virtual offspring</button> : null}
         </div>
       </div>
     </section>
