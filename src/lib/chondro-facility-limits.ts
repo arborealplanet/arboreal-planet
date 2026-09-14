@@ -52,11 +52,25 @@ export function installedEnclosures(enclosures: Record<string, number> | null | 
   return Object.values(enclosures ?? {}).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
 }
 
+export function enclosureFootprint(enclosures: Record<string, number> | null | undefined) {
+  return installedEnclosures(enclosures);
+}
+
+export function animalHousingCapacity(enclosures: Record<string, number> | null | undefined) {
+  const dojoSets = Math.max(0, Number(enclosures?.["Chondro Dojo Bin"] ?? 0) || 0);
+  const pvc = Math.max(0, Number(enclosures?.["PVC Arboreal"] ?? 0) || 0);
+  const other = Object.entries(enclosures ?? {}).reduce((sum, [key, value]) => {
+    if (key === "Chondro Dojo Bin" || key === "PVC Arboreal") return sum;
+    return sum + Math.max(0, Number(value) || 0);
+  }, 0);
+  return dojoSets * 2 + pvc + other;
+}
+
 export function remainingFacilityEnclosureSlots(
   facilityId: string | null | undefined,
   enclosures: Record<string, number> | null | undefined,
   facilityRooms?: FacilityRoomState,
 ) {
   const cap = roomCapacityFromSave({ facilityId, facilityRooms });
-  return Math.max(0, cap - installedEnclosures(enclosures));
+  return Math.max(0, cap - enclosureFootprint(enclosures));
 }
