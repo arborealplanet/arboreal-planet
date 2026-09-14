@@ -148,20 +148,24 @@ export function ChondroShowsPanel() {
   }
 
   if (!save) {
-    return <div className="rounded-2xl border border-white/[.06] p-4 text-xs text-white/35">Loading show circuit…</div>;
+    return <div className="rounded-2xl border border-white/[.06] p-4 text-xs text-white/35">Loading virtual show circuit…</div>;
   }
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] px-4 py-3 text-[10px] text-white/38">
+        <span className="rounded-full border border-emerald-300/14 bg-emerald-300/[.04] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/62">Virtual show circuit</span>
+        <span>Entries, prizes, reputation and animals in this section are part of the Chondro Breeder game.</span>
+      </div>
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
-          <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Show entry</div>
+          <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Virtual show entry</div>
           <select
             value={animal?.id ?? ""}
             onChange={(event) => setAnimalId(event.target.value)}
             className="mt-3 w-full rounded-xl border border-white/[.08] bg-black/30 px-3 py-2 text-xs text-white/65"
           >
-            {!eligibleAnimals.length ? <option value="">No eligible adults</option> : null}
+            {!eligibleAnimals.length ? <option value="">No eligible virtual adults</option> : null}
             {eligibleAnimals.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name} · score {showScore(item)} · {item.classification}
@@ -177,7 +181,7 @@ export function ChondroShowsPanel() {
             </select>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-white/38">
-            <Mini label="Entry fee" value={money(tier.entryFee)} />
+            <Mini label="Game entry fee" value={money(tier.entryFee)} />
             <Mini label="Rep required" value={tier.reputationRequired.toLocaleString()} />
             <Mini label="Animal score" value={animal ? String(showScore(animal)) : "—"} />
             <Mini label="Current rep" value={reputation.toLocaleString()} />
@@ -188,11 +192,11 @@ export function ChondroShowsPanel() {
             onClick={() => void enterShow()}
             className="mt-3 rounded-xl bg-amber-200 px-4 py-2 text-xs font-black text-[#17130a] disabled:opacity-30"
           >
-            {alreadyEntered ? "Already entered this season" : `Enter · ${money(tier.entryFee)}`}
+            {alreadyEntered ? "Already entered this season" : `Enter virtual show · ${money(tier.entryFee)}`}
           </button>
           {placement && !alreadyEntered ? (
             <div className="mt-2 text-[9px] leading-4 text-white/25">
-              Preview uses the current animal, show tier, and season. Results are deterministic for that entry.
+              Preview uses the current virtual animal, show tier, and season. Results are deterministic for that entry.
             </div>
           ) : null}
           {status ? <div role="status" className="mt-3 text-xs text-amber-100/65">{status}</div> : null}
@@ -201,8 +205,8 @@ export function ChondroShowsPanel() {
         <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Show history</div>
-              <div className="mt-1 text-xs text-white/35">Placings build cash and breeder reputation.</div>
+              <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Virtual show history</div>
+              <div className="mt-1 text-xs text-white/35">Placings build game cash and breeder reputation.</div>
             </div>
             <div className="text-[10px] text-white/25">{save.showHistory?.length ?? 0} entries</div>
           </div>
@@ -216,10 +220,10 @@ export function ChondroShowsPanel() {
                   </div>
                   <div className={`text-[10px] font-black ${entry.placement === "No Placement" ? "text-white/35" : "text-amber-100/70"}`}>{entry.placement}</div>
                 </div>
-                <div className="mt-2 text-[9px] text-emerald-100/50">{entry.cashAward ? `+${money(entry.cashAward)}` : "No cash prize"} · +{entry.reputationAward} rep</div>
+                <div className="mt-2 text-[9px] text-emerald-100/50">{entry.cashAward ? `+${money(entry.cashAward)}` : "No game cash prize"} · +{entry.reputationAward} rep</div>
               </div>
             ))}
-            {!save.showHistory?.length ? <div className="rounded-xl border border-dashed border-white/[.07] p-4 text-xs text-white/25">No show entries yet.</div> : null}
+            {!save.showHistory?.length ? <div className="rounded-xl border border-dashed border-white/[.07] p-4 text-xs text-white/25">No virtual show entries yet.</div> : null}
           </div>
         </section>
       </div>
