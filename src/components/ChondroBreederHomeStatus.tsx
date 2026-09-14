@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
 type CoreView = "breeding" | "colony" | "clutches" | "market" | "conservation";
 type Animal = { id?: string; name?: string; sex?: string; lifeStage?: string; condition?: string };
@@ -95,7 +96,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
   }, []);
 
   const colony = save.colony ?? [];
-  const capacity = Object.values(save.enclosures ?? {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  const capacity = animalHousingCapacity(save.enclosures);
   const activeClutch = Array.isArray(save.clutch?.offspring) ? save.clutch!.offspring!.length : 0;
   const cycle = save.breedingCycle ?? null;
   const pendingTests = save.geneticTestsPending ?? [];
@@ -111,7 +112,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
     if (activeClutch) return { view: "clutches" as CoreView, eyebrow: "Next action", title: save.clutchEstablished ? "Review the active clutch" : "Establish the active clutch", detail: `${activeClutch} offspring are waiting in Clutches.` };
     if (cycle) return { view: "breeding" as CoreView, eyebrow: "Breeding in progress", title: stageLabel(cycle.stage), detail: cycle.completesAt && now ? `${remaining(cycle.completesAt - now)} remaining in the current stage.` : "Your breeding cycle is active." };
     if (!colony.length) return { view: "market" as CoreView, eyebrow: "Next action", title: "Buy your first chondros", detail: "Open the Store and start building your breeding colony." };
-    if (capacity <= colony.length) return { view: "colony" as CoreView, eyebrow: "Capacity warning", title: "Add enclosure capacity", detail: "Your current colony has filled every installed enclosure." };
+    if (capacity <= colony.length) return { view: "market" as CoreView, eyebrow: "Capacity warning", title: "Add enclosure capacity", detail: "Open the Store for a Chondro Dojo Pair or PVC enclosure before adding another snake." };
     if (save.seasonCarePaid !== (save.season ?? 1)) return { view: "breeding" as CoreView, eyebrow: "Next action", title: "Prepare for the season", detail: "Provide seasonal food and care before beginning a breeding cycle." };
     const adultFemale = colony.some((animal) => animal.sex === "Female" && animal.lifeStage === "Adult");
     const adultMale = colony.some((animal) => animal.sex === "Male" && animal.lifeStage === "Adult");
