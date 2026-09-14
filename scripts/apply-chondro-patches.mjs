@@ -126,8 +126,11 @@ const checks = [
     markers: [
       "animalHousingCapacity",
       "enclosureFootprint",
-      "facility slots used",
-      "animal spaces open",
+      "Virtual colony",
+      "Every animal shown here exists only inside the Chondro Breeder game.",
+      "Virtual housing",
+      "virtual animal spaces open",
+      ">Virtual<",
     ],
   },
   {
