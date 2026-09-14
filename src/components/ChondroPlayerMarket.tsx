@@ -120,14 +120,15 @@ export function ChondroPlayerMarket() {
       <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market</div>
+            <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · Virtual animals</div>
             <h2 className="mt-2 text-xl font-semibold text-white/84 sm:text-2xl">Chondros listed by other breeders</h2>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-white/38">Shared listings keep the animal&apos;s locality, testing and breeding record when it changes hands.</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-white/38">Shared virtual listings keep the animal&apos;s locality, testing and breeding record when it changes hands inside Chondro Breeder.</p>
           </div>
           <button type="button" onClick={() => void refresh()} className="rounded-xl border border-white/[.08] px-3 py-2 text-[10px] font-bold text-white/52">Refresh</button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
+          <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-2.5 py-1 font-black uppercase tracking-[.08em] text-emerald-100/60">Virtual only</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Cash {money(cash)}</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Open animal spaces {openSlots}</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{available.length} available</span>
@@ -159,7 +160,10 @@ export function ChondroPlayerMarket() {
                 </div>
                 <div className="mt-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-white/78">{animal.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="truncate text-sm font-bold text-white/78">{animal.name}</div>
+                      <span className="shrink-0 rounded-full border border-emerald-300/14 px-2 py-0.5 text-[7px] font-black uppercase tracking-[.1em] text-emerald-100/58">Virtual</span>
+                    </div>
                     <div className="mt-1 truncate text-[10px] text-white/34">{animal.sex ?? "Unknown sex"} · {animal.lifeStage ?? "Unknown stage"} · {animal.locality ?? animal.subspecies}</div>
                   </div>
                   <div className="shrink-0 text-base font-semibold text-emerald-200/76">{money(listing.price)}</div>
@@ -171,12 +175,12 @@ export function ChondroPlayerMarket() {
                   onClick={() => buy(listing)}
                   className="mt-3 w-full rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30"
                 >
-                  {busy === listing.id ? "Claiming…" : openSlots <= 0 ? "Need enclosure" : cash < listing.price ? "Not enough cash" : "Buy snake"}
+                  {busy === listing.id ? "Claiming…" : openSlots <= 0 ? "Need enclosure" : cash < listing.price ? "Not enough cash" : "Buy virtual snake"}
                 </button>
               </article>
             );
           })}
-          {!available.length ? <div className="rounded-2xl border border-dashed border-white/[.08] p-6 text-sm text-white/30 md:col-span-2 xl:col-span-3">No breeder-listed snakes are available to you right now.</div> : null}
+          {!available.length ? <div className="rounded-2xl border border-dashed border-white/[.08] p-6 text-sm text-white/30 md:col-span-2 xl:col-span-3">No breeder-listed virtual snakes are available to you right now.</div> : null}
         </div>
       </div>
     </section>
