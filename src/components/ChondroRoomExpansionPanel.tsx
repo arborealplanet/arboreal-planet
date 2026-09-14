@@ -66,7 +66,7 @@ export function ChondroRoomExpansionPanel() {
       .finally(() => setBusy(false));
   }, [save, now, busy]);
 
-  const rooms = save?.facilityRooms ?? { "starter-room": 1 };
+  const rooms = useMemo<FacilityRoomState>(() => save?.facilityRooms ?? { "starter-room": 1 }, [save?.facilityRooms]);
   const totalCapacity = useMemo(() => roomCapacityFromSave({ facilityRooms: rooms }), [rooms]);
   const reputation = Number(save?.careerReputation ?? 0);
 
@@ -101,10 +101,13 @@ export function ChondroRoomExpansionPanel() {
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4">
-        <div className="text-sm font-bold text-white/75">Property → rooms → enclosure slots → animals</div>
-        <div className="mt-1 text-[11px] leading-5 text-white/35">Rooms add physical enclosure slots. A PVC enclosure uses one slot for one snake, while a Chondro Dojo Pair uses that same one slot for two separate snake enclosures.</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-sm font-bold text-white/75">Property → rooms → enclosure slots → virtual animals</div>
+          <span className="rounded-full border border-emerald-300/14 px-2 py-0.5 text-[7px] font-black uppercase tracking-[.1em] text-emerald-100/58">Game facility</span>
+        </div>
+        <div className="mt-1 text-[11px] leading-5 text-white/35">Rooms add physical enclosure slots inside Chondro Breeder. A PVC enclosure uses one slot for one virtual snake, while a Chondro Dojo Pair uses that same one slot for two separate virtual snake enclosures.</div>
         <div className="mt-3 text-2xl font-semibold text-emerald-100/75">{totalCapacity} facility enclosure slots</div>
-        <div className="mt-1 text-[10px] text-emerald-100/45">Dojo housing can turn each compatible slot into two animal spaces.</div>
+        <div className="mt-1 text-[10px] text-emerald-100/45">Dojo housing can turn each compatible slot into two virtual animal spaces.</div>
       </div>
 
       {activeRoom ? (
