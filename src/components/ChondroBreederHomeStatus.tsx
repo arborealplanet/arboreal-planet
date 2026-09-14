@@ -95,7 +95,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
     };
   }, []);
 
-  const colony = save.colony ?? [];
+  const colony = useMemo(() => save.colony ?? [], [save.colony]);
   const capacity = animalHousingCapacity(save.enclosures);
   const activeClutch = Array.isArray(save.clutch?.offspring) ? save.clutch!.offspring!.length : 0;
   const cycle = save.breedingCycle ?? null;
