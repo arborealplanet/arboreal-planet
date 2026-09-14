@@ -91,12 +91,16 @@ export function ChondroColonyOverview() {
   return (
     <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
       <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-[#06100c] shadow-[0_18px_60px_rgba(0,0,0,.18)]">
+        <div className="flex flex-wrap items-center gap-2 border-b border-white/[.055] px-4 py-3 sm:px-5">
+          <span className="rounded-full border border-emerald-300/14 bg-emerald-300/[.035] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/62">Virtual colony</span>
+          <span className="text-[10px] text-white/32">Every animal shown here exists only inside the Chondro Breeder game.</span>
+        </div>
         <div className="grid gap-3 border-b border-white/[.055] p-4 sm:grid-cols-2 lg:grid-cols-5 sm:p-5">
-          <Metric label="Colony" value={colony.length} detail={`${adults.length} adult${adults.length === 1 ? "" : "s"}`} />
+          <Metric label="Virtual colony" value={colony.length} detail={`${adults.length} virtual adult${adults.length === 1 ? "" : "s"}`} />
           <Metric label="Breeding ready" value={ready.length} detail="Adult, healthy and available" good />
-          <Metric label="Needs testing" value={untested.length} detail="Genetics still hidden" />
+          <Metric label="Needs testing" value={untested.length} detail="Game genetics still hidden" />
           <Metric label="Needs attention" value={attention.length} detail="Fair condition or Nido positive" warn={attention.length > 0} />
-          <Metric label="Housing" value={`${colony.length}/${animalCapacity}`} detail={`${footprint}/${facilityCapacity} facility slots used · ${Math.max(0, animalCapacity - colony.length)} animal spaces open`} />
+          <Metric label="Virtual housing" value={`${colony.length}/${animalCapacity}`} detail={`${footprint}/${facilityCapacity} facility slots used · ${Math.max(0, animalCapacity - colony.length)} virtual animal spaces open`} />
         </div>
 
         <div className="p-4 sm:p-5">
@@ -124,7 +128,10 @@ export function ChondroColonyOverview() {
                 <div key={animal.id} className={`rounded-2xl border p-3 ${attentionNow ? "border-amber-200/18 bg-amber-200/[.035]" : "border-white/[.055] bg-black/10"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-bold text-white/76">{animal.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="truncate text-sm font-bold text-white/76">{animal.name}</div>
+                        <span className="shrink-0 rounded-full border border-emerald-300/12 px-2 py-0.5 text-[7px] font-black uppercase tracking-[.09em] text-emerald-100/55">Virtual</span>
+                      </div>
                       <div className="mt-1 truncate text-[10px] text-white/32">{animal.subspecies ?? "Chondro"} · {animal.locality ?? "Unknown locality"}</div>
                     </div>
                     <span className={`shrink-0 rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] ${attentionNow ? "border-amber-200/20 text-amber-100/70" : readyNow ? "border-emerald-300/20 text-emerald-100/70" : "border-white/[.08] text-white/34"}`}>
@@ -142,8 +149,8 @@ export function ChondroColonyOverview() {
             })}
           </div>
 
-          {visible.length > 9 ? <div className="mt-3 text-[10px] text-white/28">Showing 9 of {visible.length}. Full animal controls remain directly below.</div> : null}
-          {!visible.length ? <div className="mt-4 rounded-2xl border border-white/[.06] bg-black/10 p-4 text-sm text-white/38">No animals match this filter.</div> : null}
+          {visible.length > 9 ? <div className="mt-3 text-[10px] text-white/28">Showing 9 of {visible.length}. Full virtual animal controls remain directly below.</div> : null}
+          {!visible.length ? <div className="mt-4 rounded-2xl border border-white/[.06] bg-black/10 p-4 text-sm text-white/38">No virtual animals match this filter.</div> : null}
         </div>
       </div>
     </section>
