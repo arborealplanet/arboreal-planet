@@ -42,6 +42,17 @@ const checks = [
       'subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"',
       "updatedAt: Date.now()",
       "keepalive: true",
+      "const [breederIdentityLoaded, setBreederIdentityLoaded] = useState(false);",
+      "Your completed incubation is being held safely until initials are confirmed.",
+      "Recovered the completed incubation after restoring your breeder initials.",
+    ],
+  },
+  {
+    file: "src/app/api/hatchery/chondro-breeder/breeder-identity/route.ts",
+    markers: [
+      "async function loadOwnInitials",
+      "alreadyAssigned: true",
+      "retryOwn.ok && retryOwn.initials",
     ],
   },
   {
