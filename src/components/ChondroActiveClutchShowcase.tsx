@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
+import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
 type Snake = {
   id: string;
@@ -18,7 +19,7 @@ type Snake = {
   geneticsTested?: boolean;
 };
 type Clutch = { id?: string; dam?: Snake; sire?: Snake; offspring?: Snake[] };
-type Save = { clutch?: Clutch | null; clutchEstablished?: boolean; holdbacks?: string[] };
+type Save = { clutch?: Clutch | null; clutchEstablished?: boolean; holdbacks?: string[]; colony?: Array<{ id?: string }>; enclosures?: Record<string, number> };
 type ClutchAction = "establish" | "toggle-holdback" | "finish";
 
 function strongestTrait(animal: Snake) {
@@ -67,6 +68,10 @@ export function ChondroActiveClutchShowcase() {
   const establishmentCost = 150 + offspring.length * 75;
   const holdbackCount = holdbacks.size;
   const marketCount = Math.max(0, offspring.length - holdbackCount);
+  const animalCapacity = animalHousingCapacity(save.enclosures);
+  const colonyCount = save.colony?.length ?? 0;
+  const holdbackCapacity = Math.max(0, animalCapacity - colonyCount);
+  const holdbackSpacesLeft = Math.max(0, holdbackCapacity - holdbackCount);
 
   return (
     <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
@@ -77,8 +82,11 @@ export function ChondroActiveClutchShowcase() {
             <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] text-white/90">{clutch.dam?.name ?? "Dam"} × {clutch.sire?.name ?? "Sire"}</h2>
             <p className="mt-2 text-sm text-white/44">{offspring.length} offspring · {save.clutchEstablished ? `${holdbackCount} holdback${holdbackCount === 1 ? "" : "s"} · ${marketCount} headed to market` : "establish the clutch before individual decisions"}</p>
           </div>
-          <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.13em] ${save.clutchEstablished ? "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/70" : "border-amber-200/18 bg-amber-200/[.045] text-amber-100/70"}`}>
-            {save.clutchEstablished ? "Established" : "Establishment pending"}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {save.clutchEstablished ? <div className="rounded-full border border-white/[.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white/42">{holdbackSpacesLeft} holdback space{holdbackSpacesLeft === 1 ? "" : "s"} left</div> : null}
+            <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.13em] ${save.clutchEstablished ? "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/70" : "border-amber-200/18 bg-amber-200/[.045] text-amber-100/70"}`}>
+              {save.clutchEstablished ? "Established" : "Establishment pending"}
+            </div>
           </div>
         </div>
 
@@ -97,10 +105,12 @@ export function ChondroActiveClutchShowcase() {
         ) : null}
 
         <div className="p-4 sm:p-5">
+          {save.clutchEstablished ? <div className="mb-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] px-4 py-3 text-[11px] leading-5 text-white/42">Your current housing has room for {holdbackCapacity} clutch holdback{holdbackCapacity === 1 ? "" : "s"}. Chondro Dojo Pairs count as two animal spaces while using one facility slot.</div> : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {offspring.map((baby) => {
               const strongest = strongestTrait(baby);
               const isHoldback = holdbacks.has(baby.id);
+              const holdbackFull = !isHoldback && holdbackCount >= holdbackCapacity;
               return (
                 <article key={baby.id} className={`rounded-[22px] border p-3 transition ${isHoldback ? "border-emerald-300/22 bg-emerald-300/[.035]" : "border-white/[.065] bg-black/14"}`}>
                   <div className="rounded-[18px] border border-white/[.045] bg-black/18 p-2">
@@ -125,11 +135,11 @@ export function ChondroActiveClutchShowcase() {
                   </div>
                   <button
                     type="button"
-                    disabled={!save.clutchEstablished}
+                    disabled={!save.clutchEstablished || holdbackFull}
                     onClick={() => dispatchClutchAction("toggle-holdback", baby.id)}
                     className={`mt-3 w-full rounded-xl border px-3 py-2.5 text-[10px] font-black uppercase tracking-[.08em] transition disabled:cursor-not-allowed disabled:opacity-30 ${isHoldback ? "border-emerald-300/20 bg-emerald-300/[.07] text-emerald-100/78" : "border-white/[.08] bg-white/[.025] text-white/52 hover:border-emerald-300/16 hover:text-white/78"}`}
                   >
-                    {!save.clutchEstablished ? "Establish first" : isHoldback ? "Keep as holdback" : "Mark as holdback"}
+                    {!save.clutchEstablished ? "Establish first" : isHoldback ? "Keep as holdback" : holdbackFull ? "Housing full" : "Mark as holdback"}
                   </button>
                 </article>
               );
