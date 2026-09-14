@@ -112,7 +112,7 @@ const checks = [
     markers: [
       "export function enclosureFootprint",
       "export function animalHousingCapacity",
-      "return dojoPairs * 2 + pvc + other;",
+      "return dojoSets * 2 + pvc + other;",
       "cap - enclosureFootprint(enclosures)",
     ],
   },
