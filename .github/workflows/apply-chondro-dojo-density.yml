@@ -1,0 +1,31 @@
+name: Apply Chondro Dojo Density
+
+on:
+  push:
+    paths:
+      - ".github/workflows/apply-chondro-dojo-density.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Apply Chondro Dojo density model
+        run: node scripts/apply-chondro-dojo-density.mjs
+      - name: Commit canonical source
+        run: |
+          if git diff --quiet -- src/components/ChondroBreederExpandedShop.tsx src/components/ChondroBreederGameV3.tsx src/components/ChondroColonyOverview.tsx; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ChondroBreederExpandedShop.tsx src/components/ChondroBreederGameV3.tsx src/components/ChondroColonyOverview.tsx
+          git commit -m "Make Chondro Dojo housing two snakes per facility slot"
+          git push
