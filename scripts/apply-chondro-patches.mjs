@@ -79,6 +79,15 @@ const checks = [
     ],
   },
   {
+    file: "src/components/ChondroBreederHomeStatus.tsx",
+    markers: [
+      'import { animalHousingCapacity } from "@/lib/chondro-facility-limits";',
+      "const capacity = animalHousingCapacity(save.enclosures);",
+      'view: "market" as CoreView, eyebrow: "Capacity warning"',
+      "Open the Store for a Chondro Dojo Pair or PVC enclosure",
+    ],
+  },
+  {
     file: "src/components/ChondroBreederExpandedShop.tsx",
     markers: [
       'subspecies === "Morelia viridis" ? "Yellow"',
