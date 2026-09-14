@@ -125,6 +125,15 @@ const checks = [
     ],
   },
   {
+    file: "src/components/ChondroRoomExpansionPanel.tsx",
+    markers: [
+      "Property → rooms → enclosure slots → animals",
+      "A PVC enclosure uses one slot for one snake",
+      "a Chondro Dojo Pair uses that same one slot for two separate snake enclosures",
+      "facility enclosure slots",
+    ],
+  },
+  {
     file: "src/lib/chondro-facility-limits.ts",
     markers: [
       "export function enclosureFootprint",
