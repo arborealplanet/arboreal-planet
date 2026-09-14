@@ -82,9 +82,12 @@ const checks = [
     file: "src/components/ChondroBreederHomeStatus.tsx",
     markers: [
       'import { animalHousingCapacity } from "@/lib/chondro-facility-limits";',
+      "const colony = useMemo(() => save.colony ?? [], [save.colony]);",
       "const capacity = animalHousingCapacity(save.enclosures);",
       'view: "market" as CoreView, eyebrow: "Capacity warning"',
       "Open the Store for a Chondro Dojo Pair or PVC enclosure",
+      "Virtual game",
+      "Virtual colony",
     ],
   },
   {
@@ -130,9 +133,11 @@ const checks = [
   {
     file: "src/components/ChondroRoomExpansionPanel.tsx",
     markers: [
-      "Property → rooms → enclosure slots → animals",
-      "A PVC enclosure uses one slot for one snake",
-      "a Chondro Dojo Pair uses that same one slot for two separate snake enclosures",
+      "const rooms = useMemo<FacilityRoomState>",
+      "Property → rooms → enclosure slots → virtual animals",
+      "A PVC enclosure uses one slot for one virtual snake",
+      "a Chondro Dojo Pair uses that same one slot for two separate virtual snake enclosures",
+      "virtual animal spaces",
       "facility enclosure slots",
     ],
   },
@@ -148,6 +153,15 @@ const checks = [
       "Housing conflict: remove",
       "Virtual only",
       "virtual offspring",
+    ],
+  },
+  {
+    file: "src/components/ChondroShowsPanel.tsx",
+    markers: [
+      "Virtual show circuit",
+      "Virtual show entry",
+      "Enter virtual show",
+      "game cash and breeder reputation",
     ],
   },
   {
