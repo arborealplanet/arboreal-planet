@@ -761,6 +761,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [marketStatus, setMarketStatus] = useState("");
   const [marketBusy, setMarketBusy] = useState<string | null>(null);
   const [breederInitials, setBreederInitials] = useState<string | null>(null);
+  const [breederIdentityLoaded, setBreederIdentityLoaded] = useState(false);
   const [initialsInput, setInitialsInput] = useState("");
   const [initialsPrompt, setInitialsPrompt] = useState(false);
   const [initialsStatus, setInitialsStatus] = useState("");
@@ -1004,7 +1005,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         const response = await fetch("/api/hatchery/chondro-breeder/breeder-identity", { cache: "no-store" });
         const data = await response.json();
         if (!cancelled && response.ok) setBreederInitials(data.initials ?? null);
-      } catch {}
+      } catch {} finally {
+        if (!cancelled) setBreederIdentityLoaded(true);
+      }
     }
     void loadBreederIdentity();
     return () => {
@@ -1081,10 +1084,10 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       }
     }
     if (breedingCycle.stage === "incubation") {
+      if (!breederIdentityLoaded) return;
       if (!breederInitials) {
-        setBreedingCycle(null);
         setInitialsPrompt(true);
-        setBreedingMessage("Choose breeder initials before the clutch can be recorded.");
+        setBreedingMessage("Choose breeder initials before the clutch can be recorded. Your completed incubation is being held safely until initials are confirmed.");
         return;
       }
       setClutch(createClutch(cycleDam, cycleSire, breederInitials));
@@ -1100,7 +1103,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       setBreedingCycle({ ...breedingCycle, stage: nextStage.id, completesAt: Date.now() + nextStage.hours * 3_600_000 });
       setBreedingMessage(nextStage.id === "development" ? "Pairing successful. The pair has separated naturally and development has started." : nextStage.id === "incubation" ? "Development complete. The eggs were laid and moved into the incubator. Incubation has started." : `${nextStage.label} started.`);
     }
-  }, [hydrated, now, facilityConstruction, geneticTestsPending, breedingCycle, colony, breederInitials, damId, sireId]);
+  }, [hydrated, now, facilityConstruction, geneticTestsPending, breedingCycle, colony, breederInitials, breederIdentityLoaded, damId, sireId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function buyEnclosure(type: EnclosureType) {
@@ -1299,6 +1302,21 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     startBreedingCycle();
   }
 
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!hydrated || !breederIdentityLoaded || !breederInitials || breedingCycle || clutch) return;
+    if (!breedingMessage.startsWith("Choose breeder initials before the clutch can be recorded")) return;
+    const recoveryDam = colony.find((animal) => animal.id === damId);
+    const recoverySire = colony.find((animal) => animal.id === sireId);
+    if (!recoveryDam || !recoverySire) return;
+    setClutch(createClutch(recoveryDam, recoverySire, breederInitials));
+    setClutchEstablished(false);
+    setHoldbacks([]);
+    setInitialsPrompt(false);
+    setBreedingMessage("Recovered the completed incubation after restoring your breeder initials. The clutch is ready to establish.");
+  }, [hydrated, breederIdentityLoaded, breederInitials, breedingCycle, clutch, breedingMessage, colony, damId, sireId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   function paySeasonCare() {
     if (seasonCarePaid === season || cash < seasonCareCost) return;
     setCash((value) => value - seasonCareCost);
@@ -1324,9 +1342,10 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       return;
     }
     setBreederInitials(data.initials);
+    setBreederIdentityLoaded(true);
     setInitialsPrompt(false);
     setInitialsStatus("");
-    window.setTimeout(() => startBreedingCycle(), 0);
+    if (!breedingCycle) window.setTimeout(() => startBreedingCycle(), 0);
   }
 
   function payClutchEstablishment() {
