@@ -1608,23 +1608,6 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         </section>
       </CollapsibleGameSection>
 
-      <CollapsibleGameSection label="Enclosures" detail={`${capacity} installed · ${physicalRoomCapacity} room limit · ${openSlots} animal spaces open`}>
-        <section className="panel rounded-[28px] p-6">
-          <div className="section-kicker">Enclosures</div>
-          <h2 className="mt-2 text-2xl font-semibold">Rooms set the limit. Enclosures fill the rooms.</h2>
-          <p className="mt-2 text-xs text-white/34">Your rooms can physically hold {physicalRoomCapacity} enclosures. You have {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} left.</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {(Object.keys(enclosurePrices) as EnclosureType[]).map((type) => (
-              <div key={type} className="rounded-2xl border border-white/[.06] p-4">
-                <div className="text-lg font-semibold">{type}</div>
-                <div className="mt-1 text-xs text-white/35">1 snake capacity · Owned: {enclosures[type]}</div>
-                <button disabled={cash < enclosurePrices[type] || roomEnclosureSlots <= 0} onClick={() => buyEnclosure(type)} className="mt-4 rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-[#06100c] disabled:opacity-30">{roomEnclosureSlots <= 0 ? "Need another room" : `Buy · ${money(enclosurePrices[type])}`}</button>
-              </div>
-            ))}
-          </div>
-        </section>
-      </CollapsibleGameSection>
-
       <CollapsibleGameSection label="Daily snake store" detail={`Offer ${storeIndex + 1} of ${store.length} · refreshes in ~${Math.max(1, Math.ceil((nextRefresh - now) / 3_600_000))}h`} defaultOpen>
         <section className="panel rounded-[28px] p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
