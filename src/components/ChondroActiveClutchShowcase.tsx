@@ -72,6 +72,8 @@ export function ChondroActiveClutchShowcase() {
   const colonyCount = save.colony?.length ?? 0;
   const holdbackCapacity = Math.max(0, animalCapacity - colonyCount);
   const holdbackSpacesLeft = Math.max(0, holdbackCapacity - holdbackCount);
+  const overCapacity = holdbackCount > holdbackCapacity;
+  const excessHoldbacks = Math.max(0, holdbackCount - holdbackCapacity);
 
   return (
     <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
@@ -83,7 +85,7 @@ export function ChondroActiveClutchShowcase() {
             <p className="mt-2 text-sm text-white/44">{offspring.length} offspring · {save.clutchEstablished ? `${holdbackCount} holdback${holdbackCount === 1 ? "" : "s"} · ${marketCount} headed to market` : "establish the clutch before individual decisions"}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {save.clutchEstablished ? <div className="rounded-full border border-white/[.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white/42">{holdbackSpacesLeft} holdback space{holdbackSpacesLeft === 1 ? "" : "s"} left</div> : null}
+            {save.clutchEstablished ? <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] ${overCapacity ? "border-red-300/20 bg-red-300/[.05] text-red-100/75" : "border-white/[.08] text-white/42"}`}>{overCapacity ? `${excessHoldbacks} over capacity` : `${holdbackSpacesLeft} holdback space${holdbackSpacesLeft === 1 ? "" : "s"} left`}</div> : null}
             <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.13em] ${save.clutchEstablished ? "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/70" : "border-amber-200/18 bg-amber-200/[.045] text-amber-100/70"}`}>
               {save.clutchEstablished ? "Established" : "Establishment pending"}
             </div>
@@ -106,6 +108,7 @@ export function ChondroActiveClutchShowcase() {
 
         <div className="p-4 sm:p-5">
           {save.clutchEstablished ? <div className="mb-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] px-4 py-3 text-[11px] leading-5 text-white/42">Your current housing has room for {holdbackCapacity} clutch holdback{holdbackCapacity === 1 ? "" : "s"}. Chondro Dojo Pairs count as two animal spaces while using one facility slot.</div> : null}
+          {save.clutchEstablished && overCapacity ? <div className="mb-4 rounded-2xl border border-red-300/16 bg-red-300/[.04] px-4 py-3 text-[11px] leading-5 text-red-50/72">Housing conflict: remove {excessHoldbacks} holdback{excessHoldbacks === 1 ? "" : "s"} before closing this clutch. The season cannot advance while your selected holdbacks exceed available animal spaces.</div> : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {offspring.map((baby) => {
               const strongest = strongestTrait(baby);
@@ -147,13 +150,13 @@ export function ChondroActiveClutchShowcase() {
           </div>
 
           {save.clutchEstablished ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.025] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className={`mt-5 flex flex-col gap-3 rounded-[22px] border p-4 sm:flex-row sm:items-center sm:justify-between ${overCapacity ? "border-red-300/14 bg-red-300/[.025]" : "border-emerald-300/10 bg-emerald-300/[.025]"}`}>
               <div>
-                <div className="text-sm font-bold text-white/72">Ready to close this clutch?</div>
-                <div className="mt-1 text-xs text-white/38">{holdbackCount} stay in your colony · {marketCount} will be listed · then the season advances.</div>
+                <div className="text-sm font-bold text-white/72">{overCapacity ? "Resolve housing before closing" : "Ready to close this clutch?"}</div>
+                <div className="mt-1 text-xs text-white/38">{overCapacity ? `${excessHoldbacks} selected holdback${excessHoldbacks === 1 ? "" : "s"} exceed current housing capacity.` : `${holdbackCount} stay in your colony · ${marketCount} will be listed · then the season advances.`}</div>
               </div>
-              <button type="button" onClick={() => dispatchClutchAction("finish")} className="rounded-2xl bg-emerald-300 px-5 py-3 text-xs font-black text-[#06100c] transition hover:bg-emerald-200">
-                List unheld & advance season
+              <button type="button" disabled={overCapacity} onClick={() => dispatchClutchAction("finish")} className="rounded-2xl bg-emerald-300 px-5 py-3 text-xs font-black text-[#06100c] transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
+                {overCapacity ? "Housing capacity exceeded" : "List unheld & advance season"}
               </button>
             </div>
           ) : null}
