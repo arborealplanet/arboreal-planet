@@ -47,6 +47,9 @@ const checks = [
       "Your completed incubation is being held safely until initials are confirmed.",
       "Recovered the completed incubation after restoring your breeder initials.",
     ],
+    forbidden: [
+      '<CollapsibleGameSection label="Enclosures"',
+    ],
   },
   {
     file: "src/app/api/hatchery/chondro-breeder/breeder-identity/route.ts",
@@ -85,6 +88,9 @@ const checks = [
       'arboreal-chondro-enclosure-action',
       "/hatchery/game/pvc-enclosure.webp",
       "Buy housing before you buy snakes.",
+      "Chondro Dojo Enclosure",
+      "PVC Arboreal Enclosure",
+      'aria-label="PVC arboreal enclosure diagram"',
     ],
   },
   {
@@ -103,6 +109,12 @@ for (const check of checks) {
   for (const marker of check.markers) {
     if (!source.includes(marker)) {
       console.error(`\n[Chondro setup] Validation failed: ${check.file} is missing expected output:\n${marker}`);
+      process.exit(1);
+    }
+  }
+  for (const marker of check.forbidden ?? []) {
+    if (source.includes(marker)) {
+      console.error(`\n[Chondro setup] Validation failed: ${check.file} still contains retired output:\n${marker}`);
       process.exit(1);
     }
   }
