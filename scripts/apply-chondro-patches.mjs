@@ -93,6 +93,9 @@ const checks = [
       'import { animalHousingCapacity } from "@/lib/chondro-facility-limits";',
       "const capacity = animalHousingCapacity(save.enclosures);",
       "Open animal spaces",
+      "Player market · Virtual animals",
+      "Virtual only",
+      "Buy virtual snake",
     ],
   },
   {
@@ -141,6 +144,10 @@ const checks = [
       "holdback space",
       "Chondro Dojo Pairs count as two animal spaces while using one facility slot.",
       'holdbackFull ? "Housing full"',
+      "const overCapacity = holdbackCount > holdbackCapacity;",
+      "Housing conflict: remove",
+      "Virtual only",
+      "virtual offspring",
     ],
   },
   {
