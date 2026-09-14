@@ -90,7 +90,6 @@ export function ChondroShowsPanel() {
   const achievementRep = save ? achievementReputation(save) : 0;
   const reputation = Number(save?.careerReputation ?? 0) + achievementRep;
   const placement = animal ? showPlacement(animal, tier, Number(save?.season ?? 1)) : null;
-  const rewards = placement ? showRewards(tier, placement) : { cash: 0, reputation: 0 };
   const enteredKey = animal ? `${save?.season}:${tier.id}:${category.id}:${animal.id}` : "";
   const alreadyEntered = Boolean(
     animal &&
