@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
+import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
 type SnakeLite = {
   id: string;
@@ -95,8 +96,8 @@ export function ChondroPlayerMarket() {
 
   const available = useMemo(() => listings.filter((listing) => !listing.isMine), [listings]);
   const cash = Math.max(0, Number(save.cash ?? 0));
-  const installedEnclosures = Object.values(save.enclosures ?? {}).reduce((sum, value) => sum + Number(value ?? 0), 0);
-  const openSlots = Math.max(0, installedEnclosures - (save.colony?.length ?? 0));
+  const capacity = animalHousingCapacity(save.enclosures);
+  const openSlots = Math.max(0, capacity - (save.colony?.length ?? 0));
 
   function buy(listing: Listing) {
     if (busy || cash < listing.price || openSlots <= 0) return;
@@ -128,7 +129,7 @@ export function ChondroPlayerMarket() {
 
         <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Cash {money(cash)}</span>
-          <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Open enclosures {openSlots}</span>
+          <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Open animal spaces {openSlots}</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{available.length} available</span>
         </div>
 
