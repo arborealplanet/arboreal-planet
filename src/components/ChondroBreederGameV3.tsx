@@ -1113,6 +1113,19 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setEnclosures((current) => ({ ...current, [type]: current[type] + 1 }));
   }
 
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    function handleEnclosureAction(event: Event) {
+      const detail = (event as CustomEvent<{ action?: string; type?: EnclosureType }>).detail ?? {};
+      if (detail.action !== "buy-enclosure") return;
+      if (detail.type !== "Chondro Dojo Bin" && detail.type !== "PVC Arboreal") return;
+      buyEnclosure(detail.type);
+    }
+    window.addEventListener("arboreal-chondro-enclosure-action", handleEnclosureAction);
+    return () => window.removeEventListener("arboreal-chondro-enclosure-action", handleEnclosureAction);
+  }, [cash, roomEnclosureSlots]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
   function buySnake(offer: StoreSnake) {
     if (cash < offer.price || openSlots <= 0 || purchasedStoreIds.includes(offer.id)) return;
     setCash((value) => value - offer.price);

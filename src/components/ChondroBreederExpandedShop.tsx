@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
+import { roomCapacityFromSave } from "@/lib/chondro-facility-limits";
 
 type Sex = "Male" | "Female";
 type Locality = "Biak" | "Numfor" | "Manokwari" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
@@ -43,12 +45,14 @@ type Snake = {
 };
 
 type Offer = Snake & { price: number; featured?: boolean; specialLabel?: string };
-type GameSave = { cash: number; colony: Snake[]; enclosures: Record<string, number>; purchasedStoreIds?: string[]; [key: string]: unknown };
+type EnclosureType = "Chondro Dojo Bin" | "PVC Arboreal";
+type GameSave = { cash: number; colony: Snake[]; enclosures: Record<string, number>; facilityRooms?: Record<string, number>; purchasedStoreIds?: string[]; [key: string]: unknown };
 
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
 const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
+const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 225, "PVC Arboreal": 650 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
   "Morelia azurea azurea": ["Biak", "Numfor"],
@@ -299,22 +303,40 @@ export function ChondroBreederExpandedShop() {
     void load();
     const dataTimer = window.setInterval(load, 5000);
     const onConservation = () => void load();
+    const onSaveChange = () => void load();
     window.addEventListener("chondro-conservation-updated", onConservation);
+    window.addEventListener("arboreal-chondro-breeder-save-change", onSaveChange);
     return () => {
       cancelled = true;
       window.clearInterval(rotationTimer);
       window.clearInterval(dataTimer);
       window.removeEventListener("chondro-conservation-updated", onConservation);
+      window.removeEventListener("arboreal-chondro-breeder-save-change", onSaveChange);
     };
   }, []);
 
   const offers = useMemo(() => buildOffers(seed, conservation), [seed, conservation]);
   const purchased = useMemo(() => new Set(save?.purchasedStoreIds ?? []), [save?.purchasedStoreIds]);
   const capacity = Object.values(save?.enclosures ?? {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+  const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms: save?.facilityRooms });
+  const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - capacity);
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
   const visible = offers.slice(page * 5, page * 5 + 5);
   const pageCount = Math.ceil(offers.length / 5);
   const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
+
+  function buyEnclosure(type: EnclosureType) {
+    if (!save || busy || roomEnclosureSlots <= 0 || save.cash < enclosurePrices[type]) return;
+    setBusy(`enclosure:${type}`);
+    setStatus(`Buying ${type}…`);
+    window.dispatchEvent(new CustomEvent("arboreal-chondro-enclosure-action", {
+      detail: { action: "buy-enclosure", type },
+    }));
+    window.setTimeout(() => {
+      setBusy(null);
+      setStatus(`${type} purchased. Your snake capacity increased by 1.`);
+    }, 350);
+  }
 
   async function buy(offer: Offer) {
     if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
@@ -343,6 +365,48 @@ export function ChondroBreederExpandedShop() {
 
   return (
     <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+      <section className="mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
+            <h3 className="mt-2 text-xl font-semibold text-white/80">Buy housing before you buy snakes.</h3>
+            <p className="mt-1 text-xs leading-5 text-white/38">Each enclosure adds room for one snake. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
+          </div>
+          <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
+            <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
+            <div className="mt-1 text-sm font-black text-emerald-100/72">{capacity} total · {openSlots} open</div>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
+            const price = enclosurePrices[type];
+            const owned = Number(save.enclosures?.[type] ?? 0);
+            const unavailable = busy !== null || roomEnclosureSlots <= 0 || save.cash < price;
+            return (
+              <article key={type} className="overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15">
+                <div className="relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25">
+                  <Image src="/hatchery/game/pvc-enclosure.webp" alt={type} fill sizes="(max-width: 768px) 100vw, 50vw" className={type === "Chondro Dojo Bin" ? "object-cover object-[center_64%] opacity-90" : "object-cover object-center"} />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-4 pb-3 pt-10">
+                    <div className="text-lg font-semibold text-white">{type}</div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[.12em] text-white/30">Owned</div>
+                      <div className="mt-1 text-sm font-semibold text-white/70">{owned} · +1 snake capacity each</div>
+                    </div>
+                    <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
+                  </div>
+                  <button type="button" disabled={unavailable} onClick={() => buyEnclosure(type)} className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
+                    {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? "Need " + money(price) : busy === "enclosure:" + type ? "Installing…" : "Buy " + type}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
       <div className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
