@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
-import { roomCapacityFromSave } from "@/lib/chondro-facility-limits";
+import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
 
 type Sex = "Male" | "Female";
 type Locality = "Biak" | "Numfor" | "Manokwari" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
@@ -52,9 +52,9 @@ const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
 const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
-const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 225, "PVC Arboreal": 650 };
+const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
-  "Chondro Dojo Bin": { label: "Chondro Dojo Enclosure", detail: "Clean tub-style chondro housing with the functional Dojo setup." },
+  "Chondro Dojo Bin": { label: "Chondro Dojo Pair", detail: "Two space-saving Dojo enclosures sold as one set. The pair uses one facility slot and houses two snakes." },
   "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing built around PVC structure and perching." },
 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
@@ -321,9 +321,10 @@ export function ChondroBreederExpandedShop() {
 
   const offers = useMemo(() => buildOffers(seed, conservation), [seed, conservation]);
   const purchased = useMemo(() => new Set(save?.purchasedStoreIds ?? []), [save?.purchasedStoreIds]);
-  const capacity = Object.values(save?.enclosures ?? {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+  const installedFootprint = enclosureFootprint(save?.enclosures);
+  const capacity = animalHousingCapacity(save?.enclosures);
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms: save?.facilityRooms });
-  const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - capacity);
+  const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedFootprint);
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
   const visible = offers.slice(page * 5, page * 5 + 5);
   const pageCount = Math.ceil(offers.length / 5);
@@ -374,7 +375,7 @@ export function ChondroBreederExpandedShop() {
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">Buy housing before you buy snakes.</h3>
-            <p className="mt-1 text-xs leading-5 text-white/38">Each enclosure adds room for one snake. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
+            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake. A Chondro Dojo Pair uses that same single facility slot for two snakes. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
           </div>
           <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
@@ -410,7 +411,7 @@ export function ChondroBreederExpandedShop() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-[10px] uppercase tracking-[.12em] text-white/30">Owned</div>
-                      <div className="mt-1 text-sm font-semibold text-white/70">{owned} · +1 snake capacity each</div>
+                      <div className="mt-1 text-sm font-semibold text-white/70">{owned} owned · {type === "Chondro Dojo Bin" ? "+2 snake capacity per set" : "+1 snake capacity each"}</div>
                     </div>
                     <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
                   </div>

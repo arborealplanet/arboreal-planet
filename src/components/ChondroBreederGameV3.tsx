@@ -6,7 +6,7 @@ import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
 import { breedingReputationGain, marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
-import { geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
+import { animalHousingCapacity, enclosureFootprint, geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor, needsExtraRecoveryYear, normalizeNeonateColorFor, randomNeonateColorFor } from "@/lib/breeder-species-profiles";
 
 type Subspecies =
@@ -129,7 +129,7 @@ const BREEDING_STAGES = CHONDRO_SPECIES_PROFILE.reproduction.stages as Array<{ i
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const DAY_MS = 86_400_000;
 const enclosurePrices: Record<EnclosureType, number> = {
-  "Chondro Dojo Bin": 225,
+  "Chondro Dojo Bin": 250,
   "PVC Arboreal": 650,
 };
 
@@ -776,9 +776,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const storeEpoch = Math.floor(now / DAY_MS);
   const store = useMemo(() => storeForEpoch(storeEpoch), [storeEpoch]);
   const nextRefresh = (storeEpoch + 1) * DAY_MS;
-  const installedEnclosureCount = enclosures["Chondro Dojo Bin"] + enclosures["PVC Arboreal"];
+  const installedEnclosureCount = enclosureFootprint(enclosures);
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms });
-  const capacity = installedEnclosureCount;
+  const capacity = animalHousingCapacity(enclosures);
   const openSlots = Math.max(0, capacity - colony.length);
   const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedEnclosureCount);
   const females = colony.filter((a) => a.sex === "Female" && a.lifeStage === "Adult" && Number(femaleRecovery[a.id] ?? 0) <= season);

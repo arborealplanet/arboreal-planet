@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { installedEnclosures, roomCapacityFromSave, type FacilityRoomState } from "@/lib/chondro-facility-limits";
+import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 
 type Animal = {
   id: string;
@@ -72,8 +72,9 @@ export function ChondroColonyOverview() {
   }, []);
 
   const colony = useMemo(() => save.colony ?? [], [save.colony]);
-  const capacity = roomCapacityFromSave(save);
-  const enclosures = installedEnclosures(save.enclosures);
+  const facilityCapacity = roomCapacityFromSave(save);
+  const footprint = enclosureFootprint(save.enclosures);
+  const animalCapacity = animalHousingCapacity(save.enclosures);
   const adults = colony.filter((animal) => animal.lifeStage === "Adult");
   const ready = adults.filter((animal) => animalReady(animal, save));
   const attention = colony.filter(needsAttention);
@@ -95,7 +96,7 @@ export function ChondroColonyOverview() {
           <Metric label="Breeding ready" value={ready.length} detail="Adult, healthy and available" good />
           <Metric label="Needs testing" value={untested.length} detail="Genetics still hidden" />
           <Metric label="Needs attention" value={attention.length} detail="Fair condition or Nido positive" warn={attention.length > 0} />
-          <Metric label="Housing" value={`${enclosures}/${capacity}`} detail={`${Math.max(0, capacity - enclosures)} facility slot${Math.max(0, capacity - enclosures) === 1 ? "" : "s"} open`} />
+          <Metric label="Housing" value={`${colony.length}/${animalCapacity}`} detail={`${footprint}/${facilityCapacity} facility slots used · ${Math.max(0, animalCapacity - colony.length)} animal spaces open`} />
         </div>
 
         <div className="p-4 sm:p-5">
