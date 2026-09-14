@@ -134,6 +134,16 @@ const checks = [
     ],
   },
   {
+    file: "src/components/ChondroActiveClutchShowcase.tsx",
+    markers: [
+      'import { animalHousingCapacity } from "@/lib/chondro-facility-limits";',
+      "const holdbackCapacity = Math.max(0, animalCapacity - colonyCount);",
+      "holdback spaces",
+      "Chondro Dojo Pairs count as two animal spaces while using one facility slot.",
+      'holdbackFull ? "Housing full"',
+    ],
+  },
+  {
     file: "src/lib/chondro-facility-limits.ts",
     markers: [
       "export function enclosureFootprint",
