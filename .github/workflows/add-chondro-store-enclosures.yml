@@ -29,3 +29,4 @@ jobs:
           git add src/components/ChondroBreederExpandedShop.tsx src/components/ChondroBreederGameV3.tsx
           git commit -m "Put enclosure purchases at top of Chondro Store"
           git push
+# retry after script syntax fix
