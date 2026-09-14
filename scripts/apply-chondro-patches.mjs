@@ -138,7 +138,7 @@ const checks = [
     markers: [
       'import { animalHousingCapacity } from "@/lib/chondro-facility-limits";',
       "const holdbackCapacity = Math.max(0, animalCapacity - colonyCount);",
-      "holdback spaces",
+      "holdback space",
       "Chondro Dojo Pairs count as two animal spaces while using one facility slot.",
       'holdbackFull ? "Housing full"',
     ],
