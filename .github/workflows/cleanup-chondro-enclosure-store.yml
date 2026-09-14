@@ -1,0 +1,31 @@
+name: Cleanup Chondro Enclosure Store
+
+on:
+  push:
+    paths:
+      - ".github/workflows/cleanup-chondro-enclosure-store.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Make Store the only enclosure purchase surface
+        run: node scripts/cleanup-chondro-enclosure-store.mjs
+      - name: Commit canonical source
+        run: |
+          if git diff --quiet -- src/components/ChondroBreederExpandedShop.tsx src/components/ChondroBreederGameV3.tsx; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ChondroBreederExpandedShop.tsx src/components/ChondroBreederGameV3.tsx
+          git commit -m "Make Store the single enclosure purchase surface"
+          git push
