@@ -101,9 +101,10 @@ export function ChondroRoomExpansionPanel() {
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4">
-        <div className="text-sm font-bold text-white/75">Property → rooms → enclosures → animals</div>
-        <div className="mt-1 text-[11px] leading-5 text-white/35">Rooms add physical enclosure slots. Buying an enclosure only works while you still have room for it.</div>
-        <div className="mt-3 text-2xl font-semibold text-emerald-100/75">{totalCapacity} enclosure spaces</div>
+        <div className="text-sm font-bold text-white/75">Property → rooms → enclosure slots → animals</div>
+        <div className="mt-1 text-[11px] leading-5 text-white/35">Rooms add physical enclosure slots. A PVC enclosure uses one slot for one snake, while a Chondro Dojo Pair uses that same one slot for two separate snake enclosures.</div>
+        <div className="mt-3 text-2xl font-semibold text-emerald-100/75">{totalCapacity} facility enclosure slots</div>
+        <div className="mt-1 text-[10px] text-emerald-100/45">Dojo housing can turn each compatible slot into two animal spaces.</div>
       </div>
 
       {activeRoom ? (
