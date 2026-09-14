@@ -99,7 +99,7 @@ const enclosureBlock = `    <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"
                     <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
                   </div>
                   <button type="button" disabled={unavailable} onClick={() => buyEnclosure(type)} className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
-                    {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : `Buy ${type}`}
+                    {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? "Need " + money(price) : busy === "enclosure:" + type ? "Installing…" : "Buy " + type}
                   </button>
                 </div>
               </article>
