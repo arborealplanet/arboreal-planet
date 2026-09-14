@@ -46,6 +46,9 @@ const checks = [
       "const [breederIdentityLoaded, setBreederIdentityLoaded] = useState(false);",
       "Your completed incubation is being held safely until initials are confirmed.",
       "Recovered the completed incubation after restoring your breeder initials.",
+      "animalHousingCapacity",
+      "enclosureFootprint",
+      '"Chondro Dojo Bin": 250',
     ],
     forbidden: [
       '<CollapsibleGameSection label="Enclosures"',
@@ -88,9 +91,29 @@ const checks = [
       'arboreal-chondro-enclosure-action',
       "/hatchery/game/pvc-enclosure.webp",
       "Buy housing before you buy snakes.",
-      "Chondro Dojo Enclosure",
+      "Chondro Dojo Pair",
       "PVC Arboreal Enclosure",
-      'aria-label="PVC arboreal enclosure diagram"',
+      "+2 snake capacity per set",
+      "animalHousingCapacity",
+      "enclosureFootprint",
+    ],
+  },
+  {
+    file: "src/components/ChondroColonyOverview.tsx",
+    markers: [
+      "animalHousingCapacity",
+      "enclosureFootprint",
+      "facility slots used",
+      "animal spaces open",
+    ],
+  },
+  {
+    file: "src/lib/chondro-facility-limits.ts",
+    markers: [
+      "export function enclosureFootprint",
+      "export function animalHousingCapacity",
+      "return dojoPairs * 2 + pvc + other;",
+      "cap - enclosureFootprint(enclosures)",
     ],
   },
   {
