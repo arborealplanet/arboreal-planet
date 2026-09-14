@@ -80,11 +80,12 @@ export function ChondroActiveClutchShowcase() {
       <div className="overflow-hidden rounded-[30px] border border-amber-200/12 bg-[radial-gradient(circle_at_25%_0%,rgba(251,191,36,.08),transparent_38%),#07100c]">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-white/[.055] p-5 sm:p-6">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[.17em] text-amber-100/50">Active clutch</div>
+            <div className="text-[9px] font-black uppercase tracking-[.17em] text-amber-100/50">Active clutch · Virtual animals</div>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] text-white/90">{clutch.dam?.name ?? "Dam"} × {clutch.sire?.name ?? "Sire"}</h2>
-            <p className="mt-2 text-sm text-white/44">{offspring.length} offspring · {save.clutchEstablished ? `${holdbackCount} holdback${holdbackCount === 1 ? "" : "s"} · ${marketCount} headed to market` : "establish the clutch before individual decisions"}</p>
+            <p className="mt-2 text-sm text-white/44">{offspring.length} virtual offspring · {save.clutchEstablished ? `${holdbackCount} holdback${holdbackCount === 1 ? "" : "s"} · ${marketCount} headed to market` : "establish the clutch before individual decisions"}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-emerald-100/60">Virtual only</div>
             {save.clutchEstablished ? <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] ${overCapacity ? "border-red-300/20 bg-red-300/[.05] text-red-100/75" : "border-white/[.08] text-white/42"}`}>{overCapacity ? `${excessHoldbacks} over capacity` : `${holdbackSpacesLeft} holdback space${holdbackSpacesLeft === 1 ? "" : "s"} left`}</div> : null}
             <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.13em] ${save.clutchEstablished ? "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/70" : "border-amber-200/18 bg-amber-200/[.045] text-amber-100/70"}`}>
               {save.clutchEstablished ? "Established" : "Establishment pending"}
@@ -97,7 +98,7 @@ export function ChondroActiveClutchShowcase() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-sm font-bold text-amber-100/80">Establish the clutch together</div>
-                <div className="mt-1 text-xs leading-5 text-white/40">One payment covers the shared establishment period before you choose individual holdbacks or sales.</div>
+                <div className="mt-1 text-xs leading-5 text-white/40">One payment covers the shared establishment period before you choose individual virtual holdbacks or sales.</div>
               </div>
               <button type="button" onClick={() => dispatchClutchAction("establish")} className="rounded-2xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a] transition hover:bg-amber-100">
                 Establish clutch · ${establishmentCost.toLocaleString()}
@@ -127,7 +128,10 @@ export function ChondroActiveClutchShowcase() {
                   </div>
                   <div className="mt-3 flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-bold text-white/80">{baby.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="truncate text-sm font-bold text-white/80">{baby.name}</div>
+                        <span className="shrink-0 rounded-full border border-emerald-300/14 px-2 py-0.5 text-[7px] font-black uppercase tracking-[.1em] text-emerald-100/58">Virtual</span>
+                      </div>
                       <div className="mt-1 truncate text-[10px] text-white/36">{baby.sex ?? "Unsexed"} · {baby.locality ?? baby.subspecies}</div>
                     </div>
                     {isHoldback ? <span className="shrink-0 rounded-full border border-emerald-300/18 px-2 py-1 text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/70">Holdback</span> : null}
