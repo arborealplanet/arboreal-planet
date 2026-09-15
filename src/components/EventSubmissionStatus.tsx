@@ -8,7 +8,7 @@ const labels:Record<string,string>={REPTILE_EXPO:"Reptile expo",BREEDER_EVENT:"B
 
 export function EventSubmissionStatus(){
  const [signedIn,setSignedIn]=useState<boolean|null>(null),[rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(true),[message,setMessage]=useState("");
- async function load(){setLoading(true);try{const response=await fetch("/api/events/submissions",{cache:"no-store"});const data=await response.json().catch(()=>null) as {signedIn?:boolean;rows?:Row[]}|null;if(response.ok&&data){setSignedIn(Boolean(data.signedIn));setRows(data.rows??[])}}finally{setLoading(false)}}
+ async function load(){try{const response=await fetch("/api/events/submissions",{cache:"no-store"});const data=await response.json().catch(()=>null) as {signedIn?:boolean;rows?:Row[]}|null;if(response.ok&&data){setSignedIn(Boolean(data.signedIn));setRows(data.rows??[])}}finally{setLoading(false)}}
  useEffect(()=>{void load();const refresh=()=>void load();window.addEventListener("event-submitted",refresh);return()=>window.removeEventListener("event-submitted",refresh)},[]);
  async function withdraw(id:string){if(!window.confirm("Withdraw this pending event suggestion?"))return;setMessage("Withdrawing…");const response=await fetch(`/api/events/submissions?id=${encodeURIComponent(id)}`,{method:"DELETE"});if(response.ok){setRows(current=>current.filter(row=>row.id!==id));setMessage("Suggestion withdrawn.")}else setMessage("Could not withdraw that suggestion.")}
  if(loading)return <div className="panel-soft rounded-2xl p-5 text-xs text-white/32">Checking your event suggestions…</div>;
