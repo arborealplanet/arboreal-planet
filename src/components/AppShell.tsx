@@ -16,6 +16,25 @@ const nav = [
   ["The Hatchery", "/arcade/enter?next=%2Farcade"],
 ] as const;
 
+const footerProductLinks = [
+  ["Animals", "/animals"],
+  ["Genetics", "/genetics"],
+  ["Plants", "/plants"],
+  ["Snake Stocks", "/snake-stocks"],
+  ["Community", "/community"],
+  ["Marketplace", "/marketplace"],
+  ["The Hatchery", "/arcade/enter?next=%2Farcade"],
+] as const;
+
+const footerTrustLinks = [
+  ["Privacy", "/privacy"],
+  ["Terms", "/terms"],
+  ["Guidelines", "/community-guidelines"],
+  ["Support", "/support"],
+  ["Data controls", "/data-controls"],
+  ["Account deletion", "/account-deletion"],
+] as const;
+
 function ProfileAvatar({ avatarUrl, label, className }: { avatarUrl?: string | null; label: string; className: string }) {
   const initials = label.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "AP";
   return avatarUrl ? (
@@ -87,9 +106,23 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   const footer = (
     <footer className="border-t border-white/[.06] bg-black/[.12] px-5 py-10 pb-24 lg:pb-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Reptile community, reference data and market tools.</span></div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/animals" className="hover:text-white/70">Animals</Link><Link href="/genetics" className="hover:text-white/70">Genetics</Link><Link href="/plants" className="hover:text-white/70">Plants</Link><Link href="/community" className="hover:text-white/70">Community</Link><Link href="/marketplace" className="hover:text-white/70">Marketplace</Link><Link href="/arcade/enter?next=%2Farcade" className="hover:text-white/70">The Hatchery</Link></div>
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
+          <div className="max-w-xl">
+            <div className="flex items-center gap-3 text-xs text-white/45"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Reptile community, reference data, lineage tools and market intelligence.</span></div>
+            <p className="mt-3 max-w-lg text-[11px] leading-5 text-white/28">Built for keepers, breeders and plant people who want one place for community, reference work, pedigrees, market context and virtual education.</p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:min-w-[520px]">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-200/40">Explore</div>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/40">{footerProductLinks.map(([label,href])=><Link key={href} href={href} className="hover:text-white/70">{label}</Link>)}</div>
+            </div>
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-200/40">Trust & support</div>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/40">{footerTrustLinks.map(([label,href])=><Link key={href} href={href} className="hover:text-white/70">{label}</Link>)}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   );
