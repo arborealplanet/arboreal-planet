@@ -51,6 +51,11 @@ function requestSubject(request: NextRequest) {
   return TYPES.has(type) && (type === "TOPIC" ? Boolean(key) : Boolean(id)) ? { type, id, key } : null;
 }
 
+function followQuery(userId:string,type:SubjectType,resolved:{id:string|null;key:string}){
+  const identityFilter=type==="TOPIC"?`subject_key=eq.${encodeURIComponent(resolved.key)}`:`subject_id=eq.${encodeURIComponent(resolved.id??"")}`;
+  return `${SUPABASE_AUTH_URL}/rest/v1/user_subject_follows?user_id=eq.${encodeURIComponent(userId)}&subject_type=eq.${type}&${identityFilter}`;
+}
+
 export async function GET(request: NextRequest) {
   const subject = requestSubject(request);
   if (!subject) return NextResponse.json({ error: "Invalid subject" }, { status: 400 });
@@ -59,8 +64,7 @@ export async function GET(request: NextRequest) {
   const resolved = await resolveSubject(subject.type, subject.id, subject.key);
   if (!resolved) return NextResponse.json({ error: "Subject unavailable" }, { status: 404 });
 
-  const filters = `user_id=eq.${encodeURIComponent(identity.user.id)}&subject_type=eq.${subject.type}&subject_key=eq.${encodeURIComponent(resolved.key)}&select=id&limit=1`;
-  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/user_subject_follows?${filters}`, { headers: authHeaders(identity.token), cache: "no-store" });
+  const response = await fetch(`${followQuery(identity.user.id,subject.type,resolved)}&select=id&limit=1`, { headers: authHeaders(identity.token), cache: "no-store" });
   const rows = response.ok ? await response.json().catch(() => []) as Array<{ id: string }> : [];
   return NextResponse.json({ signedIn: true, following: rows.length > 0, subject: { type: subject.type, id: resolved.id, key: resolved.key } });
 }
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
   const resolved = await resolveSubject(subject.type, subject.id, subject.key);
   if (!resolved) return NextResponse.json({ error: "Subject unavailable" }, { status: 404 });
 
-  const query = `${SUPABASE_AUTH_URL}/rest/v1/user_subject_follows?user_id=eq.${encodeURIComponent(identity.user.id)}&subject_type=eq.${subject.type}&subject_key=eq.${encodeURIComponent(resolved.key)}`;
+  const query = followQuery(identity.user.id,subject.type,resolved);
   const check = await fetch(`${query}&select=id&limit=1`, { headers: authHeaders(identity.token), cache: "no-store" });
   const existing = check.ok ? await check.json().catch(() => []) as Array<{ id: string }> : [];
 
