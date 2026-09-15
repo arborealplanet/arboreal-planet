@@ -148,15 +148,23 @@ export async function PUT(request: Request) {
     });
   }
 
+  // Cross-keeper parent links are managed through the registered-parent linker.
+  // If the browser pedigree does not contain that external parent, normal sync must
+  // preserve the cloud link instead of silently clearing a breeding agreement.
   for (const row of cleaned) {
-    const id = String(row.id);
+    const existing = existingById.get(String(row.id));
+    if (!row.dam_id && existing?.dam_id && !ids.has(existing.dam_id)) row.dam_id = existing.dam_id;
+    if (!row.sire_id && existing?.sire_id && !ids.has(existing.sire_id)) row.sire_id = existing.sire_id;
+  }
+
+  for (const row of cleaned) {
     const dam = row.dam_id as string | null;
     const sire = row.sire_id as string | null;
-    const existing = existingById.get(id);
+    const existing = existingById.get(String(row.id));
     const damAllowed = !dam || ids.has(dam) || dam === existing?.dam_id;
     const sireAllowed = !sire || ids.has(sire) || sire === existing?.sire_id;
     if (!damAllowed || !sireAllowed) {
-      return NextResponse.json({ error: "New parent links must point to animals in this pedigree. Existing transferred parent links are preserved." }, { status: 400 });
+      return NextResponse.json({ error: "Use the registered-parent linker for a parent owned by another keeper." }, { status: 400 });
     }
     if (dam === row.id || sire === row.id) return NextResponse.json({ error: "An animal cannot be its own parent." }, { status: 400 });
   }
