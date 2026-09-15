@@ -61,6 +61,34 @@ export async function GET() {
   });
 }
 
+export async function PATCH(request: Request) {
+  const identity = await getServerIdentity();
+  if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json().catch(() => null) as { id?: unknown; visibility?: unknown } | null;
+  const id = String(body?.id ?? "").trim();
+  const visibility = String(body?.visibility ?? "").trim();
+  if (!UUID_RE.test(id) || !VISIBILITIES.has(visibility)) return NextResponse.json({ error: "Invalid publishing request" }, { status: 400 });
+
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(identity.user.id)}`, {
+    method: "PATCH",
+    headers: {
+      apikey: SUPABASE_AUTH_KEY,
+      Authorization: `Bearer ${identity.token}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({ visibility, updated_at: new Date().toISOString() }),
+    cache: "no-store",
+  });
+
+  const rows = await response.json().catch(() => null) as Array<Record<string, unknown>> | null;
+  if (!response.ok) return NextResponse.json({ error: "Unable to update pedigree visibility", detail: rows }, { status: response.status });
+  if (!Array.isArray(rows) || rows.length === 0) return NextResponse.json({ error: "Animal not found" }, { status: 404 });
+
+  return NextResponse.json({ ok: true, id, visibility });
+}
+
 export async function PUT(request: Request) {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
