@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { GTP_LOCALITY_TAXON } from "@/lib/green-tree-python-taxa";
 
-type Contributor = { username?: string | null; displayName?: string | null; avatarUrl?: string | null };
+type Contributor = { username?: string | null; displayName?: string | null; avatarUrl?: string | null; confirmedAt?: string | null };
 type PublicAnimal = {
   id: string;
   registryCode?: string;
@@ -19,6 +19,7 @@ type PublicAnimal = {
   photoUrl?: string;
   contributor?: Contributor | null;
   confirmedBreeder?: Contributor | null;
+  confirmedProducers?: Contributor[];
   updatedAt?: string;
 };
 
@@ -70,7 +71,8 @@ export function GtpPublicLineageDatabase() {
       const animalLocality = animal.locality || "Mixed / Unknown";
       const animalSex = animal.sex || "Unknown";
       const animalRecordStatus = recordStatusLabel(animal.recordStatus);
-      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animalRecordStatus, animal.contributor?.displayName, animal.contributor?.username, animal.confirmedBreeder?.displayName, animal.confirmedBreeder?.username]
+      const producerSearchValues = (animal.confirmedProducers || []).flatMap((producer) => [producer.displayName, producer.username]);
+      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animalRecordStatus, animal.contributor?.displayName, animal.contributor?.username, animal.confirmedBreeder?.displayName, animal.confirmedBreeder?.username, ...producerSearchValues]
         .some((value) => String(value ?? "").toLowerCase().includes(needle));
       return matchesSearch
         && (taxon === "All taxa" || animalTaxon === taxon)
@@ -140,8 +142,7 @@ export function GtpPublicLineageDatabase() {
             const sire = animal.sireId ? byId.get(animal.sireId) : null;
             const contributor = animal.contributor;
             const contributorLabel = contributor?.displayName || contributor?.username || null;
-            const confirmedBreeder = animal.confirmedBreeder;
-            const confirmedBreederLabel = confirmedBreeder?.displayName || confirmedBreeder?.username || null;
+            const confirmedProducers = animal.confirmedProducers?.length ? animal.confirmedProducers : animal.confirmedBreeder ? [animal.confirmedBreeder] : [];
             const statusLabel = recordStatusLabel(animal.recordStatus);
             return (
               <article key={animal.id} className="panel-soft overflow-hidden rounded-[22px]">
@@ -163,7 +164,10 @@ export function GtpPublicLineageDatabase() {
                     <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Record steward</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="truncate text-xs font-semibold text-white/55 hover:text-emerald-100">{contributorLabel}</Link> : <div className="truncate text-xs font-semibold text-white/55">{contributorLabel}</div>}</div>
                   </div> : null}
 
-                  {confirmedBreederLabel ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-200/45">Confirmed breeder</div>{confirmedBreeder?.username ? <Link href={`/keepers/${encodeURIComponent(confirmedBreeder.username)}`} className="mt-1 block text-xs font-semibold text-emerald-100/65">{confirmedBreederLabel}</Link> : <div className="mt-1 text-xs font-semibold text-emerald-100/65">{confirmedBreederLabel}</div>}</div> : null}
+                  {confirmedProducers.length ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-200/45">Confirmed producer{confirmedProducers.length === 1 ? "" : "s"}</div><div className="mt-2 flex flex-wrap gap-2">{confirmedProducers.map((producer, index) => {
+                    const label = producer.displayName || producer.username || `Producer ${index + 1}`;
+                    return producer.username ? <Link key={`${producer.username}-${index}`} href={`/keepers/${encodeURIComponent(producer.username)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/65">{label}</Link> : <span key={`${label}-${index}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/65">{label}</span>;
+                  })}</div></div> : null}
 
                   <div className="mt-4 rounded-xl border border-white/[.055] bg-black/10 p-3">
                     <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Reported locality</div>
