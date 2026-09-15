@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { WatchlistButton } from "@/components/WatchlistButton";
 import { SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const dynamic="force-dynamic";
@@ -21,7 +22,7 @@ export default async function JournalArticlePage({params}:{params:Promise<{slug:
   if(article.related_plant_id){const r=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/plant_collections?id=eq.${article.related_plant_id}&status=neq.PLANNED&select=slug,name,scientific_name&limit=1`,{headers,cache:"no-store"});if(r.ok){const x:Plant[]=await r.json();plant=x[0]??null}}
 
   return <main className="mx-auto max-w-5xl px-5 py-10 pb-20 sm:px-6">
-    <Link href="/learn" className="text-xs font-bold text-emerald-200/70">← Learn</Link>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Link href="/learn" className="text-xs font-bold text-emerald-200/70">← Learn</Link><WatchlistButton type="JOURNAL" id={article.id} label="Save article"/></div>
     <article className="panel mt-5 overflow-hidden rounded-[30px]">{article.cover_image_url?<img src={article.cover_image_url} alt="" className="max-h-[480px] w-full border-b border-white/[.055] object-cover"/>:null}<div className="p-6 sm:p-8 lg:p-10"><div className="flex flex-wrap items-center gap-2 text-[9px] font-black uppercase tracking-[.13em]"><span className="text-emerald-200/60">{typeLabels[article.content_type]??article.content_type}</span><span className="text-white/18">·</span><span className="text-white/35">{categoryLabels[article.category]??article.category}</span></div><h1 className="mt-4 text-4xl font-semibold tracking-[-.045em] text-white/86 sm:text-5xl">{article.title}</h1>{article.excerpt?<p className="mt-5 max-w-3xl text-base leading-8 text-white/50">{article.excerpt}</p>:null}<div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 border-t border-white/[.055] pt-5 text-[11px] text-white/28">{article.author_display?<span>By {article.author_display}</span>:null}<span>Published {new Date(article.published_at).toLocaleDateString()}</span>{article.updated_at!==article.published_at?<span>Updated {new Date(article.updated_at).toLocaleDateString()}</span>:null}</div><div className="mt-8 whitespace-pre-wrap text-[15px] leading-8 text-white/62">{article.body}</div>{article.tags?.length?<div className="mt-8 flex flex-wrap gap-2 border-t border-white/[.055] pt-5">{article.tags.map(tag=><Link key={tag} href={`/learn?q=${encodeURIComponent(tag)}`} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-[10px] text-white/38 hover:text-emerald-100/65">#{tag}</Link>)}</div>:null}</div></article>
 
     <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_.8fr]">
