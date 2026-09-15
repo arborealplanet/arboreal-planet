@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
+import { GtpBreederConfirmations } from "@/components/GtpBreederConfirmations";
 import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
 import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
 import { GtpPedigreeCloudSync } from "@/components/GtpPedigreeCloudSync";
@@ -35,6 +36,10 @@ export default function GeneticsCalculatorPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
         <GtpPedigreeTransfers />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
+        <GtpBreederConfirmations />
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6 lg:pb-20">
