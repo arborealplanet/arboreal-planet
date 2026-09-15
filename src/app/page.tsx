@@ -6,6 +6,7 @@ import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 
 const platformCards = [
   { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
+  { title: "Genetics & Pedigrees", text: "Subspecies calculator, family trees, registered lineages and public pedigree records.", href: "/genetics", tag: "LINEAGE", icon: "⌘" },
   { title: "Plant Database", text: "Nepenthes, bromeliads and terrarium cultivation knowledge.", href: "/plants", tag: "PLANTS", icon: "⌁" },
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "DISCOVER", icon: "▣" },
@@ -13,7 +14,7 @@ const platformCards = [
   { title: "Arboreal Arcade", text: "Breeder games with virtual lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "PLAY", icon: "◈" },
 ];
 
-const populations = ["Biak", "Numfor", "Manokwari", "Sorong", "Wamena", "Lereh", "Cyclops", "Jayapura", "Aru", "Merauke"];
+const populations = ["Biak", "Numfor", "Manokwari", "Sorong", "Timika", "Kofiau", "Wamena", "Lereh", "Cyclops", "Jayapura", "Aru", "Merauke"];
 
 export default function Home() {
   return (
@@ -66,7 +67,7 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Core sections</h2></div>
-          <p className="max-w-md text-sm leading-6 text-white/52">Reference data, marketplace listings, community activity, market tools and breeder games all share the same account and navigation.</p>
+          <p className="max-w-md text-sm leading-6 text-white/52">Reference data, genetics and pedigrees, marketplace listings, community activity, market tools and breeder games all share the same account and navigation.</p>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {platformCards.map((card) => (
@@ -86,7 +87,7 @@ export default function Home() {
             <p className="mt-2 text-sm italic text-white/42">Morelia viridis complex · Arboreal Planet market grouping</p>
             <p className="mt-6 max-w-xl text-base leading-7 text-white/58">Green Tree Python is the first fully connected animal record, linking locality structure, origin terminology, marketplace listings, Snake Stocks and community activity.</p>
             <div className="mt-7 flex flex-wrap gap-2">{populations.map((name) => <span key={name} className="rounded-full border border-white/[.07] bg-white/[.018] px-3 py-1.5 text-xs text-white/55">{name}</span>)}</div>
-            <Link href="/animals/green-tree-python" className="mt-7 w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link>
+            <div className="mt-7 flex flex-wrap gap-4"><Link href="/animals/green-tree-python" className="w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link><Link href="/genetics" className="w-fit text-sm font-bold text-emerald-300">Open genetics & pedigrees →</Link></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[["CAPTIVE BRED", "USCBB, CBB and other unambiguous captive-produced terms normalize here."],["IMPORT", "Import, farm bred, farm raised, wild caught and LTC normalize into the public Import market."],["LOCALITY", "Population and locality stay visible instead of being flattened into one generic species price."],["DESIGNER LINES", "Designer and project animals remain separate from locality import comparisons."]].map(([title, text]) => <div key={title} className="panel-soft rounded-[22px] p-5"><div className="text-[10px] font-bold tracking-[.15em] text-emerald-300/65">{title}</div><p className="mt-3 text-sm leading-6 text-white/50">{text}</p></div>)}
