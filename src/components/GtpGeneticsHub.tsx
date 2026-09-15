@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { GtpBreederConfirmations } from "@/components/GtpBreederConfirmations";
 import { GtpBreedingWorkflow } from "@/components/GtpBreedingWorkflow";
-import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
+import { GtpFamilyTreeMakerV2 } from "@/components/GtpFamilyTreeMakerV2";
 import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
 import { GtpMyAnimalsDashboard } from "@/components/GtpMyAnimalsDashboard";
 import { GtpPairingClutchManager } from "@/components/GtpPairingClutchManager";
@@ -144,7 +144,7 @@ export function GtpGeneticsHub() {
       </div>
 
       <div className={active === "pedigrees" ? "mt-5" : "hidden"} aria-hidden={active !== "pedigrees"}>
-        <GtpFamilyTreeMaker />
+        <GtpFamilyTreeMakerV2 />
       </div>
 
       <div className={active === "database" ? "mt-5" : "hidden"} aria-hidden={active !== "database"}>
