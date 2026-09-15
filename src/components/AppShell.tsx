@@ -14,7 +14,7 @@ const nav = [
   ["Snake Stocks", "/snake-stocks"],
   ["Marketplace", "/marketplace"],
   ["Community", "/community"],
-  ["The Hatchery", "/arcade/enter?next=%2Farcade"],
+  ["Arcade", "/arcade/enter?next=%2Farcade"],
 ] as const;
 
 const footerProductLinks = [
@@ -28,7 +28,7 @@ const footerProductLinks = [
   ["Snake Stocks", "/snake-stocks"],
   ["Community", "/community"],
   ["Marketplace", "/marketplace"],
-  ["The Hatchery", "/arcade/enter?next=%2Farcade"],
+  ["Arcade", "/arcade/enter?next=%2Farcade"],
 ] as const;
 
 const footerTrustLinks = [
@@ -105,7 +105,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(66px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.07] bg-[#06100c]/96 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 text-center text-[9px] font-semibold uppercase text-white/48 shadow-[0_-12px_30px_rgba(0,0,0,.16)] backdrop-blur-xl xl:hidden">
       <Link href="/community" className="mobile-nav-item"><span className="mobile-nav-icon">◎</span><span className="mobile-nav-label">Community</span></Link>
       <Link href="/marketplace" className="mobile-nav-item"><span className="mobile-nav-icon">▣</span><span className="mobile-nav-label">Market</span></Link>
-      <Link href="/arcade/enter?next=%2Farcade" className="mobile-nav-item text-emerald-300"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-300/[.09] text-[18px]">◈</span><span className="mobile-nav-label">Hatchery</span></Link>
+      <Link href="/arcade/enter?next=%2Farcade" className="mobile-nav-item text-emerald-300"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-300/[.09] text-[18px]">◈</span><span className="mobile-nav-label">Arcade</span></Link>
       <Link href={signedIn?"/messages":"/login?next=/messages"} className="mobile-nav-item"><span className="mobile-nav-icon">✉</span><span className="mobile-nav-label">Messages</span></Link>
       {signedIn ? (
         <Link href="/profile" aria-label="Profile settings" className="mobile-nav-item"><ProfileAvatar avatarUrl={profile?.avatar_url} label={accountLabel} className="h-7 w-7 rounded-full border border-emerald-300/15" /><span className="mobile-nav-label">Profile</span></Link>
