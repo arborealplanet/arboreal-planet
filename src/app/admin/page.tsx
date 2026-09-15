@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { PageIntro } from "@/components/AppShell";
+import { AdminAccountDeletionReview } from "@/components/AdminAccountDeletionReview";
 import { AdminCommunityModeration } from "@/components/AdminCommunityModeration";
 import { AdminEventReview } from "@/components/AdminEventReview";
 import { AdminGtpPedigreeReports } from "@/components/AdminGtpPedigreeReports";
@@ -9,7 +10,7 @@ import { AdminSellerVerification } from "@/components/AdminSellerVerification";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
 const adminSections=[
-  ["Journal","journal"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Moderation","moderation"]
+  ["Journal","journal"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Accounts","accounts"],["Moderation","moderation"]
 ] as const;
 
 export default async function AdminPage(){
@@ -22,7 +23,7 @@ export default async function AdminPage(){
     <PageIntro
       eyebrow="Administration"
       title="Arboreal Planet administration"
-      description="Private moderation, publishing, event review, seller verification, lineage review and reference tools for authorized Arboreal Planet staff. Unauthorized accounts receive a 404 for this route."
+      description="Private moderation, publishing, event review, seller verification, lineage review, account requests and reference tools for authorized Arboreal Planet staff. Unauthorized accounts receive a 404 for this route."
       aside={<div className="rounded-full border border-amber-300/15 bg-amber-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">{profile.role}</div>}
     />
 
@@ -73,6 +74,15 @@ export default async function AdminPage(){
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Edit overview text, tags, husbandry, breeding, taxonomy, natural-history and cultivation fields without changing site code. Empty fields remain marked as pending on the public record.</p>
       </div>
       <AdminReferenceEditor/>
+    </section>
+
+    <section id="accounts" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+      <div className="mb-5 panel rounded-3xl p-6">
+        <div className="section-kicker">Account requests</div>
+        <h2 className="mt-3 text-2xl font-semibold">Account deletion review</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Review deletion requests before any irreversible account action. Use the processing states to document checks around public content, marketplace history and lineage attribution; this queue deliberately does not perform a hard account deletion.</p>
+      </div>
+      <AdminAccountDeletionReview/>
     </section>
 
     <section id="moderation" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-16 sm:px-6">
