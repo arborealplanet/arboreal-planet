@@ -11,6 +11,7 @@ const TYPES = [
   ["COMMUNITY_MEETUP","Community meetup"],
   ["OTHER","Other"],
 ] as const;
+const TIME_ZONES=["America/New_York","America/Chicago","America/Denver","America/Phoenix","America/Los_Angeles","America/Anchorage","Pacific/Honolulu","America/Toronto","Europe/London","Europe/Berlin","Australia/Sydney","UTC"] as const;
 
 export function EventSubmissionForm() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export function EventSubmissionForm() {
       <label className="text-xs font-semibold text-white/48">Venue<input name="venue_name" maxLength={180} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/></label>
       <label className="text-xs font-semibold text-white/48">Starts<input required name="starts_at" type="datetime-local" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/></label>
       <label className="text-xs font-semibold text-white/48">Ends<input name="ends_at" type="datetime-local" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/></label>
+      <label className="text-xs font-semibold text-white/48 md:col-span-2">Time zone<input required name="time_zone" list="event-time-zones" placeholder="America/New_York" maxLength={100} className="mt-2 w-full rounded-xl border border-emerald-300/15 bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/><datalist id="event-time-zones">{TIME_ZONES.map(zone=><option key={zone} value={zone}/>)}</datalist><span className="mt-1 block text-[10px] font-normal leading-4 text-white/25">Use an IANA time zone such as America/New_York so event hours do not shift when viewed elsewhere.</span></label>
       <label className="text-xs font-semibold text-white/48">City<input required name="city" maxLength={120} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/></label>
       <label className="text-xs font-semibold text-white/48">State / region<input name="state_region" maxLength={120} placeholder="FL, NY, Ontario…" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/></label>
       <label className="text-xs font-semibold text-white/48">Country<input required name="country" defaultValue="United States" maxLength={120} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 py-3 text-sm text-white/75 outline-none"/></label>
