@@ -97,6 +97,18 @@ export async function PUT(request: Request) {
   if (!body || !Array.isArray(body.animals)) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   if (body.animals.length > 2000) return NextResponse.json({ error: "Pedigree is too large for one sync." }, { status: 400 });
 
+  const visibilityResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?owner_id=eq.${encodeURIComponent(identity.user.id)}&select=id,visibility`, {
+    headers: {
+      apikey: SUPABASE_AUTH_KEY,
+      Authorization: `Bearer ${identity.token}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  const visibilityRows = await visibilityResponse.json().catch(() => null) as Array<{ id?: string; visibility?: string }> | null;
+  if (!visibilityResponse.ok) return NextResponse.json({ error: "Unable to inspect existing pedigree before sync", detail: visibilityRows }, { status: visibilityResponse.status });
+  const existingVisibility = new Map((Array.isArray(visibilityRows) ? visibilityRows : []).map((row) => [String(row.id), VISIBILITIES.has(String(row.visibility)) ? String(row.visibility) : "private"]));
+
   const ids = new Set<string>();
   const cleaned = [] as Array<Record<string, unknown>>;
 
@@ -107,7 +119,7 @@ export async function PUT(request: Request) {
     ids.add(id);
 
     const sex = SEXES.has(String(raw.sex)) ? String(raw.sex) : "Unknown";
-    const visibility = VISIBILITIES.has(String(raw.visibility)) ? String(raw.visibility) : "private";
+    const visibility = VISIBILITIES.has(String(raw.visibility)) ? String(raw.visibility) : existingVisibility.get(id) ?? "private";
     const hatchText = String(raw.hatchYear ?? "").replace(/[^0-9]/g, "").slice(0, 4);
     const hatchYear = hatchText ? Number(hatchText) : null;
 
