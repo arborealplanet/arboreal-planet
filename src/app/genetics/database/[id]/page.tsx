@@ -78,7 +78,10 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
   return <main className="mx-auto max-w-7xl px-5 py-10 pb-20 sm:px-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <Link href="/genetics/database" className="text-xs font-bold text-emerald-200/70">← Public lineage database</Link>
-      <Link href="/genetics" className="text-xs font-bold text-white/40">Genetics tools →</Link>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href={`/genetics/database/${encodeURIComponent(animal.id)}/card`} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.035] px-3 py-2 text-xs font-bold text-emerald-100/70">Print / share pedigree</Link>
+        <Link href="/genetics" className="text-xs font-bold text-white/40">Genetics tools →</Link>
+      </div>
     </div>
 
     <div className="mt-6 grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
