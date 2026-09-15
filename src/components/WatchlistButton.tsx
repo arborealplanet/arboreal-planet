@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type ItemType = "ANIMAL" | "PLANT" | "MARKET_LISTING" | "JOURNAL";
+type ItemType = "ANIMAL" | "PLANT" | "MARKET_LISTING" | "JOURNAL" | "EVENT";
 
 export function WatchlistButton({ type, id, label = "Save" }: { type: ItemType; id: string; label?: string }) {
   const router = useRouter();
