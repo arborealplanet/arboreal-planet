@@ -15,6 +15,7 @@ type PublicAnimal = {
   hatchYear?: string;
   damId?: string | null;
   sireId?: string | null;
+  recordStatus?: "keeper_reported" | "breeder_confirmed" | "reviewed";
   photoUrl?: string;
   contributor?: Contributor | null;
   updatedAt?: string;
@@ -25,12 +26,19 @@ function taxonFor(locality?: string) {
   return GTP_LOCALITY_TAXON[locality as keyof typeof GTP_LOCALITY_TAXON] ?? "Locality label not mapped";
 }
 
+function recordStatusLabel(status?: PublicAnimal["recordStatus"]) {
+  if (status === "breeder_confirmed") return "Breeder confirmed";
+  if (status === "reviewed") return "Reviewed record";
+  return "Keeper reported";
+}
+
 export function GtpPublicLineageDatabase() {
   const [animals, setAnimals] = useState<PublicAnimal[]>([]);
   const [query, setQuery] = useState("");
   const [taxon, setTaxon] = useState("All taxa");
   const [locality, setLocality] = useState("All localities");
   const [sex, setSex] = useState("All sexes");
+  const [recordStatus, setRecordStatus] = useState("All record statuses");
   const [status, setStatus] = useState("Loading public lineage records…");
 
   async function load() {
@@ -52,6 +60,7 @@ export function GtpPublicLineageDatabase() {
   const taxa = useMemo(() => [...new Set(animals.map((animal) => taxonFor(animal.locality)))].sort(), [animals]);
   const localities = useMemo(() => [...new Set(animals.map((animal) => animal.locality || "Mixed / Unknown"))].sort(), [animals]);
   const sexes = useMemo(() => [...new Set(animals.map((animal) => animal.sex || "Unknown"))].sort(), [animals]);
+  const recordStatuses = useMemo(() => [...new Set(animals.map((animal) => recordStatusLabel(animal.recordStatus)))].sort(), [animals]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -59,20 +68,23 @@ export function GtpPublicLineageDatabase() {
       const animalTaxon = taxonFor(animal.locality);
       const animalLocality = animal.locality || "Mixed / Unknown";
       const animalSex = animal.sex || "Unknown";
-      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animal.contributor?.displayName, animal.contributor?.username]
+      const animalRecordStatus = recordStatusLabel(animal.recordStatus);
+      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animalRecordStatus, animal.contributor?.displayName, animal.contributor?.username]
         .some((value) => String(value ?? "").toLowerCase().includes(needle));
       return matchesSearch
         && (taxon === "All taxa" || animalTaxon === taxon)
         && (locality === "All localities" || animalLocality === locality)
-        && (sex === "All sexes" || animalSex === sex);
+        && (sex === "All sexes" || animalSex === sex)
+        && (recordStatus === "All record statuses" || animalRecordStatus === recordStatus);
     });
-  }, [animals, query, taxon, locality, sex]);
+  }, [animals, query, taxon, locality, sex, recordStatus]);
 
   function resetFilters() {
     setQuery("");
     setTaxon("All taxa");
     setLocality("All localities");
     setSex("All sexes");
+    setRecordStatus("All record statuses");
   }
 
   return (
@@ -82,14 +94,14 @@ export function GtpPublicLineageDatabase() {
           <div>
             <div className="section-kicker">Community lineage records</div>
             <h2 className="mt-2 text-2xl font-semibold text-white/80">Search published Green Tree Python pedigrees.</h2>
-            <p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Only animals their keepers explicitly chose to publish appear here. A missing parent means that parent is unknown or has not been made public.</p>
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Only animals their keepers explicitly chose to publish appear here. New records are labeled Keeper reported; stronger record statuses are reserved for trusted confirmation or review.</p>
           </div>
           <label className="w-full text-xs text-white/38 md:max-w-sm">Search animal, registry ID, locality, subspecies or keeper
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. AP-GTP, Jayapura, utaraensis" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" />
           </label>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <label className="text-[10px] font-bold uppercase tracking-[.11em] text-white/28">Subspecies / taxon
             <select value={taxon} onChange={(event) => setTaxon(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[.07] bg-[#08130e] px-3 py-3 text-xs normal-case tracking-normal text-white/65">
               <option>All taxa</option>
@@ -108,6 +120,12 @@ export function GtpPublicLineageDatabase() {
               {sexes.map((value) => <option key={value}>{value}</option>)}
             </select>
           </label>
+          <label className="text-[10px] font-bold uppercase tracking-[.11em] text-white/28">Record status
+            <select value={recordStatus} onChange={(event) => setRecordStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[.07] bg-[#08130e] px-3 py-3 text-xs normal-case tracking-normal text-white/65">
+              <option>All record statuses</option>
+              {recordStatuses.map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
           <button type="button" onClick={resetFilters} className="self-end rounded-xl border border-emerald-300/15 px-4 py-3 text-xs font-bold text-emerald-200/70">Reset filters</button>
         </div>
 
@@ -121,6 +139,7 @@ export function GtpPublicLineageDatabase() {
             const sire = animal.sireId ? byId.get(animal.sireId) : null;
             const contributor = animal.contributor;
             const contributorLabel = contributor?.displayName || contributor?.username || null;
+            const statusLabel = recordStatusLabel(animal.recordStatus);
             return (
               <article key={animal.id} className="panel-soft overflow-hidden rounded-[22px]">
                 {animal.photoUrl ? (
@@ -133,7 +152,7 @@ export function GtpPublicLineageDatabase() {
                       <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="block truncate text-lg font-semibold text-white/78 transition hover:text-emerald-100">{animal.name}</Link>
                       <div className="mt-1 text-[10px] text-white/32">{animal.registryCode ? `${animal.registryCode} · ` : ""}{animal.sex || "Unknown"}{animal.hatchYear ? ` · ${animal.hatchYear}` : ""}</div>
                     </div>
-                    <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/60">PUBLIC</span>
+                    <div className="flex flex-wrap justify-end gap-1.5"><span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/60">PUBLIC</span><span className="rounded-full border border-white/[.07] px-2 py-1 text-[9px] font-bold text-white/45">{statusLabel}</span></div>
                   </div>
 
                   {contributorLabel ? <div className="mt-4 flex items-center gap-2 border-y border-white/[.05] py-3">
