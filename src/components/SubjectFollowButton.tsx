@@ -43,6 +43,7 @@ export function SubjectFollowButton({ type, id = "", subjectKey, label = "Follow
         setSignedIn(true);
         setFollowing(data.following);
         window.dispatchEvent(new CustomEvent("subject-follow-changed", { detail: { type, id, subjectKey, following: data.following } }));
+        router.refresh();
       }
     } finally {
       setBusy(false);
