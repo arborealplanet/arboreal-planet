@@ -4,13 +4,14 @@ import { ListingOwnerControls } from "@/components/ListingOwnerControls";
 import { MessageSellerButton } from "@/components/MessageSellerButton";
 import { SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL,getServerIdentity } from "@/lib/supabase-auth";
 
-type Listing={id:string;owner_id:string;category:string;title:string;description:string|null;public_origin:string|null;price:number|null;currency:string;image_urls:string[];seller_location:string|null;morph:string|null;sex:string|null;age_or_year:string|null;lineage:string|null;status:string;created_at:string;species:{common_name:string;scientific_name:string}|null;localities:{name:string}|null;profiles:{username:string|null;display_name:string|null;avatar_url:string|null;seller_enabled:boolean}|null};
+type Listing={id:string;owner_id:string;category:string;title:string;description:string|null;public_origin:string|null;price:number|null;currency:string;image_urls:string[];seller_location:string|null;morph:string|null;sex:string|null;age_or_year:string|null;lineage:string|null;pedigree_animal_id:string|null;status:string;created_at:string;species:{common_name:string;scientific_name:string}|null;localities:{name:string}|null;profiles:{username:string|null;display_name:string|null;avatar_url:string|null;seller_enabled:boolean}|null};
+type Pedigree={id:string;registry_code:string;name:string;locality_label:string|null}|null;
 
 export default async function ListingPage({params}:{params:Promise<{id:string}>}){
   const {id}=await params;
   const identity=await getServerIdentity();
   const token=identity?.token??SUPABASE_AUTH_KEY;
-  const r=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/marketplace_listings?id=eq.${encodeURIComponent(id)}&select=id,owner_id,category,title,description,public_origin,price,currency,image_urls,seller_location,morph,sex,age_or_year,lineage,status,created_at,species!marketplace_listings_species_id_fkey(common_name,scientific_name),localities!marketplace_listings_locality_id_fkey(name),profiles!marketplace_listings_owner_id_fkey(username,display_name,avatar_url,seller_enabled)`,{headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${token}`},cache:"no-store"});
+  const r=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/marketplace_listings?id=eq.${encodeURIComponent(id)}&select=id,owner_id,category,title,description,public_origin,price,currency,image_urls,seller_location,morph,sex,age_or_year,lineage,pedigree_animal_id,status,created_at,species!marketplace_listings_species_id_fkey(common_name,scientific_name),localities!marketplace_listings_locality_id_fkey(name),profiles!marketplace_listings_owner_id_fkey(username,display_name,avatar_url,seller_enabled)`,{headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${token}`},cache:"no-store"});
   if(!r.ok)notFound();
   const rows:Listing[]=await r.json();
   const listing=rows[0];
@@ -18,6 +19,8 @@ export default async function ListingPage({params}:{params:Promise<{id:string}>}
   const isOwner=identity?.user.id===listing.owner_id;
   if(!isOwner&&listing.status!=="ACTIVE")notFound();
   const seller=listing.profiles;
+  let pedigree:Pedigree=null;
+  if(listing.pedigree_animal_id){const pr=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(listing.pedigree_animal_id)}&visibility=eq.public&select=id,registry_code,name,locality_label&limit=1`,{headers:{apikey:SUPABASE_AUTH_KEY},cache:"no-store"});if(pr.ok){const p=await pr.json() as Exclude<Pedigree,null>[];pedigree=p[0]??null}}
   const animalDetails=[["Species",listing.species?`${listing.species.common_name} · ${listing.species.scientific_name}`:null],["Locality",listing.localities?.name??null],["Morph / trait",listing.morph],["Sex",listing.sex],["Age / birth year",listing.age_or_year],["Seller location",listing.seller_location]];
 
   return <main className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
@@ -31,6 +34,8 @@ export default async function ListingPage({params}:{params:Promise<{id:string}>}
           <h1 className="mt-3 text-3xl font-semibold">{listing.title}</h1>
           <div className="mt-4 text-3xl font-semibold">{listing.price==null?"Contact seller":`$${Number(listing.price).toLocaleString()}`}</div>
           <div className="mt-7 grid gap-3 sm:grid-cols-2">{animalDetails.filter(([,v])=>v).map(([k,v])=><div key={String(k)} className="panel-soft rounded-2xl p-4"><div className="text-[9px] uppercase tracking-[.13em] text-white/25">{k}</div><div className="mt-1 text-sm text-white/65">{v}</div></div>)}</div>
+          {pedigree&&<div className="mt-6 rounded-2xl border border-emerald-300/12 bg-emerald-300/[.03] p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-200/45">Arboreal Planet registered pedigree</div><div className="mt-2 flex flex-wrap items-end justify-between gap-3"><div><div className="font-semibold text-white/72">{pedigree.name}</div><div className="mt-1 font-mono text-[10px] font-bold tracking-[.08em] text-emerald-100/50">{pedigree.registry_code}{pedigree.locality_label?` · ${pedigree.locality_label}`:""}</div></div><Link href={`/genetics/database/${encodeURIComponent(pedigree.id)}`} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c]">View Pedigree →</Link></div></div>}
+          {listing.pedigree_animal_id&&!pedigree&&<div className="mt-6 rounded-2xl border border-white/[.06] p-4 text-xs text-white/32">This listing is linked to a registered pedigree, but that pedigree is currently private.</div>}
           {listing.lineage&&<div className="mt-6"><div className="section-kicker">Lineage / parents</div><p className="mt-2 text-sm leading-6 text-white/50">{listing.lineage}</p></div>}
           {listing.description&&<div className="mt-6"><div className="section-kicker">Seller description</div><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-white/50">{listing.description}</p></div>}
         </div>
