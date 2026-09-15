@@ -26,6 +26,20 @@ async function removeStorageObject(path: string, token: string) {
   });
 }
 
+async function patchPhotoPath(id: string, ownerId: string, token: string, photoPath: string | null) {
+  return fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(ownerId)}`, {
+    method: "PATCH",
+    headers: {
+      apikey: SUPABASE_AUTH_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({ photo_path: photoPath, updated_at: new Date().toISOString() }),
+    cache: "no-store",
+  });
+}
+
 async function fetchAnimal(id: string, token?: string) {
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&select=id,owner_id,visibility,photo_path&limit=1`, {
     headers: {
@@ -79,6 +93,7 @@ export async function POST(request: Request) {
   if ("error" in animal) return NextResponse.json({ error: "Unable to verify animal" }, { status: animal.status });
   if (!animal.row || animal.row.owner_id !== identity.user.id) return NextResponse.json({ error: "Animal not found" }, { status: 404 });
 
+  const oldPath = animal.row.photo_path ?? null;
   const path = `${identity.user.id}/${id}.${MIME_EXT[file.type]}`;
   const upload = await fetch(storageObjectUrl(path), {
     method: "POST",
@@ -96,24 +111,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unable to upload photo", detail }, { status: upload.status });
   }
 
-  const patch = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(identity.user.id)}`, {
-    method: "PATCH",
-    headers: {
-      apikey: SUPABASE_AUTH_KEY,
-      Authorization: `Bearer ${identity.token}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({ photo_path: path, updated_at: new Date().toISOString() }),
-    cache: "no-store",
-  });
-  if (!patch.ok) return NextResponse.json({ error: "Photo uploaded, but the pedigree record could not be updated." }, { status: patch.status });
-
-  if (animal.row.photo_path && animal.row.photo_path !== path) {
-    await removeStorageObject(animal.row.photo_path, identity.token).catch(() => null);
+  const patch = await patchPhotoPath(id, identity.user.id, identity.token, path);
+  if (!patch.ok) {
+    if (path !== oldPath) await removeStorageObject(path, identity.token).catch(() => null);
+    return NextResponse.json({ error: "Photo upload was rolled back because the pedigree record could not be updated." }, { status: patch.status });
   }
 
-  return NextResponse.json({ ok: true, photoUrl: `/api/genetics/pedigree/photo?id=${encodeURIComponent(id)}&v=${Date.now()}` });
+  let cleanupPending = false;
+  if (oldPath && oldPath !== path) {
+    const cleanup = await removeStorageObject(oldPath, identity.token).catch(() => null);
+    cleanupPending = !cleanup || (!cleanup.ok && cleanup.status !== 404);
+  }
+
+  return NextResponse.json({ ok: true, cleanupPending, photoUrl: `/api/genetics/pedigree/photo?id=${encodeURIComponent(id)}&v=${Date.now()}` });
 }
 
 export async function DELETE(request: Request) {
@@ -127,23 +137,18 @@ export async function DELETE(request: Request) {
   if ("error" in animal) return NextResponse.json({ error: "Unable to verify animal" }, { status: animal.status });
   if (!animal.row || animal.row.owner_id !== identity.user.id) return NextResponse.json({ error: "Animal not found" }, { status: 404 });
 
-  if (animal.row.photo_path) {
-    const remove = await removeStorageObject(animal.row.photo_path, identity.token);
-    if (!remove.ok && remove.status !== 404) return NextResponse.json({ error: "Unable to remove photo" }, { status: remove.status });
-  }
+  const oldPath = animal.row.photo_path ?? null;
+  if (!oldPath) return NextResponse.json({ ok: true });
 
-  const patch = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(identity.user.id)}`, {
-    method: "PATCH",
-    headers: {
-      apikey: SUPABASE_AUTH_KEY,
-      Authorization: `Bearer ${identity.token}`,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({ photo_path: null, updated_at: new Date().toISOString() }),
-    cache: "no-store",
-  });
-  if (!patch.ok) return NextResponse.json({ error: "Unable to clear photo record" }, { status: patch.status });
+  const clear = await patchPhotoPath(id, identity.user.id, identity.token, null);
+  if (!clear.ok) return NextResponse.json({ error: "Unable to clear photo record" }, { status: clear.status });
+
+  const remove = await removeStorageObject(oldPath, identity.token).catch(() => null);
+  if (!remove || (!remove.ok && remove.status !== 404)) {
+    const restore = await patchPhotoPath(id, identity.user.id, identity.token, oldPath).catch(() => null);
+    if (!restore?.ok) return NextResponse.json({ error: "Photo cleanup failed and the pedigree photo reference could not be restored." }, { status: 500 });
+    return NextResponse.json({ error: "Unable to remove photo. The original photo reference was restored." }, { status: remove?.status || 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
