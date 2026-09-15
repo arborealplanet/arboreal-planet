@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Contributor = { username?: string | null; displayName?: string | null };
+type Relation = { status: "unknown" | "private_or_unpublished" | "public"; id?: string; name?: string | null };
 type PublicAnimal = {
   id: string;
   name: string;
@@ -11,8 +12,8 @@ type PublicAnimal = {
   locality?: string;
   breederId?: string;
   hatchYear?: string;
-  damId?: string | null;
-  sireId?: string | null;
+  dam?: Relation;
+  sire?: Relation;
   photoUrl?: string;
   contributor?: Contributor | null;
   confirmedProducers?: Contributor[];
@@ -28,15 +29,14 @@ type PublicPairing = {
   reporter?: Contributor | null;
   offspring?: PairingOffspring[];
 };
-
-type RelativeSlot = {
-  id: string | null;
-  label: string;
-  animal: PublicAnimal | null;
-};
+type RelativeSlot = { label: string; relation: Relation; animal: PublicAnimal | null };
 
 function stewardLabel(animal: PublicAnimal) {
   return animal.contributor?.displayName || animal.contributor?.username || null;
+}
+
+function relationAnimal(relation: Relation | undefined, byId: Map<string, PublicAnimal>) {
+  return relation?.status === "public" && relation.id ? byId.get(relation.id) ?? null : null;
 }
 
 function RelativeCard({ slot, compact = false }: { slot: RelativeSlot; compact?: boolean }) {
@@ -44,7 +44,7 @@ function RelativeCard({ slot, compact = false }: { slot: RelativeSlot; compact?:
     return (
       <div className={`rounded-2xl border border-dashed border-white/[.07] bg-black/10 ${compact ? "p-3" : "p-4"}`}>
         <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/22">{slot.label}</div>
-        <div className="mt-2 text-xs text-white/28">{slot.id ? "Private / unpublished" : "Unknown"}</div>
+        <div className="mt-2 text-xs text-white/28">{slot.relation.status === "private_or_unpublished" ? "Private / unpublished" : "Unknown"}</div>
       </div>
     );
   }
@@ -54,10 +54,7 @@ function RelativeCard({ slot, compact = false }: { slot: RelativeSlot; compact?:
   return (
     <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className={`interactive-card block overflow-hidden rounded-2xl border border-white/[.07] bg-black/10 ${compact ? "p-3" : "p-4"}`}>
       <div className="flex items-center gap-3">
-        {animal.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={animal.photoUrl} alt="" className={`${compact ? "h-10 w-10" : "h-12 w-12"} shrink-0 rounded-xl object-cover`} />
-        ) : null}
+        {animal.photoUrl ? <img src={animal.photoUrl} alt="" className={`${compact ? "h-10 w-10" : "h-12 w-12"} shrink-0 rounded-xl object-cover`} /> : null}
         <div className="min-w-0">
           <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/22">{slot.label}</div>
           <div className={`mt-1 truncate font-semibold text-white/68 ${compact ? "text-xs" : "text-sm"}`}>{animal.name}</div>
@@ -79,7 +76,7 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
     void (async () => {
       try {
         const [animalResponse, pairingResponse] = await Promise.all([
-          fetch("/api/genetics/pedigree/public", { cache: "no-store" }),
+          fetch(`/api/genetics/pedigree/public/${encodeURIComponent(focusId)}/graph`, { cache: "no-store" }),
           fetch(`/api/genetics/pairings/public?animalId=${encodeURIComponent(focusId)}`, { cache: "no-store" }),
         ]);
         const animalData = await animalResponse.json().catch(() => null) as { animals?: PublicAnimal[]; error?: string } | null;
@@ -100,17 +97,17 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
 
   const byId = useMemo(() => new Map(animals.map((animal) => [animal.id, animal])), [animals]);
   const focus = byId.get(focusId) ?? null;
-
-  const dam = focus?.damId ? byId.get(focus.damId) ?? null : null;
-  const sire = focus?.sireId ? byId.get(focus.sireId) ?? null : null;
+  const dam = focus ? relationAnimal(focus.dam, byId) : null;
+  const sire = focus ? relationAnimal(focus.sire, byId) : null;
   const grandparents: RelativeSlot[] = [
-    { id: dam?.damId ?? null, label: "Maternal granddam", animal: dam?.damId ? byId.get(dam.damId) ?? null : null },
-    { id: dam?.sireId ?? null, label: "Maternal grandsire", animal: dam?.sireId ? byId.get(dam.sireId) ?? null : null },
-    { id: sire?.damId ?? null, label: "Paternal granddam", animal: sire?.damId ? byId.get(sire.damId) ?? null : null },
-    { id: sire?.sireId ?? null, label: "Paternal grandsire", animal: sire?.sireId ? byId.get(sire.sireId) ?? null : null },
+    { relation: dam?.dam ?? { status: "unknown" }, label: "Maternal granddam", animal: dam ? relationAnimal(dam.dam, byId) : null },
+    { relation: dam?.sire ?? { status: "unknown" }, label: "Maternal grandsire", animal: dam ? relationAnimal(dam.sire, byId) : null },
+    { relation: sire?.dam ?? { status: "unknown" }, label: "Paternal granddam", animal: sire ? relationAnimal(sire.dam, byId) : null },
+    { relation: sire?.sire ?? { status: "unknown" }, label: "Paternal grandsire", animal: sire ? relationAnimal(sire.sire, byId) : null },
   ];
-  const children = focus ? animals.filter((animal) => animal.damId === focus.id || animal.sireId === focus.id) : [];
-  const grandChildren = focus ? animals.filter((animal) => children.some((child) => animal.damId === child.id || animal.sireId === child.id)) : [];
+  const children = focus ? animals.filter((animal) => animal.dam?.id === focus.id || animal.sire?.id === focus.id) : [];
+  const childIds = new Set(children.map((child) => child.id));
+  const grandChildren = focus ? animals.filter((animal) => (animal.dam?.id && childIds.has(animal.dam.id)) || (animal.sire?.id && childIds.has(animal.sire.id))) : [];
   const focusSteward = focus ? stewardLabel(focus) : null;
   const focusProducers = focus?.confirmedProducers ?? [];
 
@@ -130,46 +127,20 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
 
       <div className="mt-6 overflow-x-auto pb-2">
         <div className="min-w-[760px] space-y-5">
-          <div>
-            <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Grandparents</div>
-            <div className="grid grid-cols-4 gap-3">{grandparents.map((slot) => <RelativeCard key={slot.label} slot={slot} compact />)}</div>
-          </div>
+          <div><div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Grandparents</div><div className="grid grid-cols-4 gap-3">{grandparents.map((slot) => <RelativeCard key={slot.label} slot={slot} compact />)}</div></div>
 
-          <div>
-            <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Parents</div>
-            <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3">
-              <RelativeCard slot={{ id: focus.damId ?? null, label: "Dam", animal: dam }} />
-              <RelativeCard slot={{ id: focus.sireId ?? null, label: "Sire", animal: sire }} />
-            </div>
-          </div>
+          <div><div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Parents</div><div className="mx-auto grid max-w-3xl grid-cols-2 gap-3"><RelativeCard slot={{ relation: focus.dam ?? { status: "unknown" }, label: "Dam", animal: dam }} /><RelativeCard slot={{ relation: focus.sire ?? { status: "unknown" }, label: "Sire", animal: sire }} /></div></div>
 
           <div className="mx-auto max-w-xl rounded-[24px] border border-emerald-300/15 bg-emerald-300/[.035] p-5 text-center shadow-[0_0_50px_rgba(16,185,129,.06)]">
-            {focus.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={focus.photoUrl} alt="" className="mx-auto h-24 w-24 rounded-2xl object-cover" />
-            ) : null}
-            <div className="mt-3 text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/40">Focused animal</div>
-            <div className="mt-2 text-2xl font-semibold text-white/84">{focus.name}</div>
-            <div className="mt-1 text-xs text-white/34">{focus.locality || "Mixed / Unknown"}{focus.hatchYear ? ` · ${focus.hatchYear}` : ""}</div>
+            {focus.photoUrl ? <img src={focus.photoUrl} alt="" className="mx-auto h-24 w-24 rounded-2xl object-cover" /> : null}
+            <div className="mt-3 text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/40">Focused animal</div><div className="mt-2 text-2xl font-semibold text-white/84">{focus.name}</div><div className="mt-1 text-xs text-white/34">{focus.locality || "Mixed / Unknown"}{focus.hatchYear ? ` · ${focus.hatchYear}` : ""}</div>
             {focusSteward ? <div className="mt-2 text-[10px] text-emerald-100/42">Current steward: {focusSteward}</div> : null}
-            {focusProducers.length ? <div className="mt-3 border-t border-emerald-300/10 pt-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-100/35">Confirmed producer{focusProducers.length === 1 ? "" : "s"}</div><div className="mt-2 flex flex-wrap justify-center gap-2">{focusProducers.map((producer, index) => {
-              const label = producer.displayName || producer.username || `Producer ${index + 1}`;
-              return producer.username ? <Link key={`${producer.username}-${index}`} href={`/keepers/${encodeURIComponent(producer.username)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/62">{label}</Link> : <span key={`${label}-${index}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/62">{label}</span>;
-            })}</div></div> : null}
+            {focusProducers.length ? <div className="mt-3 border-t border-emerald-300/10 pt-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-100/35">Confirmed producer{focusProducers.length === 1 ? "" : "s"}</div><div className="mt-2 flex flex-wrap justify-center gap-2">{focusProducers.map((producer, index) => { const label = producer.displayName || producer.username || `Producer ${index + 1}`; return producer.username ? <Link key={`${producer.username}-${index}`} href={`/keepers/${encodeURIComponent(producer.username)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/62">{label}</Link> : <span key={`${label}-${index}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/62">{label}</span>; })}</div></div> : null}
           </div>
 
-          <div>
-            <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Published offspring</div>
-            {children.length ? <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{children.map((child) => <RelativeCard key={child.id} slot={{ id: child.id, label: "Offspring", animal: child }} compact />)}</div> : <div className="rounded-2xl border border-dashed border-white/[.07] p-5 text-center text-xs text-white/28">No published offspring linked yet.</div>}
-          </div>
+          <div><div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Published offspring</div>{children.length ? <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{children.map((child) => <RelativeCard key={child.id} slot={{ relation: { status: "public", id: child.id, name: child.name }, label: "Offspring", animal: child }} compact />)}</div> : <div className="rounded-2xl border border-dashed border-white/[.07] p-5 text-center text-xs text-white/28">No published offspring linked yet.</div>}</div>
 
-          {grandChildren.length ? (
-            <div>
-              <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Published grandchildren</div>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{grandChildren.slice(0, 12).map((child) => <RelativeCard key={child.id} slot={{ id: child.id, label: "Grandchild", animal: child }} compact />)}</div>
-              {grandChildren.length > 12 ? <div className="mt-2 text-center text-[10px] text-white/25">Showing 12 of {grandChildren.length} published grandchildren.</div> : null}
-            </div>
-          ) : null}
+          {grandChildren.length ? <div><div className="mb-2 text-center text-[9px] font-black uppercase tracking-[.15em] text-white/20">Published grandchildren</div><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{grandChildren.slice(0,12).map((child) => <RelativeCard key={child.id} slot={{ relation: { status: "public", id: child.id, name: child.name }, label: "Grandchild", animal: child }} compact />)}</div>{grandChildren.length > 12 ? <div className="mt-2 text-center text-[10px] text-white/25">Showing 12 of {grandChildren.length} published grandchildren.</div> : null}</div> : null}
         </div>
       </div>
 
@@ -180,15 +151,7 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
           const partner = partnerId ? byId.get(partnerId) ?? null : null;
           const reporter = pairing.reporter?.displayName || pairing.reporter?.username || "Keeper reported";
           const clutch = pairing.offspring ?? [];
-          return <div key={pairing.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4">
-            <div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Published pairing</div>
-            <div className="mt-1 font-semibold text-white/66">{focus.name} × {partner?.name || "Private / unpublished partner"}</div>
-            <div className="mt-1 text-[10px] text-white/30">{pairing.pairingCode || "No pairing code"}{pairing.pairingYear ? ` · ${pairing.pairingYear}` : ""}</div>
-            {pairing.notes ? <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/36">{pairing.notes}</p> : null}
-            {clutch.length ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-emerald-100/40">Explicitly grouped offspring · {clutch.length}</div><div className="mt-2 flex flex-wrap gap-2">{clutch.map((offspring,index) => offspring.id ? <Link key={offspring.id} href={`/genetics/database/${encodeURIComponent(offspring.id)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/60">{offspring.name || offspring.registryCode || `Offspring ${index + 1}`}</Link> : null)}</div></div> : null}
-            <div className="mt-3 text-[9px] text-emerald-100/35">Reported by: {reporter}</div>
-            {partner ? <Link href={`/genetics/database/${encodeURIComponent(partner.id)}`} className="mt-2 inline-flex text-[10px] font-bold text-emerald-200/60">Open partner record →</Link> : null}
-          </div>;
+          return <div key={pairing.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4"><div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Published pairing</div><div className="mt-1 font-semibold text-white/66">{focus.name} × {partner?.name || "Private / unpublished partner"}</div><div className="mt-1 text-[10px] text-white/30">{pairing.pairingCode || "No pairing code"}{pairing.pairingYear ? ` · ${pairing.pairingYear}` : ""}</div>{pairing.notes ? <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/36">{pairing.notes}</p> : null}{clutch.length ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-emerald-100/40">Explicitly grouped offspring · {clutch.length}</div><div className="mt-2 flex flex-wrap gap-2">{clutch.map((offspring,index) => offspring.id ? <Link key={offspring.id} href={`/genetics/database/${encodeURIComponent(offspring.id)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/60">{offspring.name || offspring.registryCode || `Offspring ${index + 1}`}</Link> : null)}</div></div> : null}<div className="mt-3 text-[9px] text-emerald-100/35">Reported by: {reporter}</div>{partner ? <Link href={`/genetics/database/${encodeURIComponent(partner.id)}`} className="mt-2 inline-flex text-[10px] font-bold text-emerald-200/60">Open partner record →</Link> : null}</div>;
         })}</div>
         <p className="mt-3 text-[10px] leading-5 text-white/25">Pairing and clutch grouping are keeper-reported history. A pairing does not transfer ownership or automatically prove offspring; grouped offspring are records whose existing dam/sire already match that pairing.</p>
       </div> : null}
