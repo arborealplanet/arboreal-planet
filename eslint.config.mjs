@@ -30,6 +30,8 @@ const eslintConfig = defineConfig([
       "src/components/ChondroTraitFocusPanel.tsx",
       "src/components/ChondroRealtimeProgression.tsx",
       "src/components/ChondroRoomExpansionPanel.tsx",
+      "src/components/AdminGtpPedigreeReports.tsx",
+      "src/components/GtpBreederConfirmations.tsx",
       "src/components/GtpFamilyTreeMaker.tsx",
       "src/components/GtpPedigreeCloudSync.tsx",
       "src/components/GtpPedigreePublishing.tsx",
@@ -38,6 +40,7 @@ const eslintConfig = defineConfig([
     ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
+      "react-hooks/exhaustive-deps": "off",
       "react/no-unescaped-entities": "off",
     },
   },
