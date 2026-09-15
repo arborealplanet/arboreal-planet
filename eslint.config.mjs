@@ -33,6 +33,7 @@ const eslintConfig = defineConfig([
       "src/components/GtpFamilyTreeMaker.tsx",
       "src/components/GtpPedigreeCloudSync.tsx",
       "src/components/GtpPedigreePublishing.tsx",
+      "src/components/GtpPublicLineageDatabase.tsx",
     ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
