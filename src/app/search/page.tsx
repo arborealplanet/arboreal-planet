@@ -27,6 +27,13 @@ function filterText(rows: Array<Record<string, unknown>>, term: string, fields: 
   }));
 }
 
+function money(value: unknown, currency: unknown) {
+  const amount = Number(value ?? 0);
+  const code = /^[A-Z]{3}$/.test(String(currency ?? "USD")) ? String(currency ?? "USD") : "USD";
+  try { return amount.toLocaleString(undefined, { style: "currency", currency: code }); }
+  catch { return `$${amount.toLocaleString()}`; }
+}
+
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const params = await searchParams;
   const term = safeTerm(params.q ?? "");
@@ -45,8 +52,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     items = [
       ...filterText(animals, term, ["common_name", "scientific_name", "animal_group", "description", "tags"]).map((row) => ({ kind: "Animal reference", title: String(row.common_name ?? "Animal"), subtitle: String(row.scientific_name ?? row.animal_group ?? ""), href: `/animals/${row.slug}`, detail: String(row.description ?? ""), badge: "REFERENCE" })),
       ...filterText(plants, term, ["name", "scientific_name", "plant_group", "description", "tags"]).map((row) => ({ kind: "Plant collection", title: String(row.name ?? "Plant"), subtitle: String(row.scientific_name ?? row.plant_group ?? ""), href: row.status === "PLANNED" ? "/plants" : `/plants/${row.slug}`, detail: String(row.description ?? ""), badge: String(row.status ?? "") })),
-      ...filterText(profiles, term, ["username", "display_name", "bio", "location"]).map((row) => ({ kind: "Keeper", title: String(row.display_name ?? row.username ?? "Keeper"), subtitle: row.username ? `@${String(row.username)}` : "Public profile", href: `/keepers/${encodeURIComponent(String(row.username ?? ""))}`, detail: String(row.location ?? row.bio ?? ""), badge: row.seller_enabled && row.seller_verification_status === "verified" ? "VERIFIED SELLER" : "PUBLIC PROFILE" })),
-      ...filterText(listings, term, ["title", "description", "category", "seller_location", "morph", "sex", "age_or_year"]).map((row) => ({ kind: "Marketplace", title: String(row.title ?? "Listing"), subtitle: `${String(row.category ?? "Listing")} · ${Number(row.price ?? 0).toLocaleString(undefined, { style: "currency", currency: String(row.currency ?? "USD") })}`, href: `/marketplace/${row.id}`, detail: String(row.seller_location ?? row.morph ?? ""), badge: "ACTIVE LISTING" })),
+      ...filterText(profiles, term, ["username", "display_name", "bio", "location"]).filter((row) => Boolean(row.username)).map((row) => ({ kind: "Keeper", title: String(row.display_name ?? row.username ?? "Keeper"), subtitle: `@${String(row.username)}`, href: `/keepers/${encodeURIComponent(String(row.username))}`, detail: String(row.location ?? row.bio ?? ""), badge: Boolean(row.seller_enabled) && row.seller_verification_status === "verified" ? "VERIFIED SELLER" : "PUBLIC PROFILE" })),
+      ...filterText(listings, term, ["title", "description", "category", "seller_location", "morph", "sex", "age_or_year"]).map((row) => ({ kind: "Marketplace", title: String(row.title ?? "Listing"), subtitle: `${String(row.category ?? "Listing")} · ${money(row.price, row.currency)}`, href: `/marketplace/${row.id}`, detail: String(row.seller_location ?? row.morph ?? ""), badge: "ACTIVE LISTING" })),
       ...filterText(posts, term, ["body", "tags", "type"]).map((row) => ({ kind: "Community", title: String(row.body ?? "Community post").slice(0, 90) || "Community post", subtitle: String(row.type ?? "POST").replaceAll("_", " "), href: `/community#${row.id}`, detail: Array.isArray(row.tags) ? row.tags.slice(0, 4).map((tag) => `#${tag}`).join(" · ") : null, badge: "COMMUNITY" })),
       ...filterText(pedigrees, term, ["registry_code", "name", "locality_label", "breeder_animal_id", "record_status"]).map((row) => ({ kind: "Registered GTP", title: String(row.name ?? "Registered animal"), subtitle: [row.registry_code, row.locality_label].filter(Boolean).join(" · "), href: `/genetics/database/${row.id}`, detail: [row.sex, row.hatch_year ? `Hatched ${row.hatch_year}` : null, row.breeder_animal_id ? `Breeder ID ${row.breeder_animal_id}` : null].filter(Boolean).join(" · "), badge: String(row.record_status ?? "keeper_reported").replaceAll("_", " ").toUpperCase() })),
     ];
