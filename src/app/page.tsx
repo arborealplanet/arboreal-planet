@@ -5,11 +5,12 @@ import { ChondroBreederPreview } from "@/components/ChondroBreederPreview";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 
 const platformCards = [
+  { title: "Search Arboreal Planet", text: "Search reference records, plants, keepers, marketplace listings, community posts and public pedigrees at once.", href: "/search", tag: "DISCOVER", icon: "⌕" },
   { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
   { title: "Genetics & Pedigrees", text: "Subspecies calculator, family trees, registered lineages and public pedigree records.", href: "/genetics", tag: "LINEAGE", icon: "⌘" },
   { title: "Plant Database", text: "Nepenthes, bromeliads and terrarium cultivation knowledge.", href: "/plants", tag: "PLANTS", icon: "⌁" },
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
-  { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "DISCOVER", icon: "▣" },
+  { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "MARKET", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
   { title: "The Hatchery", text: "Educational breeder games with virtual animals, lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "PLAY", icon: "◈" },
 ];
@@ -33,7 +34,8 @@ export default function Home() {
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">Arboreal Planet brings species records, plant cultivation, marketplace listings, keeper activity and reptile market intelligence into one connected platform.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/community" className="primary-action">Explore the network</Link>
+              <Link href="/search" className="primary-action">Search the hub</Link>
+              <Link href="/community" className="secondary-action">Explore the network</Link>
               <Link href="/snake-stocks" className="secondary-action">Open Snake Stocks ↗</Link>
             </div>
             <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/[.055] pt-6 text-xs text-white/45">
@@ -67,9 +69,9 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Core sections</h2></div>
-          <p className="max-w-md text-sm leading-6 text-white/52">Reference data, genetics and pedigrees, marketplace listings, community activity, market tools and educational breeder games all share the same account and navigation.</p>
+          <p className="max-w-md text-sm leading-6 text-white/52">Search, reference data, genetics and pedigrees, marketplace listings, community activity, market tools and educational breeder games all share the same platform.</p>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {platformCards.map((card) => (
             <Link key={card.href} href={card.href} className="panel interactive-card group flex min-h-52 flex-col rounded-[24px] p-6">
               <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-xl border border-white/[.065] bg-white/[.02] text-lg text-emerald-300/75">{card.icon}</span><span className="text-[9px] font-bold tracking-[.14em] text-white/36">{card.tag}</span></div>
