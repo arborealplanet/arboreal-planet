@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { PageIntro } from "@/components/AppShell";
 import { AdminCommunityModeration } from "@/components/AdminCommunityModeration";
+import { AdminEventReview } from "@/components/AdminEventReview";
 import { AdminGtpPedigreeReports } from "@/components/AdminGtpPedigreeReports";
 import { AdminJournalEditor } from "@/components/AdminJournalEditor";
 import { AdminReferenceEditor } from "@/components/AdminReferenceEditor";
@@ -17,7 +18,7 @@ export default async function AdminPage(){
     <PageIntro
       eyebrow="Administration"
       title="Arboreal Planet administration"
-      description="Private moderation, publishing, seller verification, lineage review and reference tools for authorized Arboreal Planet staff. Unauthorized accounts receive a 404 for this route."
+      description="Private moderation, publishing, event review, seller verification, lineage review and reference tools for authorized Arboreal Planet staff. Unauthorized accounts receive a 404 for this route."
       aside={<div className="rounded-full border border-amber-300/15 bg-amber-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">{profile.role}</div>}
     />
 
@@ -28,6 +29,15 @@ export default async function AdminPage(){
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Create drafts, preview editorial content, attach sources, connect pieces to animal or plant records, publish finished work and archive older pieces without touching the database directly.</p>
       </div>
       <AdminJournalEditor/>
+    </section>
+
+    <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+      <div className="mb-5 panel rounded-3xl p-6">
+        <div className="section-kicker">Shows & Events</div>
+        <h2 className="mt-3 text-2xl font-semibold">Event suggestion review</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Verify submitted event details against the original source before publishing. Approval publishes the event and closes the submission in one transactional action.</p>
+      </div>
+      <AdminEventReview/>
     </section>
 
     <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
