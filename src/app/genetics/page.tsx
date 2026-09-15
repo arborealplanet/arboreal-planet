@@ -3,6 +3,7 @@ import { PageIntro } from "@/components/AppShell";
 import { GtpBreederConfirmations } from "@/components/GtpBreederConfirmations";
 import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
 import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
+import { GtpPairingClutchManager } from "@/components/GtpPairingClutchManager";
 import { GtpPairingRecords } from "@/components/GtpPairingRecords";
 import { GtpPedigreeCloudSync } from "@/components/GtpPedigreeCloudSync";
 import { GtpPedigreePublishing } from "@/components/GtpPedigreePublishing";
@@ -46,6 +47,10 @@ export default function GeneticsCalculatorPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
         <GtpPairingRecords />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
+        <GtpPairingClutchManager />
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
