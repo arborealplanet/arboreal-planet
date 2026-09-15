@@ -8,6 +8,7 @@ import { fetchOwnProfile,getServerIdentity } from "@/lib/supabase-auth";
 
 const nav = [
   ["Animals", "/animals"],
+  ["Genetics", "/genetics"],
   ["Plants", "/plants"],
   ["Snake Stocks", "/snake-stocks"],
   ["Marketplace", "/marketplace"],
@@ -88,7 +89,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     <footer className="border-t border-white/[.06] bg-black/[.12] px-5 py-10 pb-24 lg:pb-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-5 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Reptile community, reference data and market tools.</span></div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/animals" className="hover:text-white/70">Animals</Link><Link href="/plants" className="hover:text-white/70">Plants</Link><Link href="/community" className="hover:text-white/70">Community</Link><Link href="/marketplace" className="hover:text-white/70">Marketplace</Link><Link href="/arcade/enter?next=%2Farcade" className="hover:text-white/70">Arcade</Link></div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/animals" className="hover:text-white/70">Animals</Link><Link href="/genetics" className="hover:text-white/70">Genetics</Link><Link href="/plants" className="hover:text-white/70">Plants</Link><Link href="/community" className="hover:text-white/70">Community</Link><Link href="/marketplace" className="hover:text-white/70">Marketplace</Link><Link href="/arcade/enter?next=%2Farcade" className="hover:text-white/70">Arcade</Link></div>
       </div>
     </footer>
   );
