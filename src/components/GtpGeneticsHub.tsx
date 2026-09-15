@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { GtpBreederConfirmations } from "@/components/GtpBreederConfirmations";
+import { GtpBreedingWorkflow } from "@/components/GtpBreedingWorkflow";
 import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
 import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
 import { GtpMyAnimalsDashboard } from "@/components/GtpMyAnimalsDashboard";
@@ -129,10 +130,11 @@ export function GtpGeneticsHub() {
       </div>
 
       <div className={active === "breeding" ? "mt-5 space-y-5" : "hidden"} aria-hidden={active !== "breeding"}>
-        <GtpRegisteredParentLinker />
-        <GtpPairingRecords />
-        <GtpPairingClutchManager />
-        <GtpBreederConfirmations />
+        <GtpBreedingWorkflow />
+        <div id="breeding-parents"><GtpRegisteredParentLinker /></div>
+        <div id="breeding-pairing"><GtpPairingRecords /></div>
+        <div id="breeding-clutch"><GtpPairingClutchManager /></div>
+        <div id="breeding-producers"><GtpBreederConfirmations /></div>
       </div>
 
       <div className={active === "pedigrees" ? "mt-5" : "hidden"} aria-hidden={active !== "pedigrees"}>
