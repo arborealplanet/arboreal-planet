@@ -3,11 +3,15 @@ import { PageIntro } from "@/components/AppShell";
 import { MarketplaceExplorer } from "@/components/MarketplaceExplorer";
 import { MarketplaceCategoryCards } from "@/components/MarketplaceCategoryCards";
 
-export default function MarketplacePage(){
+export default async function MarketplacePage({searchParams}:{searchParams:Promise<{species?:string;category?:string;q?:string}>}){
+  const params=await searchParams;
+  const species=(params.species??"").trim().slice(0,80);
+  const category=(params.category??"All").trim().slice(0,20);
+  const query=(params.q??"").trim().slice(0,120);
   return <main>
     <PageIntro eyebrow="Marketplace" title="Browse listings from Arboreal Planet sellers." description="Find animals, plants, enclosures, supplies and feeders. Listings stay separate from reference records and Snake Stocks market analysis." aside={<div className="flex gap-2"><Link href="/marketplace/mine" className="secondary-action">My Listings</Link><Link href="/marketplace/new" className="primary-action">Create listing</Link></div>}/>
 
-    <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6"><MarketplaceExplorer/></section>
+    <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6"><MarketplaceExplorer initialSpeciesId={species} initialCategory={category} initialQuery={query}/></section>
 
     <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
       <div className="mb-5"><div className="section-kicker">Browse by category</div><h2 className="mt-2 text-2xl font-semibold tracking-[-.025em]">Marketplace sections</h2><p className="mt-2 text-xs leading-5 text-white/32">Choose a category to jump back to the live marketplace with that filter applied.</p></div>
