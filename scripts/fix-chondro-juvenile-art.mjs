@@ -60,6 +60,15 @@ for (const { file, pairs } of replacements) {
 
   for (const [before, after] of pairs) {
     if (source.includes(after)) continue;
+
+    if (
+      file === "src/components/ChondroBreederExpandedShop.tsx" &&
+      source.includes("lifeStage={offer.lifeStage}") &&
+      source.includes("neonateColor={offer.neonateColor}")
+    ) {
+      continue;
+    }
+
     if (!source.includes(before)) {
       throw new Error(`Juvenile art patch could not find expected source in ${file}: ${before}`);
     }
