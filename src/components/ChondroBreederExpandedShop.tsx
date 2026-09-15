@@ -106,9 +106,9 @@ function chooseSubspecies(random: () => number, source: Snake["source"], effects
   const weights = subspeciesList.map((subspecies) => source === "Import" ? Number(effects.get(subspecies)?.import_multiplier ?? 1) : 1);
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   let roll = random() * total;
-  for (let i = 0; i < subspeciesList.length; i++) {
-    roll -= weights[i];
-    if (roll <= 0) return subspeciesList[i];
+  for (let index = 0; index < subspeciesList.length; index += 1) {
+    roll -= weights[index];
+    if (roll <= 0) return subspeciesList[index];
   }
   return subspeciesList[subspeciesList.length - 1];
 }
@@ -188,7 +188,6 @@ export function ChondroBreederExpandedShop() {
   const [authenticated, setAuthenticated] = useState(false);
   const [conservation, setConservation] = useState<ConservationRow[]>([]);
   const [seed, setSeed] = useState(1);
-  const [page, setPage] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [refreshAt, setRefreshAt] = useState(0);
@@ -239,7 +238,6 @@ export function ChondroBreederExpandedShop() {
       window.localStorage.setItem(SHOP_REFRESH_AT_KEY, String(nextDeadline));
       setSeed(nextSeed);
       setRefreshAt(nextDeadline);
-      setPage(0);
       setStatus("The daily shop refreshed automatically. A new set of listings is available.");
     }, 1000);
 
@@ -256,7 +254,9 @@ export function ChondroBreederExpandedShop() {
         if (!cancelled && saveResponse.ok) {
           setAuthenticated(Boolean(saveData.authenticated));
           setSave(parseSave(saveData.save?.state) ?? local);
-        } else if (!cancelled) setSave(local);
+        } else if (!cancelled) {
+          setSave(local);
+        }
         if (!cancelled && conservationResponse.ok) {
           const conservationData = await conservationResponse.json() as { status?: ConservationRow[] };
           setConservation(conservationData.status ?? []);
@@ -265,6 +265,7 @@ export function ChondroBreederExpandedShop() {
       } catch {}
       if (!cancelled) setSave(local);
     }
+
     void load();
     const dataTimer = window.setInterval(load, 5000);
     const onConservation = () => void load();
@@ -287,8 +288,6 @@ export function ChondroBreederExpandedShop() {
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms: save?.facilityRooms });
   const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedFootprint);
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
-  const visible = offers.slice(page * 5, page * 5 + 5);
-  const pageCount = Math.ceil(offers.length / 5);
   const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
 
   function buyEnclosure(type: EnclosureType) {
@@ -300,7 +299,7 @@ export function ChondroBreederExpandedShop() {
     }));
     window.setTimeout(() => {
       setBusy(null);
-      setStatus(`${type} purchased. Your snake capacity increased by 1.`);
+      setStatus(`${type} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
     }, 350);
   }
 
@@ -308,11 +307,20 @@ export function ChondroBreederExpandedShop() {
     if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
     setBusy(offer.id);
     setStatus("");
-    const next: GameSave = { ...save, cash: save.cash - offer.price, colony: [...save.colony, offer], purchasedStoreIds: [...(save.purchasedStoreIds ?? []), offer.id] };
+    const next: GameSave = {
+      ...save,
+      cash: save.cash - offer.price,
+      colony: [...save.colony, offer],
+      purchasedStoreIds: [...(save.purchasedStoreIds ?? []), offer.id],
+    };
     try {
       window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(next));
       if (authenticated) {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
+        const response = await fetch("/api/hatchery/chondro-breeder/save", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next),
+        });
         if (!response.ok) throw new Error("save failed");
       }
       setSave(next);
@@ -343,6 +351,7 @@ export function ChondroBreederExpandedShop() {
             <div className="mt-1 text-sm font-black text-emerald-100/72">{capacity} total · {openSlots} open</div>
           </div>
         </div>
+
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
             const price = enclosurePrices[type];
@@ -377,7 +386,7 @@ export function ChondroBreederExpandedShop() {
                     <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
                   </div>
                   <button type="button" disabled={unavailable} onClick={() => buyEnclosure(type)} className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
-                    {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? "Need " + money(price) : busy === "enclosure:" + type ? "Installing…" : "Buy " + enclosureDisplay[type].label}
+                    {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : `Buy ${enclosureDisplay[type].label}`}
                   </button>
                 </div>
               </article>
@@ -385,12 +394,13 @@ export function ChondroBreederExpandedShop() {
           })}
         </div>
       </section>
-      <div className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
+
+      <section className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
-            <p className="mt-1 text-xs text-white/35">Community conservation stewardship influences subspecies representation and phenotype quality among imported animals.</p>
+            <p className="mt-1 text-xs text-white/35">Swipe left or right through the full store. Three snake cards display together when the screen has enough room.</p>
           </div>
           <div className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.14em] text-sky-100/45">Next shop refresh</div>
@@ -402,16 +412,34 @@ export function ChondroBreederExpandedShop() {
           Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return.
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {visible.map((offer) => {
+        <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/32">
+          <span>Swipe to browse all {offers.length} listings</span>
+          <span>{openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</span>
+        </div>
+
+        <div
+          aria-label="Scrollable snake store listings"
+          className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"
+        >
+          {offers.map((offer) => {
             const sold = purchased.has(offer.id);
             const effect = conservation.find((row) => row.subspecies === offer.subspecies);
             return (
-              <article key={offer.id} className={`rounded-2xl border p-3 ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}>
-                <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }} compact />
+              <article
+                key={offer.id}
+                className={`w-[82%] shrink-0 snap-start rounded-2xl border p-3 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)] ${offer.featured ? "border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}
+              >
+                <ChondroSnakeIcon
+                  subspecies={offer.subspecies}
+                  name={offer.name}
+                  traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }}
+                  lifeStage={offer.lifeStage}
+                  neonateColor={offer.neonateColor}
+                  compact
+                />
                 <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
                 <div className="mt-1 text-[10px] text-white/32">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
-                <div className="mt-1 text-[10px] font-semibold text-red-100/65">Neonate color: {offer.neonateColor}</div>
+                <div className={`mt-1 text-[10px] font-semibold ${offer.neonateColor === "Red" ? "text-red-100/65" : "text-amber-100/65"}`}>Neonate color: {offer.neonateColor}</div>
                 {offer.specialLabel ? <div className="mt-2 rounded-full border border-amber-200/20 px-2 py-1 text-center text-[9px] font-black uppercase text-amber-100/75">{offer.specialLabel}</div> : null}
                 {offer.source === "Import" && effect && Number(effect.stewardship_score) > 0 ? <div className="mt-2 text-[9px] font-semibold text-emerald-100/55">Conservation-supported import · stewardship {Number(effect.stewardship_score).toFixed(1)}</div> : null}
                 <div className="mt-3 rounded-xl border border-white/[.06] p-2 text-[10px] leading-5 text-white/42">
@@ -420,20 +448,17 @@ export function ChondroBreederExpandedShop() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">{sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}</button>
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}
+                  </button>
                 </div>
               </article>
             );
           })}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <button type="button" onClick={() => setPage((value) => (value - 1 + pageCount) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">← Previous 5</button>
-          <div className="text-xs text-white/32">Page {page + 1} of {pageCount} · {openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</div>
-          <button type="button" onClick={() => setPage((value) => (value + 1) % pageCount)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Next 5 →</button>
-        </div>
         {status ? <div role="status" className="mt-3 text-xs text-sky-100/65">{status}</div> : null}
-      </div>
+      </section>
     </div>
   );
 }
