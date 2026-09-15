@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { GTP_LOCALITY_TAXON } from "@/lib/green-tree-python-taxa";
 
@@ -78,7 +79,7 @@ export function GtpPublicLineageDatabase() {
                 <div className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className="truncate text-lg font-semibold text-white/78">{animal.name}</h3>
+                      <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="block truncate text-lg font-semibold text-white/78 transition hover:text-emerald-100">{animal.name}</Link>
                       <div className="mt-1 text-[10px] text-white/32">{animal.sex || "Unknown"}{animal.hatchYear ? ` · ${animal.hatchYear}` : ""}</div>
                     </div>
                     <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/60">PUBLIC</span>
@@ -96,6 +97,7 @@ export function GtpPublicLineageDatabase() {
                     <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Dam</div><div className="mt-1 truncate text-white/55">{dam?.name || (animal.damId ? "Private / unpublished" : "Unknown")}</div></div>
                     <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Sire</div><div className="mt-1 truncate text-white/55">{sire?.name || (animal.sireId ? "Private / unpublished" : "Unknown")}</div></div>
                   </div>
+                  <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="mt-4 inline-flex text-xs font-bold text-emerald-200/70">Open lineage record →</Link>
                 </div>
               </article>
             );
