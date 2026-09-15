@@ -4,7 +4,7 @@ import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 type PublicProfile = { id?: string; username?: string | null; display_name?: string | null; avatar_url?: string | null };
 
 export async function GET() {
-  const fields = "id,registry_code,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,owner_id,photo_path,updated_at";
+  const fields = "id,registry_code,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,owner_id,photo_path,record_status,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&select=${fields}&order=updated_at.desc&limit=500`, {
     headers: {
       apikey: SUPABASE_AUTH_KEY,
@@ -49,6 +49,7 @@ export async function GET() {
         hatchYear: row.hatch_year == null ? "" : String(row.hatch_year),
         damId: row.dam_id,
         sireId: row.sire_id,
+        recordStatus: row.record_status ?? "keeper_reported",
         photoUrl: row.photo_path ? `/api/genetics/pedigree/photo?id=${encodeURIComponent(String(row.id))}` : "",
         contributor: profile ? {
           username: profile.username ?? null,
