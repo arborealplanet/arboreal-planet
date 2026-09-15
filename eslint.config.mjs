@@ -30,6 +30,8 @@ const eslintConfig = defineConfig([
       "src/components/ChondroTraitFocusPanel.tsx",
       "src/components/ChondroRealtimeProgression.tsx",
       "src/components/ChondroRoomExpansionPanel.tsx",
+      "src/components/GtpFamilyTreeMaker.tsx",
+      "src/components/GtpPedigreeCloudSync.tsx",
     ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
