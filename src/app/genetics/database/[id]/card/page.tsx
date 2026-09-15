@@ -9,7 +9,6 @@ type PublicRecord = {
   id: string;
   registry_code: string;
   owner_id: string;
-  breeder_profile_id: string | null;
   name: string;
   sex: string | null;
   locality_label: string | null;
@@ -25,10 +24,11 @@ type PublicProfile = {
   username: string | null;
   display_name: string | null;
 };
+type Producer = PublicProfile & { avatar_url?: string | null; confirmed_at?: string | null };
 
 async function publicRecord(id: string | null) {
   if (!id) return null;
-  const fields = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status";
+  const fields = "id,registry_code,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${fields}&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -49,13 +49,24 @@ async function publicProfile(id: string | null) {
   return rows[0] ?? null;
 }
 
+async function publicProducers(id: string) {
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/public_gtp_pedigree_producers`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_AUTH_KEY, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ p_animal_id: id }),
+    cache: "no-store",
+  });
+  if (!response.ok) return [] as Producer[];
+  return await response.json() as Producer[];
+}
+
 function taxonFor(locality: string | null) {
   if (!locality || locality === "Mixed / Unknown") return "Mixed / unknown subspecies";
   return GTP_LOCALITY_TAXON[locality as keyof typeof GTP_LOCALITY_TAXON] ?? "Locality label not mapped";
 }
 
 function recordStatusLabel(status: PublicRecord["record_status"]) {
-  if (status === "breeder_confirmed") return "Breeder confirmed";
+  if (status === "breeder_confirmed") return "Producer confirmed";
   if (status === "reviewed") return "Reviewed record";
   return "Keeper reported";
 }
@@ -82,11 +93,11 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
   const animal = await publicRecord(id);
   if (!animal) notFound();
 
-  const [dam, sire, contributor, confirmedBreeder] = await Promise.all([
+  const [dam, sire, contributor, confirmedProducers] = await Promise.all([
     publicRecord(animal.dam_id),
     publicRecord(animal.sire_id),
     publicProfile(animal.owner_id),
-    publicProfile(animal.breeder_profile_id),
+    publicProducers(animal.id),
   ]);
   const [maternalGrandDam, maternalGrandSire, paternalGrandDam, paternalGrandSire] = await Promise.all([
     publicRecord(dam?.dam_id ?? null),
@@ -103,7 +114,6 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
   const contributorLabel = contributor?.display_name || contributor?.username || "Anonymous record steward";
-  const confirmedBreederLabel = confirmedBreeder?.display_name || confirmedBreeder?.username || null;
   const statusLabel = recordStatusLabel(animal.record_status);
 
   return (
@@ -147,7 +157,7 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
                 <div className="mt-1 text-sm font-semibold italic text-emerald-900/72">{taxon}</div>
               </div>
               {animal.breeder_animal_id ? <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Breeder / animal ID</div><div className="mt-1 text-sm font-bold text-black/68">{animal.breeder_animal_id}</div></div> : null}
-              {confirmedBreederLabel ? <div className="rounded-xl border border-emerald-900/10 bg-emerald-900/[.035] p-3"><div className="text-[9px] font-black uppercase tracking-[.13em] text-emerald-900/45">Confirmed breeder</div><div className="mt-1 text-sm font-black text-emerald-900/72">{confirmedBreederLabel}</div></div> : null}
+              {confirmedProducers.length ? <div className="rounded-xl border border-emerald-900/10 bg-emerald-900/[.035] p-3"><div className="text-[9px] font-black uppercase tracking-[.13em] text-emerald-900/45">Confirmed producer{confirmedProducers.length === 1 ? "" : "s"}</div><div className="mt-2 space-y-1">{confirmedProducers.map((producer,index) => <div key={`${producer.username || producer.display_name || index}-${index}`} className="text-sm font-black text-emerald-900/72">{producer.display_name || producer.username || `Producer ${index + 1}`}</div>)}</div></div> : null}
               <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Current record steward</div><div className="mt-1 text-sm font-bold text-black/68">{contributorLabel}</div></div>
             </div>
           </section>
@@ -180,7 +190,7 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
 
             <div className="mt-7 flex items-end justify-between gap-5 border-t border-black/10 pt-5">
               <div className="max-w-md text-[10px] leading-5 text-black/42">
-                The Arboreal Planet registry ID remains attached to this animal through keeper transfers. Locality is the keeper-reported line label. Breeder confirmation, when shown, means the named Arboreal Planet account confirmed producing the animal; it does not independently verify geographic locality.
+                The Arboreal Planet registry ID remains attached to this animal through keeper transfers. Producer credits, parentage and current stewardship are separate. Producer confirmation means each named Arboreal Planet account confirmed producing or co-producing the animal; it does not independently verify geographic locality.
               </div>
               <div className="shrink-0 text-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
