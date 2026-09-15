@@ -14,7 +14,7 @@ export default function AnimalsPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[["PUBLISHED", "1", "Verified reference record"], ["GROUPS", "3", "Snakes · Lizards · Amphibians"], ["REFERENCE", "GTP", "Green Tree Python record"], ["CONNECTED", "3", "Snake Stocks · Marketplace · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
+          {[["PUBLISHED", "1", "Verified reference record"], ["GROUPS", "3", "Snakes · Lizards · Amphibians"], ["REFERENCE", "GTP", "Green Tree Python record"], ["CONNECTED", "4", "Genetics · Stocks · Market · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
         </div>
       </section>
 
@@ -27,7 +27,8 @@ export default function AnimalsPage() {
             <h2 className="mt-3 text-2xl font-semibold">Designed to scale across species and animal groups.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/38">Search and animal groups handle discovery, while individual records contain detailed reference information. Planned species remain clearly marked until their records are complete.</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Link href="/genetics" className="panel-soft rounded-2xl p-5 transition hover:bg-emerald-300/[.025]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300/55">Education tool</div><div className="mt-2 font-semibold">Subspecies Genetics →</div><p className="mt-2 text-xs leading-5 text-white/30">Calculate green tree python locality and subspecies ancestry across generations.</p></Link>
             <Link href="/snake-stocks" className="panel-soft rounded-2xl p-5 transition hover:bg-emerald-300/[.025]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300/55">Market intelligence</div><div className="mt-2 font-semibold">Snake Stocks →</div><p className="mt-2 text-xs leading-5 text-white/30">Market observations and pricing analysis remain separate from species facts.</p></Link>
             <Link href="/marketplace" className="panel-soft rounded-2xl p-5 transition hover:bg-white/[.03]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/25">Live inventory</div><div className="mt-2 font-semibold">Marketplace →</div><p className="mt-2 text-xs leading-5 text-white/30">Current listings remain separate from reference records.</p></Link>
           </div>
