@@ -33,6 +33,7 @@ const eslintConfig = defineConfig([
       "src/components/AdminGtpPedigreeReports.tsx",
       "src/components/GtpBreederConfirmations.tsx",
       "src/components/GtpFamilyTreeMaker.tsx",
+      "src/components/GtpFamilyTreeMakerV2.tsx",
       "src/components/GtpPairingClutchManager.tsx",
       "src/components/GtpPairingRecords.tsx",
       "src/components/GtpPedigreeCloudSync.tsx",
