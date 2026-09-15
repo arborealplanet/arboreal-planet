@@ -52,9 +52,16 @@ async function uploadAnimalPhoto(animal: LocalAnimal) {
   return true;
 }
 
+async function deleteAnimalPhoto(animal: LocalAnimal) {
+  const response = await fetch(`/api/genetics/pedigree/photo?id=${encodeURIComponent(animal.id)}`, { method: "DELETE" });
+  const data = await response.json().catch(() => null) as { error?: string } | null;
+  if (!response.ok) throw new Error(data?.error || `Could not remove the cloud photo for ${animal.name}.`);
+}
+
 export function GtpPedigreeCloudSync() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [cloudCount, setCloudCount] = useState(0);
+  const [cloudAnimals, setCloudAnimals] = useState<LocalAnimal[]>([]);
   const [status, setStatus] = useState("Checking account sync…");
   const [busy, setBusy] = useState(false);
 
@@ -64,14 +71,17 @@ export function GtpPedigreeCloudSync() {
       if (response.status === 401) {
         setSignedIn(false);
         setCloudCount(0);
+        setCloudAnimals([]);
         setStatus("Sign in to save this pedigree to your Arboreal Planet account.");
         return;
       }
       const data = await response.json().catch(() => null) as { animals?: LocalAnimal[]; error?: string } | null;
       if (!response.ok) throw new Error(data?.error || "Could not check account pedigree.");
+      const next = Array.isArray(data?.animals) ? data.animals : [];
       setSignedIn(true);
-      setCloudCount(Array.isArray(data?.animals) ? data.animals.length : 0);
-      setStatus(Array.isArray(data?.animals) && data.animals.length ? `${data.animals.length} cloud animal${data.animals.length === 1 ? "" : "s"} available.` : "No cloud pedigree saved yet.");
+      setCloudAnimals(next);
+      setCloudCount(next.length);
+      setStatus(next.length ? `${next.length} cloud animal${next.length === 1 ? "" : "s"} available.` : "No cloud pedigree saved yet.");
     } catch (error) {
       setSignedIn(null);
       setStatus(error instanceof Error ? error.message : "Could not check cloud sync.");
@@ -82,15 +92,17 @@ export function GtpPedigreeCloudSync() {
 
   async function saveToCloud() {
     const animals = readLocalAnimals();
-    if (!animals.length) {
+    if (!animals.length && cloudCount === 0) {
       setStatus("Add at least one animal to the family tree before syncing.");
       return;
     }
-    if (cloudCount > 0 && !window.confirm(`Replace your current ${cloudCount}-animal cloud pedigree with the ${animals.length}-animal pedigree saved on this device?`)) return;
+    if (!animals.length && cloudCount > 0 && !window.confirm(`Remove all ${cloudCount} animals from your cloud pedigree? This does not affect exported backups.`)) return;
+    if (animals.length && cloudCount > 0 && !window.confirm(`Replace your current ${cloudCount}-animal cloud pedigree with the ${animals.length}-animal pedigree saved on this device?`)) return;
 
     setBusy(true);
-    setStatus("Saving pedigree to your account…");
+    setStatus(animals.length ? "Saving pedigree to your account…" : "Clearing your cloud pedigree…");
     try {
+      const previousCloudById = new Map(cloudAnimals.map((animal) => [animal.id, animal]));
       const response = await fetch("/api/genetics/pedigree", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -99,15 +111,30 @@ export function GtpPedigreeCloudSync() {
       const data = await response.json().catch(() => null) as { count?: number; error?: string } | null;
       if (!response.ok) throw new Error(data?.error || "Could not save pedigree.");
 
-      const photos = animals.filter((animal) => animal.photoDataUrl?.startsWith("data:image/"));
+      const uploads = animals.filter((animal) => animal.photoDataUrl?.startsWith("data:image/"));
+      const removals = animals.filter((animal) => !animal.photoDataUrl && Boolean(previousCloudById.get(animal.id)?.photoDataUrl));
       let uploaded = 0;
-      for (const animal of photos) {
-        setStatus(`Saving pedigree photos… ${uploaded + 1} of ${photos.length}`);
+      let removed = 0;
+
+      for (const animal of uploads) {
+        setStatus(`Saving pedigree photos… ${uploaded + 1} of ${uploads.length}`);
         if (await uploadAnimalPhoto(animal)) uploaded += 1;
       }
 
+      for (const animal of removals) {
+        setStatus(`Removing old cloud photos… ${removed + 1} of ${removals.length}`);
+        await deleteAnimalPhoto(animal);
+        removed += 1;
+      }
+
+      setCloudAnimals(animals);
       setCloudCount(data?.count ?? animals.length);
-      setStatus(`Saved ${data?.count ?? animals.length} animal${(data?.count ?? animals.length) === 1 ? "" : "s"} to your account${uploaded ? ` with ${uploaded} photo${uploaded === 1 ? "" : "s"}` : ""}.`);
+      if (!animals.length) {
+        setStatus("Cloud pedigree cleared.");
+      } else {
+        const photoSummary = [uploaded ? `${uploaded} photo${uploaded === 1 ? "" : "s"} saved` : "", removed ? `${removed} photo${removed === 1 ? "" : "s"} removed` : ""].filter(Boolean).join(", ");
+        setStatus(`Saved ${data?.count ?? animals.length} animal${(data?.count ?? animals.length) === 1 ? "" : "s"} to your account${photoSummary ? ` · ${photoSummary}` : ""}.`);
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not save pedigree.");
     } finally {
@@ -150,10 +177,10 @@ export function GtpPedigreeCloudSync() {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {signedIn === false ? (
-          <Link href="/login?next=/genetics" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in to sync</Link>
+          <Link href="/login?next=/genetics#animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in to sync</Link>
         ) : (
           <>
-            <button type="button" disabled={busy || signedIn !== true} onClick={() => void saveToCloud()} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30">Save device pedigree to account</button>
+            <button type="button" disabled={busy || signedIn !== true} onClick={() => void saveToCloud()} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30">{cloudCount > 0 && readLocalAnimals().length === 0 ? "Clear account pedigree" : "Save device pedigree to account"}</button>
             <button type="button" disabled={busy || signedIn !== true || cloudCount === 0} onClick={() => void loadFromCloud()} className="rounded-xl border border-white/[.08] px-4 py-2.5 text-xs font-bold text-white/55 disabled:opacity-30">Load account pedigree on this device</button>
           </>
         )}
