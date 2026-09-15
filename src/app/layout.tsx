@@ -7,11 +7,28 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+const description = "A keeper-first reptile platform for animal and plant reference data, Green Tree Python genetics and pedigrees, community, marketplace tools, Snake Stocks market intelligence and The Hatchery breeder games.";
+
 export const metadata: Metadata = {
   title: { default: "Arboreal Planet", template: "%s · Arboreal Planet" },
-  description: "A keeper-first community, animal database, marketplace, reptile market intelligence platform and Arboreal Arcade.",
+  description,
   manifest: "/manifest.webmanifest",
   applicationName: "Arboreal Planet",
+  openGraph: {
+    title: "Arboreal Planet",
+    description,
+    siteName: "Arboreal Planet",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Arboreal Planet",
+    description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   appleWebApp: {
     capable: true,
     title: "Arboreal Planet",
