@@ -9,6 +9,7 @@ type PublicRecord = {
   id: string;
   registry_code: string;
   owner_id: string;
+  breeder_profile_id: string | null;
   name: string;
   sex: string | null;
   locality_label: string | null;
@@ -17,6 +18,7 @@ type PublicRecord = {
   dam_id: string | null;
   sire_id: string | null;
   photo_path: string | null;
+  record_status: "keeper_reported" | "breeder_confirmed" | "reviewed";
 };
 
 type PublicProfile = {
@@ -26,7 +28,7 @@ type PublicProfile = {
 
 async function publicRecord(id: string | null) {
   if (!id) return null;
-  const fields = "id,registry_code,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path";
+  const fields = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${fields}&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -36,7 +38,8 @@ async function publicRecord(id: string | null) {
   return rows[0] ?? null;
 }
 
-async function publicProfile(id: string) {
+async function publicProfile(id: string | null) {
+  if (!id) return null;
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=username,display_name&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -49,6 +52,12 @@ async function publicProfile(id: string) {
 function taxonFor(locality: string | null) {
   if (!locality || locality === "Mixed / Unknown") return "Mixed / unknown subspecies";
   return GTP_LOCALITY_TAXON[locality as keyof typeof GTP_LOCALITY_TAXON] ?? "Locality label not mapped";
+}
+
+function recordStatusLabel(status: PublicRecord["record_status"]) {
+  if (status === "breeder_confirmed") return "Breeder confirmed";
+  if (status === "reviewed") return "Reviewed record";
+  return "Keeper reported";
 }
 
 function RelativeBox({ title, animal }: { title: string; animal: PublicRecord | null }) {
@@ -73,10 +82,11 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
   const animal = await publicRecord(id);
   if (!animal) notFound();
 
-  const [dam, sire, contributor] = await Promise.all([
+  const [dam, sire, contributor, confirmedBreeder] = await Promise.all([
     publicRecord(animal.dam_id),
     publicRecord(animal.sire_id),
     publicProfile(animal.owner_id),
+    publicProfile(animal.breeder_profile_id),
   ]);
   const [maternalGrandDam, maternalGrandSire, paternalGrandDam, paternalGrandSire] = await Promise.all([
     publicRecord(dam?.dam_id ?? null),
@@ -93,6 +103,8 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
   const contributorLabel = contributor?.display_name || contributor?.username || "Anonymous record steward";
+  const confirmedBreederLabel = confirmedBreeder?.display_name || confirmedBreeder?.username || null;
+  const statusLabel = recordStatusLabel(animal.record_status);
 
   return (
     <main className="min-h-screen bg-[#eef1ec] px-4 py-6 text-[#101713] print:bg-white print:p-0">
@@ -110,7 +122,7 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
               <div className="mt-1 font-mono text-[10px] font-bold tracking-[.1em] text-emerald-100/65">{animal.registry_code}</div>
               <div className="mt-2 text-sm text-white/50">{animal.sex || "Unknown sex"}{animal.hatch_year ? ` · Hatched ${animal.hatch_year}` : ""}</div>
             </div>
-            <div className="rounded-full border border-emerald-200/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-emerald-100/75">Public lineage record</div>
+            <div className="flex flex-col items-end gap-2"><div className="rounded-full border border-emerald-200/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-emerald-100/75">Public lineage record</div><div className="rounded-full border border-white/15 px-3 py-1 text-[9px] font-bold uppercase tracking-[.1em] text-white/60">{statusLabel}</div></div>
           </div>
         </header>
 
@@ -125,6 +137,7 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
 
             <div className="space-y-4 p-6 sm:p-7">
               <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Arboreal Planet registry ID</div><div className="mt-1 font-mono text-sm font-black text-emerald-900/72">{animal.registry_code}</div></div>
+              <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Record status</div><div className="mt-1 text-sm font-bold text-black/68">{statusLabel}</div></div>
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Reported locality</div>
                 <div className="mt-1 text-xl font-bold text-black/78">{locality}</div>
@@ -134,6 +147,7 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
                 <div className="mt-1 text-sm font-semibold italic text-emerald-900/72">{taxon}</div>
               </div>
               {animal.breeder_animal_id ? <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Breeder / animal ID</div><div className="mt-1 text-sm font-bold text-black/68">{animal.breeder_animal_id}</div></div> : null}
+              {confirmedBreederLabel ? <div className="rounded-xl border border-emerald-900/10 bg-emerald-900/[.035] p-3"><div className="text-[9px] font-black uppercase tracking-[.13em] text-emerald-900/45">Confirmed breeder</div><div className="mt-1 text-sm font-black text-emerald-900/72">{confirmedBreederLabel}</div></div> : null}
               <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-black/35">Current record steward</div><div className="mt-1 text-sm font-bold text-black/68">{contributorLabel}</div></div>
             </div>
           </section>
@@ -166,7 +180,7 @@ export default async function PedigreeCardPage({ params }: { params: Promise<{ i
 
             <div className="mt-7 flex items-end justify-between gap-5 border-t border-black/10 pt-5">
               <div className="max-w-md text-[10px] leading-5 text-black/42">
-                The Arboreal Planet registry ID remains attached to this animal through keeper transfers. Locality is displayed as the keeper-reported line label; the broader subspecies grouping provides the biological context.
+                The Arboreal Planet registry ID remains attached to this animal through keeper transfers. Locality is the keeper-reported line label. Breeder confirmation, when shown, means the named Arboreal Planet account confirmed producing the animal; it does not independently verify geographic locality.
               </div>
               <div className="shrink-0 text-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
