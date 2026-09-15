@@ -15,6 +15,7 @@ type PublicAnimal = {
   sireId?: string | null;
   photoUrl?: string;
   contributor?: Contributor | null;
+  confirmedProducers?: Contributor[];
 };
 type PublicPairing = {
   id: string;
@@ -109,6 +110,7 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
   const children = focus ? animals.filter((animal) => animal.damId === focus.id || animal.sireId === focus.id) : [];
   const grandChildren = focus ? animals.filter((animal) => children.some((child) => animal.damId === child.id || animal.sireId === child.id)) : [];
   const focusSteward = focus ? stewardLabel(focus) : null;
+  const focusProducers = focus?.confirmedProducers ?? [];
 
   if (status) return <div className="panel rounded-[26px] p-5 text-xs text-white/40">{status}</div>;
   if (!focus) return null;
@@ -119,7 +121,7 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
         <div>
           <div className="section-kicker">Interactive pedigree</div>
           <h2 className="mt-2 text-2xl font-semibold text-white/78">Trace ancestors, descendants and published pairings.</h2>
-          <p className="mt-2 max-w-3xl text-xs leading-5 text-white/36">Tap any published relative to move through the lineage. Parentage and current stewardship are shown separately, so outside breedings do not imply shared ownership. Private or unpublished relatives stay masked.</p>
+          <p className="mt-2 max-w-3xl text-xs leading-5 text-white/36">Tap any published relative to move through the lineage. Parentage, producer credits and current stewardship are separate, so outside breedings and co-produced clutches do not imply shared ownership. Private or unpublished relatives stay masked.</p>
         </div>
         <span className="rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold text-white/35">2 generations each direction</span>
       </div>
@@ -148,6 +150,10 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
             <div className="mt-2 text-2xl font-semibold text-white/84">{focus.name}</div>
             <div className="mt-1 text-xs text-white/34">{focus.locality || "Mixed / Unknown"}{focus.hatchYear ? ` · ${focus.hatchYear}` : ""}</div>
             {focusSteward ? <div className="mt-2 text-[10px] text-emerald-100/42">Current steward: {focusSteward}</div> : null}
+            {focusProducers.length ? <div className="mt-3 border-t border-emerald-300/10 pt-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-100/35">Confirmed producer{focusProducers.length === 1 ? "" : "s"}</div><div className="mt-2 flex flex-wrap justify-center gap-2">{focusProducers.map((producer, index) => {
+              const label = producer.displayName || producer.username || `Producer ${index + 1}`;
+              return producer.username ? <Link key={`${producer.username}-${index}`} href={`/keepers/${encodeURIComponent(producer.username)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/62">{label}</Link> : <span key={`${label}-${index}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/62">{label}</span>;
+            })}</div></div> : null}
           </div>
 
           <div>
