@@ -1,8 +1,9 @@
 import { PageIntro } from "@/components/AppShell";
 import { CommunityComposer } from "@/components/CommunityComposer";
 import { CommunityFeed } from "@/components/CommunityFeed";
+import { CommunityTopicButtons } from "@/components/CommunityTopicButtons";
 
-const topics=["Green Tree Pythons","Boiga","Tree Monitors","Nepenthes","Breeding","Husbandry","Enclosures"];
+const topics=["Green Tree Pythons","Boiga","Tree Monitors","Nepenthes","Breeding","Husbandry","Enclosures"] as const;
 
 export default function CommunityPage(){return <main>
   <PageIntro eyebrow="Community" title="Keeper posts, questions and breeding updates." description="Share husbandry notes, photos, questions and project updates. Browse the public Explore feed or switch to posts from keepers you follow." aside={<div className="rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-200/70">Explore · Following</div>}/>
@@ -14,7 +15,8 @@ export default function CommunityPage(){return <main>
     <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
       <div className="panel rounded-[26px] p-5">
         <div className="section-kicker">Browse topics</div>
-        <div className="mt-4 flex flex-wrap gap-2">{topics.map(topic=><span key={topic} className="rounded-full border border-white/[.07] bg-white/[.025] px-3 py-2 text-[11px] font-medium text-white/52">{topic}</span>)}</div>
+        <p className="mt-2 text-xs leading-5 text-white/32">Jump straight into the live feed by subject.</p>
+        <div className="mt-4"><CommunityTopicButtons topics={topics}/></div>
       </div>
       <div className="panel-soft rounded-[26px] p-5">
         <div className="section-kicker">Community features</div>
@@ -27,7 +29,7 @@ export default function CommunityPage(){return <main>
       </div>
       <div className="rounded-[26px] border border-emerald-300/10 bg-emerald-300/[.035] p-5">
         <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/65">Linked records</div>
-        <p className="mt-3 text-sm leading-6 text-white/48">Community posts can connect to species records without mixing user-submitted content into reference data.</p>
+        <p className="mt-3 text-sm leading-6 text-white/48">Community posts can connect to species and plant records without mixing user-submitted content into reference data.</p>
       </div>
     </aside>
   </section>
