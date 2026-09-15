@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Arboreal Planet",
     short_name: "Arboreal Planet",
-    description: "The keeper-first reptile community, market intelligence, marketplace and Arboreal Arcade.",
+    description: "A keeper-first reptile platform for community, animal and plant reference data, genetics and pedigrees, marketplace tools, Snake Stocks market intelligence and The Hatchery breeder games.",
     start_url: "/",
     scope: "/",
     display: "standalone",
