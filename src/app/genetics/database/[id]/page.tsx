@@ -6,6 +6,7 @@ import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 type PublicRecord = {
   id: string;
+  registry_code: string;
   owner_id: string;
   name: string;
   sex: string | null;
@@ -18,9 +19,17 @@ type PublicRecord = {
   updated_at: string;
 };
 type PublicProfile = { username: string | null; display_name: string | null; avatar_url: string | null };
+type OwnershipHistory = {
+  transfer_id: string;
+  transferred_at: string;
+  from_username: string | null;
+  from_display_name: string | null;
+  to_username: string | null;
+  to_display_name: string | null;
+};
 
 async function publicRecord(id: string) {
-  const fields = "id,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
+  const fields = "id,registry_code,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${fields}&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -41,13 +50,24 @@ async function publicProfile(id: string) {
 }
 
 async function publicDescendants(id: string) {
-  const fields = "id,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
+  const fields = "id,registry_code,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&or=(dam_id.eq.${encodeURIComponent(id)},sire_id.eq.${encodeURIComponent(id)})&select=${fields}&order=hatch_year.desc.nullslast&limit=100`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
   });
   if (!response.ok) return [] as PublicRecord[];
   return await response.json() as PublicRecord[];
+}
+
+async function publicOwnershipHistory(id: string) {
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/public_gtp_pedigree_transfer_history`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_AUTH_KEY, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ p_animal_id: id }),
+    cache: "no-store",
+  });
+  if (!response.ok) return [] as OwnershipHistory[];
+  return await response.json() as OwnershipHistory[];
 }
 
 function taxonFor(locality: string | null) {
@@ -57,7 +77,7 @@ function taxonFor(locality: string | null) {
 
 function MiniRecord({ animal, relationship }: { animal: PublicRecord | null; relationship: string }) {
   if (!animal) return <div className="rounded-2xl border border-dashed border-white/[.07] p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 text-sm text-white/30">Private, unpublished or unknown</div></div>;
-  return <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 font-semibold text-white/68">{animal.name}</div><div className="mt-1 text-xs text-white/35">{animal.locality_label || "Mixed / Unknown"}</div></Link>;
+  return <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 font-semibold text-white/68">{animal.name}</div><div className="mt-1 text-xs text-white/35">{animal.registry_code} · {animal.locality_label || "Mixed / Unknown"}</div></Link>;
 }
 
 export default async function PublicLineageRecordPage({ params }: { params: Promise<{ id: string }> }) {
@@ -65,11 +85,12 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
   const animal = await publicRecord(id);
   if (!animal) notFound();
 
-  const [dam, sire, descendants, contributor] = await Promise.all([
+  const [dam, sire, descendants, contributor, ownershipHistory] = await Promise.all([
     animal.dam_id ? publicRecord(animal.dam_id) : Promise.resolve(null),
     animal.sire_id ? publicRecord(animal.sire_id) : Promise.resolve(null),
     publicDescendants(animal.id),
     publicProfile(animal.owner_id),
+    publicOwnershipHistory(animal.id),
   ]);
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
@@ -93,11 +114,12 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
         <div className="p-6 sm:p-8">
           <div className="section-kicker">Published lineage record</div>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white/88">{animal.name}</h1>
+          <div className="mt-2 font-mono text-xs font-bold tracking-[.08em] text-emerald-200/60">{animal.registry_code}</div>
           <div className="mt-3 text-sm text-white/38">{animal.sex || "Unknown sex"}{animal.hatch_year ? ` · Hatched ${animal.hatch_year}` : ""}</div>
 
           {contributorLabel ? <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[.06] bg-black/10 p-3">
             {contributor?.avatar_url ? <img src={contributor.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="grid h-10 w-10 place-items-center rounded-full border border-white/[.07] text-[10px] font-bold text-white/30">AP</div>}
-            <div><div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Contributed by</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="mt-1 block text-sm font-semibold text-white/62 hover:text-emerald-100">{contributorLabel}</Link> : <div className="mt-1 text-sm font-semibold text-white/62">{contributorLabel}</div>}</div>
+            <div><div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Current record steward</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="mt-1 block text-sm font-semibold text-white/62 hover:text-emerald-100">{contributorLabel}</Link> : <div className="mt-1 text-sm font-semibold text-white/62">{contributorLabel}</div>}</div>
           </div> : null}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -121,8 +143,19 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
         <section className="panel rounded-[28px] p-5 sm:p-6">
           <div className="section-kicker">Descendants</div>
           <div className="mt-2 flex items-end justify-between gap-3"><h2 className="text-2xl font-semibold text-white/78">Published offspring</h2><span className="text-xs font-bold text-white/30">{descendants.length}</span></div>
-          {descendants.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{descendants.map((child) => <Link key={child.id} href={`/genetics/database/${encodeURIComponent(child.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="font-semibold text-white/65">{child.name}</div><div className="mt-1 text-xs text-white/32">{child.locality_label || "Mixed / Unknown"}{child.hatch_year ? ` · ${child.hatch_year}` : ""}</div></Link>)}</div> : <div className="mt-4 rounded-2xl border border-dashed border-white/[.07] p-6 text-center text-sm text-white/28">No published offspring are linked yet.</div>}
+          {descendants.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{descendants.map((child) => <Link key={child.id} href={`/genetics/database/${encodeURIComponent(child.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="font-semibold text-white/65">{child.name}</div><div className="mt-1 text-xs text-white/32">{child.registry_code} · {child.locality_label || "Mixed / Unknown"}{child.hatch_year ? ` · ${child.hatch_year}` : ""}</div></Link>)}</div> : <div className="mt-4 rounded-2xl border border-dashed border-white/[.07] p-6 text-center text-sm text-white/28">No published offspring are linked yet.</div>}
         </section>
+
+        {ownershipHistory.length ? <section className="panel rounded-[28px] p-5 sm:p-6">
+          <div className="section-kicker">Ownership history</div>
+          <h2 className="mt-2 text-xl font-semibold text-white/75">Publicly shared transfers</h2>
+          <div className="mt-4 space-y-2">{ownershipHistory.map((entry) => {
+            const from = entry.from_display_name || entry.from_username || "Private keeper";
+            const to = entry.to_display_name || entry.to_username || "Private keeper";
+            return <div key={entry.transfer_id} className="rounded-xl border border-white/[.055] p-3 text-xs text-white/42"><span className="font-semibold text-white/58">{from}</span> → <span className="font-semibold text-white/58">{to}</span><span className="ml-2 text-white/24">{new Date(entry.transferred_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span></div>;
+          })}</div>
+          <p className="mt-3 text-[10px] leading-5 text-white/25">Only completed transfers explicitly marked public are shown here, and private keeper profiles remain anonymous.</p>
+        </section> : null}
       </div>
     </div>
 
