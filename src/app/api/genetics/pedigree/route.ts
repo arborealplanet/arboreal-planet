@@ -56,7 +56,7 @@ export async function GET() {
       damId: row.dam_id,
       sireId: row.sire_id,
       visibility: row.visibility,
-      photoPath: row.photo_path,
+      photoDataUrl: row.photo_path ? `/api/genetics/pedigree/photo?id=${encodeURIComponent(String(row.id))}` : "",
     })),
   });
 }
