@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type CloudAnimal = {
   id: string;
+  registryCode?: string;
   name: string;
   sex?: string;
   locality?: string;
@@ -75,19 +77,22 @@ export function GtpPedigreePublishing() {
           {animals.map((animal) => {
             const isPublic = animal.visibility === "public";
             return (
-              <div key={animal.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-white/[.06] bg-black/10 p-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-white/72">{animal.name}</div>
-                  <div className="mt-1 truncate text-[10px] text-white/32">{animal.locality || "Mixed / Unknown"}{animal.breederId ? ` · ${animal.breederId}` : ""}</div>
+              <div key={animal.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-3">
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-white/72">{animal.name}</div>
+                    <div className="mt-1 truncate text-[10px] text-white/32">{animal.registryCode ? `${animal.registryCode} · ` : ""}{animal.locality || "Mixed / Unknown"}{animal.breederId ? ` · ${animal.breederId}` : ""}</div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busyId === animal.id}
+                    onClick={() => void setVisibility(animal, isPublic ? "private" : "public")}
+                    className={`shrink-0 rounded-xl px-3 py-2 text-[10px] font-black disabled:opacity-40 ${isPublic ? "border border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/70" : "border border-white/[.08] text-white/50"}`}
+                  >
+                    {isPublic ? "PUBLIC · MAKE PRIVATE" : "PUBLISH"}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  disabled={busyId === animal.id}
-                  onClick={() => void setVisibility(animal, isPublic ? "private" : "public")}
-                  className={`shrink-0 rounded-xl px-3 py-2 text-[10px] font-black disabled:opacity-40 ${isPublic ? "border border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/70" : "border border-white/[.08] text-white/50"}`}
-                >
-                  {isPublic ? "PUBLIC · MAKE PRIVATE" : "PUBLISH"}
-                </button>
+                {isPublic ? <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[.045] pt-3"><Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="rounded-lg border border-white/[.07] px-3 py-2 text-[10px] font-bold text-white/45">View public record</Link><Link href={`/marketplace/new?pedigree=${encodeURIComponent(animal.id)}`} className="rounded-lg border border-emerald-300/15 bg-emerald-300/[.035] px-3 py-2 text-[10px] font-black text-emerald-100/65">List on Marketplace →</Link></div> : null}
               </div>
             );
           })}
