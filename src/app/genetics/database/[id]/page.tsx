@@ -30,9 +30,10 @@ type OwnershipHistory = {
   to_display_name: string | null;
 };
 
+const PUBLIC_FIELDS = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
+
 async function publicRecord(id: string) {
-  const fields = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
-  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${fields}&limit=1`, {
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${PUBLIC_FIELDS}&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
   });
@@ -52,8 +53,21 @@ async function publicProfile(id: string) {
 }
 
 async function publicDescendants(id: string) {
-  const fields = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
-  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&or=(dam_id.eq.${encodeURIComponent(id)},sire_id.eq.${encodeURIComponent(id)})&select=${fields}&order=hatch_year.desc.nullslast&limit=100`, {
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&or=(dam_id.eq.${encodeURIComponent(id)},sire_id.eq.${encodeURIComponent(id)})&select=${PUBLIC_FIELDS}&order=hatch_year.desc.nullslast&limit=100`, {
+    headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) return [] as PublicRecord[];
+  return await response.json() as PublicRecord[];
+}
+
+async function publicSiblings(animal: PublicRecord) {
+  const parentFilters = [
+    animal.dam_id ? `dam_id.eq.${encodeURIComponent(animal.dam_id)}` : null,
+    animal.sire_id ? `sire_id.eq.${encodeURIComponent(animal.sire_id)}` : null,
+  ].filter((value): value is string => Boolean(value));
+  if (!parentFilters.length) return [] as PublicRecord[];
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&id=neq.${encodeURIComponent(animal.id)}&or=(${parentFilters.join(",")})&select=${PUBLIC_FIELDS}&order=hatch_year.desc.nullslast&limit=100`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
   });
@@ -89,15 +103,20 @@ function MiniRecord({ animal, relationship, steward }: { animal: PublicRecord | 
   return <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 font-semibold text-white/68">{animal.name}</div><div className="mt-1 text-xs text-white/35">{animal.registry_code} · {animal.locality_label || "Mixed / Unknown"}</div>{stewardLabel ? <div className="mt-2 text-[10px] text-emerald-100/38">Current steward: {stewardLabel}</div> : null}</Link>;
 }
 
+function RelatedAnimal({ animal, relationship }: { animal: PublicRecord; relationship: string }) {
+  return <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.12em] text-white/23">{relationship}</div><div className="mt-1 font-semibold text-white/65">{animal.name}</div><div className="mt-1 text-[10px] text-white/31">{animal.registry_code} · {animal.locality_label || "Mixed / Unknown"}{animal.hatch_year ? ` · ${animal.hatch_year}` : ""}</div></Link>;
+}
+
 export default async function PublicLineageRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const animal = await publicRecord(id);
   if (!animal) notFound();
 
-  const [dam, sire, descendants, contributor, confirmedBreeder, ownershipHistory] = await Promise.all([
+  const [dam, sire, descendants, siblings, contributor, confirmedBreeder, ownershipHistory] = await Promise.all([
     animal.dam_id ? publicRecord(animal.dam_id) : Promise.resolve(null),
     animal.sire_id ? publicRecord(animal.sire_id) : Promise.resolve(null),
     publicDescendants(animal.id),
+    publicSiblings(animal),
     publicProfile(animal.owner_id),
     animal.breeder_profile_id ? publicProfile(animal.breeder_profile_id) : Promise.resolve(null),
     publicOwnershipHistory(animal.id),
@@ -106,6 +125,9 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
     dam ? publicProfile(dam.owner_id) : Promise.resolve(null),
     sire ? publicProfile(sire.owner_id) : Promise.resolve(null),
   ]);
+  const fullSiblings = siblings.filter((sibling) => Boolean(animal.dam_id && animal.sire_id && sibling.dam_id === animal.dam_id && sibling.sire_id === animal.sire_id));
+  const fullSiblingIds = new Set(fullSiblings.map((sibling) => sibling.id));
+  const halfSiblings = siblings.filter((sibling) => !fullSiblingIds.has(sibling.id));
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
   const contributorLabel = contributor?.display_name || contributor?.username || null;
@@ -161,6 +183,14 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
           <div className="mt-4 grid gap-3 sm:grid-cols-2"><MiniRecord animal={dam} relationship="Dam" steward={damSteward}/><MiniRecord animal={sire} relationship="Sire" steward={sireSteward}/></div>
           <p className="mt-4 text-[10px] leading-5 text-white/28">Parentage does not imply ownership. A dam or sire may belong to another keeper through a breeding loan, partnership or outside breeding. Private relatives stay hidden until their own steward publishes them.</p>
         </section>
+
+        {(fullSiblings.length || halfSiblings.length) ? <section className="panel rounded-[28px] p-5 sm:p-6">
+          <div className="section-kicker">Sibling network</div>
+          <div className="mt-2 flex items-end justify-between gap-3"><h2 className="text-xl font-semibold text-white/75">Published siblings</h2><span className="text-xs font-bold text-white/30">{siblings.length}</span></div>
+          {fullSiblings.length ? <div className="mt-4"><div className="mb-2 text-[9px] font-black uppercase tracking-[.12em] text-white/24">Full siblings · same published dam and sire</div><div className="grid gap-2 sm:grid-cols-2">{fullSiblings.slice(0, 12).map((sibling) => <RelatedAnimal key={sibling.id} animal={sibling} relationship="Full sibling" />)}</div></div> : null}
+          {halfSiblings.length ? <div className="mt-4"><div className="mb-2 text-[9px] font-black uppercase tracking-[.12em] text-white/24">Half siblings · one shared published parent</div><div className="grid gap-2 sm:grid-cols-2">{halfSiblings.slice(0, 12).map((sibling) => <RelatedAnimal key={sibling.id} animal={sibling} relationship="Half sibling" />)}</div></div> : null}
+          {(fullSiblings.length > 12 || halfSiblings.length > 12) ? <div className="mt-3 text-[10px] text-white/25">Showing up to 12 records in each sibling group.</div> : null}
+        </section> : null}
 
         <section className="panel rounded-[28px] p-5 sm:p-6">
           <div className="section-kicker">Descendants</div>
