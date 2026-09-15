@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GtpInteractivePedigreeExplorer } from "@/components/GtpInteractivePedigreeExplorer";
 import { GTP_LOCALITY_TAXON } from "@/lib/green-tree-python-taxa";
 import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
@@ -120,6 +121,10 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
           {descendants.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{descendants.map((child) => <Link key={child.id} href={`/genetics/database/${encodeURIComponent(child.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="font-semibold text-white/65">{child.name}</div><div className="mt-1 text-xs text-white/32">{child.locality_label || "Mixed / Unknown"}{child.hatch_year ? ` · ${child.hatch_year}` : ""}</div></Link>)}</div> : <div className="mt-4 rounded-2xl border border-dashed border-white/[.07] p-6 text-center text-sm text-white/28">No published offspring are linked yet.</div>}
         </section>
       </div>
+    </div>
+
+    <div className="mt-6">
+      <GtpInteractivePedigreeExplorer focusId={animal.id} />
     </div>
   </main>;
 }
