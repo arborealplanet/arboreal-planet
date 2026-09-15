@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { GtpBreederConfirmations } from "@/components/GtpBreederConfirmations";
 import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
 import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
+import { GtpMyAnimalsDashboard } from "@/components/GtpMyAnimalsDashboard";
 import { GtpPairingClutchManager } from "@/components/GtpPairingClutchManager";
 import { GtpPairingRecords } from "@/components/GtpPairingRecords";
 import { GtpPedigreeCloudSync } from "@/components/GtpPedigreeCloudSync";
@@ -26,7 +27,7 @@ const tabs: Array<{ id: HubTab; label: string; short: string; description: strin
     id: "animals",
     label: "My Animals",
     short: "Cloud records",
-    description: "Sync your pedigree animals to your account, choose what becomes public and transfer a permanent registry record when an animal changes keepers.",
+    description: "See your registered collection, sync pedigree animals to your account, choose what becomes public and transfer a permanent registry record when an animal changes keepers.",
   },
   {
     id: "breeding",
@@ -52,17 +53,31 @@ function isHubTab(value: string): value is HubTab {
   return tabs.some((tab) => tab.id === value);
 }
 
-export function GtpGeneticsHub() {
-  const [active, setActive] = useState<HubTab>("calculator");
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener("hashchange", callback);
+  window.addEventListener("popstate", callback);
+  return () => {
+    window.removeEventListener("hashchange", callback);
+    window.removeEventListener("popstate", callback);
+  };
+}
 
-  useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    if (isHubTab(hash)) setActive(hash);
-  }, []);
+function getLocationSnapshot(): HubTab {
+  const hash = window.location.hash.replace("#", "");
+  return isHubTab(hash) ? hash : "calculator";
+}
+
+function getServerSnapshot(): HubTab {
+  return "calculator";
+}
+
+export function GtpGeneticsHub() {
+  const active = useSyncExternalStore(subscribeToLocation, getLocationSnapshot, getServerSnapshot);
 
   function selectTab(tab: HubTab) {
-    setActive(tab);
-    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${tab}`);
+    const nextUrl = `${window.location.pathname}${window.location.search}#${tab}`;
+    window.history.replaceState(null, "", nextUrl);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -107,9 +122,10 @@ export function GtpGeneticsHub() {
       </div>
 
       <div className={active === "animals" ? "mt-5 space-y-5" : "hidden"} aria-hidden={active !== "animals"}>
-        <GtpPedigreeCloudSync />
-        <GtpPedigreePublishing />
-        <GtpPedigreeTransfers />
+        <GtpMyAnimalsDashboard />
+        <div id="cloud-sync"><GtpPedigreeCloudSync /></div>
+        <div id="publishing"><GtpPedigreePublishing /></div>
+        <div id="transfers"><GtpPedigreeTransfers /></div>
       </div>
 
       <div className={active === "breeding" ? "mt-5 space-y-5" : "hidden"} aria-hidden={active !== "breeding"}>
