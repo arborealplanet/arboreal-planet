@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-15-neonate-sharp";
+const TRAIT_ART_VERSION = "2026-09-15-juvenile-baby-art";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -84,9 +84,12 @@ function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits
   return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
 }
 
-function neonatePortraitArt(subspecies: ChondroSubspecies, neonateColor: NeonateColor) {
-  const effectiveColor: NeonateColor = subspecies === "Morelia viridis" ? "Yellow" : neonateColor;
-  return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${effectiveColor.toLowerCase()}.webp`;
+function juvenilePortraitArt(subspecies: ChondroSubspecies) {
+  // For now every hatchling, neonate and subadult uses the newly approved
+  // baby portrait for its subspecies. We only have one approved baby asset
+  // per subspecies at the moment, so color does not choose a different file.
+  const assetColor = subspecies === "Morelia viridis" ? "yellow" : "red";
+  return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${assetColor}.webp`;
 }
 
 export function ChondroSnakeIcon({
@@ -105,8 +108,8 @@ export function ChondroSnakeIcon({
   neonateColor?: NeonateColor;
 }) {
   const adultRawSrc = adultPortraitArt(subspecies, traits);
-  const isNeonate = (lifeStage === "Hatchling" || lifeStage === "Neonate") && !!neonateColor;
-  const rawSrc = isNeonate ? neonatePortraitArt(subspecies, neonateColor) : adultRawSrc;
+  const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult";
+  const rawSrc = isJuvenile ? juvenilePortraitArt(subspecies) : adultRawSrc;
   const rawFallback = adultRawSrc;
   const rawBaseFallback = baseArtBySubspecies[subspecies];
   const src = withVersion(rawSrc);
@@ -134,9 +137,9 @@ export function ChondroSnakeIcon({
       <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
         Virtual
       </div>
-      {isNeonate ? (
+      {isJuvenile ? (
         <div className={`pointer-events-none absolute right-2 top-2 rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.12em] shadow-lg backdrop-blur-sm ${neonateColor === "Red" ? "border-red-200/20 bg-red-950/75 text-red-100/80" : "border-amber-100/20 bg-amber-950/75 text-amber-100/80"}`}>
-          {neonateColor} neonate
+          {lifeStage ?? "Juvenile"}
         </div>
       ) : null}
     </div>
