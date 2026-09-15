@@ -83,9 +83,10 @@ function recordStatusLabel(status: PublicRecord["record_status"] | null | undefi
   return "Keeper reported";
 }
 
-function MiniRecord({ animal, relationship }: { animal: PublicRecord | null; relationship: string }) {
+function MiniRecord({ animal, relationship, steward }: { animal: PublicRecord | null; relationship: string; steward?: PublicProfile | null }) {
   if (!animal) return <div className="rounded-2xl border border-dashed border-white/[.07] p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 text-sm text-white/30">Private, unpublished or unknown</div></div>;
-  return <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 font-semibold text-white/68">{animal.name}</div><div className="mt-1 text-xs text-white/35">{animal.registry_code} · {animal.locality_label || "Mixed / Unknown"}</div></Link>;
+  const stewardLabel = steward?.display_name || steward?.username || null;
+  return <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="panel-soft interactive-card rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">{relationship}</div><div className="mt-2 font-semibold text-white/68">{animal.name}</div><div className="mt-1 text-xs text-white/35">{animal.registry_code} · {animal.locality_label || "Mixed / Unknown"}</div>{stewardLabel ? <div className="mt-2 text-[10px] text-emerald-100/38">Current steward: {stewardLabel}</div> : null}</Link>;
 }
 
 export default async function PublicLineageRecordPage({ params }: { params: Promise<{ id: string }> }) {
@@ -100,6 +101,10 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
     publicProfile(animal.owner_id),
     animal.breeder_profile_id ? publicProfile(animal.breeder_profile_id) : Promise.resolve(null),
     publicOwnershipHistory(animal.id),
+  ]);
+  const [damSteward, sireSteward] = await Promise.all([
+    dam ? publicProfile(dam.owner_id) : Promise.resolve(null),
+    sire ? publicProfile(sire.owner_id) : Promise.resolve(null),
   ]);
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
@@ -153,8 +158,8 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
         <section className="panel rounded-[28px] p-5 sm:p-6">
           <div className="section-kicker">Parents</div>
           <h2 className="mt-2 text-2xl font-semibold text-white/78">Published parentage</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2"><MiniRecord animal={dam} relationship="Dam"/><MiniRecord animal={sire} relationship="Sire"/></div>
-          <p className="mt-4 text-[10px] leading-5 text-white/28">A parent can be linked in the keeper&apos;s private pedigree without appearing here. Private relatives stay hidden until their owner publishes them.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2"><MiniRecord animal={dam} relationship="Dam" steward={damSteward}/><MiniRecord animal={sire} relationship="Sire" steward={sireSteward}/></div>
+          <p className="mt-4 text-[10px] leading-5 text-white/28">Parentage does not imply ownership. A dam or sire may belong to another keeper through a breeding loan, partnership or outside breeding. Private relatives stay hidden until their own steward publishes them.</p>
         </section>
 
         <section className="panel rounded-[28px] p-5 sm:p-6">
