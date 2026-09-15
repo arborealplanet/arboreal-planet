@@ -138,6 +138,7 @@ export function GtpSubspeciesCalculator() {
           <div className="mt-5 flex flex-wrap gap-2">
             <button type="button" onClick={() => setParentA(offspring)} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c]">Use offspring as Parent A</button>
             <button type="button" onClick={() => setParentB(offspring)} className="rounded-xl border border-emerald-300/20 bg-emerald-300/[.04] px-4 py-2.5 text-xs font-bold text-emerald-100/70">Use offspring as Parent B</button>
+            <button type="button" onClick={() => { const next = offspring; setParentA(next); setParentB(next); }} className="rounded-xl border border-amber-200/20 bg-amber-200/[.04] px-4 py-2.5 text-xs font-bold text-amber-100/70">Use offspring as both parents · F1 × F1</button>
           </div>
         </div>
 
