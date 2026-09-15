@@ -16,6 +16,15 @@ type PublicAnimal = {
   photoUrl?: string;
   contributor?: Contributor | null;
 };
+type PublicPairing = {
+  id: string;
+  damId?: string | null;
+  sireId?: string | null;
+  pairingYear?: number | null;
+  pairingCode?: string | null;
+  notes?: string | null;
+  reporter?: Contributor | null;
+};
 
 type RelativeSlot = {
   id: string | null;
@@ -59,18 +68,24 @@ function RelativeCard({ slot, compact = false }: { slot: RelativeSlot; compact?:
 
 export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string }) {
   const [animals, setAnimals] = useState<PublicAnimal[]>([]);
+  const [pairings, setPairings] = useState<PublicPairing[]>([]);
   const [status, setStatus] = useState("Loading lineage explorer…");
 
   useEffect(() => {
     let active = true;
     void (async () => {
       try {
-        const response = await fetch("/api/genetics/pedigree/public", { cache: "no-store" });
-        const data = await response.json().catch(() => null) as { animals?: PublicAnimal[]; error?: string } | null;
-        if (!response.ok) throw new Error(data?.error || "Could not load pedigree network.");
+        const [animalResponse, pairingResponse] = await Promise.all([
+          fetch("/api/genetics/pedigree/public", { cache: "no-store" }),
+          fetch(`/api/genetics/pairings/public?animalId=${encodeURIComponent(focusId)}`, { cache: "no-store" }),
+        ]);
+        const animalData = await animalResponse.json().catch(() => null) as { animals?: PublicAnimal[]; error?: string } | null;
+        const pairingData = await pairingResponse.json().catch(() => null) as { pairings?: PublicPairing[]; error?: string } | null;
+        if (!animalResponse.ok) throw new Error(animalData?.error || "Could not load pedigree network.");
+        if (!pairingResponse.ok) throw new Error(pairingData?.error || "Could not load public pairing history.");
         if (!active) return;
-        const next = Array.isArray(data?.animals) ? data.animals : [];
-        setAnimals(next);
+        setAnimals(Array.isArray(animalData?.animals) ? animalData.animals : []);
+        setPairings(Array.isArray(pairingData?.pairings) ? pairingData.pairings : []);
         setStatus("");
       } catch (error) {
         if (!active) return;
@@ -78,7 +93,7 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [focusId]);
 
   const byId = useMemo(() => new Map(animals.map((animal) => [animal.id, animal])), [animals]);
   const focus = byId.get(focusId) ?? null;
@@ -103,7 +118,7 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="section-kicker">Interactive pedigree</div>
-          <h2 className="mt-2 text-2xl font-semibold text-white/78">Trace ancestors and descendants.</h2>
+          <h2 className="mt-2 text-2xl font-semibold text-white/78">Trace ancestors, descendants and published pairings.</h2>
           <p className="mt-2 max-w-3xl text-xs leading-5 text-white/36">Tap any published relative to move through the lineage. Parentage and current stewardship are shown separately, so outside breedings do not imply shared ownership. Private or unpublished relatives stay masked.</p>
         </div>
         <span className="rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold text-white/35">2 generations each direction</span>
@@ -149,6 +164,24 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
           ) : null}
         </div>
       </div>
+
+      {pairings.length ? <div className="mt-6 border-t border-white/[.06] pt-5">
+        <div className="flex items-end justify-between gap-3"><div><div className="section-kicker">Breeding history</div><h3 className="mt-2 text-xl font-semibold text-white/72">Published pairing records</h3></div><span className="text-xs font-bold text-white/30">{pairings.length}</span></div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">{pairings.map((pairing) => {
+          const partnerId = pairing.damId === focus.id ? pairing.sireId : pairing.damId;
+          const partner = partnerId ? byId.get(partnerId) ?? null : null;
+          const reporter = pairing.reporter?.displayName || pairing.reporter?.username || "Keeper reported";
+          return <div key={pairing.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4">
+            <div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Published pairing</div>
+            <div className="mt-1 font-semibold text-white/66">{focus.name} × {partner?.name || "Private / unpublished partner"}</div>
+            <div className="mt-1 text-[10px] text-white/30">{pairing.pairingCode || "No pairing code"}{pairing.pairingYear ? ` · ${pairing.pairingYear}` : ""}</div>
+            {pairing.notes ? <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/36">{pairing.notes}</p> : null}
+            <div className="mt-3 text-[9px] text-emerald-100/35">Reported by: {reporter}</div>
+            {partner ? <Link href={`/genetics/database/${encodeURIComponent(partner.id)}`} className="mt-2 inline-flex text-[10px] font-bold text-emerald-200/60">Open partner record →</Link> : null}
+          </div>;
+        })}</div>
+        <p className="mt-3 text-[10px] leading-5 text-white/25">Pairing records are keeper-reported history. They do not transfer ownership and do not independently confirm that breeding produced offspring.</p>
+      </div> : null}
 
       <p className="mt-3 text-[10px] leading-5 text-white/25 sm:hidden">Swipe sideways to explore the full pedigree tree.</p>
     </section>
