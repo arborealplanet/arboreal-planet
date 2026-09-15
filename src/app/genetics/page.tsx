@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
 import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
 import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
+import { GtpPedigreeCloudSync } from "@/components/GtpPedigreeCloudSync";
 import { GtpSubspeciesCalculator } from "@/components/GtpSubspeciesCalculator";
 
 export default function GeneticsCalculatorPage() {
@@ -20,6 +21,10 @@ export default function GeneticsCalculatorPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
         <GtpSubspeciesCalculator />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
+        <GtpPedigreeCloudSync />
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6 lg:pb-20">
