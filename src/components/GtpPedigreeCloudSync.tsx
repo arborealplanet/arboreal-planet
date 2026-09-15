@@ -72,7 +72,7 @@ export function GtpPedigreeCloudSync() {
       const response = await fetch("/api/genetics/pedigree", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ animals: animals.map((animal) => ({ ...animal, visibility: animal.visibility ?? "private" })) }),
+        body: JSON.stringify({ animals }),
       });
       const data = await response.json().catch(() => null) as { count?: number; error?: string } | null;
       if (!response.ok) throw new Error(data?.error || "Could not save pedigree.");
