@@ -1401,7 +1401,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     }
     window.addEventListener("arboreal-chondro-clutch-action", handleClutchAction);
     return () => window.removeEventListener("arboreal-chondro-clutch-action", handleClutchAction);
-  }, [clutch, clutchEstablished, cash, clutchEstablishmentCost, holdbacks, marketBusy, season]);
+  }, [clutch, clutchEstablished, cash, clutchEstablishmentCost, holdbacks, marketBusy, openSlots, season]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   async function finishClutch() {
