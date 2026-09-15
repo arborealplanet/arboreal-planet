@@ -18,6 +18,7 @@ type PublicAnimal = {
   recordStatus?: "keeper_reported" | "breeder_confirmed" | "reviewed";
   photoUrl?: string;
   contributor?: Contributor | null;
+  confirmedBreeder?: Contributor | null;
   updatedAt?: string;
 };
 
@@ -69,7 +70,7 @@ export function GtpPublicLineageDatabase() {
       const animalLocality = animal.locality || "Mixed / Unknown";
       const animalSex = animal.sex || "Unknown";
       const animalRecordStatus = recordStatusLabel(animal.recordStatus);
-      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animalRecordStatus, animal.contributor?.displayName, animal.contributor?.username]
+      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animalRecordStatus, animal.contributor?.displayName, animal.contributor?.username, animal.confirmedBreeder?.displayName, animal.confirmedBreeder?.username]
         .some((value) => String(value ?? "").toLowerCase().includes(needle));
       return matchesSearch
         && (taxon === "All taxa" || animalTaxon === taxon)
@@ -139,6 +140,8 @@ export function GtpPublicLineageDatabase() {
             const sire = animal.sireId ? byId.get(animal.sireId) : null;
             const contributor = animal.contributor;
             const contributorLabel = contributor?.displayName || contributor?.username || null;
+            const confirmedBreeder = animal.confirmedBreeder;
+            const confirmedBreederLabel = confirmedBreeder?.displayName || confirmedBreeder?.username || null;
             const statusLabel = recordStatusLabel(animal.recordStatus);
             return (
               <article key={animal.id} className="panel-soft overflow-hidden rounded-[22px]">
@@ -159,6 +162,8 @@ export function GtpPublicLineageDatabase() {
                     {contributor?.avatarUrl ? <img src={contributor.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" /> : <div className="grid h-8 w-8 place-items-center rounded-full border border-white/[.07] text-[9px] font-bold text-white/30">AP</div>}
                     <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Record steward</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="truncate text-xs font-semibold text-white/55 hover:text-emerald-100">{contributorLabel}</Link> : <div className="truncate text-xs font-semibold text-white/55">{contributorLabel}</div>}</div>
                   </div> : null}
+
+                  {confirmedBreederLabel ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-200/45">Confirmed breeder</div>{confirmedBreeder?.username ? <Link href={`/keepers/${encodeURIComponent(confirmedBreeder.username)}`} className="mt-1 block text-xs font-semibold text-emerald-100/65">{confirmedBreederLabel}</Link> : <div className="mt-1 text-xs font-semibold text-emerald-100/65">{confirmedBreederLabel}</div>}</div> : null}
 
                   <div className="mt-4 rounded-xl border border-white/[.055] bg-black/10 p-3">
                     <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Reported locality</div>
