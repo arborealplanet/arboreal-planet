@@ -7,6 +7,7 @@ import { GTP_LOCALITY_TAXON } from "@/lib/green-tree-python-taxa";
 type Contributor = { username?: string | null; displayName?: string | null; avatarUrl?: string | null };
 type PublicAnimal = {
   id: string;
+  registryCode?: string;
   name: string;
   sex?: string;
   locality?: string;
@@ -48,7 +49,7 @@ export function GtpPublicLineageDatabase() {
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return animals;
-    return animals.filter((animal) => [animal.name, animal.locality, animal.breederId, animal.hatchYear, taxonFor(animal.locality), animal.contributor?.displayName, animal.contributor?.username].some((value) => String(value ?? "").toLowerCase().includes(needle)));
+    return animals.filter((animal) => [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, taxonFor(animal.locality), animal.contributor?.displayName, animal.contributor?.username].some((value) => String(value ?? "").toLowerCase().includes(needle)));
   }, [animals, query]);
 
   return (
@@ -60,8 +61,8 @@ export function GtpPublicLineageDatabase() {
             <h2 className="mt-2 text-2xl font-semibold text-white/80">Search published Green Tree Python pedigrees.</h2>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Only animals their keepers explicitly chose to publish appear here. A missing parent means that parent is unknown or has not been made public.</p>
           </div>
-          <label className="w-full text-xs text-white/38 md:max-w-sm">Search animal, ID, locality, subspecies or keeper
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. Jayapura, GAB-023, utaraensis" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" />
+          <label className="w-full text-xs text-white/38 md:max-w-sm">Search animal, registry ID, locality, subspecies or keeper
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. AP-GTP, Jayapura, utaraensis" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" />
           </label>
         </div>
         <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
@@ -84,14 +85,14 @@ export function GtpPublicLineageDatabase() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="block truncate text-lg font-semibold text-white/78 transition hover:text-emerald-100">{animal.name}</Link>
-                      <div className="mt-1 text-[10px] text-white/32">{animal.sex || "Unknown"}{animal.hatchYear ? ` · ${animal.hatchYear}` : ""}</div>
+                      <div className="mt-1 text-[10px] text-white/32">{animal.registryCode ? `${animal.registryCode} · ` : ""}{animal.sex || "Unknown"}{animal.hatchYear ? ` · ${animal.hatchYear}` : ""}</div>
                     </div>
                     <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/60">PUBLIC</span>
                   </div>
 
                   {contributorLabel ? <div className="mt-4 flex items-center gap-2 border-y border-white/[.05] py-3">
                     {contributor?.avatarUrl ? <img src={contributor.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" /> : <div className="grid h-8 w-8 place-items-center rounded-full border border-white/[.07] text-[9px] font-bold text-white/30">AP</div>}
-                    <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Contributed by</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="truncate text-xs font-semibold text-white/55 hover:text-emerald-100">{contributorLabel}</Link> : <div className="truncate text-xs font-semibold text-white/55">{contributorLabel}</div>}</div>
+                    <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Record steward</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="truncate text-xs font-semibold text-white/55 hover:text-emerald-100">{contributorLabel}</Link> : <div className="truncate text-xs font-semibold text-white/55">{contributorLabel}</div>}</div>
                   </div> : null}
 
                   <div className="mt-4 rounded-xl border border-white/[.055] bg-black/10 p-3">
@@ -100,7 +101,7 @@ export function GtpPublicLineageDatabase() {
                     <div className="mt-1 text-xs italic text-emerald-100/48">{taxonFor(animal.locality)}</div>
                   </div>
 
-                  {animal.breederId ? <div className="mt-3 text-xs text-white/38"><span className="text-white/25">Animal ID:</span> {animal.breederId}</div> : null}
+                  {animal.breederId ? <div className="mt-3 text-xs text-white/38"><span className="text-white/25">Breeder ID:</span> {animal.breederId}</div> : null}
 
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Dam</div><div className="mt-1 truncate text-white/55">{dam?.name || (animal.damId ? "Private / unpublished" : "Unknown")}</div></div>
