@@ -205,7 +205,7 @@ export function GtpPedigreeCloudSync() {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {signedIn === false ? (
-          <Link href="/login?next=/genetics#animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in to sync</Link>
+          <Link href="/login?next=%2Fgenetics%23animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in to sync</Link>
         ) : (
           <>
             <button type="button" disabled={busy || signedIn !== true} onClick={() => void saveToCloud()} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30">Save device pedigree to account</button>
