@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/apply-chondro-patches.mjs",
+    "predev": "node scripts/fix-chondro-juvenile-art.mjs && node scripts/apply-chondro-patches.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/apply-chondro-patches.mjs",
+    "prebuild": "node scripts/fix-chondro-juvenile-art.mjs && node scripts/apply-chondro-patches.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
