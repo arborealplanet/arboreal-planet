@@ -30,6 +30,7 @@ export function EventSubmissionForm() {
       if(!response.ok){setMessage(data?.error||"Could not submit event suggestion.");return}
       event.currentTarget.reset();
       setMessage("Submitted for review. It will not appear publicly until it is approved and its source is checked.");
+      window.dispatchEvent(new Event("event-submitted"));
     }finally{setBusy(false)}
   }
 
