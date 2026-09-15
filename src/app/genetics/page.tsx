@@ -1,65 +1,17 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
-import { GtpBreederConfirmations } from "@/components/GtpBreederConfirmations";
-import { GtpFamilyTreeMaker } from "@/components/GtpFamilyTreeMaker";
-import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGuide";
-import { GtpPairingClutchManager } from "@/components/GtpPairingClutchManager";
-import { GtpPairingRecords } from "@/components/GtpPairingRecords";
-import { GtpPedigreeCloudSync } from "@/components/GtpPedigreeCloudSync";
-import { GtpPedigreePublishing } from "@/components/GtpPedigreePublishing";
-import { GtpPedigreeTransfers } from "@/components/GtpPedigreeTransfers";
-import { GtpRegisteredParentLinker } from "@/components/GtpRegisteredParentLinker";
-import { GtpSubspeciesCalculator } from "@/components/GtpSubspeciesCalculator";
+import { GtpGeneticsHub } from "@/components/GtpGeneticsHub";
 
 export default function GeneticsCalculatorPage() {
   return (
     <main>
       <PageIntro
-        eyebrow="Education Tool"
-        title="Green Tree Python genetics calculator & family tree maker."
-        description="Calculate subspecies ancestry, then build a real pedigree with names, locality labels, parent links and keeper notes. No phenotype or trait predictions are included."
-        aside={<div className="flex flex-wrap gap-2"><Link href="/genetics/database" className="secondary-action">Public lineage database →</Link><Link href="/animals/green-tree-python" className="secondary-action">Open GTP reference →</Link></div>}
+        eyebrow="Green Tree Python Genetics Hub"
+        title="Calculate ancestry. Build pedigrees. Track real lineages."
+        description="Use the subspecies calculator for education, maintain private cloud pedigree records, document pairings and producer credits, or explore the opt-in public Green Tree Python lineage database."
+        aside={<div className="flex flex-wrap gap-2"><Link href="/genetics/database" className="secondary-action">Public lineage database →</Link><Link href="/animals/green-tree-python" className="secondary-action">GTP reference →</Link></div>}
       />
-
-      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <GtpLocalityConfidenceGuide />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
-        <GtpSubspeciesCalculator />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpPedigreeCloudSync />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpPedigreePublishing />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpPedigreeTransfers />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpRegisteredParentLinker />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpPairingRecords />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpPairingClutchManager />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
-        <GtpBreederConfirmations />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6 lg:pb-20">
-        <GtpFamilyTreeMaker />
-      </section>
+      <GtpGeneticsHub />
     </main>
   );
 }
