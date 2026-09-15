@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
 import { EventSubmissionForm } from "@/components/EventSubmissionForm";
+import { EventSubmissionStatus } from "@/components/EventSubmissionStatus";
 import { SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const dynamic="force-dynamic";
@@ -32,6 +33,6 @@ export default async function EventsPage({searchParams}:{searchParams:Promise<{q
 
   <section className="border-y border-white/[.055] bg-black/[.1]"><div className="mx-auto grid max-w-7xl gap-4 px-5 py-10 sm:px-6 md:grid-cols-3">{[["SOURCE-LINKED","Each published event retains the source used to verify its public details."],["UPCOMING FIRST","Past dates drop out of the default calendar so the page stays useful."],["COMMUNITY SUGGESTIONS","Signed-in keepers can suggest shows, but suggestions do not publish themselves."]].map(([a,b])=><div key={a} className="panel-soft rounded-[20px] p-5"><div className="text-[9px] font-black tracking-[.13em] text-emerald-200/50">{a}</div><p className="mt-3 text-xs leading-5 text-white/34">{b}</p></div>)}</div></section>
 
-  <section id="suggest" className="mx-auto max-w-5xl scroll-mt-28 px-5 py-12 sm:px-6"><EventSubmissionForm/></section>
+  <section id="suggest" className="mx-auto grid max-w-7xl scroll-mt-28 gap-5 px-5 py-12 sm:px-6 lg:grid-cols-[1.25fr_.75fr] lg:items-start"><EventSubmissionForm/><EventSubmissionStatus/></section>
  </main>
 }
