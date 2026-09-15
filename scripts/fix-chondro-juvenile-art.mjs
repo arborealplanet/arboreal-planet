@@ -35,6 +35,23 @@ const replacements = [
       ],
     ],
   },
+  {
+    file: "src/components/ChondroCollectionManager.tsx",
+    pairs: [
+      [
+        '  lifeStage: string;\n  classification: string;',
+        '  lifeStage: string;\n  neonateColor?: "Red" | "Yellow";\n  classification: string;',
+      ],
+      [
+        '<ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} compact />',
+        '<ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} compact />',
+      ],
+      [
+        '<div className="mx-auto max-w-[360px]"><ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} /></div>',
+        '<div className="mx-auto max-w-[360px]"><ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} /></div>',
+      ],
+    ],
+  },
 ];
 
 for (const { file, pairs } of replacements) {
