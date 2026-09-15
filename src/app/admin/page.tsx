@@ -8,6 +8,10 @@ import { AdminReferenceEditor } from "@/components/AdminReferenceEditor";
 import { AdminSellerVerification } from "@/components/AdminSellerVerification";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
+const adminSections=[
+  ["Journal","journal"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Moderation","moderation"]
+] as const;
+
 export default async function AdminPage(){
   const identity=await getServerIdentity();
   if(!identity) redirect("/login?next=/admin");
@@ -22,7 +26,11 @@ export default async function AdminPage(){
       aside={<div className="rounded-full border border-amber-300/15 bg-amber-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">{profile.role}</div>}
     />
 
-    <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+    <nav aria-label="Admin sections" className="mx-auto mb-8 flex max-w-7xl gap-2 overflow-x-auto px-5 sm:px-6">
+      {adminSections.map(([label,id])=><a key={id} href={`#${id}`} className="shrink-0 rounded-xl border border-white/[.07] bg-white/[.02] px-4 py-2.5 text-[10px] font-black uppercase tracking-[.08em] text-white/45 transition hover:border-emerald-300/18 hover:text-emerald-100/70">{label}</a>)}
+    </nav>
+
+    <section id="journal" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
       <div className="mb-5 panel rounded-3xl p-6">
         <div className="section-kicker">Journal publishing</div>
         <h2 className="mt-3 text-2xl font-semibold">Learn / Arboreal Planet Journal</h2>
@@ -31,7 +39,7 @@ export default async function AdminPage(){
       <AdminJournalEditor/>
     </section>
 
-    <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+    <section id="events" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
       <div className="mb-5 panel rounded-3xl p-6">
         <div className="section-kicker">Shows & Events</div>
         <h2 className="mt-3 text-2xl font-semibold">Event suggestion review</h2>
@@ -40,7 +48,7 @@ export default async function AdminPage(){
       <AdminEventReview/>
     </section>
 
-    <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+    <section id="sellers" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
       <div className="mb-5 panel rounded-3xl p-6">
         <div className="section-kicker">Seller verification</div>
         <h2 className="mt-3 text-2xl font-semibold">Seller approval queue</h2>
@@ -49,7 +57,7 @@ export default async function AdminPage(){
       <AdminSellerVerification/>
     </section>
 
-    <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+    <section id="pedigrees" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
       <div className="mb-5 panel rounded-3xl p-6">
         <div className="section-kicker">Lineage database</div>
         <h2 className="mt-3 text-2xl font-semibold">Pedigree correction queue</h2>
@@ -58,7 +66,7 @@ export default async function AdminPage(){
       <AdminGtpPedigreeReports/>
     </section>
 
-    <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+    <section id="references" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
       <div className="mb-5 panel rounded-3xl p-6">
         <div className="section-kicker">Reference publishing</div>
         <h2 className="mt-3 text-2xl font-semibold">Animal and plant reference editor</h2>
@@ -67,7 +75,7 @@ export default async function AdminPage(){
       <AdminReferenceEditor/>
     </section>
 
-    <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6">
+    <section id="moderation" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-16 sm:px-6">
       <div className="mb-5 panel rounded-3xl p-6">
         <div className="section-kicker">Community moderation</div>
         <h2 className="mt-3 text-2xl font-semibold">Report review queue</h2>
