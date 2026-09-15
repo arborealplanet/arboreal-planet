@@ -30,6 +30,28 @@ function readLocalAnimals(): LocalAnimal[] {
   }
 }
 
+function photoBlob(dataUrl: string) {
+  const match = /^data:(image\/(?:webp|jpeg|png));base64,(.+)$/i.exec(dataUrl);
+  if (!match) return null;
+  const bytes = atob(match[2]);
+  const buffer = new Uint8Array(bytes.length);
+  for (let index = 0; index < bytes.length; index += 1) buffer[index] = bytes.charCodeAt(index);
+  return new Blob([buffer], { type: match[1].toLowerCase() });
+}
+
+async function uploadAnimalPhoto(animal: LocalAnimal) {
+  if (!animal.photoDataUrl?.startsWith("data:image/")) return false;
+  const blob = photoBlob(animal.photoDataUrl);
+  if (!blob) return false;
+  const form = new FormData();
+  form.set("id", animal.id);
+  form.set("file", blob, `${animal.id}.${blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "webp"}`);
+  const response = await fetch("/api/genetics/pedigree/photo", { method: "POST", body: form });
+  const data = await response.json().catch(() => null) as { error?: string } | null;
+  if (!response.ok) throw new Error(data?.error || `Could not upload the photo for ${animal.name}.`);
+  return true;
+}
+
 export function GtpPedigreeCloudSync() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [cloudCount, setCloudCount] = useState(0);
@@ -76,8 +98,16 @@ export function GtpPedigreeCloudSync() {
       });
       const data = await response.json().catch(() => null) as { count?: number; error?: string } | null;
       if (!response.ok) throw new Error(data?.error || "Could not save pedigree.");
+
+      const photos = animals.filter((animal) => animal.photoDataUrl?.startsWith("data:image/"));
+      let uploaded = 0;
+      for (const animal of photos) {
+        setStatus(`Saving pedigree photos… ${uploaded + 1} of ${photos.length}`);
+        if (await uploadAnimalPhoto(animal)) uploaded += 1;
+      }
+
       setCloudCount(data?.count ?? animals.length);
-      setStatus(`Saved ${data?.count ?? animals.length} animal${(data?.count ?? animals.length) === 1 ? "" : "s"} to your account. Photos remain in this browser for this first cloud-sync version.`);
+      setStatus(`Saved ${data?.count ?? animals.length} animal${(data?.count ?? animals.length) === 1 ? "" : "s"} to your account${uploaded ? ` with ${uploaded} photo${uploaded === 1 ? "" : "s"}` : ""}.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not save pedigree.");
     } finally {
@@ -97,7 +127,7 @@ export function GtpPedigreeCloudSync() {
       if (!response.ok) throw new Error(data?.error || "Could not load pedigree.");
       const animals = Array.isArray(data?.animals) ? data.animals : [];
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(animals));
-      setStatus(`Loaded ${animals.length} cloud animal${animals.length === 1 ? "" : "s"}. Refreshing the pedigree…`);
+      setStatus(`Loaded ${animals.length} cloud animal${animals.length === 1 ? "" : "s"}, including available photos. Refreshing the pedigree…`);
       window.location.reload();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not load pedigree.");
@@ -111,7 +141,7 @@ export function GtpPedigreeCloudSync() {
         <div>
           <div className="section-kicker">Account pedigree</div>
           <h2 className="mt-2 text-xl font-semibold text-white/80">Keep the family tree with your Arboreal Planet account.</h2>
-          <p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Browser storage still works offline. Account sync gives the pedigree a private cloud copy that can later power optional public lineage records.</p>
+          <p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Browser storage still works offline. Account sync keeps the pedigree and its animal photos with your account. Records stay private unless you explicitly publish an animal.</p>
         </div>
         <span className={`rounded-full border px-3 py-1.5 text-[10px] font-bold ${signedIn ? "border-emerald-300/15 text-emerald-100/65" : "border-white/[.08] text-white/40"}`}>{signedIn ? `${cloudCount} CLOUD` : signedIn === false ? "SIGN IN REQUIRED" : "CHECKING"}</span>
       </div>
