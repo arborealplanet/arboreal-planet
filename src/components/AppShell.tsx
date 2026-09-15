@@ -18,6 +18,7 @@ const nav = [
 
 const footerProductLinks = [
   ["Search", "/search"],
+  ["Saved", "/saved"],
   ["Animals", "/animals"],
   ["Genetics", "/genetics"],
   ["Plants", "/plants"],
@@ -77,6 +78,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
         <div className="hidden items-center gap-2 lg:flex">
           {signedIn?<>
+            <Link href="/saved" className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.025] text-sm text-white/55 transition hover:border-emerald-300/20 hover:bg-emerald-300/[.03] hover:text-emerald-200" aria-label="Saved" title="Saved & Following">◆</Link>
             <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.025] text-lg text-white/60 transition hover:border-emerald-300/20 hover:bg-emerald-300/[.03] hover:text-emerald-200" aria-label="Messages">✉</Link>
             <NotificationBell />
             <Link href="/profile" aria-label="Profile settings" title="Profile settings" className="grid h-11 w-11 place-items-center rounded-full border border-white/[.08] bg-white/[.025] p-0.5 transition hover:border-emerald-300/30 hover:ring-2 hover:ring-emerald-300/10">
@@ -88,6 +90,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
       <nav aria-label="Browse" className="hide-scrollbar mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/[.04] px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[.08em] text-white/50 lg:hidden sm:px-6">
         <Link href="/search" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Search</Link>
+        {signedIn&&<Link href="/saved" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Saved</Link>}
         {nav.slice(0,4).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
       </nav>
     </header>
