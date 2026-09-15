@@ -13,7 +13,7 @@ const nav = [
   ["Snake Stocks", "/snake-stocks"],
   ["Marketplace", "/marketplace"],
   ["Community", "/community"],
-  ["Arcade", "/arcade/enter?next=%2Farcade"],
+  ["The Hatchery", "/arcade/enter?next=%2Farcade"],
 ] as const;
 
 function ProfileAvatar({ avatarUrl, label, className }: { avatarUrl?: string | null; label: string; className: string }) {
@@ -75,7 +75,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(66px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.07] bg-[#06100c]/96 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 text-center text-[9px] font-semibold uppercase text-white/48 shadow-[0_-12px_30px_rgba(0,0,0,.16)] backdrop-blur-xl lg:hidden">
       <Link href="/community" className="mobile-nav-item"><span className="mobile-nav-icon">◎</span><span className="mobile-nav-label">Community</span></Link>
       <Link href="/marketplace" className="mobile-nav-item"><span className="mobile-nav-icon">▣</span><span className="mobile-nav-label">Market</span></Link>
-      <Link href="/arcade/enter?next=%2Farcade" className="mobile-nav-item text-emerald-300"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-300/[.09] text-[18px]">◈</span><span className="mobile-nav-label">Arcade</span></Link>
+      <Link href="/arcade/enter?next=%2Farcade" className="mobile-nav-item text-emerald-300"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-300/[.09] text-[18px]">◈</span><span className="mobile-nav-label">Hatchery</span></Link>
       <Link href={signedIn?"/messages":"/login?next=/messages"} className="mobile-nav-item"><span className="mobile-nav-icon">✉</span><span className="mobile-nav-label">Messages</span></Link>
       {signedIn ? (
         <Link href="/profile" aria-label="Profile settings" className="mobile-nav-item"><ProfileAvatar avatarUrl={profile?.avatar_url} label={accountLabel} className="h-7 w-7 rounded-full border border-emerald-300/15" /><span className="mobile-nav-label">Profile</span></Link>
@@ -89,7 +89,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     <footer className="border-t border-white/[.06] bg-black/[.12] px-5 py-10 pb-24 lg:pb-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-5 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Reptile community, reference data and market tools.</span></div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/animals" className="hover:text-white/70">Animals</Link><Link href="/genetics" className="hover:text-white/70">Genetics</Link><Link href="/plants" className="hover:text-white/70">Plants</Link><Link href="/community" className="hover:text-white/70">Community</Link><Link href="/marketplace" className="hover:text-white/70">Marketplace</Link><Link href="/arcade/enter?next=%2Farcade" className="hover:text-white/70">Arcade</Link></div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/animals" className="hover:text-white/70">Animals</Link><Link href="/genetics" className="hover:text-white/70">Genetics</Link><Link href="/plants" className="hover:text-white/70">Plants</Link><Link href="/community" className="hover:text-white/70">Community</Link><Link href="/marketplace" className="hover:text-white/70">Marketplace</Link><Link href="/arcade/enter?next=%2Farcade" className="hover:text-white/70">The Hatchery</Link></div>
       </div>
     </footer>
   );
