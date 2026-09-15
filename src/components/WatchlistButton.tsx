@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SubjectFollowButton } from "@/components/SubjectFollowButton";
 
 type ItemType = "ANIMAL" | "PLANT" | "MARKET_LISTING" | "JOURNAL" | "EVENT";
 
@@ -46,5 +47,8 @@ export function WatchlistButton({ type, id, label = "Save" }: { type: ItemType; 
     }
   }
 
-  return <button type="button" onClick={() => void toggle()} disabled={busy || signedIn === null} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[.08em] transition disabled:opacity-40 ${saved ? "border-emerald-300/18 bg-emerald-300/[.055] text-emerald-100/70" : "border-white/[.08] bg-white/[.02] text-white/42 hover:border-emerald-300/18 hover:text-emerald-100/65"}`}>{busy ? "Working…" : saved ? "Saved" : signedIn === false ? `Sign in to ${label.toLowerCase()}` : label}</button>;
+  const saveButton=<button type="button" onClick={() => void toggle()} disabled={busy || signedIn === null} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[.08em] transition disabled:opacity-40 ${saved ? "border-emerald-300/18 bg-emerald-300/[.055] text-emerald-100/70" : "border-white/[.08] bg-white/[.02] text-white/42 hover:border-emerald-300/18 hover:text-emerald-100/65"}`}>{busy ? "Working…" : saved ? "Saved" : signedIn === false ? `Sign in to ${label.toLowerCase()}` : label}</button>;
+
+  if(type!=="ANIMAL"&&type!=="PLANT")return saveButton;
+  return <span className="inline-flex flex-wrap gap-2">{saveButton}<SubjectFollowButton type={type} id={id} subjectKey="" label={type==="ANIMAL"?"Follow animal":"Follow plant"}/></span>;
 }
