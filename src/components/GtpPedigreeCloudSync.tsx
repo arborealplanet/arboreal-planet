@@ -39,6 +39,22 @@ function photoBlob(dataUrl: string) {
   return new Blob([buffer], { type: match[1].toLowerCase() });
 }
 
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Could not prepare photo."));
+    reader.onerror = () => reject(reader.error || new Error("Could not prepare photo."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function localizeCloudPhoto(photoUrl: string) {
+  if (!photoUrl || photoUrl.startsWith("data:image/")) return photoUrl;
+  const response = await fetch(photoUrl, { cache: "no-store" });
+  if (!response.ok) throw new Error("Could not download a pedigree photo for offline use.");
+  return blobToDataUrl(await response.blob());
+}
+
 async function uploadAnimalPhoto(animal: LocalAnimal) {
   if (!animal.photoDataUrl?.startsWith("data:image/")) return false;
   const blob = photoBlob(animal.photoDataUrl);
@@ -153,8 +169,20 @@ export function GtpPedigreeCloudSync() {
       const data = await response.json().catch(() => null) as { animals?: LocalAnimal[]; error?: string } | null;
       if (!response.ok) throw new Error(data?.error || "Could not load pedigree.");
       const animals = Array.isArray(data?.animals) ? data.animals : [];
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(animals));
-      setStatus(`Loaded ${animals.length} cloud animal${animals.length === 1 ? "" : "s"}, including available photos. Refreshing the pedigree…`);
+      let localizedPhotos = 0;
+      const localized = await Promise.all(animals.map(async (animal) => {
+        if (!animal.photoDataUrl) return animal;
+        setStatus(`Preparing pedigree photos for offline use… ${localizedPhotos + 1}`);
+        try {
+          const photoDataUrl = await localizeCloudPhoto(animal.photoDataUrl);
+          localizedPhotos += 1;
+          return { ...animal, photoDataUrl };
+        } catch {
+          return animal;
+        }
+      }));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(localized));
+      setStatus(`Loaded ${localized.length} cloud animal${localized.length === 1 ? "" : "s"}${localizedPhotos ? ` and cached ${localizedPhotos} photo${localizedPhotos === 1 ? "" : "s"} for offline use` : ""}. Refreshing the pedigree…`);
       window.location.reload();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not load pedigree.");
