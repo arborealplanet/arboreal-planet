@@ -18,6 +18,13 @@ type IncomingAnimal = {
   visibility?: unknown;
 };
 
+type ExistingAnimal = {
+  id?: string;
+  visibility?: string;
+  dam_id?: string | null;
+  sire_id?: string | null;
+};
+
 function cleanText(value: unknown, max: number) {
   return String(value ?? "").trim().slice(0, max);
 }
@@ -31,7 +38,7 @@ export async function GET() {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const fields = "id,name,sex,locality_label,breeder_animal_id,hatch_year,notes,dam_id,sire_id,visibility,photo_path,created_at,updated_at";
+  const fields = "id,registry_code,name,sex,locality_label,breeder_animal_id,hatch_year,notes,dam_id,sire_id,visibility,photo_path,created_at,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?owner_id=eq.${encodeURIComponent(identity.user.id)}&select=${fields}&order=created_at.asc`, {
     headers: {
       apikey: SUPABASE_AUTH_KEY,
@@ -47,6 +54,7 @@ export async function GET() {
   return NextResponse.json({
     animals: (Array.isArray(rows) ? rows : []).map((row: Record<string, unknown>) => ({
       id: row.id,
+      registryCode: row.registry_code,
       name: row.name,
       sex: row.sex,
       locality: row.locality_label,
@@ -97,7 +105,7 @@ export async function PUT(request: Request) {
   if (!body || !Array.isArray(body.animals)) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   if (body.animals.length > 2000) return NextResponse.json({ error: "Pedigree is too large for one sync." }, { status: 400 });
 
-  const visibilityResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?owner_id=eq.${encodeURIComponent(identity.user.id)}&select=id,visibility`, {
+  const existingResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?owner_id=eq.${encodeURIComponent(identity.user.id)}&select=id,visibility,dam_id,sire_id`, {
     headers: {
       apikey: SUPABASE_AUTH_KEY,
       Authorization: `Bearer ${identity.token}`,
@@ -105,10 +113,10 @@ export async function PUT(request: Request) {
     },
     cache: "no-store",
   });
-  const visibilityRows = await visibilityResponse.json().catch(() => null) as Array<{ id?: string; visibility?: string }> | null;
-  if (!visibilityResponse.ok) return NextResponse.json({ error: "Unable to inspect existing pedigree before sync", detail: visibilityRows }, { status: visibilityResponse.status });
-  const existingVisibility = new Map((Array.isArray(visibilityRows) ? visibilityRows : []).map((row) => [String(row.id), VISIBILITIES.has(String(row.visibility)) ? String(row.visibility) : "private"]));
+  const existingRows = await existingResponse.json().catch(() => null) as ExistingAnimal[] | null;
+  if (!existingResponse.ok) return NextResponse.json({ error: "Unable to inspect existing pedigree before sync", detail: existingRows }, { status: existingResponse.status });
 
+  const existingById = new Map((Array.isArray(existingRows) ? existingRows : []).map((row) => [String(row.id), row]));
   const ids = new Set<string>();
   const cleaned = [] as Array<Record<string, unknown>>;
 
@@ -118,8 +126,9 @@ export async function PUT(request: Request) {
     if (!UUID_RE.test(id) || !name || ids.has(id)) return NextResponse.json({ error: "Invalid or duplicate animal record." }, { status: 400 });
     ids.add(id);
 
+    const current = existingById.get(id);
     const sex = SEXES.has(String(raw.sex)) ? String(raw.sex) : "Unknown";
-    const visibility = VISIBILITIES.has(String(raw.visibility)) ? String(raw.visibility) : existingVisibility.get(id) ?? "private";
+    const visibility = VISIBILITIES.has(String(raw.visibility)) ? String(raw.visibility) : (current?.visibility && VISIBILITIES.has(current.visibility) ? current.visibility : "private");
     const hatchText = String(raw.hatchYear ?? "").replace(/[^0-9]/g, "").slice(0, 4);
     const hatchYear = hatchText ? Number(hatchText) : null;
 
@@ -140,10 +149,14 @@ export async function PUT(request: Request) {
   }
 
   for (const row of cleaned) {
+    const id = String(row.id);
     const dam = row.dam_id as string | null;
     const sire = row.sire_id as string | null;
-    if ((dam && !ids.has(dam)) || (sire && !ids.has(sire))) {
-      return NextResponse.json({ error: "All linked parents must be present in the synced pedigree." }, { status: 400 });
+    const existing = existingById.get(id);
+    const damAllowed = !dam || ids.has(dam) || dam === existing?.dam_id;
+    const sireAllowed = !sire || ids.has(sire) || sire === existing?.sire_id;
+    if (!damAllowed || !sireAllowed) {
+      return NextResponse.json({ error: "New parent links must point to animals in this pedigree. Existing transferred parent links are preserved." }, { status: 400 });
     }
     if (dam === row.id || sire === row.id) return NextResponse.json({ error: "An animal cannot be its own parent." }, { status: 400 });
   }
