@@ -172,7 +172,7 @@ export function GtpPublicLineageDatabase() {
                     <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Dam</div><div className="mt-1 truncate text-white/55">{dam?.name || (animal.damId ? "Private / unpublished" : "Unknown")}</div></div>
                     <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Sire</div><div className="mt-1 truncate text-white/55">{sire?.name || (animal.sireId ? "Private / unpublished" : "Unknown")}</div></div>
                   </div>
-                  <Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="mt-4 inline-flex text-xs font-bold text-emerald-200/70">Open lineage record →</Link>
+                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2"><Link href={`/genetics/database/${encodeURIComponent(animal.id)}`} className="text-xs font-bold text-emerald-200/70">Open lineage record →</Link><Link href={`/genetics/database/${encodeURIComponent(animal.id)}/report`} className="text-[10px] font-bold text-white/32 hover:text-white/55">Report record</Link></div>
                 </div>
               </article>
             );
