@@ -61,7 +61,7 @@ export function GtpMyAnimalsDashboard() {
           <h2 className="mt-2 text-2xl font-semibold text-white/82">Your registered Green Tree Pythons.</h2>
           <p className="mt-2 max-w-3xl text-xs leading-6 text-white/40">This is your account-level registry collection. Public status, ownership, producer credits and pedigree relationships stay separate so the record can follow the animal through real-world breeding and sales.</p>
         </div>
-        {signedIn === false ? <Link href="/login?next=/genetics#animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in</Link> : <Link href="#pedigrees" className="secondary-action !min-h-0 !px-4 !py-2.5 !text-xs">Open pedigree builder →</Link>}
+        {signedIn === false ? <Link href="/login?next=%2Fgenetics%23animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in</Link> : <Link href="#pedigrees" className="secondary-action !min-h-0 !px-4 !py-2.5 !text-xs">Open pedigree builder →</Link>}
       </div>
 
       <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
