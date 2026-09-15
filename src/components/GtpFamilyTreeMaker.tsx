@@ -18,6 +18,7 @@ type TreeAnimal = {
   notes: string;
   damId: string | null;
   sireId: string | null;
+  photoDataUrl?: string;
 };
 
 type Ancestry = Partial<Record<GtpTaxon, number>>;
@@ -83,6 +84,7 @@ function newAnimal(patch: Partial<TreeAnimal> = {}): TreeAnimal {
     notes: "",
     damId: null,
     sireId: null,
+    photoDataUrl: "",
     ...patch,
   };
 }
@@ -102,6 +104,38 @@ function descendantIds(rootId: string, animals: TreeAnimal[]) {
   return result;
 }
 
+async function compressAnimalPhoto(file: File) {
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  if (file.size > 12 * 1024 * 1024) throw new Error("Please choose an image under 12 MB.");
+
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = sourceUrl;
+    await image.decode();
+    const maxSide = 640;
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not prepare that image.");
+    context.drawImage(image, 0, 0, width, height);
+    const webp = canvas.toDataURL("image/webp", 0.76);
+    return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/jpeg", 0.76);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+function AnimalPhoto({ animal, className = "h-20 w-20" }: { animal: TreeAnimal; className?: string }) {
+  if (!animal.photoDataUrl) return null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={animal.photoDataUrl} alt={`${animal.name || "Animal"} pedigree photo`} className={`${className} shrink-0 rounded-xl border border-white/[.08] object-cover`} />;
+}
+
 function AnimalNode({ animal, byId, depth = 0 }: { animal: TreeAnimal; byId: Map<string, TreeAnimal>; depth?: number }) {
   const ancestry = ancestryFor(animal, byId);
   const dam = animal.damId ? byId.get(animal.damId) : null;
@@ -109,14 +143,19 @@ function AnimalNode({ animal, byId, depth = 0 }: { animal: TreeAnimal; byId: Map
   return (
     <div className="min-w-0">
       <div className="rounded-2xl border border-white/[.07] bg-black/10 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="text-sm font-semibold text-white/78">{animal.name || "Unnamed animal"}</div>
-          <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/55">{ancestryLabel(ancestry)}</span>
+        <div className="flex items-start gap-3">
+          <AnimalPhoto animal={animal} className="h-16 w-16" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="text-sm font-semibold text-white/78">{animal.name || "Unnamed animal"}</div>
+              <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/55">{ancestryLabel(ancestry)}</span>
+            </div>
+            <div className="mt-1 text-[10px] text-white/35">{animal.sex} · {animal.locality}</div>
+            <div className="mt-2 text-[10px] leading-5 text-emerald-100/55">{formatAncestry(ancestry)}</div>
+            {animal.breederId ? <div className="mt-1 text-[10px] text-white/30">ID: {animal.breederId}</div> : null}
+            {animal.hatchYear ? <div className="mt-1 text-[10px] text-white/30">Hatched: {animal.hatchYear}</div> : null}
+          </div>
         </div>
-        <div className="mt-1 text-[10px] text-white/35">{animal.sex} · {animal.locality}</div>
-        <div className="mt-2 text-[10px] leading-5 text-emerald-100/55">{formatAncestry(ancestry)}</div>
-        {animal.breederId ? <div className="mt-1 text-[10px] text-white/30">ID: {animal.breederId}</div> : null}
-        {animal.hatchYear ? <div className="mt-1 text-[10px] text-white/30">Hatched: {animal.hatchYear}</div> : null}
       </div>
       {depth < 3 && (dam || sire) ? (
         <div className="mt-3 grid gap-3 border-l border-white/[.08] pl-4 md:grid-cols-2">
@@ -170,6 +209,28 @@ export function GtpFamilyTreeMaker() {
     setAnimals((current) => current.map((animal) => animal.id === id ? { ...animal, ...patch } : animal));
   }
 
+  async function setDraftPhoto(file?: File) {
+    if (!file) return;
+    try {
+      const photoDataUrl = await compressAnimalPhoto(file);
+      setDraft((current) => ({ ...current, photoDataUrl }));
+      setStatus("Photo added. It will be saved with this animal.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not use that image.");
+    }
+  }
+
+  async function setSelectedPhoto(file?: File) {
+    if (!selected || !file) return;
+    try {
+      const photoDataUrl = await compressAnimalPhoto(file);
+      updateAnimal(selected.id, { photoDataUrl });
+      setStatus(`Photo updated for ${selected.name}.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not use that image.");
+    }
+  }
+
   function startOffspringFromSelected() {
     if (!selected) return;
     setDraft(newAnimal(selected.sex === "Female" ? { damId: selected.id } : selected.sex === "Male" ? { sireId: selected.id } : { damId: selected.id }));
@@ -197,14 +258,14 @@ export function GtpFamilyTreeMaker() {
   }
 
   function exportTree() {
-    const blob = new Blob([JSON.stringify({ version: 1, animals }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ version: 2, animals }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = "arboreal-planet-gtp-pedigree.json";
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatus("Pedigree backup exported.");
+    setStatus("Pedigree backup exported, including animal photos.");
   }
 
   async function importTree(file: File) {
@@ -230,7 +291,7 @@ export function GtpFamilyTreeMaker() {
         <div>
           <div className="section-kicker">Family tree maker</div>
           <h2 className="mt-3 text-3xl font-semibold tracking-[-.035em]">Build a real pedigree.</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/46">Add your actual animals, connect dams and sires, and let Arboreal Planet carry subspecies ancestry through the family tree. Records are saved in this browser for now.</p>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/46">Add your actual animals, photos and parent links, then let Arboreal Planet carry subspecies ancestry through the family tree. Records are saved in this browser for now.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" disabled={!animals.length} onClick={exportTree} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55 disabled:opacity-30">Export backup</button>
@@ -253,7 +314,8 @@ export function GtpFamilyTreeMaker() {
             <label className="text-xs text-white/38">Locality label<select value={draft.locality} onChange={(e) => setDraft({ ...draft, locality: e.target.value as TreeAnimal["locality"] })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75"><option>Mixed / Unknown</option>{localities.map((locality) => <option key={locality}>{locality}</option>)}</select></label>
             <label className="text-xs text-white/38">Breeder / animal ID<input value={draft.breederId} onChange={(e) => setDraft({ ...draft, breederId: e.target.value })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" /></label>
             <label className="text-xs text-white/38">Hatch year<input inputMode="numeric" value={draft.hatchYear} onChange={(e) => setDraft({ ...draft, hatchYear: e.target.value.replace(/[^0-9]/g, "").slice(0,4) })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" /></label>
-            <div className="hidden sm:block" />
+            <label className="text-xs text-white/38">Photo<input type="file" accept="image/*" onChange={(e) => { void setDraftPhoto(e.target.files?.[0]); e.target.value = ""; }} className="mt-2 block w-full text-xs text-white/45 file:mr-3 file:rounded-xl file:border-0 file:bg-white/[.06] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white/65" /></label>
+            {draft.photoDataUrl ? <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-white/[.06] p-3"><AnimalPhoto animal={draft} className="h-20 w-20" /><div className="text-xs text-white/38">Photo ready for this animal.<br/><button type="button" onClick={() => setDraft({ ...draft, photoDataUrl: "" })} className="mt-2 font-bold text-white/55">Remove photo</button></div></div> : null}
             <label className="text-xs text-white/38">Dam<select value={draft.damId ?? ""} onChange={(e) => setDraft({ ...draft, damId: e.target.value || null })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75"><option value="">Unknown / founder</option>{potentialDams.map((a) => <option key={a.id} value={a.id}>{a.name || "Unnamed"}</option>)}</select></label>
             <label className="text-xs text-white/38">Sire<select value={draft.sireId ?? ""} onChange={(e) => setDraft({ ...draft, sireId: e.target.value || null })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75"><option value="">Unknown / founder</option>{potentialSires.map((a) => <option key={a.id} value={a.id}>{a.name || "Unnamed"}</option>)}</select></label>
             <label className="text-xs text-white/38 sm:col-span-2">Notes<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} className="mt-2 min-h-24 w-full rounded-xl border border-white/[.08] bg-black/25 p-3 text-base text-white/75" /></label>
@@ -268,11 +330,11 @@ export function GtpFamilyTreeMaker() {
           </div>
           {selected ? (
             <div className="mt-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-emerald-100/45">Selected animal</div><div className="mt-1 font-semibold text-white/75">{ancestryLabel(selectedAncestry)}</div></div>
-                <button type="button" onClick={startOffspringFromSelected} className="rounded-xl border border-emerald-300/15 px-3 py-2 text-[10px] font-bold text-emerald-100/65">Create offspring from this animal</button>
+              <div className="flex items-center gap-3">
+                <AnimalPhoto animal={selected} className="h-20 w-20" />
+                <div className="min-w-0 flex-1"><div className="text-[9px] font-black uppercase tracking-[.13em] text-emerald-100/45">Selected animal</div><div className="mt-1 font-semibold text-white/75">{ancestryLabel(selectedAncestry)}</div><div className="mt-2 text-xs leading-5 text-white/40">{formatAncestry(selectedAncestry)}</div></div>
               </div>
-              <div className="mt-2 text-xs leading-5 text-white/40">{formatAncestry(selectedAncestry)}</div>
+              <button type="button" onClick={startOffspringFromSelected} className="mt-3 rounded-xl border border-emerald-300/15 px-3 py-2 text-[10px] font-bold text-emerald-100/65">Create offspring from this animal</button>
             </div>
           ) : null}
           <div className="mt-5">{selected ? <AnimalNode animal={selected} byId={byId} /> : <div className="rounded-2xl border border-dashed border-white/[.07] p-8 text-center text-sm text-white/28">Add an animal to start your tree.</div>}</div>
@@ -291,7 +353,8 @@ export function GtpFamilyTreeMaker() {
             <label className="text-xs text-white/38">Locality label<select value={selected.locality} onChange={(e) => updateAnimal(selected.id, { locality: e.target.value as TreeAnimal["locality"] })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75"><option>Mixed / Unknown</option>{localities.map((locality) => <option key={locality}>{locality}</option>)}</select></label>
             <label className="text-xs text-white/38">Breeder / animal ID<input value={selected.breederId} onChange={(e) => updateAnimal(selected.id, { breederId: e.target.value })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" /></label>
             <label className="text-xs text-white/38">Hatch year<input inputMode="numeric" value={selected.hatchYear} onChange={(e) => updateAnimal(selected.id, { hatchYear: e.target.value.replace(/[^0-9]/g, "").slice(0,4) })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" /></label>
-            <div className="hidden md:block" />
+            <label className="text-xs text-white/38">Replace / add photo<input type="file" accept="image/*" onChange={(e) => { void setSelectedPhoto(e.target.files?.[0]); e.target.value = ""; }} className="mt-2 block w-full text-xs text-white/45 file:mr-3 file:rounded-xl file:border-0 file:bg-white/[.06] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white/65" /></label>
+            {selected.photoDataUrl ? <div className="md:col-span-2 flex items-center gap-3 rounded-xl border border-white/[.06] p-3"><AnimalPhoto animal={selected} className="h-24 w-24" /><div className="text-xs text-white/38">Current pedigree photo.<br/><button type="button" onClick={() => updateAnimal(selected.id, { photoDataUrl: "" })} className="mt-2 font-bold text-white/55">Remove photo</button></div></div> : null}
             <label className="text-xs text-white/38">Dam<select value={selected.damId ?? ""} onChange={(e) => updateAnimal(selected.id, { damId: e.target.value || null })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75"><option value="">Unknown / founder</option>{animals.filter((a) => a.id !== selected.id && !blockedParentIds.has(a.id) && a.sex !== "Male").map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
             <label className="text-xs text-white/38">Sire<select value={selected.sireId ?? ""} onChange={(e) => updateAnimal(selected.id, { sireId: e.target.value || null })} className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75"><option value="">Unknown / founder</option>{animals.filter((a) => a.id !== selected.id && !blockedParentIds.has(a.id) && a.sex !== "Female").map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
             <label className="text-xs text-white/38 md:col-span-2">Notes<textarea value={selected.notes} onChange={(e) => updateAnimal(selected.id, { notes: e.target.value })} className="mt-2 min-h-24 w-full rounded-xl border border-white/[.08] bg-black/25 p-3 text-base text-white/75" /></label>
