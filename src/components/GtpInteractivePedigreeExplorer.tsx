@@ -17,6 +17,7 @@ type PublicAnimal = {
   contributor?: Contributor | null;
   confirmedProducers?: Contributor[];
 };
+type PairingOffspring = { id?: string | null; registryCode?: string | null; name?: string | null; sex?: string | null; locality?: string | null; hatchYear?: number | null };
 type PublicPairing = {
   id: string;
   damId?: string | null;
@@ -25,6 +26,7 @@ type PublicPairing = {
   pairingCode?: string | null;
   notes?: string | null;
   reporter?: Contributor | null;
+  offspring?: PairingOffspring[];
 };
 
 type RelativeSlot = {
@@ -177,16 +179,18 @@ export function GtpInteractivePedigreeExplorer({ focusId }: { focusId: string })
           const partnerId = pairing.damId === focus.id ? pairing.sireId : pairing.damId;
           const partner = partnerId ? byId.get(partnerId) ?? null : null;
           const reporter = pairing.reporter?.displayName || pairing.reporter?.username || "Keeper reported";
+          const clutch = pairing.offspring ?? [];
           return <div key={pairing.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4">
             <div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Published pairing</div>
             <div className="mt-1 font-semibold text-white/66">{focus.name} × {partner?.name || "Private / unpublished partner"}</div>
             <div className="mt-1 text-[10px] text-white/30">{pairing.pairingCode || "No pairing code"}{pairing.pairingYear ? ` · ${pairing.pairingYear}` : ""}</div>
             {pairing.notes ? <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/36">{pairing.notes}</p> : null}
+            {clutch.length ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-emerald-100/40">Explicitly grouped offspring · {clutch.length}</div><div className="mt-2 flex flex-wrap gap-2">{clutch.map((offspring,index) => offspring.id ? <Link key={offspring.id} href={`/genetics/database/${encodeURIComponent(offspring.id)}`} className="rounded-lg border border-emerald-300/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100/60">{offspring.name || offspring.registryCode || `Offspring ${index + 1}`}</Link> : null)}</div></div> : null}
             <div className="mt-3 text-[9px] text-emerald-100/35">Reported by: {reporter}</div>
             {partner ? <Link href={`/genetics/database/${encodeURIComponent(partner.id)}`} className="mt-2 inline-flex text-[10px] font-bold text-emerald-200/60">Open partner record →</Link> : null}
           </div>;
         })}</div>
-        <p className="mt-3 text-[10px] leading-5 text-white/25">Pairing records are keeper-reported history. They do not transfer ownership and do not independently confirm that breeding produced offspring.</p>
+        <p className="mt-3 text-[10px] leading-5 text-white/25">Pairing and clutch grouping are keeper-reported history. A pairing does not transfer ownership or automatically prove offspring; grouped offspring are records whose existing dam/sire already match that pairing.</p>
       </div> : null}
 
       <p className="mt-3 text-[10px] leading-5 text-white/25 sm:hidden">Swipe sideways to explore the full pedigree tree.</p>
