@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-15-juvenile-baby-art";
+const TRAIT_ART_VERSION = "2026-09-15-juvenile-baby-art-v2";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -28,24 +28,9 @@ const slugByTrait: Record<TraitKey, string> = {
   blotches: "blotches",
 };
 
-// Only trait families listed here are allowed to override a sharp base portrait.
-// This lets us upgrade artwork one family at a time without accidentally
-// re-enabling low-resolution legacy files for other snakes.
 const verifiedTraitArtBySubspecies: Record<ChondroSubspecies, readonly TraitKey[]> = {
-  "Morelia azurea azurea": [
-    "highBlack",
-    "highWhite",
-    "blueStripe",
-    "yellowRetention",
-    "blotches",
-  ],
-  "Morelia azurea pulcher": [
-    "highBlack",
-    "highWhite",
-    "blueStripe",
-    "yellowRetention",
-    "blotches",
-  ],
+  "Morelia azurea azurea": ["highBlack", "highWhite", "blueStripe", "yellowRetention", "blotches"],
+  "Morelia azurea pulcher": ["highBlack", "highWhite", "blueStripe", "yellowRetention", "blotches"],
   "Morelia azurea utaraensis": ["blueStripe", "yellowRetention"],
   "Morelia viridis": [],
 };
@@ -71,13 +56,8 @@ function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits
   const allowedTraits = verifiedTraitArtBySubspecies[subspecies];
   if (allowedTraits.length === 0) return baseArtBySubspecies[subspecies];
 
-  const entries = allowedTraits.map(
-    key => [key, traitValue(traits, key)] as const,
-  );
-  const [trait, value] = entries.reduce(
-    (best, current) => (current[1] > best[1] ? current : best),
-    entries[0],
-  );
+  const entries = allowedTraits.map(key => [key, traitValue(traits, key)] as const);
+  const [trait, value] = entries.reduce((best, current) => (current[1] > best[1] ? current : best), entries[0]);
   const tier = portraitTier(value);
   if (tier === null) return baseArtBySubspecies[subspecies];
 
@@ -85,9 +65,6 @@ function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits
 }
 
 function juvenilePortraitArt(subspecies: ChondroSubspecies) {
-  // For now every hatchling, neonate and subadult uses the newly approved
-  // baby portrait for its subspecies. We only have one approved baby asset
-  // per subspecies at the moment, so color does not choose a different file.
   const assetColor = subspecies === "Morelia viridis" ? "yellow" : "red";
   return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${assetColor}.webp`;
 }
@@ -132,7 +109,9 @@ export function ChondroSnakeIcon({
           }
         }}
         alt={`${name} illustrated virtual game portrait`}
-        className="h-full w-full object-contain p-1 sm:p-2"
+        className={isJuvenile
+          ? "absolute inset-0 m-auto h-auto w-auto max-h-[176px] max-w-[176px] object-contain"
+          : "h-full w-full object-contain p-1 sm:p-2"}
       />
       <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
         Virtual
