@@ -14,7 +14,7 @@ const platformCards = [
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "MARKET", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
-  { title: "The Hatchery", text: "Educational breeder games with virtual animals, lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "PLAY", icon: "◈" },
+  { title: "Arcade", text: "Educational breeder games with virtual animals, lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "PLAY", icon: "◈" },
 ];
 
 const populations = ["Biak", "Numfor", "Manokwari", "Sorong", "Timika", "Kofiau", "Wamena", "Lereh", "Cyclops", "Jayapura", "Aru", "Merauke"];
@@ -109,7 +109,7 @@ export default function Home() {
             <Link href="/arcade/enter?next=%2Farcade" className="panel interactive-card group relative overflow-hidden rounded-[26px] p-4 sm:p-5">
               <ChondroBreederPreview />
               <div className="px-1 pb-1 pt-5">
-                <div className="section-kicker text-amber-200/75">The Hatchery · Virtual breeder game</div>
+                <div className="section-kicker text-amber-200/75">Arcade · Virtual breeder game</div>
                 <div className="mt-2 flex items-end justify-between gap-4">
                   <div><h2 className="text-2xl font-semibold">Chondro Breeder</h2><p className="mt-3 max-w-sm text-sm leading-6 text-white/54">Manage a virtual Green Tree Python breeding program with lineage, facilities, projects and long-term progression. Game animals and game values stay separate from real Arboreal Planet market and pedigree records.</p></div>
                   <span className="shrink-0 text-xs font-bold text-amber-200/75 transition group-hover:text-amber-100">Play →</span>
