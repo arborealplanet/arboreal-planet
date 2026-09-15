@@ -170,49 +170,10 @@ function makeRandomOffer(seed: number, index: number, random: () => number, effe
   };
 }
 
-function specialCyclops(sex: Sex): Offer {
-  const suffix = sex === "Male" ? "M" : "F";
-  return {
-    id: `SPECIAL-CYCLOPS-A++-RED-${suffix}`,
-    name: `A++ Cyclops Red ${sex}`,
-    sex,
-    source: "Captive Bred",
-    subspecies: "Morelia azurea utaraensis",
-    locality: "Cyclops",
-    neonateColor: "Red",
-    lifeStage: "Neonate",
-    highBlack: 0,
-    highWhite: 0,
-    blueStripe: 100,
-    yellowRetention: 0,
-    blotches: 0,
-    geneticsTested: true,
-    phenotypeScore: 100,
-    localityAncestry: { Cyclops: 100 },
-    body: "Morelia azurea utaraensis",
-    tail: "Matching body color and pattern",
-    eyes: "Morelia azurea utaraensis",
-    head: "Morelia azurea utaraensis",
-    pattern: "Cyclops",
-    color: "Cyclops",
-    nidoStatus: "Negative",
-    condition: "Excellent",
-    classification: "Pure",
-    generation: 1,
-    parentIds: [],
-    ancestry: { "Morelia azurea utaraensis": 100 },
-    notes: "Special A++ Morelia azurea utaraensis phenotype shop animal.",
-    breederInitials: null,
-    price: 5000,
-    featured: true,
-    specialLabel: "A++ M. a. utaraensis phenotype",
-  };
-}
-
 function buildOffers(seed: number, rows: ConservationRow[]) {
   const random = rng(seed * 7919 + 20260908);
   const effects = effectMap(rows);
-  return [specialCyclops("Male"), specialCyclops("Female"), ...Array.from({ length: 18 }, (_, index) => makeRandomOffer(seed, index, random, effects))];
+  return Array.from({ length: 20 }, (_, index) => makeRandomOffer(seed, index, random, effects));
 }
 
 function parseSave(value: unknown): GameSave | null {
@@ -429,7 +390,7 @@ export function ChondroBreederExpandedShop() {
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
-            <p className="mt-1 text-xs text-white/35">The A++ utaraensis pair is pinned first. Community conservation stewardship influences subspecies representation and phenotype quality among imported animals.</p>
+            <p className="mt-1 text-xs text-white/35">Community conservation stewardship influences subspecies representation and phenotype quality among imported animals.</p>
           </div>
           <div className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.14em] text-sky-100/45">Next shop refresh</div>
