@@ -8,6 +8,7 @@ type PublicRecord = {
   id: string;
   registry_code: string;
   owner_id: string;
+  breeder_profile_id: string | null;
   name: string;
   sex: string | null;
   locality_label: string | null;
@@ -30,7 +31,7 @@ type OwnershipHistory = {
 };
 
 async function publicRecord(id: string) {
-  const fields = "id,registry_code,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
+  const fields = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${fields}&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -51,7 +52,7 @@ async function publicProfile(id: string) {
 }
 
 async function publicDescendants(id: string) {
-  const fields = "id,registry_code,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
+  const fields = "id,registry_code,owner_id,breeder_profile_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,record_status,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&or=(dam_id.eq.${encodeURIComponent(id)},sire_id.eq.${encodeURIComponent(id)})&select=${fields}&order=hatch_year.desc.nullslast&limit=100`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -92,16 +93,18 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
   const animal = await publicRecord(id);
   if (!animal) notFound();
 
-  const [dam, sire, descendants, contributor, ownershipHistory] = await Promise.all([
+  const [dam, sire, descendants, contributor, confirmedBreeder, ownershipHistory] = await Promise.all([
     animal.dam_id ? publicRecord(animal.dam_id) : Promise.resolve(null),
     animal.sire_id ? publicRecord(animal.sire_id) : Promise.resolve(null),
     publicDescendants(animal.id),
     publicProfile(animal.owner_id),
+    animal.breeder_profile_id ? publicProfile(animal.breeder_profile_id) : Promise.resolve(null),
     publicOwnershipHistory(animal.id),
   ]);
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
   const contributorLabel = contributor?.display_name || contributor?.username || null;
+  const confirmedBreederLabel = confirmedBreeder?.display_name || confirmedBreeder?.username || null;
   const recordStatus = recordStatusLabel(animal.record_status);
 
   return <main className="mx-auto max-w-7xl px-5 py-10 pb-20 sm:px-6">
@@ -109,6 +112,7 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
       <Link href="/genetics/database" className="text-xs font-bold text-emerald-200/70">← Public lineage database</Link>
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/genetics/database/${encodeURIComponent(animal.id)}/card`} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.035] px-3 py-2 text-xs font-bold text-emerald-100/70">Print / share pedigree</Link>
+        <Link href={`/genetics/database/${encodeURIComponent(animal.id)}/report`} className="rounded-xl border border-white/[.08] px-3 py-2 text-xs font-bold text-white/45">Report record</Link>
         <Link href="/genetics" className="text-xs font-bold text-white/40">Genetics tools →</Link>
       </div>
     </div>
@@ -130,13 +134,18 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
             <div><div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Current record steward</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="mt-1 block text-sm font-semibold text-white/62 hover:text-emerald-100">{contributorLabel}</Link> : <div className="mt-1 text-sm font-semibold text-white/62">{contributorLabel}</div>}</div>
           </div> : null}
 
+          {confirmedBreederLabel ? <div className="mt-3 flex items-center gap-3 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-3">
+            {confirmedBreeder?.avatar_url ? <img src={confirmedBreeder.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="grid h-10 w-10 place-items-center rounded-full border border-emerald-300/10 text-[10px] font-bold text-emerald-100/40">AP</div>}
+            <div><div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-200/45">Confirmed breeder</div>{confirmedBreeder?.username ? <Link href={`/keepers/${encodeURIComponent(confirmedBreeder.username)}`} className="mt-1 block text-sm font-semibold text-emerald-100/68 hover:text-emerald-100">{confirmedBreederLabel}</Link> : <div className="mt-1 text-sm font-semibold text-emerald-100/68">{confirmedBreederLabel}</div>}</div>
+          </div> : null}
+
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Reported locality</div><div className="mt-2 font-semibold text-white/68">{locality}</div></div>
             <div className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Arboreal Planet grouping</div><div className="mt-2 font-semibold text-emerald-100/65">{taxon}</div></div>
             {animal.breeder_animal_id ? <div className="panel-soft rounded-2xl p-4 sm:col-span-2"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Breeder / animal ID</div><div className="mt-2 font-semibold text-white/68">{animal.breeder_animal_id}</div></div> : null}
           </div>
 
-          <p className="mt-6 text-xs leading-6 text-white/36">Locality is shown as the keeper-reported line label. Arboreal Planet uses the broader subspecies grouping for biological context; the locality label is not presented as independently verified geographic origin. Record status describes the provenance of the pedigree entry, not proof of geographic locality.</p>
+          <p className="mt-6 text-xs leading-6 text-white/36">Locality is shown as the keeper-reported line label. Arboreal Planet uses the broader subspecies grouping for biological context; the locality label is not presented as independently verified geographic origin. Breeder confirmation means the named Arboreal Planet account confirmed producing this animal; it is not independent geographic-locality verification.</p>
         </div>
       </section>
 
