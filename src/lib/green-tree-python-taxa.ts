@@ -10,6 +10,7 @@ export type GtpLocality =
   | "Manokwari"
   | "Sorong"
   | "Timika"
+  | "Kofiau"
   | "Cyclops"
   | "Jayapura"
   | "Lereh"
@@ -23,6 +24,7 @@ export const GTP_LOCALITY_TAXON: Record<GtpLocality, GtpTaxon> = {
   Manokwari: "Morelia azurea pulcher",
   Sorong: "Morelia azurea pulcher",
   Timika: "Morelia azurea pulcher",
+  Kofiau: "Morelia azurea pulcher",
   Cyclops: "Morelia azurea utaraensis",
   Jayapura: "Morelia azurea utaraensis",
   Lereh: "Morelia azurea utaraensis",
@@ -33,14 +35,14 @@ export const GTP_LOCALITY_TAXON: Record<GtpLocality, GtpTaxon> = {
 
 export const GTP_TAXON_LOCALITIES: Record<GtpTaxon, GtpLocality[]> = {
   "Morelia azurea azurea": ["Biak", "Numfor"],
-  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],
+  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika", "Kofiau"],
   "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena"],
   "Morelia viridis": ["Aru", "Merauke"],
 };
 
 export const GTP_TAXON_NOTES: Record<GtpTaxon, string> = {
   "Morelia azurea azurea": "Northern island/locality grouping used by Arboreal Planet for Biak and Numfor.",
-  "Morelia azurea pulcher": "Western New Guinea grouping used by Arboreal Planet for Manokwari, Sorong and Timika.",
+  "Morelia azurea pulcher": "Western New Guinea grouping used by Arboreal Planet for Manokwari, Sorong, Timika and Kofiau.",
   "Morelia azurea utaraensis": "Northern mainland grouping used by Arboreal Planet for Cyclops, Jayapura, Lereh and Wamena.",
   "Morelia viridis": "Southern green tree python taxon used here for Aru and Merauke. This is a separate species-level taxon rather than an azurea subspecies.",
 };
