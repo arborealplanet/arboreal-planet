@@ -25,27 +25,32 @@ export function AccountDeletionRequestPanel() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Checking your account…");
 
-  async function load() {
-    try {
-      const response = await fetch("/api/account-deletion", { cache: "no-store" });
-      if (response.status === 401) {
-        setSignedIn(false);
-        setRequest(null);
-        setStatus("Sign in to submit or review an account deletion request.");
-        return;
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const response = await fetch("/api/account-deletion", { cache: "no-store" });
+        if (!active) return;
+        if (response.status === 401) {
+          setSignedIn(false);
+          setRequest(null);
+          setStatus("Sign in to submit or review an account deletion request.");
+          return;
+        }
+        const data = await response.json().catch(() => null) as { request?: DeletionRequest | null; error?: string } | null;
+        if (!response.ok) throw new Error(data?.error || "Could not load deletion request.");
+        if (!active) return;
+        setSignedIn(true);
+        setRequest(data?.request ?? null);
+        setStatus(data?.request ? `Latest request: ${data.request.status}.` : "No account deletion request is currently on file.");
+      } catch (error) {
+        if (!active) return;
+        setSignedIn(null);
+        setStatus(error instanceof Error ? error.message : "Could not load deletion request.");
       }
-      const data = await response.json().catch(() => null) as { request?: DeletionRequest | null; error?: string } | null;
-      if (!response.ok) throw new Error(data?.error || "Could not load deletion request.");
-      setSignedIn(true);
-      setRequest(data?.request ?? null);
-      setStatus(data?.request ? `Latest request: ${data.request.status}.` : "No account deletion request is currently on file.");
-    } catch (error) {
-      setSignedIn(null);
-      setStatus(error instanceof Error ? error.message : "Could not load deletion request.");
-    }
-  }
-
-  useEffect(() => { void load(); }, []);
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function submit() {
     if (!window.confirm("Submit an account deletion request? This does not delete the account immediately. You can cancel while the request is still pending.")) return;
