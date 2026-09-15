@@ -6,6 +6,7 @@ import { GtpLocalityConfidenceGuide } from "@/components/GtpLocalityConfidenceGu
 import { GtpPedigreeCloudSync } from "@/components/GtpPedigreeCloudSync";
 import { GtpPedigreePublishing } from "@/components/GtpPedigreePublishing";
 import { GtpPedigreeTransfers } from "@/components/GtpPedigreeTransfers";
+import { GtpRegisteredParentLinker } from "@/components/GtpRegisteredParentLinker";
 import { GtpSubspeciesCalculator } from "@/components/GtpSubspeciesCalculator";
 
 export default function GeneticsCalculatorPage() {
@@ -36,6 +37,10 @@ export default function GeneticsCalculatorPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
         <GtpPedigreeTransfers />
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
+        <GtpRegisteredParentLinker />
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-5 sm:px-6">
