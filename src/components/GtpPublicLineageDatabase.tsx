@@ -12,6 +12,7 @@ type PublicAnimal = {
   hatchYear?: string;
   damId?: string | null;
   sireId?: string | null;
+  photoUrl?: string;
   updatedAt?: string;
 };
 
@@ -69,26 +70,32 @@ export function GtpPublicLineageDatabase() {
             const dam = animal.damId ? byId.get(animal.damId) : null;
             const sire = animal.sireId ? byId.get(animal.sireId) : null;
             return (
-              <article key={animal.id} className="panel-soft rounded-[22px] p-5">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-lg font-semibold text-white/78">{animal.name}</h3>
-                    <div className="mt-1 text-[10px] text-white/32">{animal.sex || "Unknown"}{animal.hatchYear ? ` · ${animal.hatchYear}` : ""}</div>
+              <article key={animal.id} className="panel-soft overflow-hidden rounded-[22px]">
+                {animal.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={animal.photoUrl} alt={`${animal.name} pedigree photo`} className="h-48 w-full border-b border-white/[.055] object-cover" />
+                ) : null}
+                <div className="p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-semibold text-white/78">{animal.name}</h3>
+                      <div className="mt-1 text-[10px] text-white/32">{animal.sex || "Unknown"}{animal.hatchYear ? ` · ${animal.hatchYear}` : ""}</div>
+                    </div>
+                    <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/60">PUBLIC</span>
                   </div>
-                  <span className="rounded-full border border-emerald-300/10 px-2 py-1 text-[9px] font-bold text-emerald-100/60">PUBLIC</span>
-                </div>
 
-                <div className="mt-4 rounded-xl border border-white/[.055] bg-black/10 p-3">
-                  <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Reported locality</div>
-                  <div className="mt-1 text-sm font-semibold text-white/65">{animal.locality || "Mixed / Unknown"}</div>
-                  <div className="mt-1 text-xs italic text-emerald-100/48">{taxonFor(animal.locality)}</div>
-                </div>
+                  <div className="mt-4 rounded-xl border border-white/[.055] bg-black/10 p-3">
+                    <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Reported locality</div>
+                    <div className="mt-1 text-sm font-semibold text-white/65">{animal.locality || "Mixed / Unknown"}</div>
+                    <div className="mt-1 text-xs italic text-emerald-100/48">{taxonFor(animal.locality)}</div>
+                  </div>
 
-                {animal.breederId ? <div className="mt-3 text-xs text-white/38"><span className="text-white/25">Animal ID:</span> {animal.breederId}</div> : null}
+                  {animal.breederId ? <div className="mt-3 text-xs text-white/38"><span className="text-white/25">Animal ID:</span> {animal.breederId}</div> : null}
 
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Dam</div><div className="mt-1 truncate text-white/55">{dam?.name || (animal.damId ? "Private / unpublished" : "Unknown")}</div></div>
-                  <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Sire</div><div className="mt-1 truncate text-white/55">{sire?.name || (animal.sireId ? "Private / unpublished" : "Unknown")}</div></div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Dam</div><div className="mt-1 truncate text-white/55">{dam?.name || (animal.damId ? "Private / unpublished" : "Unknown")}</div></div>
+                    <div className="rounded-xl border border-white/[.055] p-3"><div className="text-[9px] font-black uppercase tracking-[.11em] text-white/22">Sire</div><div className="mt-1 truncate text-white/55">{sire?.name || (animal.sireId ? "Private / unpublished" : "Unknown")}</div></div>
+                  </div>
                 </div>
               </article>
             );
