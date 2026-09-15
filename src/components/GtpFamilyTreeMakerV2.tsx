@@ -48,12 +48,16 @@ function founderAncestry(animal: TreeAnimal): Ancestry {
 function ancestryFor(animal: TreeAnimal, byId: Map<string, TreeAnimal>, seen = new Set<string>()): Ancestry {
   if (seen.has(animal.id)) return UNKNOWN_ANCESTRY;
   const nextSeen = new Set(seen).add(animal.id);
+  const hasDamLink = Boolean(animal.damId);
+  const hasSireLink = Boolean(animal.sireId);
   const dam = animal.damId ? byId.get(animal.damId) : null;
   const sire = animal.sireId ? byId.get(animal.sireId) : null;
+  const damAncestry = dam ? ancestryFor(dam, byId, nextSeen) : hasDamLink ? UNKNOWN_ANCESTRY : null;
+  const sireAncestry = sire ? ancestryFor(sire, byId, nextSeen) : hasSireLink ? UNKNOWN_ANCESTRY : null;
 
-  if (dam && sire) return combine(ancestryFor(dam, byId, nextSeen), ancestryFor(sire, byId, nextSeen));
-  if (dam) return combine(ancestryFor(dam, byId, nextSeen), UNKNOWN_ANCESTRY);
-  if (sire) return combine(UNKNOWN_ANCESTRY, ancestryFor(sire, byId, nextSeen));
+  if (damAncestry && sireAncestry) return combine(damAncestry, sireAncestry);
+  if (damAncestry) return combine(damAncestry, UNKNOWN_ANCESTRY);
+  if (sireAncestry) return combine(UNKNOWN_ANCESTRY, sireAncestry);
   return founderAncestry(animal);
 }
 
@@ -145,12 +149,17 @@ function AnimalPhoto({ animal, className = "h-20 w-20" }: { animal: TreeAnimal; 
   return <img src={animal.photoDataUrl} alt={`${animal.name || "Animal"} pedigree photo`} className={`${className} shrink-0 rounded-xl border border-white/[.08] object-cover`} />;
 }
 
+function MissingParent({ role, linked }: { role: "Dam" | "Sire"; linked: boolean }) {
+  return <div className="rounded-xl border border-dashed border-white/[.06] p-3 text-xs text-white/25">{linked ? `${role} is linked outside this browser pedigree or unavailable` : `${role} unknown`} · contributes 50% unknown ancestry</div>;
+}
+
 function AnimalNode({ animal, byId, depth = 0, trail = new Set<string>() }: { animal: TreeAnimal; byId: Map<string, TreeAnimal>; depth?: number; trail?: Set<string> }) {
   const ancestry = ancestryFor(animal, byId);
   const dam = animal.damId ? byId.get(animal.damId) : null;
   const sire = animal.sireId ? byId.get(animal.sireId) : null;
   const cycle = trail.has(animal.id);
   const nextTrail = new Set(trail).add(animal.id);
+  const hasParentLink = Boolean(animal.damId || animal.sireId);
 
   if (cycle) return <div className="rounded-xl border border-amber-200/10 bg-amber-200/[.02] p-3 text-xs text-amber-100/45">Circular parent link detected in imported data.</div>;
 
@@ -171,9 +180,9 @@ function AnimalNode({ animal, byId, depth = 0, trail = new Set<string>() }: { an
           </div>
         </div>
       </div>
-      {depth < 3 && (dam || sire) ? <div className="mt-3 grid gap-3 border-l border-white/[.08] pl-4 md:grid-cols-2">
-        {dam ? <AnimalNode animal={dam} byId={byId} depth={depth + 1} trail={nextTrail} /> : <div className="rounded-xl border border-dashed border-white/[.06] p-3 text-xs text-white/25">Dam unknown · contributes 50% unknown ancestry</div>}
-        {sire ? <AnimalNode animal={sire} byId={byId} depth={depth + 1} trail={nextTrail} /> : <div className="rounded-xl border border-dashed border-white/[.06] p-3 text-xs text-white/25">Sire unknown · contributes 50% unknown ancestry</div>}
+      {depth < 3 && hasParentLink ? <div className="mt-3 grid gap-3 border-l border-white/[.08] pl-4 md:grid-cols-2">
+        {dam ? <AnimalNode animal={dam} byId={byId} depth={depth + 1} trail={nextTrail} /> : <MissingParent role="Dam" linked={Boolean(animal.damId)} />}
+        {sire ? <AnimalNode animal={sire} byId={byId} depth={depth + 1} trail={nextTrail} /> : <MissingParent role="Sire" linked={Boolean(animal.sireId)} />}
       </div> : null}
     </div>
   );
@@ -316,7 +325,7 @@ export function GtpFamilyTreeMakerV2() {
 
   return <section className="panel rounded-[30px] p-5 sm:p-7">
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div><div className="section-kicker">Family tree maker</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em]">Build a real pedigree.</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-white/46">Add actual animals, photos and parent links. Known parents contribute their real half of the pedigree; an unknown parent remains explicitly unknown instead of being inferred from the offspring&apos;s locality label.</p></div>
+      <div><div className="section-kicker">Family tree maker</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em]">Build a real pedigree.</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-white/46">Add actual animals, photos and parent links. Known parents contribute their real half of the pedigree; an unknown or locally unavailable parent remains explicitly unknown instead of being inferred from the offspring&apos;s locality label.</p></div>
       <div className="flex flex-wrap gap-2"><button type="button" disabled={!animals.length} onClick={exportTree} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55 disabled:opacity-30">Export backup</button><button type="button" onClick={() => importRef.current?.click()} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Import backup</button><input ref={importRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importTree(file); event.target.value = ""; }} /></div>
     </div>
 
