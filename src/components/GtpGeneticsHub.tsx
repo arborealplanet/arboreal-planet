@@ -54,6 +54,13 @@ function isHubTab(value: string): value is HubTab {
   return tabs.some((tab) => tab.id === value);
 }
 
+function tabFromHash(hash: string): HubTab {
+  if (isHubTab(hash)) return hash;
+  if (hash.startsWith("breeding-")) return "breeding";
+  if (["cloud-sync", "publishing", "transfers"].includes(hash)) return "animals";
+  return "calculator";
+}
+
 function subscribeToLocation(callback: () => void) {
   window.addEventListener("hashchange", callback);
   window.addEventListener("popstate", callback);
@@ -64,8 +71,7 @@ function subscribeToLocation(callback: () => void) {
 }
 
 function getLocationSnapshot(): HubTab {
-  const hash = window.location.hash.replace("#", "");
-  return isHubTab(hash) ? hash : "calculator";
+  return tabFromHash(window.location.hash.replace("#", ""));
 }
 
 function getServerSnapshot(): HubTab {
