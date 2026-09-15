@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
-const TYPES = new Set(["ANIMAL", "PLANT", "MARKET_LISTING"]);
+const TYPES = new Set(["ANIMAL", "PLANT", "MARKET_LISTING", "JOURNAL"]);
 
-type ItemType = "ANIMAL" | "PLANT" | "MARKET_LISTING";
+type ItemType = "ANIMAL" | "PLANT" | "MARKET_LISTING" | "JOURNAL";
 
 function parse(request: NextRequest) {
   const type = String(request.nextUrl.searchParams.get("type") ?? "").toUpperCase() as ItemType;
@@ -18,7 +18,9 @@ async function publicItemExists(type: ItemType, id: string) {
     ? `species?id=eq.${id}&published=eq.true&select=id`
     : type === "PLANT"
       ? `plant_collections?id=eq.${id}&status=neq.PLANNED&select=id`
-      : `marketplace_listings?id=eq.${id}&status=eq.ACTIVE&select=id`;
+      : type === "MARKET_LISTING"
+        ? `marketplace_listings?id=eq.${id}&status=eq.ACTIVE&select=id`
+        : `journal_articles?id=eq.${id}&status=eq.PUBLISHED&select=id`;
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/${path}`, { headers, cache: "no-store" });
   if (!response.ok) return false;
   const rows = await response.json().catch(() => []) as Array<{ id: string }>;
