@@ -5,10 +5,12 @@ import { ChondroBreederPreview } from "@/components/ChondroBreederPreview";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 
 const platformCards = [
-  { title: "Search Arboreal Planet", text: "Search reference records, plants, keepers, marketplace listings, community posts and public pedigrees at once.", href: "/search", tag: "DISCOVER", icon: "⌕" },
+  { title: "Search Arboreal Planet", text: "Search reference records, Journal pieces, plants, keepers, listings, community posts, events and public pedigrees at once.", href: "/search", tag: "DISCOVER", icon: "⌕" },
   { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
   { title: "Genetics & Pedigrees", text: "Subspecies calculator, family trees, registered lineages and public pedigree records.", href: "/genetics", tag: "LINEAGE", icon: "⌘" },
   { title: "Plant Database", text: "Nepenthes, bromeliads and terrarium cultivation knowledge.", href: "/plants", tag: "PLANTS", icon: "⌁" },
+  { title: "Learn", text: "Guides, explainers, conservation stories and source-linked Arboreal Planet Journal coverage.", href: "/learn", tag: "JOURNAL", icon: "▤" },
+  { title: "Shows & Events", text: "Source-linked reptile shows, breeder events, plant events and community gatherings.", href: "/events", tag: "EVENTS", icon: "⌖" },
   { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "MARKET", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
@@ -30,18 +32,18 @@ export default function Home() {
           <div className="relative z-10">
             <div className="section-kicker">The arboreal keeper network</div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[.98] tracking-[-.055em] text-white sm:text-6xl lg:text-[72px]">
-              Reptile keeping, market data and community <span className="text-emerald-300">in one platform.</span>
+              Reptile keeping, knowledge, market data and community <span className="text-emerald-300">in one platform.</span>
             </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">Arboreal Planet brings species records, plant cultivation, marketplace listings, keeper activity and reptile market intelligence into one connected platform.</p>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">Arboreal Planet connects species records, plant cultivation, education, shows, marketplace listings, keeper activity, pedigrees and reptile market intelligence in one ecosystem.</p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/search" className="primary-action">Search the hub</Link>
+              <Link href="/learn" className="secondary-action">Open Learn</Link>
               <Link href="/community" className="secondary-action">Explore the network</Link>
-              <Link href="/snake-stocks" className="secondary-action">Open Snake Stocks ↗</Link>
             </div>
             <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/[.055] pt-6 text-xs text-white/45">
               <span><b className="text-white/72">USA-first</b> market terminology</span>
               <span><b className="text-white/72">Median-first</b> market analysis</span>
-              <span><b className="text-white/72">Source-reviewed</b> market data</span>
+              <span><b className="text-white/72">Source-linked</b> learning & events</span>
             </div>
           </div>
 
@@ -69,9 +71,9 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Core sections</h2></div>
-          <p className="max-w-md text-sm leading-6 text-white/52">Search, reference data, genetics and pedigrees, marketplace listings, community activity, market tools and educational breeder games all share the same platform.</p>
+          <p className="max-w-md text-sm leading-6 text-white/52">Search, reference data, learning, shows, genetics, marketplace listings, community activity, market tools and educational breeder games all share the same platform.</p>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           {platformCards.map((card) => (
             <Link key={card.href} href={card.href} className="panel interactive-card group flex min-h-52 flex-col rounded-[24px] p-6">
               <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-xl border border-white/[.065] bg-white/[.02] text-lg text-emerald-300/75">{card.icon}</span><span className="text-[9px] font-bold tracking-[.14em] text-white/36">{card.tag}</span></div>
@@ -87,9 +89,9 @@ export default function Home() {
             <div className="section-kicker">Reference animal</div>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Green Tree Python</h2>
             <p className="mt-2 text-sm italic text-white/42">Morelia viridis complex · Arboreal Planet market grouping</p>
-            <p className="mt-6 max-w-xl text-base leading-7 text-white/58">Green Tree Python is the first fully connected animal record, linking locality structure, origin terminology, marketplace listings, Snake Stocks and community activity.</p>
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/58">Green Tree Python is the first fully connected animal record, linking locality structure, origin terminology, Genetics, Learn, marketplace listings, Snake Stocks and community activity.</p>
             <div className="mt-7 flex flex-wrap gap-2">{populations.map((name) => <span key={name} className="rounded-full border border-white/[.07] bg-white/[.018] px-3 py-1.5 text-xs text-white/55">{name}</span>)}</div>
-            <div className="mt-7 flex flex-wrap gap-4"><Link href="/animals/green-tree-python" className="w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link><Link href="/genetics" className="w-fit text-sm font-bold text-emerald-300">Open genetics & pedigrees →</Link></div>
+            <div className="mt-7 flex flex-wrap gap-4"><Link href="/animals/green-tree-python" className="w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link><Link href="/genetics" className="w-fit text-sm font-bold text-emerald-300">Open genetics & pedigrees →</Link><Link href="/learn?q=Green%20Tree%20Python" className="w-fit text-sm font-bold text-emerald-300">Read related Journal pieces →</Link></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[["CAPTIVE BRED", "USCBB, CBB and other unambiguous captive-produced terms normalize here."],["IMPORT", "Import, farm bred, farm raised, wild caught and LTC normalize into the public Import market."],["LOCALITY", "Population and locality stay visible instead of being flattened into one generic species price."],["DESIGNER LINES", "Designer and project animals remain separate from locality import comparisons."]].map(([title, text]) => <div key={title} className="panel-soft rounded-[22px] p-5"><div className="text-[10px] font-bold tracking-[.15em] text-emerald-300/65">{title}</div><p className="mt-3 text-sm leading-6 text-white/50">{text}</p></div>)}
