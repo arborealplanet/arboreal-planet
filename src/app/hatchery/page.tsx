@@ -15,7 +15,7 @@ export default function HatcheryPage() {
       </section>
 
       <PageIntro
-        eyebrow="Arboreal Arcade"
+        eyebrow="The Hatchery"
         title="Breeder games built around long-term progression."
         description="Arboreal Planet's game space starts with Chondro Breeder, where players manage a virtual collection, breeding seasons, lineage, facilities, genetics, shows and research over multiple generations."
         aside={<div className="rounded-full border border-amber-200/15 bg-amber-200/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">Virtual animals only</div>}
@@ -35,7 +35,7 @@ export default function HatcheryPage() {
             </div>
 
             <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">
-              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arboreal Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />
+              <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet The Hatchery" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />
               <div className="border-t border-white/[.06] bg-[#030806] p-3">
                 <div className="grid grid-cols-[96px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">
                   <Image src="/hatchery/game/hatching.webp" alt="Chondro Breeder illustrated hatching art" width={220} height={220} className="h-auto w-full rounded-[14px]" />
@@ -65,7 +65,7 @@ export default function HatcheryPage() {
             <div className="mt-6 grid grid-cols-3 gap-3">{["Collection", "Lineages", "Projects"].map((item) => <div key={item} className="rounded-2xl border border-white/[.06] bg-white/[.018] p-4"><div className="text-[9px] uppercase tracking-[.13em] text-white/22">{item}</div><div className="mt-3 text-xl font-semibold text-white/45">—</div></div>)}</div>
           </div>
           <div className="panel rounded-3xl p-6">
-            <div className="section-kicker">Arcade achievements</div>
+            <div className="section-kicker">Hatchery achievements</div>
             <h2 className="mt-3 text-2xl font-semibold">Achievements track long-term progress.</h2>
             <div className="mt-5 flex flex-wrap gap-2">{achievements.map((item) => <span key={item} className="rounded-full border border-amber-200/10 bg-amber-200/[.025] px-3 py-2 text-[11px] font-semibold text-amber-100/45">{item}</span>)}</div>
             <p className="mt-5 text-xs leading-5 text-white/28">Game rarity, virtual prices and progression are game systems only and do not represent real biological rarity or market value.</p>
