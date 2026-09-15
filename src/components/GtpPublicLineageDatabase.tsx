@@ -28,6 +28,9 @@ function taxonFor(locality?: string) {
 export function GtpPublicLineageDatabase() {
   const [animals, setAnimals] = useState<PublicAnimal[]>([]);
   const [query, setQuery] = useState("");
+  const [taxon, setTaxon] = useState("All taxa");
+  const [locality, setLocality] = useState("All localities");
+  const [sex, setSex] = useState("All sexes");
   const [status, setStatus] = useState("Loading public lineage records…");
 
   async function load() {
@@ -46,11 +49,31 @@ export function GtpPublicLineageDatabase() {
   useEffect(() => { void load(); }, []);
 
   const byId = useMemo(() => new Map(animals.map((animal) => [animal.id, animal])), [animals]);
+  const taxa = useMemo(() => [...new Set(animals.map((animal) => taxonFor(animal.locality)))].sort(), [animals]);
+  const localities = useMemo(() => [...new Set(animals.map((animal) => animal.locality || "Mixed / Unknown"))].sort(), [animals]);
+  const sexes = useMemo(() => [...new Set(animals.map((animal) => animal.sex || "Unknown"))].sort(), [animals]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return animals;
-    return animals.filter((animal) => [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, taxonFor(animal.locality), animal.contributor?.displayName, animal.contributor?.username].some((value) => String(value ?? "").toLowerCase().includes(needle)));
-  }, [animals, query]);
+    return animals.filter((animal) => {
+      const animalTaxon = taxonFor(animal.locality);
+      const animalLocality = animal.locality || "Mixed / Unknown";
+      const animalSex = animal.sex || "Unknown";
+      const matchesSearch = !needle || [animal.name, animal.registryCode, animal.locality, animal.breederId, animal.hatchYear, animalTaxon, animal.contributor?.displayName, animal.contributor?.username]
+        .some((value) => String(value ?? "").toLowerCase().includes(needle));
+      return matchesSearch
+        && (taxon === "All taxa" || animalTaxon === taxon)
+        && (locality === "All localities" || animalLocality === locality)
+        && (sex === "All sexes" || animalSex === sex);
+    });
+  }, [animals, query, taxon, locality, sex]);
+
+  function resetFilters() {
+    setQuery("");
+    setTaxon("All taxa");
+    setLocality("All localities");
+    setSex("All sexes");
+  }
 
   return (
     <div className="space-y-5">
@@ -65,7 +88,30 @@ export function GtpPublicLineageDatabase() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="e.g. AP-GTP, Jayapura, utaraensis" className="mt-2 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 py-3 text-base text-white/75" />
           </label>
         </div>
-        <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-[10px] font-bold uppercase tracking-[.11em] text-white/28">Subspecies / taxon
+            <select value={taxon} onChange={(event) => setTaxon(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[.07] bg-[#08130e] px-3 py-3 text-xs normal-case tracking-normal text-white/65">
+              <option>All taxa</option>
+              {taxa.map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] font-bold uppercase tracking-[.11em] text-white/28">Reported locality
+            <select value={locality} onChange={(event) => setLocality(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[.07] bg-[#08130e] px-3 py-3 text-xs normal-case tracking-normal text-white/65">
+              <option>All localities</option>
+              {localities.map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] font-bold uppercase tracking-[.11em] text-white/28">Sex
+            <select value={sex} onChange={(event) => setSex(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[.07] bg-[#08130e] px-3 py-3 text-xs normal-case tracking-normal text-white/65">
+              <option>All sexes</option>
+              {sexes.map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={resetFilters} className="self-end rounded-xl border border-emerald-300/15 px-4 py-3 text-xs font-bold text-emerald-200/70">Reset filters</button>
+        </div>
+
+        <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status} {animals.length ? `${filtered.length} currently shown.` : ""}</div>
       </div>
 
       {filtered.length ? (
@@ -114,7 +160,7 @@ export function GtpPublicLineageDatabase() {
           })}
         </div>
       ) : (
-        <div className="panel-soft rounded-[22px] p-8 text-center text-sm text-white/32">{animals.length ? "No published records match that search." : "The public lineage database is ready for the first opt-in records."}</div>
+        <div className="panel-soft rounded-[22px] p-8 text-center text-sm text-white/32">{animals.length ? "No published records match those filters." : "The public lineage database is ready for the first opt-in records."}</div>
       )}
     </div>
   );
