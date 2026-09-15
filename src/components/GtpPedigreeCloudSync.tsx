@@ -180,7 +180,7 @@ export function GtpPedigreeCloudSync() {
           <Link href="/login?next=/genetics#animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in to sync</Link>
         ) : (
           <>
-            <button type="button" disabled={busy || signedIn !== true} onClick={() => void saveToCloud()} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30">{cloudCount > 0 && readLocalAnimals().length === 0 ? "Clear account pedigree" : "Save device pedigree to account"}</button>
+            <button type="button" disabled={busy || signedIn !== true} onClick={() => void saveToCloud()} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30">Save device pedigree to account</button>
             <button type="button" disabled={busy || signedIn !== true || cloudCount === 0} onClick={() => void loadFromCloud()} className="rounded-xl border border-white/[.08] px-4 py-2.5 text-xs font-bold text-white/55 disabled:opacity-30">Load account pedigree on this device</button>
           </>
         )}
