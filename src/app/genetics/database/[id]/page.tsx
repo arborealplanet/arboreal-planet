@@ -5,6 +5,7 @@ import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 type PublicRecord = {
   id: string;
+  owner_id: string;
   name: string;
   sex: string | null;
   locality_label: string | null;
@@ -15,9 +16,10 @@ type PublicRecord = {
   photo_path: string | null;
   updated_at: string;
 };
+type PublicProfile = { username: string | null; display_name: string | null; avatar_url: string | null };
 
 async function publicRecord(id: string) {
-  const fields = "id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
+  const fields = "id,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&visibility=eq.public&select=${fields}&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -27,8 +29,18 @@ async function publicRecord(id: string) {
   return rows[0] ?? null;
 }
 
+async function publicProfile(id: string) {
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=username,display_name,avatar_url&limit=1`, {
+    headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const rows = await response.json() as PublicProfile[];
+  return rows[0] ?? null;
+}
+
 async function publicDescendants(id: string) {
-  const fields = "id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
+  const fields = "id,owner_id,name,sex,locality_label,breeder_animal_id,hatch_year,dam_id,sire_id,photo_path,updated_at";
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?visibility=eq.public&or=(dam_id.eq.${encodeURIComponent(id)},sire_id.eq.${encodeURIComponent(id)})&select=${fields}&order=hatch_year.desc.nullslast&limit=100`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Accept: "application/json" },
     cache: "no-store",
@@ -52,13 +64,15 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
   const animal = await publicRecord(id);
   if (!animal) notFound();
 
-  const [dam, sire, descendants] = await Promise.all([
+  const [dam, sire, descendants, contributor] = await Promise.all([
     animal.dam_id ? publicRecord(animal.dam_id) : Promise.resolve(null),
     animal.sire_id ? publicRecord(animal.sire_id) : Promise.resolve(null),
     publicDescendants(animal.id),
+    publicProfile(animal.owner_id),
   ]);
   const locality = animal.locality_label || "Mixed / Unknown";
   const taxon = taxonFor(animal.locality_label);
+  const contributorLabel = contributor?.display_name || contributor?.username || null;
 
   return <main className="mx-auto max-w-7xl px-5 py-10 pb-20 sm:px-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -77,6 +91,11 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
           <h1 className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white/88">{animal.name}</h1>
           <div className="mt-3 text-sm text-white/38">{animal.sex || "Unknown sex"}{animal.hatch_year ? ` · Hatched ${animal.hatch_year}` : ""}</div>
 
+          {contributorLabel ? <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[.06] bg-black/10 p-3">
+            {contributor?.avatar_url ? <img src={contributor.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="grid h-10 w-10 place-items-center rounded-full border border-white/[.07] text-[10px] font-bold text-white/30">AP</div>}
+            <div><div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Contributed by</div>{contributor?.username ? <Link href={`/keepers/${encodeURIComponent(contributor.username)}`} className="mt-1 block text-sm font-semibold text-white/62 hover:text-emerald-100">{contributorLabel}</Link> : <div className="mt-1 text-sm font-semibold text-white/62">{contributorLabel}</div>}</div>
+          </div> : null}
+
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Reported locality</div><div className="mt-2 font-semibold text-white/68">{locality}</div></div>
             <div className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.13em] text-white/25">Arboreal Planet grouping</div><div className="mt-2 font-semibold text-emerald-100/65">{taxon}</div></div>
@@ -92,7 +111,7 @@ export default async function PublicLineageRecordPage({ params }: { params: Prom
           <div className="section-kicker">Parents</div>
           <h2 className="mt-2 text-2xl font-semibold text-white/78">Published parentage</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2"><MiniRecord animal={dam} relationship="Dam"/><MiniRecord animal={sire} relationship="Sire"/></div>
-          <p className="mt-4 text-[10px] leading-5 text-white/28">A parent can be linked in the keeper's private pedigree without appearing here. Private relatives stay hidden until their owner publishes them.</p>
+          <p className="mt-4 text-[10px] leading-5 text-white/28">A parent can be linked in the keeper&apos;s private pedigree without appearing here. Private relatives stay hidden until their owner publishes them.</p>
         </section>
 
         <section className="panel rounded-[28px] p-5 sm:p-6">
