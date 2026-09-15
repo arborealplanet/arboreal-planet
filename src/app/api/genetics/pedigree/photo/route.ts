@@ -13,6 +13,19 @@ function storageObjectUrl(path: string) {
   return `${SUPABASE_AUTH_URL}/storage/v1/object/gtp-pedigrees/${encoded}`;
 }
 
+async function removeStorageObject(path: string, token: string) {
+  return fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/gtp-pedigrees`, {
+    method: "DELETE",
+    headers: {
+      apikey: SUPABASE_AUTH_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prefixes: [path] }),
+    cache: "no-store",
+  });
+}
+
 async function fetchAnimal(id: string, token?: string) {
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?id=eq.${encodeURIComponent(id)}&select=id,owner_id,visibility,photo_path&limit=1`, {
     headers: {
@@ -97,14 +110,7 @@ export async function POST(request: Request) {
   if (!patch.ok) return NextResponse.json({ error: "Photo uploaded, but the pedigree record could not be updated." }, { status: patch.status });
 
   if (animal.row.photo_path && animal.row.photo_path !== path) {
-    await fetch(storageObjectUrl(animal.row.photo_path), {
-      method: "DELETE",
-      headers: {
-        apikey: SUPABASE_AUTH_KEY,
-        Authorization: `Bearer ${identity.token}`,
-      },
-      cache: "no-store",
-    }).catch(() => null);
+    await removeStorageObject(animal.row.photo_path, identity.token).catch(() => null);
   }
 
   return NextResponse.json({ ok: true, photoUrl: `/api/genetics/pedigree/photo?id=${encodeURIComponent(id)}&v=${Date.now()}` });
@@ -122,14 +128,7 @@ export async function DELETE(request: Request) {
   if (!animal.row || animal.row.owner_id !== identity.user.id) return NextResponse.json({ error: "Animal not found" }, { status: 404 });
 
   if (animal.row.photo_path) {
-    const remove = await fetch(storageObjectUrl(animal.row.photo_path), {
-      method: "DELETE",
-      headers: {
-        apikey: SUPABASE_AUTH_KEY,
-        Authorization: `Bearer ${identity.token}`,
-      },
-      cache: "no-store",
-    });
+    const remove = await removeStorageObject(animal.row.photo_path, identity.token);
     if (!remove.ok && remove.status !== 404) return NextResponse.json({ error: "Unable to remove photo" }, { status: remove.status });
   }
 
