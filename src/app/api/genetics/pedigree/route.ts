@@ -23,6 +23,7 @@ type ExistingAnimal = {
   visibility?: string;
   dam_id?: string | null;
   sire_id?: string | null;
+  photo_path?: string | null;
 };
 
 function cleanText(value: unknown, max: number) {
@@ -32,6 +33,19 @@ function cleanText(value: unknown, max: number) {
 function cleanParent(value: unknown) {
   const text = String(value ?? "").trim();
   return UUID_RE.test(text) ? text : null;
+}
+
+async function removeStorageObject(path: string, token: string) {
+  return fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/gtp-pedigrees`, {
+    method: "DELETE",
+    headers: {
+      apikey: SUPABASE_AUTH_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prefixes: [path] }),
+    cache: "no-store",
+  });
 }
 
 export async function GET() {
@@ -105,7 +119,7 @@ export async function PUT(request: Request) {
   if (!body || !Array.isArray(body.animals)) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   if (body.animals.length > 2000) return NextResponse.json({ error: "Pedigree is too large for one sync." }, { status: 400 });
 
-  const existingResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?owner_id=eq.${encodeURIComponent(identity.user.id)}&select=id,visibility,dam_id,sire_id`, {
+  const existingResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/gtp_pedigree_animals?owner_id=eq.${encodeURIComponent(identity.user.id)}&select=id,visibility,dam_id,sire_id,photo_path`, {
     headers: {
       apikey: SUPABASE_AUTH_KEY,
       Authorization: `Bearer ${identity.token}`,
@@ -116,7 +130,8 @@ export async function PUT(request: Request) {
   const existingRows = await existingResponse.json().catch(() => null) as ExistingAnimal[] | null;
   if (!existingResponse.ok) return NextResponse.json({ error: "Unable to inspect existing pedigree before sync", detail: existingRows }, { status: existingResponse.status });
 
-  const existingById = new Map((Array.isArray(existingRows) ? existingRows : []).map((row) => [String(row.id), row]));
+  const existing = Array.isArray(existingRows) ? existingRows : [];
+  const existingById = new Map(existing.map((row) => [String(row.id), row]));
   const ids = new Set<string>();
   const cleaned = [] as Array<Record<string, unknown>>;
 
@@ -152,17 +167,17 @@ export async function PUT(request: Request) {
   // If the browser pedigree does not contain that external parent, normal sync must
   // preserve the cloud link instead of silently clearing a breeding agreement.
   for (const row of cleaned) {
-    const existing = existingById.get(String(row.id));
-    if (!row.dam_id && existing?.dam_id && !ids.has(existing.dam_id)) row.dam_id = existing.dam_id;
-    if (!row.sire_id && existing?.sire_id && !ids.has(existing.sire_id)) row.sire_id = existing.sire_id;
+    const current = existingById.get(String(row.id));
+    if (!row.dam_id && current?.dam_id && !ids.has(current.dam_id)) row.dam_id = current.dam_id;
+    if (!row.sire_id && current?.sire_id && !ids.has(current.sire_id)) row.sire_id = current.sire_id;
   }
 
   for (const row of cleaned) {
     const dam = row.dam_id as string | null;
     const sire = row.sire_id as string | null;
-    const existing = existingById.get(String(row.id));
-    const damAllowed = !dam || ids.has(dam) || dam === existing?.dam_id;
-    const sireAllowed = !sire || ids.has(sire) || sire === existing?.sire_id;
+    const current = existingById.get(String(row.id));
+    const damAllowed = !dam || ids.has(dam) || dam === current?.dam_id;
+    const sireAllowed = !sire || ids.has(sire) || sire === current?.sire_id;
     if (!damAllowed || !sireAllowed) {
       return NextResponse.json({ error: "Use the registered-parent linker for a parent owned by another keeper." }, { status: 400 });
     }
@@ -184,6 +199,15 @@ export async function PUT(request: Request) {
     if (!upsert.ok) {
       const detail = await upsert.json().catch(() => null);
       return NextResponse.json({ error: "Unable to save pedigree", detail }, { status: upsert.status });
+    }
+  }
+
+  const removedAnimals = existing.filter((row) => row.id && !ids.has(row.id));
+  for (const removedAnimal of removedAnimals) {
+    if (!removedAnimal.photo_path) continue;
+    const removePhoto = await removeStorageObject(removedAnimal.photo_path, identity.token).catch(() => null);
+    if (!removePhoto || (!removePhoto.ok && removePhoto.status !== 404)) {
+      return NextResponse.json({ error: "Pedigree saved, but a deleted animal photo could not be cleaned up." }, { status: removePhoto?.status || 500 });
     }
   }
 
