@@ -17,6 +17,7 @@ const nav = [
 ] as const;
 
 const footerProductLinks = [
+  ["Search", "/search"],
   ["Animals", "/animals"],
   ["Genetics", "/genetics"],
   ["Plants", "/plants"],
@@ -69,6 +70,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-2">
+          <Link href="/search" aria-label="Search Arboreal Planet" title="Search Arboreal Planet" className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.07] bg-white/[.02] text-sm text-white/50 transition hover:border-emerald-300/20 hover:bg-emerald-300/[.03] hover:text-emerald-200">⌕</Link>
           <PwaInstallButton />
           {signedIn&&<div className="lg:hidden"><NotificationBell /></div>}
         </div>
@@ -85,6 +87,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav aria-label="Browse" className="hide-scrollbar mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/[.04] px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[.08em] text-white/50 lg:hidden sm:px-6">
+        <Link href="/search" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Search</Link>
         {nav.slice(0,4).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
       </nav>
     </header>
