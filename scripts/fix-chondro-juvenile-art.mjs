@@ -79,4 +79,65 @@ for (const { file, pairs } of replacements) {
   if (changed) fs.writeFileSync(file, source);
 }
 
-console.log("Applied Chondro juvenile-art wiring for hatchlings, neonates and subadults.");
+const expandedShopFile = "src/components/ChondroBreederExpandedShop.tsx";
+let expandedShop = fs.readFileSync(expandedShopFile, "utf8");
+let expandedShopChanged = false;
+
+const oldColorRoll = 'const neonateColor: "Red" | "Yellow" = subspecies === "Morelia viridis" ? "Yellow" : random() < 0.4 ? "Red" : "Yellow";';
+const newColorRoll = 'const neonateColor: "Red" | "Yellow" = subspecies === "Morelia viridis" ? "Yellow" : random() < 0.5 ? "Red" : "Yellow";';
+if (expandedShop.includes(oldColorRoll)) {
+  expandedShop = expandedShop.replace(oldColorRoll, newColorRoll);
+  expandedShopChanged = true;
+}
+
+const oldBuildOffers = `function buildOffers(seed: number, rows: ConservationRow[]) {
+  const random = rng(seed * 7919 + 20260908);
+  const effects = effectMap(rows);
+  return Array.from({ length: 20 }, (_, index) => makeRandomOffer(seed, index, random, effects));
+}`;
+const newBuildOffers = `function buildOffers(seed: number, rows: ConservationRow[]) {
+  const random = rng(seed * 7919 + 20260908);
+  const effects = effectMap(rows);
+  const yellowShowcase: Array<[Subspecies, Locality]> = [
+    ["Morelia azurea azurea", "Biak"],
+    ["Morelia azurea pulcher", "Manokwari"],
+    ["Morelia azurea utaraensis", "Cyclops"],
+  ];
+
+  return Array.from({ length: 20 }, (_, index) => {
+    const offer = makeRandomOffer(seed, index, random, effects);
+    const forced = yellowShowcase[index];
+    if (!forced) return offer;
+
+    const [subspecies, locality] = forced;
+    return {
+      ...offer,
+      name: \\`\\${locality} Yellow Juvenile\\`,
+      subspecies,
+      locality,
+      neonateColor: "Yellow" as const,
+      lifeStage: "Neonate" as const,
+      localityAncestry: { [locality]: 100 },
+      body: subspecies,
+      tail: subspecies === "Morelia azurea utaraensis" ? "Matching body color and pattern" : "Black-dipped",
+      eyes: subspecies,
+      head: subspecies,
+      pattern: locality,
+      color: locality,
+      ancestry: { [subspecies]: 100 },
+      featured: true,
+      specialLabel: "Yellow juvenile showcase",
+    };
+  });
+}`;
+
+if (expandedShop.includes(oldBuildOffers)) {
+  expandedShop = expandedShop.replace(oldBuildOffers, newBuildOffers);
+  expandedShopChanged = true;
+} else if (!expandedShop.includes("const yellowShowcase: Array<[Subspecies, Locality]>") ) {
+  throw new Error("Yellow juvenile shop showcase patch could not find buildOffers.");
+}
+
+if (expandedShopChanged) fs.writeFileSync(expandedShopFile, expandedShop);
+
+console.log("Applied Chondro juvenile-art wiring plus guaranteed yellow juvenile shop showcases.");
