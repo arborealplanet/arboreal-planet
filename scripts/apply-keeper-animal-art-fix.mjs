@@ -147,10 +147,10 @@ function emeraldSpriteStyle(animal: EmeraldAnimal): React.CSSProperties | null {
   const x = columns === 1 ? 0 : (column / (columns - 1)) * 100;
   const y = rows === 1 ? 0 : (row / (rows - 1)) * 100;
   return {
-    backgroundImage: `url("${animal.assetPath}")`,
+    backgroundImage: 'url("' + animal.assetPath + '")',
     backgroundRepeat: "no-repeat",
-    backgroundSize: `${columns * 100}% ${rows * 100}%`,
-    backgroundPosition: `${x}% ${y}%`,
+    backgroundSize: String(columns * 100) + "% " + String(rows * 100) + "%",
+    backgroundPosition: String(x) + "% " + String(y) + "%",
   };
 }
 `;
@@ -161,11 +161,11 @@ update(marketPath, (source) => {
   if (!next.includes(speciesImport)) {
     next = next.replace(
       'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";',
-      `import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";\n${speciesImport}`,
+      'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";\n' + speciesImport,
     );
   }
   if (!next.includes("function emeraldSpriteStyle")) {
-    next = next.replace("function compatibleEmptyHousingCount", `${spriteHelper}\nfunction compatibleEmptyHousingCount`);
+    next = next.replace("function compatibleEmptyHousingCount", spriteHelper + "\nfunction compatibleEmptyHousingCount");
   }
   next = next.replace(
 `    const offer = offers.find((item) => item.id === offerId);
@@ -173,7 +173,8 @@ update(marketPath, (source) => {
 `    const offer = offers.find((item) => item.id === offerId);
     if (!offer || purchased.has(offer.id) || busy) return;
     if (!offer.available) {
-      setStatus(`${emeraldSpeciesDisplayName(offer.animal.speciesId)} unlocks at Keeper Level ${ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel}.`);
+      const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;
+      setStatus(emeraldSpeciesDisplayName(offer.animal.speciesId) + " unlocks at Keeper Level " + requiredLevel + ".");
       return;
     }`,
   );
@@ -186,29 +187,22 @@ update(marketPath, (source) => {
                 const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;
                 const locked = !offer.available;`,
   );
-  next = next.replace(
-`                      {showImage ? (
-                        <Image
-                          src={offer.animal.assetPath!}
-                          alt={\`${"${"}emeraldSpeciesDisplayName(offer.animal.speciesId)} ${"${"}offer.animal.lifeStage}\`}
-                          fill
-                          sizes="(max-width: 640px) 82vw, (max-width: 1024px) 48vw, 33vw"
-                          className="object-contain p-2"
-                          onError={() => setBrokenAssets((current) => current.includes(offer.animal.assetPath!) ? current : [...current, offer.animal.assetPath!])}
-                        />
-                      ) : (`,
-`                      {showImage ? (
+
+  if (!next.includes('style={spriteStyle}')) {
+    next = next.replace(
+      /\{showImage \? \(\s*<Image[\s\S]*?\/>\s*\) : \(/,
+`{showImage ? (
                         spriteStyle ? (
                           <div
                             role="img"
-                            aria-label={\`${"${"}emeraldSpeciesDisplayName(offer.animal.speciesId)} ${"${"}offer.animal.lifeStage}\`}
+                            aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
                             className="absolute inset-2 rounded-xl bg-black"
                             style={spriteStyle}
                           />
                         ) : (
                           <Image
                             src={offer.animal.assetPath!}
-                            alt={\`${"${"}emeraldSpeciesDisplayName(offer.animal.speciesId)} ${"${"}offer.animal.lifeStage}\`}
+                            alt={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
                             fill
                             sizes="(max-width: 640px) 82vw, (max-width: 1024px) 48vw, 33vw"
                             className="object-contain p-2"
@@ -216,8 +210,11 @@ update(marketPath, (source) => {
                           />
                         )
                       ) : (`,
-  );
-  next = next.replace(
+    );
+  }
+
+  if (!next.includes("Unlocks Level {requiredLevel}")) {
+    next = next.replace(
 `                      <div className="flex flex-wrap gap-1.5">
                         {offer.animal.phase === "anaconda" ? (`,
 `                      <div className="flex flex-wrap gap-1.5">
@@ -225,14 +222,15 @@ update(marketPath, (source) => {
                           <span className="rounded-full border border-amber-200/15 bg-amber-200/[.05] px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-amber-100/70">Unlocks Level {requiredLevel}</span>
                         ) : null}
                         {offer.animal.phase === "anaconda" ? (`,
-  );
+    );
+  }
   next = next.replace(
     'disabled={sold || busy !== null || cash < offer.price || housing <= 0}',
     'disabled={locked || sold || busy !== null || cash < offer.price || housing <= 0}',
   );
   next = next.replace(
     '{sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
-    '{locked ? `Level ${requiredLevel}` : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
+    '{locked ? "Level " + requiredLevel : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
   );
   return next;
 }, "Rendered committed Emerald sprites in the separate boa market bar with visible level locks.");
@@ -240,23 +238,9 @@ update(marketPath, (source) => {
 update(workspacePath, (source) => {
   let next = source;
   if (!next.includes("function emeraldSpriteStyle")) {
-    next = next.replace("type EconomyAction =", `${spriteHelper}\ntype EconomyAction =`);
+    next = next.replace("type EconomyAction =", spriteHelper + "\ntype EconomyAction =");
   }
-  next = next.replace(
-`function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
-  return (
-    <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
-      {animal.assetPath && !failed ? (
-        <Image
-          src={animal.assetPath}
-          alt={\`${"${"}emeraldSpeciesDisplayName(animal.speciesId)} game asset\`}
-          fill
-          sizes="(max-width: 768px) 90vw, 320px"
-          className="object-contain p-1"
-          onError={onFail}
-        />
-      ) : (`,
-`function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
+  const portrait = `function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
   const spriteStyle = emeraldSpriteStyle(animal);
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
@@ -264,21 +248,35 @@ update(workspacePath, (source) => {
         spriteStyle ? (
           <div
             role="img"
-            aria-label={\`${"${"}emeraldSpeciesDisplayName(animal.speciesId)} game asset\`}
+            aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " game asset"}
             className="absolute inset-1 rounded-[16px] bg-black"
             style={spriteStyle}
           />
         ) : (
           <Image
             src={animal.assetPath}
-            alt={\`${"${"}emeraldSpeciesDisplayName(animal.speciesId)} game asset\`}
+            alt={emeraldSpeciesDisplayName(animal.speciesId) + " game asset"}
             fill
             sizes="(max-width: 768px) 90vw, 320px"
             className="object-contain p-1"
             onError={onFail}
           />
         )
-      ) : (`,
+      ) : (
+        <div className="absolute inset-0 grid place-items-center p-5 text-center">
+          <div>
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-emerald-300/10 bg-emerald-300/[.04] text-2xl text-emerald-100/40">◆</div>
+            <div className="mt-3 text-[10px] font-black uppercase tracking-[.15em] text-white/30">Asset slot ready</div>
+            <div className="mt-1 text-xs text-white/22">{animal.assetId ?? "Emerald artwork pending upload"}</div>
+          </div>
+        </div>
+      )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+    </div>
   );
+}
+
+`;
+  next = next.replace(/function EmeraldPortrait\([\s\S]*?\n}\n\nfunction EmptyState/, portrait + "function EmptyState");
   return next;
 }, "Rendered committed Emerald sprites throughout My Animals and breeding views.");
