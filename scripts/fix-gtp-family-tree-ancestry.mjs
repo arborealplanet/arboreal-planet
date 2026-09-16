@@ -57,15 +57,15 @@ if (source.includes(oldAncestryFor)) {
 const oldFormatAncestry = `function formatAncestry(ancestry: Ancestry) {
   const entries = ancestryEntries(ancestry);
   if (!entries.length) return "Subspecies ancestry unknown";
-  return entries.map(([taxon, value]) => \`${formatPercent(value)} ${taxon}\`).join(" · ");
+  return entries.map(([taxon, value]) => \`\${formatPercent(value)} \${taxon}\`).join(" · ");
 }`;
 
 const newFormatAncestry = `function formatAncestry(ancestry: Ancestry) {
   const entries = ancestryEntries(ancestry);
   const known = entries.reduce((sum, [, value]) => sum + value, 0);
   const unknown = Math.max(0, Math.round((100 - known) * 10) / 10);
-  const parts = entries.map(([taxon, value]) => \`${formatPercent(value)} ${taxon}\`);
-  if (unknown > 0.1) parts.push(\`${formatPercent(unknown)} Unknown / unresolved\`);
+  const parts = entries.map(([taxon, value]) => \`\${formatPercent(value)} \${taxon}\`);
+  if (unknown > 0.1) parts.push(\`\${formatPercent(unknown)} Unknown / unresolved\`);
   return parts.length ? parts.join(" · ") : "100% Unknown / unresolved";
 }`;
 
@@ -79,7 +79,7 @@ if (source.includes(oldFormatAncestry)) {
 const oldAncestryLabel = `function ancestryLabel(ancestry: Ancestry) {
   const entries = ancestryEntries(ancestry);
   if (!entries.length) return "Unknown ancestry";
-  if (entries.length === 1 && entries[0][1] >= 99.9) return \`Pure ${entries[0][0]}\`;
+  if (entries.length === 1 && entries[0][1] >= 99.9) return \`Pure \${entries[0][0]}\`;
   return "Mixed subspecies ancestry";
 }`;
 
@@ -88,7 +88,7 @@ const newAncestryLabel = `function ancestryLabel(ancestry: Ancestry) {
   if (!entries.length) return "Unknown ancestry";
   const known = entries.reduce((sum, [, value]) => sum + value, 0);
   if (known < 99.9) return "Partial ancestry";
-  if (entries.length === 1 && entries[0][1] >= 99.9) return \`Pure ${entries[0][0]}\`;
+  if (entries.length === 1 && entries[0][1] >= 99.9) return \`Pure \${entries[0][0]}\`;
   return "Mixed subspecies ancestry";
 }`;
 
