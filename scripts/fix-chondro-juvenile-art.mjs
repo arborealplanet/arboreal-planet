@@ -112,7 +112,7 @@ const newBuildOffers = `function buildOffers(seed: number, rows: ConservationRow
     const [subspecies, locality] = forced;
     return {
       ...offer,
-      name: \\`\\${locality} Yellow Juvenile\\`,
+      name: locality + " Yellow Juvenile",
       subspecies,
       locality,
       neonateColor: "Yellow" as const,
