@@ -52,7 +52,7 @@ export default function ArcadePage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-14 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[["1 · BUILD", "Start with limited facility capacity, compatible enclosures and an operating budget."],["2 · KEEP", "House animals individually by default while sharing compatible enclosure models across species."],["3 · BREED", "Run egg-laying or live-bearing breeding programs according to each species' biology."],["4 · EXPAND", "Raise offspring, keep holdbacks, build lines, expand rooms and unlock rarer species and equipment."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
+          {[["1 · BUILD", "Start with limited facility capacity, compatible enclosures and an operating budget."],["2 · KEEP", "House animals individually by default while sharing compatible enclosure models across species."],["3 · BREED", "Run egg-laying or live-bearing breeding programs according to the biology of each species."],["4 · EXPAND", "Raise offspring, keep holdbacks, build lines, expand rooms and unlock rarer species and equipment."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
         </div>
       </section>
 
