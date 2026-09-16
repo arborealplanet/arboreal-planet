@@ -35,7 +35,7 @@ function sanitizeLocalSave(value: unknown) {
 
 export function ChondroSaveRecoveryGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [message, setMessage] = useState("Checking your Chondro Breeder save…");
+  const [message, setMessage] = useState("Checking your Arboreal Keeper save…");
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +56,7 @@ export function ChondroSaveRecoveryGate({ children }: { children: ReactNode }) {
 
       try {
         const response = await fetch("/api/hatchery/chondro-breeder/repair-save", { method: "POST", cache: "no-store" });
-        if (response.ok) setMessage("Save checked. Loading your breeder program…");
+        if (response.ok) setMessage("Save checked. Loading your Arboreal Keeper facility…");
       } catch {
         // Continue into the game even if cloud repair is temporarily unavailable.
       } finally {

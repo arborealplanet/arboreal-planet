@@ -1,10 +1,5 @@
-import { ChondroBreederWorkspace } from "@/components/ChondroBreederWorkspace";
-import { ChondroSaveRecoveryGate } from "@/components/ChondroSaveRecoveryGate";
+import { redirect } from "next/navigation";
 
-export default function ChondroBreederPage() {
-  return (
-    <ChondroSaveRecoveryGate>
-      <ChondroBreederWorkspace />
-    </ChondroSaveRecoveryGate>
-  );
+export default function ChondroBreederLegacyPage() {
+  redirect("/hatchery/arboreal-keeper");
 }
