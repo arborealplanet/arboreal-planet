@@ -271,7 +271,7 @@ if (fs.existsSync(workspacePath)) {
     const cost = breedingCost(speciesId);`,
       `    const recoveryUntil = Number(save.femaleRecoveryUntil[dam.id] ?? 0);
     if (recoveryUntil > now) {
-      setMessage(\`${dam.name} is still recovering from her previous litter for ${remaining(recoveryUntil - now)}.\`);
+      setMessage(dam.name + " is still recovering from her previous litter for " + remaining(recoveryUntil - now) + ".");
       return;
     }
     if (currentJob) {
