@@ -33,6 +33,16 @@ export const ARBOREAL_KEEPER_ROADMAP: KeeperRoadmapSpecies[] = [
     note: "Original Arboreal Keeper breeding program.",
   },
   {
+    id: "mourning_gecko",
+    displayName: "Mourning Gecko",
+    scientificName: "Lepidodactylus lugubris",
+    group: "Gecko",
+    unlockLevel: 3,
+    status: "planned",
+    lock: "experience",
+    note: "Compact early-game gecko program planned for the shared nursery and display systems.",
+  },
+  {
     id: "crested_gecko",
     displayName: "Crested Gecko",
     scientificName: "Correlophus ciliatus",
@@ -41,6 +51,16 @@ export const ARBOREAL_KEEPER_ROADMAP: KeeperRoadmapSpecies[] = [
     status: "planned",
     lock: "experience",
     note: "Entry gecko program planned for the shared facility.",
+  },
+  {
+    id: "giant_day_gecko",
+    displayName: "Giant Day Gecko",
+    scientificName: "Phelsuma grandis",
+    group: "Gecko",
+    unlockLevel: 5,
+    status: "planned",
+    lock: "experience",
+    note: "Colorful early display-gecko branch with planted enclosure incentives.",
   },
   {
     id: "amazon_tree_boa",
@@ -60,7 +80,7 @@ export const ARBOREAL_KEEPER_ROADMAP: KeeperRoadmapSpecies[] = [
     unlockLevel: 7,
     status: "planned",
     lock: "experience",
-    note: "Second gecko program with its own trait system.",
+    note: "Second New Caledonian gecko program with its own trait system.",
   },
   {
     id: "northern_emerald_tree_boa",
