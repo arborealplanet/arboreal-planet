@@ -23,7 +23,7 @@ let source = fs.readFileSync(workspacePath, "utf8");
 source = replaceOnce(
   source,
   'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
-  'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";\nimport { ArborealKeeperSpeciesPrograms } from "@/components/ArborealKeeperSpeciesPrograms";',
+  'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";\nimport { ArborealKeeperSpeciesPrograms } from "@/components/ArborealKeeperSpeciesPrograms";\nimport { ArborealKeeperProgressionStrip } from "@/components/ArborealKeeperProgressionStrip";',
 );
 
 const replacements = [
@@ -54,7 +54,7 @@ for (const [before, after] of replacements) {
 source = replaceOnce(
   source,
   '          <ChondroBreederHomeStatus onOpen={(next) => onOpen(next)} />',
-  '          <ChondroBreederHomeStatus onOpen={(next) => onOpen(next)} />\n\n          <ArborealKeeperSpeciesPrograms />',
+  '          <ChondroBreederHomeStatus onOpen={(next) => onOpen(next)} />\n\n          <ArborealKeeperProgressionStrip />\n          <ArborealKeeperSpeciesPrograms />',
 );
 
 fs.writeFileSync(workspacePath, source);
