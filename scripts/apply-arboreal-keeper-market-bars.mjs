@@ -4,6 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const workspacePath = path.join(root, "src/components/ChondroBreederWorkspace.tsx");
 const chondroShopPath = path.join(root, "src/components/ChondroBreederExpandedShop.tsx");
+const emeraldMarketBarPath = path.join(root, "src/components/ArborealKeeperEmeraldMarketBar.tsx");
 
 function replaceOnce(source, before, after, label) {
   if (source.includes(after)) return source;
@@ -22,6 +23,16 @@ if (fs.existsSync(chondroShopPath)) {
   shop = shop.replace("Swipe to browse all {offers.length} listings", "Swipe to browse all {offers.length} Green Tree Python listings");
   fs.writeFileSync(chondroShopPath, shop);
   console.log("[keeper-market-bars] Labeled the existing carousel as Green Tree Pythons.");
+}
+
+if (fs.existsSync(emeraldMarketBarPath)) {
+  let marketBar = fs.readFileSync(emeraldMarketBarPath, "utf8");
+  marketBar = marketBar.replace(
+    "const marketEpoch = Math.floor((now || Date.now()) / EMERALD_MARKET_DAY_MS);",
+    "const marketEpoch = Math.floor(now / EMERALD_MARKET_DAY_MS);",
+  );
+  fs.writeFileSync(emeraldMarketBarPath, marketBar);
+  console.log("[keeper-market-bars] Kept Emerald market rendering idempotent after hydration.");
 }
 
 if (!fs.existsSync(workspacePath)) {
