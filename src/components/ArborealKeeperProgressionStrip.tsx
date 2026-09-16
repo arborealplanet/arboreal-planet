@@ -26,12 +26,22 @@ export function ArborealKeeperProgressionStrip() {
 
   useEffect(() => {
     const sync = () => setReputation(readCareerReputation());
+    const syncEconomy = (event: Event) => {
+      const detail = (event as CustomEvent<{ reputation?: number }>).detail;
+      if (typeof detail?.reputation === "number") {
+        setReputation(Math.max(0, detail.reputation));
+        return;
+      }
+      sync();
+    };
     sync();
     window.addEventListener("storage", sync);
     window.addEventListener("focus", sync);
+    window.addEventListener("arboreal-keeper-economy-updated", syncEconomy);
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener("focus", sync);
+      window.removeEventListener("arboreal-keeper-economy-updated", syncEconomy);
     };
   }, []);
 
