@@ -3,7 +3,7 @@ import Image from "next/image";
 import { PageIntro } from "@/components/AppShell";
 import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
 
-const achievements = ["First Clutch", "First Red Neo", "First Yellow Neo", "Three Generations", "Lineage Keeper", "Genetics Student"];
+const achievements = ["First Offspring", "First Clutch", "First Litter", "Three Generations", "Lineage Keeper", "Facility Builder"];
 
 export default function ArcadePage() {
   return (
@@ -16,8 +16,8 @@ export default function ArcadePage() {
 
       <PageIntro
         eyebrow="Arcade"
-        title="Breeder games built around long-term progression."
-        description="Arboreal Planet's Arcade starts with Chondro Breeder, where players manage a virtual collection, breeding seasons, lineage, facilities, genetics, shows and research over multiple generations."
+        title="Keeper games built around long-term progression."
+        description="Arboreal Planet's Arcade features Arboreal Keeper, where players build a shared facility, collect multiple arboreal species, manage species-specific breeding programs, customize compatible enclosures and develop lineages over generations."
         aside={<div className="rounded-full border border-amber-200/15 bg-amber-200/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">Virtual animals only</div>}
       />
 
@@ -28,20 +28,20 @@ export default function ArcadePage() {
           <div className="relative grid gap-8 p-7 sm:p-9 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-100/55">Featured game</div>
-              <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Chondro Breeder</h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Manage breeding pairs, lineage, facility capacity, health risk, research and shows. Real-time timers continue while you are away, and each generation becomes part of the program&apos;s recorded history.</p>
-              <div className="mt-7 flex flex-wrap gap-2">{["Cycle", "Pair", "Develop", "Incubation", "Establishment", "Lineage", "Facilities", "Research"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
-              <Link href="/arcade/chondro-breeder" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Chondro Breeder</Link>
+              <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Arboreal Keeper</h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Build one arboreal facility around Green Tree Pythons, Northern Emerald Tree Boas, Amazon Basin Emerald Tree Boas and future species. Each program keeps its own breeding biology while sharing rooms, markets, enclosure systems, progression and records.</p>
+              <div className="mt-7 flex flex-wrap gap-2">{["Pair", "Incubation", "Gestation", "Litters", "Lineage", "Enclosures", "Facilities", "Conservation"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
+              <Link href="/arcade/arboreal-keeper" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Arboreal Keeper</Link>
             </div>
 
             <div className="mx-auto w-full max-w-sm overflow-hidden rounded-[26px] border border-amber-200/15 bg-black/20 shadow-2xl shadow-black/25">
               <Image src="/branding/arboreal-arcade-splash.webp" alt="Arboreal Planet Arcade" width={700} height={1244} sizes="(max-width: 1024px) 90vw, 384px" className="block h-auto w-full" />
               <div className="border-t border-white/[.06] bg-[#030806] p-3">
                 <div className="grid grid-cols-[96px_1fr] items-center gap-3 rounded-[18px] border border-emerald-300/10 bg-emerald-300/[.025] p-3">
-                  <Image src="/hatchery/game/hatching.webp" alt="Chondro Breeder illustrated hatching art" width={220} height={220} className="h-auto w-full rounded-[14px]" />
+                  <Image src="/hatchery/game/hatching.webp" alt="Arboreal Keeper illustrated breeding art" width={220} height={220} className="h-auto w-full rounded-[14px]" />
                   <div>
                     <div className="text-[9px] font-bold uppercase tracking-[.16em] text-emerald-200/50">Inside the game</div>
-                    <div className="mt-1 text-sm font-semibold text-white/72">Breeding, housing, clutches and the store use Arboreal Planet game art.</div>
+                    <div className="mt-1 text-sm font-semibold text-white/72">Animals, breeding programs, housing, offspring and the market share one expanding Arboreal Planet facility.</div>
                   </div>
                 </div>
               </div>
@@ -52,17 +52,17 @@ export default function ArcadePage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-14 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[["1 · BUILD", "Start with a limited collection, facility capacity and operating budget."],["2 · PAIR", "Plan pairings around lineage, locality, phenotype, condition, health and breeding goals."],["3 · MANAGE", "Cycle, Pair, Develop, Incubation, testing and construction continue on real-time timers while you are away."],["4 · EXPAND", "Establish clutches, keep holdbacks, build lines, enter shows, expand rooms and unlock research tools."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
+          {[["1 · BUILD", "Start with limited facility capacity, compatible enclosures and an operating budget."],["2 · KEEP", "House animals individually by default while sharing compatible enclosure models across species."],["3 · BREED", "Run egg-laying or live-bearing breeding programs according to each species' biology."],["4 · EXPAND", "Raise offspring, keep holdbacks, build lines, expand rooms and unlock rarer species and equipment."]].map(([title, text]) => <div key={title} className="panel-soft rounded-3xl p-5"><div className="text-[10px] font-bold tracking-[.16em] text-emerald-300/55">{title}</div><p className="mt-3 text-sm leading-6 text-white/38">{text}</p></div>)}
         </div>
       </section>
 
       <section className="border-y border-white/[.06] bg-black/[.12]">
         <div className="mx-auto grid max-w-7xl gap-5 px-5 py-14 sm:px-6 lg:grid-cols-[1fr_1fr]">
           <div className="panel rounded-3xl p-6">
-            <div className="section-kicker">My Chondro Program</div>
-            <h2 className="mt-3 text-2xl font-semibold">Collection history and lineage records.</h2>
-            <p className="mt-3 text-sm leading-6 text-white/38">Virtual animals retain parentage, hatch color, generation, breeding history, project tags, favorites and achievements across multiple generations.</p>
-            <div className="mt-6 grid grid-cols-3 gap-3">{["Collection", "Lineages", "Projects"].map((item) => <div key={item} className="rounded-2xl border border-white/[.06] bg-white/[.018] p-4"><div className="text-[9px] uppercase tracking-[.13em] text-white/22">{item}</div><div className="mt-3 text-xl font-semibold text-white/45">—</div></div>)}</div>
+            <div className="section-kicker">My Keeper Program</div>
+            <h2 className="mt-3 text-2xl font-semibold">One collection. Multiple species and lineages.</h2>
+            <p className="mt-3 text-sm leading-6 text-white/38">Virtual animals retain parentage, life stage, traits, breeding history, project tags, favorites and achievements while living inside the same facility and market ecosystem.</p>
+            <div className="mt-6 grid grid-cols-3 gap-3">{["Animals", "Lineages", "Programs"].map((item) => <div key={item} className="rounded-2xl border border-white/[.06] bg-white/[.018] p-4"><div className="text-[9px] uppercase tracking-[.13em] text-white/22">{item}</div><div className="mt-3 text-xl font-semibold text-white/45">—</div></div>)}</div>
           </div>
           <div className="panel rounded-3xl p-6">
             <div className="section-kicker">Arcade achievements</div>
@@ -78,24 +78,24 @@ export default function ArcadePage() {
           <div className="panel-soft overflow-hidden rounded-3xl">
             <div className="grid items-center gap-4 p-5 sm:grid-cols-[130px_1fr] sm:p-6">
               <div className="overflow-hidden rounded-[20px] border border-emerald-300/10 bg-black/30">
-                <Image src="/hatchery/game/fresh-eggs.webp" alt="Illustrated Chondro Breeder clutch" width={560} height={560} className="h-auto w-full" />
+                <Image src="/hatchery/game/fresh-eggs.webp" alt="Illustrated Arboreal Keeper offspring art" width={560} height={560} className="h-auto w-full" />
               </div>
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div>
+                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Species systems</div>
                 <h3 className="mt-3 text-xl font-semibold text-white/65">Breeding & Genetics</h3>
-                <p className="mt-2 text-sm leading-6 text-white/32">Cycle, pair, development, incubation, clutch establishment and genetic testing become part of a visual breeding program instead of living only in tables and timers.</p>
+                <p className="mt-2 text-sm leading-6 text-white/32">Green Tree Pythons retain their egg and incubation flow while Emerald Tree Boas use pairing, ovulation, gestation, birth and litter stages.</p>
               </div>
             </div>
           </div>
           <div className="panel-soft overflow-hidden rounded-3xl">
             <div className="grid items-center gap-4 p-5 sm:grid-cols-[130px_1fr] sm:p-6">
               <div className="overflow-hidden rounded-[20px] border border-amber-200/10 bg-black/30">
-                <Image src="/hatchery/game/incubator.webp" alt="Illustrated Chondro Breeder incubator" width={560} height={560} className="h-auto w-full" />
+                <Image src="/hatchery/game/incubator.webp" alt="Illustrated Arboreal Keeper facility" width={560} height={560} className="h-auto w-full" />
               </div>
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Progression system</div>
-                <h3 className="mt-3 text-xl font-semibold text-white/65">Rooms & Facility Growth</h3>
-                <p className="mt-2 text-sm leading-6 text-white/32">Add breeder capacity, incubation and research infrastructure as the collection expands.</p>
+                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Shared progression</div>
+                <h3 className="mt-3 text-xl font-semibold text-white/65">Rooms, Enclosures & Keeper Level</h3>
+                <p className="mt-2 text-sm leading-6 text-white/32">Expand shared rooms, customize compatible enclosures and climb Keeper Levels to unlock rarer animals, equipment and future conservation certificates.</p>
               </div>
             </div>
           </div>
