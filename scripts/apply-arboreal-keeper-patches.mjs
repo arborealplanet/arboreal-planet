@@ -4,6 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const workspacePath = path.join(root, "src/components/ChondroBreederWorkspace.tsx");
 const gamePath = path.join(root, "src/components/ChondroBreederGameV3.tsx");
+const emeraldWorkspacePath = path.join(root, "src/components/ArborealKeeperEmeraldWorkspace.tsx");
 
 function replaceOnce(source, before, after) {
   if (source.includes(after)) return source;
@@ -79,4 +80,23 @@ if (!fs.existsSync(gamePath)) {
 
   fs.writeFileSync(gamePath, game);
   console.log("[arboreal-keeper] Applied shared Arboreal Keeper economy bridge.");
+}
+
+if (fs.existsSync(emeraldWorkspacePath)) {
+  let emerald = fs.readFileSync(emeraldWorkspacePath, "utf8");
+
+  emerald = emerald.replace('  eligibleEmeraldEnclosures,\n', "");
+  emerald = emerald.replace(
+    '\nfunction maxLitterSize(speciesId: EmeraldSpeciesId) {\n  return speciesId === "amazon_basin_emerald_tree_boa" ? 9 : 11;\n}\n',
+    "\n",
+  );
+
+  emerald = replaceOnce(
+    emerald,
+    '  useEffect(() => {\n    const sync = () => {\n      const progress = readSharedProgress();\n      setCash(progress.cash);\n      setReputation(progress.reputation);\n    };\n    window.addEventListener("arboreal-keeper-economy-updated", sync);\n    window.addEventListener("focus", sync);\n    return () => {\n      window.removeEventListener("arboreal-keeper-economy-updated", sync);\n      window.removeEventListener("focus", sync);\n    };\n  }, []);',
+    '  useEffect(() => {\n    const syncFromStorage = () => {\n      const progress = readSharedProgress();\n      setCash(progress.cash);\n      setReputation(progress.reputation);\n    };\n    const syncFromEvent = (event: Event) => {\n      const detail = (event as CustomEvent<{ cash?: number; reputation?: number }>).detail;\n      if (typeof detail?.cash === "number") setCash(detail.cash);\n      if (typeof detail?.reputation === "number") setReputation(detail.reputation);\n      if (typeof detail?.cash !== "number" && typeof detail?.reputation !== "number") syncFromStorage();\n    };\n    window.addEventListener("arboreal-keeper-economy-updated", syncFromEvent);\n    window.addEventListener("focus", syncFromStorage);\n    return () => {\n      window.removeEventListener("arboreal-keeper-economy-updated", syncFromEvent);\n      window.removeEventListener("focus", syncFromStorage);\n    };\n  }, []);',
+  );
+
+  fs.writeFileSync(emeraldWorkspacePath, emerald);
+  console.log("[arboreal-keeper] Polished Emerald Tree Boa workspace bindings.");
 }
