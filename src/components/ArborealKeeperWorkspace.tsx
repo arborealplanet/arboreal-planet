@@ -1,6 +1,16 @@
 "use client";
 
-// Canonical Arboreal Keeper shell. The legacy workspace remains the implementation
-// during migration so existing saves/gameplay stay stable while species-neutral
-// systems move behind this public component name.
-export { ChondroBreederWorkspace as ArborealKeeperWorkspace } from "@/components/ChondroBreederWorkspace";
+import { ArborealKeeperFacilityBridge } from "@/components/ArborealKeeperFacilityBridge";
+import { ChondroBreederWorkspace } from "@/components/ChondroBreederWorkspace";
+
+// Canonical Arboreal Keeper shell. Shared systems mount here while the original
+// Green Tree Python workspace continues to provide the mature game UI during
+// the migration. Species-neutral systems can now move out independently.
+export function ArborealKeeperWorkspace() {
+  return (
+    <>
+      <ArborealKeeperFacilityBridge />
+      <ChondroBreederWorkspace />
+    </>
+  );
+}
