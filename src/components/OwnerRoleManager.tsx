@@ -15,7 +15,17 @@ export function OwnerRoleManager(){
     setRows(data?.rows??[]);setStatus(`${data?.rows?.length??0} account${(data?.rows?.length??0)===1?"":"s"}`);
   }
 
-  useEffect(()=>{void load("")},[]);
+  useEffect(()=>{
+    let active=true;
+    void (async()=>{
+      const response=await fetch("/api/admin/users?q=",{cache:"no-store"});
+      const data=await response.json().catch(()=>null) as {rows?:Row[];error?:string}|null;
+      if(!active)return;
+      if(!response.ok){setRows([]);setStatus(data?.error||"Could not load users.");return}
+      setRows(data?.rows??[]);setStatus(`${data?.rows?.length??0} account${(data?.rows?.length??0)===1?"":"s"}`);
+    })();
+    return()=>{active=false};
+  },[]);
 
   async function updateRole(userId:string,role:string){
     if(!window.confirm(`Change this account role to ${role}?`))return;
