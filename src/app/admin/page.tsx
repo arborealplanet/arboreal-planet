@@ -7,6 +7,7 @@ import { AdminGtpPedigreeReports } from "@/components/AdminGtpPedigreeReports";
 import { AdminJournalEditor } from "@/components/AdminJournalEditor";
 import { AdminReferenceEditor } from "@/components/AdminReferenceEditor";
 import { AdminSellerVerification } from "@/components/AdminSellerVerification";
+import { OwnerConsoleOverview } from "@/components/OwnerConsoleOverview";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
 const adminSections=[
@@ -26,6 +27,8 @@ export default async function AdminPage(){
       description="Private moderation, publishing, event review, seller verification, lineage review, account requests and reference tools for authorized Arboreal Planet staff. Unauthorized accounts receive a 404 for this route."
       aside={<div className="rounded-full border border-amber-300/15 bg-amber-300/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">{profile.role}</div>}
     />
+
+    {profile.role==="owner"&&<OwnerConsoleOverview/>}
 
     <nav aria-label="Admin sections" className="mx-auto mb-8 flex max-w-7xl gap-2 overflow-x-auto px-5 sm:px-6">
       {adminSections.map(([label,id])=><a key={id} href={`#${id}`} className="shrink-0 rounded-xl border border-white/[.07] bg-white/[.02] px-4 py-2.5 text-[10px] font-black uppercase tracking-[.08em] text-white/45 transition hover:border-emerald-300/18 hover:text-emerald-100/70">{label}</a>)}
