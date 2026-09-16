@@ -5,6 +5,7 @@ const root = process.cwd();
 const enginePath = path.join(root, "src/lib/arboreal-keeper-emerald-engine.ts");
 const marketPath = path.join(root, "src/components/ArborealKeeperEmeraldMarketBar.tsx");
 const workspacePath = path.join(root, "src/components/ArborealKeeperEmeraldWorkspace.tsx");
+const gtpShopPath = path.join(root, "src/components/ChondroBreederExpandedShop.tsx");
 
 function writeIfChanged(filePath, next, source, label) {
   if (next !== source) {
@@ -101,4 +102,27 @@ for (const filePath of [marketPath, workspacePath]) {
     source,
     `${path.basename(filePath)} now offers only Chondro Dojo 2 Stack and PVC Enclosure.`,
   );
+}
+
+if (fs.existsSync(gtpShopPath)) {
+  const source = fs.readFileSync(gtpShopPath, "utf8");
+  let next = source;
+
+  next = next
+    .replace(
+      '"Chondro Dojo Bin": { label: "Chondro Dojo Pair", detail: "Two space-saving Dojo enclosures sold as one set. The pair uses one facility slot and houses two snakes." },',
+      '"Chondro Dojo Bin": { label: "Chondro Dojo 2 Stack", detail: "The original two-enclosure Chondro Dojo stack. One stack uses one facility slot and provides two individual animal spaces." },',
+    )
+    .replace(
+      '"PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing built around PVC structure and perching." },',
+      '"PVC Arboreal": { label: "PVC Enclosure", detail: "The original full-size PVC arboreal enclosure for eligible subadult and adult animals." },',
+    )
+    .split("A Chondro Dojo Pair uses that same single facility slot for two snakes.")
+    .join("A Chondro Dojo 2 Stack uses that same single facility slot for two individually housed animals.")
+    .split("Illustrated Chondro Dojo enclosure with white PVC perches")
+    .join("Illustrated Chondro Dojo 2 Stack enclosure with white PVC perches")
+    .split('aria-label="PVC arboreal enclosure diagram"')
+    .join('aria-label="PVC enclosure diagram"');
+
+  writeIfChanged(gtpShopPath, next, source, "Aligned the Green Tree Python shop with the exact Chondro Dojo 2 Stack and PVC Enclosure names.");
 }

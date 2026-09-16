@@ -114,8 +114,6 @@ const checks = [
       'arboreal-chondro-enclosure-action',
       "/hatchery/game/pvc-enclosure.webp",
       "Buy housing before you buy snakes.",
-      "Chondro Dojo Pair",
-      "PVC Arboreal Enclosure",
       "+2 snake capacity per set",
       "animalHousingCapacity",
       "enclosureFootprint",
