@@ -23,8 +23,16 @@ if (!fs.existsSync(workspacePath)) {
   source = replaceOnce(
     source,
     'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
-    'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";\nimport { ArborealKeeperSpeciesPrograms } from "@/components/ArborealKeeperSpeciesPrograms";\nimport { ArborealKeeperProgressionStrip } from "@/components/ArborealKeeperProgressionStrip";\nimport { ArborealKeeperEmeraldWorkspace } from "@/components/ArborealKeeperEmeraldWorkspace";',
+    'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";\nimport { ArborealKeeperSpeciesPrograms } from "@/components/ArborealKeeperSpeciesPrograms";\nimport { ArborealKeeperProgressionStrip } from "@/components/ArborealKeeperProgressionStrip";\nimport { ArborealKeeperEmeraldWorkspace } from "@/components/ArborealKeeperEmeraldWorkspace";\nimport { ArborealKeeperMyAnimals } from "@/components/ArborealKeeperMyAnimals";',
   );
+
+  // A prior lint pass may already have installed the older multispecies imports.
+  if (!source.includes('import { ArborealKeeperMyAnimals } from "@/components/ArborealKeeperMyAnimals";')) {
+    source = source.replace(
+      'import { ArborealKeeperEmeraldWorkspace } from "@/components/ArborealKeeperEmeraldWorkspace";',
+      'import { ArborealKeeperEmeraldWorkspace } from "@/components/ArborealKeeperEmeraldWorkspace";\nimport { ArborealKeeperMyAnimals } from "@/components/ArborealKeeperMyAnimals";',
+    );
+  }
 
   const replacements = [
     ["Exit Chondro Breeder and return to Arboreal Planet", "Exit Arboreal Keeper and return to Arboreal Planet"],
@@ -60,7 +68,14 @@ if (!fs.existsSync(workspacePath)) {
   source = replaceOnce(
     source,
     '      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />\n      {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}',
-    '      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />\n      <ArborealKeeperEmeraldWorkspace mode={view} />\n      {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}',
+    '      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />\n      {view === "colony" ? <ArborealKeeperMyAnimals /> : null}\n      <ArborealKeeperEmeraldWorkspace mode={view} />\n      {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}',
+  );
+
+  // Keep the patch repeatable after lint has already generated the Emerald workspace mount.
+  source = replaceOnce(
+    source,
+    '      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />\n      <ArborealKeeperEmeraldWorkspace mode={view} />',
+    '      <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />\n      {view === "colony" ? <ArborealKeeperMyAnimals /> : null}\n      <ArborealKeeperEmeraldWorkspace mode={view} />',
   );
 
   fs.writeFileSync(workspacePath, source);
