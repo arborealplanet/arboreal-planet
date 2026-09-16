@@ -19,8 +19,8 @@ const chunkFiles = fs.readdirSync(packDir)
   .filter((name) => /^\d+\.txt$/.test(name))
   .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-if (chunkFiles.length !== 21) {
-  throw new Error(`[keeper-art-v2] Expected 21 artwork chunks; found ${chunkFiles.length}.`);
+if (chunkFiles.length !== 27) {
+  throw new Error(`[keeper-art-v2] Expected 27 artwork chunks; found ${chunkFiles.length}.`);
 }
 
 const encoded = chunkFiles.map((name) => fs.readFileSync(path.join(packDir, name), "utf8").trim()).join("");
