@@ -1,1 +1,5 @@
-export { default } from "@/app/hatchery/arboreal-keeper/page";
+import { redirect } from "next/navigation";
+
+export default function ChondroBreederLegacyArcadePage() {
+  redirect("/arcade/arboreal-keeper");
+}

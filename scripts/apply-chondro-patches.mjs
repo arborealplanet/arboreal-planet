@@ -39,7 +39,6 @@ const checks = [
       'arboreal-chondro-clutch-action',
       'arboreal-chondro-enclosure-action',
       'aria-label="Open game options"',
-      'confirmation !== "RESET CHONDRO BREEDER"',
       'subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"',
       "updatedAt: Date.now()",
       "keepalive: true",
@@ -49,6 +48,9 @@ const checks = [
       "animalHousingCapacity",
       "enclosureFootprint",
       '"Chondro Dojo Bin": 250',
+    ],
+    markersAny: [
+      ['confirmation !== "RESET CHONDRO BREEDER"', 'confirmation !== "RESET ARBOREAL KEEPER"'],
     ],
     forbidden: [
       '<CollapsibleGameSection label="Enclosures"',
@@ -125,10 +127,15 @@ const checks = [
       "animalHousingCapacity",
       "enclosureFootprint",
       "Virtual colony",
-      "Every animal shown here exists only inside the Chondro Breeder game.",
       "Virtual housing",
       "virtual animal spaces open",
       ">Virtual<",
+    ],
+    markersAny: [
+      [
+        "Every animal shown here exists only inside the Chondro Breeder game.",
+        "Every animal shown here exists only inside the Arboreal Keeper game.",
+      ],
     ],
   },
   {
@@ -190,6 +197,12 @@ for (const check of checks) {
   for (const marker of check.markers) {
     if (!source.includes(marker)) {
       console.error(`\n[Chondro setup] Validation failed: ${check.file} is missing expected output:\n${marker}`);
+      process.exit(1);
+    }
+  }
+  for (const alternatives of check.markersAny ?? []) {
+    if (!alternatives.some((marker) => source.includes(marker))) {
+      console.error(`\n[Chondro setup] Validation failed: ${check.file} is missing every accepted output:\n${alternatives.join("\nOR\n")}`);
       process.exit(1);
     }
   }
