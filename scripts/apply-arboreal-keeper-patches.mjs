@@ -90,11 +90,37 @@ if (fs.existsSync(emeraldWorkspacePath)) {
     '\nfunction maxLitterSize(speciesId: EmeraldSpeciesId) {\n  return speciesId === "amazon_basin_emerald_tree_boa" ? 9 : 11;\n}\n',
     "\n",
   );
+  emerald = emerald.replace(
+    '  let housingUnits = save.housingUnits.map((unit) => ({ ...unit }));',
+    '  const housingUnits = save.housingUnits.map((unit) => ({ ...unit }));',
+  );
+  emerald = emerald.replace(
+    '  const [now, setNow] = useState(Date.now());',
+    '  const [now, setNow] = useState(0);',
+  );
+
+  emerald = replaceOnce(
+    emerald,
+    '  useEffect(() => {\n    try {\n      const raw = window.localStorage.getItem(EMERALD_KEEPER_SAVE_KEY);\n      setSave(raw ? sanitizeEmeraldKeeperSave(JSON.parse(raw)) : EMPTY_EMERALD_KEEPER_SAVE);\n    } catch {\n      setSave(EMPTY_EMERALD_KEEPER_SAVE);\n    }\n    const progress = readSharedProgress();\n    setCash(progress.cash);\n    setReputation(progress.reputation);\n    setHydrated(true);\n  }, []);',
+    '  useEffect(() => {\n    const timer = window.setTimeout(() => {\n      try {\n        const raw = window.localStorage.getItem(EMERALD_KEEPER_SAVE_KEY);\n        setSave(raw ? sanitizeEmeraldKeeperSave(JSON.parse(raw)) : EMPTY_EMERALD_KEEPER_SAVE);\n      } catch {\n        setSave(EMPTY_EMERALD_KEEPER_SAVE);\n      }\n      const progress = readSharedProgress();\n      setCash(progress.cash);\n      setReputation(progress.reputation);\n      setNow(Date.now());\n      setHydrated(true);\n    }, 0);\n    return () => window.clearTimeout(timer);\n  }, []);',
+  );
+
+  emerald = replaceOnce(
+    emerald,
+    '  useEffect(() => {\n    const timer = window.setInterval(() => setNow(Date.now()), 30_000);\n    return () => window.clearInterval(timer);\n  }, []);',
+    '  useEffect(() => {\n    const timer = window.setInterval(() => setNow(Date.now()), 30_000);\n    return () => window.clearInterval(timer);\n  }, []);',
+  );
 
   emerald = replaceOnce(
     emerald,
     '  useEffect(() => {\n    const sync = () => {\n      const progress = readSharedProgress();\n      setCash(progress.cash);\n      setReputation(progress.reputation);\n    };\n    window.addEventListener("arboreal-keeper-economy-updated", sync);\n    window.addEventListener("focus", sync);\n    return () => {\n      window.removeEventListener("arboreal-keeper-economy-updated", sync);\n      window.removeEventListener("focus", sync);\n    };\n  }, []);',
     '  useEffect(() => {\n    const syncFromStorage = () => {\n      const progress = readSharedProgress();\n      setCash(progress.cash);\n      setReputation(progress.reputation);\n    };\n    const syncFromEvent = (event: Event) => {\n      const detail = (event as CustomEvent<{ cash?: number; reputation?: number }>).detail;\n      if (typeof detail?.cash === "number") setCash(detail.cash);\n      if (typeof detail?.reputation === "number") setReputation(detail.reputation);\n      if (typeof detail?.cash !== "number" && typeof detail?.reputation !== "number") syncFromStorage();\n    };\n    window.addEventListener("arboreal-keeper-economy-updated", syncFromEvent);\n    window.addEventListener("focus", syncFromStorage);\n    return () => {\n      window.removeEventListener("arboreal-keeper-economy-updated", syncFromEvent);\n      window.removeEventListener("focus", syncFromStorage);\n    };\n  }, []);',
+  );
+
+  emerald = replaceOnce(
+    emerald,
+    '  useEffect(() => {\n    if (!hydrated || !save.breedingJobs.length) return;\n    const resolved = resolveReadyJobs(save, now);\n    if (!resolved.changed) return;\n    setSave(resolved.save);\n    if (resolved.reputationEarned > 0) {\n      requestEconomyAction("reputation", resolved.reputationEarned, "Emerald Tree Boa litter");\n      setMessage(`Live litter produced. +${resolved.reputationEarned} keeper reputation.`);\n    }\n  }, [hydrated, now, save]);',
+    '  useEffect(() => {\n    if (!hydrated || !save.breedingJobs.length || now <= 0) return;\n    const timer = window.setTimeout(() => {\n      const resolved = resolveReadyJobs(save, now);\n      if (!resolved.changed) return;\n      setSave(resolved.save);\n      if (resolved.reputationEarned > 0) {\n        requestEconomyAction("reputation", resolved.reputationEarned, "Emerald Tree Boa litter");\n        setMessage(`Live litter produced. +${resolved.reputationEarned} keeper reputation.`);\n      }\n    }, 0);\n    return () => window.clearTimeout(timer);\n  }, [hydrated, now, save]);',
   );
 
   fs.writeFileSync(emeraldWorkspacePath, emerald);
