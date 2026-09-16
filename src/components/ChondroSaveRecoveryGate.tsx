@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
+// Legacy local key is preserved during migration so existing players keep their saves.
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 
 function sanitizeLocalSave(value: unknown) {
@@ -55,7 +56,7 @@ export function ChondroSaveRecoveryGate({ children }: { children: ReactNode }) {
       }
 
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/repair-save", { method: "POST", cache: "no-store" });
+        const response = await fetch("/api/hatchery/arboreal-keeper/repair-save", { method: "POST", cache: "no-store" });
         if (response.ok) setMessage("Save checked. Loading your Arboreal Keeper facility…");
       } catch {
         // Continue into the game even if cloud repair is temporarily unavailable.
