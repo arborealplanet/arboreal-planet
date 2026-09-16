@@ -31,16 +31,23 @@ source = replaceOnce(
   `  useEffect(() => {
     function handleAnimalRecordAction(event: Event) {
       const detail = (event as CustomEvent<{ animalId?: string; field?: "name" | "notes"; value?: string }>).detail;
-      if (!detail?.animalId || !detail.field || typeof detail.value !== "string") return;
+      if (
+        !detail?.animalId ||
+        (detail.field !== "name" && detail.field !== "notes") ||
+        typeof detail.value !== "string"
+      ) return;
+      const animalId = detail.animalId;
+      const field = detail.field;
+      const value = detail.value;
       setSave((current) => ({
         ...current,
         animals: current.animals.map((animal) => {
-          if (animal.id !== detail.animalId) return animal;
-          if (detail.field === "name") {
-            const name = detail.value.trim().slice(0, 60);
+          if (animal.id !== animalId) return animal;
+          if (field === "name") {
+            const name = value.trim().slice(0, 60);
             return { ...animal, name: name || emeraldSpeciesDisplayName(animal.speciesId) };
           }
-          return { ...animal, notes: detail.value.slice(0, 1000) };
+          return { ...animal, notes: value.slice(0, 1000) };
         }),
       }));
     }
