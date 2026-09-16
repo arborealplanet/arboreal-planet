@@ -1,0 +1,2 @@
+Artwork cache revision: v6
+Purpose: force a fresh production deployment for corrected yellow GTP neonates and Emerald Tree Boa rendering.
