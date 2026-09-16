@@ -1,10 +1,10 @@
-import { ChondroBreederWorkspace } from "@/components/ChondroBreederWorkspace";
-import { ChondroSaveRecoveryGate } from "@/components/ChondroSaveRecoveryGate";
+import { ArborealKeeperWorkspace } from "@/components/ArborealKeeperWorkspace";
+import { ArborealKeeperSaveRecoveryGate } from "@/components/ArborealKeeperSaveRecoveryGate";
 
 export default function ArborealKeeperPage() {
   return (
-    <ChondroSaveRecoveryGate>
-      <ChondroBreederWorkspace />
-    </ChondroSaveRecoveryGate>
+    <ArborealKeeperSaveRecoveryGate>
+      <ArborealKeeperWorkspace />
+    </ArborealKeeperSaveRecoveryGate>
   );
 }
