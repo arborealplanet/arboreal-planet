@@ -13,19 +13,22 @@ async function rpcRows(token:string,name:string){
   return response.json() as Promise<Array<Record<string,unknown>>>;
 }
 
+function numberValue(value:unknown){const parsed=Number(value??0);return Number.isFinite(parsed)?parsed:0}
+
 export async function OwnerConsoleOverview(){
   const identity=await getServerIdentity();
   if(!identity)return null;
   const profile=await fetchOwnProfile(identity.token,identity.user.id) as {role?:string}|null;
   if(profile?.role!=="owner")return null;
 
-  const [sellerQueue,eventQueue,pedigreeQueue,accountQueue,communityQueue,drafts]=await Promise.all([
+  const [sellerQueue,eventQueue,pedigreeQueue,accountQueue,communityQueue,drafts,statsRows]=await Promise.all([
     rpcRows(identity.token,"seller_verification_queue"),
     restRows(identity.token,"event_submissions?status=eq.PENDING&select=id"),
     rpcRows(identity.token,"gtp_pedigree_report_queue"),
     restRows(identity.token,"account_deletion_requests?status=in.(pending,reviewing,ready_for_processing)&select=id"),
     restRows(identity.token,"community_post_reports?status=eq.OPEN&select=id"),
     restRows(identity.token,"journal_articles?status=eq.DRAFT&select=id"),
+    rpcRows(identity.token,"owner_platform_stats"),
   ]);
 
   const cards=[
@@ -37,6 +40,15 @@ export async function OwnerConsoleOverview(){
     ["Journal drafts",drafts.length,"#journal"],
   ] as const;
   const attention=cards.reduce((sum,[label,count])=>label==="Journal drafts"?sum:sum+count,0);
+  const stats=statsRows[0]??{};
+  const totals=[
+    ["Accounts",numberValue(stats.users)],
+    ["Active listings",numberValue(stats.active_listings)],
+    ["Public pedigrees",numberValue(stats.published_pedigrees)],
+    ["Community posts",numberValue(stats.community_posts)],
+    ["Published events",numberValue(stats.published_events)],
+    ["Journal pieces",numberValue(stats.published_journal)],
+  ] as const;
 
   return <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
     <div className="rounded-[28px] border border-amber-300/14 bg-amber-300/[.025] p-5 sm:p-6">
@@ -46,6 +58,10 @@ export async function OwnerConsoleOverview(){
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map(([label,count,href])=><Link href={href} key={label} className="rounded-2xl border border-white/[.06] bg-black/10 p-4 transition hover:border-amber-300/15 hover:bg-amber-300/[.025]"><div className="text-[9px] font-black uppercase tracking-[.1em] text-white/25">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{count}</div><div className="mt-2 text-[10px] font-bold text-amber-100/40">Review →</div></Link>)}
+      </div>
+      <div className="mt-6 border-t border-amber-300/10 pt-5">
+        <div className="text-[9px] font-black uppercase tracking-[.12em] text-white/24">Platform totals</div>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">{totals.map(([label,count])=><div key={label} className="rounded-2xl border border-white/[.05] bg-black/[.08] p-4"><div className="text-[9px] font-black uppercase tracking-[.08em] text-white/22">{label}</div><div className="mt-2 text-xl font-semibold text-white/62">{count.toLocaleString()}</div></div>)}</div>
       </div>
     </div>
   </section>;
