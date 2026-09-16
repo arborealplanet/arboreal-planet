@@ -7,6 +7,7 @@ const enginePath = path.join(root, "src/lib/arboreal-keeper-emerald-engine.ts");
 const marketPath = path.join(root, "src/components/ArborealKeeperEmeraldMarketBar.tsx");
 const workspacePath = path.join(root, "src/components/ArborealKeeperEmeraldWorkspace.tsx");
 const spritePath = "/hatchery/animals/emerald-tree-boas/amazon-basin/basin-sprite.webp";
+const speciesImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";';
 
 function writeIfChanged(filePath, source, next, label) {
   if (next !== source) {
@@ -84,9 +85,18 @@ function basinSpritePosition(animal: EmeraldAnimal) {
 if (fs.existsSync(marketPath)) {
   const source = fs.readFileSync(marketPath, "utf8");
   let next = source;
+
+  if (!next.includes(speciesImport)) {
+    next = next.replace(
+      'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";',
+      `import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";\n${speciesImport}`,
+    );
+  }
+
   if (!next.includes("const BASIN_SPRITE_POSITIONS")) {
     next = next.replace("function compatibleEmptyHousingCount", `${spriteHelpers}\nfunction compatibleEmptyHousingCount`);
   }
+
   next = next.replace(
 `    const offer = offers.find((item) => item.id === offerId);
     if (!offer || purchased.has(offer.id) || busy) return;`,
@@ -98,12 +108,7 @@ if (fs.existsSync(marketPath)) {
       return;
     }`,
   );
-  if (!next.includes('ARBOREAL_KEEPER_SPECIES_BY_ID')) {
-    next = next.replace(
-      'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";',
-      'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";\nimport { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";',
-    );
-  }
+
   next = next.replace(
 `                const traits = strongestTraits(offer.animal);
                 const showImage = Boolean(offer.animal.assetPath) && !brokenAssets.includes(offer.animal.assetPath ?? "");`,
@@ -113,6 +118,7 @@ if (fs.existsSync(marketPath)) {
                 const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;
                 const locked = !offer.available;`,
   );
+
   next = next.replace(
 `                      {showImage ? (
                         <Image
@@ -148,6 +154,7 @@ if (fs.existsSync(marketPath)) {
                         )
                       ) : (`,
   );
+
   next = next.replace(
 `                      <div className="flex flex-wrap gap-1.5">
                         {offer.animal.phase === "anaconda" ? (`,
@@ -158,12 +165,12 @@ if (fs.existsSync(marketPath)) {
                         {offer.animal.phase === "anaconda" ? (`,
   );
   next = next.replace(
-`                          disabled={sold || busy !== null || cash < offer.price || housing <= 0}`,
-`                          disabled={locked || sold || busy !== null || cash < offer.price || housing <= 0}`,
+    'disabled={sold || busy !== null || cash < offer.price || housing <= 0}',
+    'disabled={locked || sold || busy !== null || cash < offer.price || housing <= 0}',
   );
   next = next.replace(
-`                          {sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}`,
-`                          {locked ? `Level ${'${'}requiredLevel}` : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}`,
+    '{sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
+    '{locked ? `Level ${requiredLevel}` : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
   );
   writeIfChanged(marketPath, source, next, "Added Basin sprite rendering and visible Keeper Level locks to the Emerald market bar.");
 }
