@@ -49,6 +49,16 @@ source = replaceOnce(
   "market bar import",
 );
 
+if (!source.includes('import { ArborealKeeperMarketFilterBar } from "@/components/ArborealKeeperMarketFilterBar";')) {
+  const emeraldImport = 'import { ArborealKeeperEmeraldMarketBar } from "@/components/ArborealKeeperEmeraldMarketBar";';
+  if (source.includes(emeraldImport)) {
+    source = source.replace(
+      emeraldImport,
+      `${emeraldImport}\nimport { ArborealKeeperMarketFilterBar } from "@/components/ArborealKeeperMarketFilterBar";`,
+    );
+  }
+}
+
 source = replaceOnce(
   source,
   '      <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6">\n        <div className="grid gap-2 rounded-[24px] border border-white/[.06] bg-[#05100b] p-2 sm:grid-cols-2">',
@@ -68,12 +78,22 @@ source = source.replace(
   'className={view === "market" || activeProgram === "gtp" ? "" : "hidden"} aria-hidden={view !== "market" && activeProgram !== "gtp"}',
 );
 
-source = replaceOnce(
-  source,
-  '      {view === "market" ? <ChondroBreederExpandedShop /> : null}',
-  '      {view === "market" ? (<>\n        <ChondroBreederExpandedShop />\n        <ArborealKeeperEmeraldMarketBar />\n      </>) : null}',
-  "stacked animal market",
-);
+const filteredMarket = `      {view === "market" ? (<>
+        <ArborealKeeperMarketFilterBar />
+        <div data-keeper-market-group="pythons"><ChondroBreederExpandedShop /></div>
+        <div data-keeper-market-group="boas"><ArborealKeeperEmeraldMarketBar /></div>
+      </>) : null}`;
+
+if (!source.includes(filteredMarket)) {
+  const stackedMarket = `      {view === "market" ? (<>
+        <ChondroBreederExpandedShop />
+        <ArborealKeeperEmeraldMarketBar />
+      </>) : null}`;
+  const singleMarket = '      {view === "market" ? <ChondroBreederExpandedShop /> : null}';
+  if (source.includes(stackedMarket)) source = source.replace(stackedMarket, filteredMarket);
+  else if (source.includes(singleMarket)) source = source.replace(singleMarket, filteredMarket);
+  else console.warn("[keeper-market-bars] Expected market render fragment not found; filters were not mounted.");
+}
 
 source = source.replace(
   '<strong className="text-amber-100">Snake Store:</strong> rotating chondros are below. Purchases use your breeder cash and require an open enclosure.',
@@ -82,3 +102,4 @@ source = source.replace(
 
 fs.writeFileSync(workspacePath, source);
 console.log("[keeper-market-bars] Stacked Green Tree Python and Emerald Tree Boa carousels in the Animal Market.");
+console.log("[keeper-market-bars] Added visible market categories with working Python / Boa filtering and locked future groups.");
