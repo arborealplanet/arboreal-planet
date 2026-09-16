@@ -18,15 +18,15 @@ const chunks = fs
   .filter((name) => /^\d+\.txt$/.test(name))
   .sort((a, b) => a.localeCompare(b));
 
-if (chunks.length !== 10) {
-  throw new Error(`[keeper-boa-assets] Expected 10 Basin sprite chunks, found ${chunks.length}.`);
+if (chunks.length !== 3) {
+  throw new Error(`[keeper-boa-assets] Expected 3 Basin sprite chunks, found ${chunks.length}.`);
 }
 
 const payload = chunks
   .map((name) => fs.readFileSync(path.join(chunksDir, name), "utf8").trim())
   .join("");
 
-if (payload.length !== 144416) {
+if (payload.length !== 42624) {
   throw new Error(`[keeper-boa-assets] Basin sprite base64 length mismatch: ${payload.length}.`);
 }
 
@@ -35,7 +35,7 @@ const signature = bytes.subarray(0, 12).toString("ascii");
 if (!signature.startsWith("RIFF") || !signature.includes("WEBP")) {
   throw new Error("[keeper-boa-assets] Basin sprite payload is not a valid WEBP file.");
 }
-if (bytes.length !== 108312) {
+if (bytes.length !== 31966) {
   throw new Error(`[keeper-boa-assets] Basin sprite byte length mismatch: ${bytes.length}.`);
 }
 
