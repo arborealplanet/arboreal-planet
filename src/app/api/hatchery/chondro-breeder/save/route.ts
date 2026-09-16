@@ -27,6 +27,7 @@ const EXTENSION_KEYS = [
   "breedingMessage",
   "retiredBreeders",
   "legacyBadges",
+  "emeraldKeeper",
 ] as const;
 
 const apiHeaders = (token: string) => ({
