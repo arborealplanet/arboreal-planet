@@ -126,6 +126,11 @@ type LegacyHousingUnit = {
   occupantId?: unknown;
 };
 
+type RawEmeraldKeeperSave = Omit<Partial<EmeraldKeeperSave>, "housingUnits" | "racks"> & {
+  housingUnits?: LegacyHousingUnit[];
+  racks?: unknown[];
+};
+
 export const EMERALD_BREEDING_STAGES: Array<{
   id: EmeraldBreedingStage;
   label: string;
@@ -638,9 +643,7 @@ function normalizeRack(raw: unknown, index: number): KeeperRackInstance | null {
   });
   const oldTubs = Array.isArray(input.tubs) ? input.tubs : [];
   normalized.tubs = normalized.tubs.map((tub) => {
-    const old = oldTubs.find((item) => item && typeof item === "object" && "id" in item && item.id === tub.id) as
-      | { occupantId?: unknown }
-      | undefined;
+    const old = oldTubs.find((item) => item.id === tub.id);
     return {
       ...tub,
       occupantId: typeof old?.occupantId === "string" ? old.occupantId : null,
@@ -651,10 +654,10 @@ function normalizeRack(raw: unknown, index: number): KeeperRackInstance | null {
 
 export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
   if (!value || typeof value !== "object" || Array.isArray(value)) return createEmptyEmeraldKeeperSave();
-  const input = value as Partial<EmeraldKeeperSave> & { housingUnits?: LegacyHousingUnit[] };
+  const input = value as RawEmeraldKeeperSave;
   const animals = Array.isArray(input.animals) ? input.animals : [];
-  const rawHousing = Array.isArray(input.housingUnits) ? input.housingUnits : [];
-  const legacyTubUnits = rawHousing.filter((unit) => unit?.enclosureId === "neonate-arboreal-tub");
+  const rawHousing: LegacyHousingUnit[] = Array.isArray(input.housingUnits) ? input.housingUnits : [];
+  const legacyTubUnits = rawHousing.filter((unit) => unit.enclosureId === "neonate-arboreal-tub");
 
   let racks = Array.isArray(input.racks)
     ? input.racks.map((rack, index) => normalizeRack(rack, index)).filter((rack): rack is KeeperRackInstance => Boolean(rack))
@@ -668,7 +671,7 @@ export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
   }
 
   const housingUnits: EmeraldHousingUnit[] = rawHousing.flatMap((unit, index) => {
-    const enclosureId = String(unit?.enclosureId ?? "");
+    const enclosureId = String(unit.enclosureId ?? "");
     if (enclosureId === "neonate-arboreal-tub") return [];
     const migratedId: KeeperEnclosureId | null =
       enclosureId === "chondro-dojo-bin"
@@ -678,9 +681,9 @@ export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
           : null;
     if (!migratedId) return [];
     return [{
-      id: typeof unit?.id === "string" && unit.id ? unit.id : `keeper-housing-${index + 1}`,
+      id: typeof unit.id === "string" && unit.id ? unit.id : `keeper-housing-${index + 1}`,
       enclosureId: migratedId,
-      occupantId: typeof unit?.occupantId === "string" ? unit.occupantId : null,
+      occupantId: typeof unit.occupantId === "string" ? unit.occupantId : null,
     }];
   });
 
@@ -689,7 +692,7 @@ export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
   );
   const rackCandidateOccupants = new Set<string>();
   for (const unit of legacyTubUnits) {
-    if (typeof unit?.occupantId === "string") rackCandidateOccupants.add(unit.occupantId);
+    if (typeof unit.occupantId === "string") rackCandidateOccupants.add(unit.occupantId);
   }
   for (const unit of housingUnits) {
     if (unit.occupantId && neonateIds.has(unit.occupantId)) {
