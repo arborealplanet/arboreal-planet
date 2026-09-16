@@ -5,6 +5,15 @@ const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IMAGES = 10;
 const MAX_BYTES = 10 * 1024 * 1024;
 
+async function removeUploaded(identity:{token:string;user:{id:string}},paths:string[]){
+  for(const path of paths){
+    await fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/community/${path}`,{
+      method:"DELETE",
+      headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`},
+    }).catch(()=>null);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const identity = await getServerIdentity();
   if (!identity) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
@@ -14,13 +23,13 @@ export async function POST(request: NextRequest) {
   if (!files.length || files.length > MAX_IMAGES) {
     return NextResponse.json({ error: `Choose 1 to ${MAX_IMAGES} images` }, { status: 400 });
   }
+  if(files.some((file)=>!allowed.has(file.type)||file.size>MAX_BYTES)){
+    return NextResponse.json({ error: "Images must be JPG, PNG, or WebP and no larger than 10 MB each" }, { status: 400 });
+  }
 
   const urls: string[] = [];
+  const paths: string[] = [];
   for (const file of files) {
-    if (!allowed.has(file.type) || file.size > MAX_BYTES) {
-      return NextResponse.json({ error: "Images must be JPG, PNG, or WebP and no larger than 10 MB each" }, { status: 400 });
-    }
-
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${identity.user.id}/${crypto.randomUUID()}.${ext}`;
     const upload = await fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/community/${path}`, {
@@ -32,15 +41,29 @@ export async function POST(request: NextRequest) {
         "x-upsert": "false",
       },
       body: await file.arrayBuffer(),
-    });
+    }).catch(()=>null);
 
-    if (!upload.ok) {
-      const detail = await upload.json().catch(() => null);
-      return NextResponse.json({ error: "Community photo upload failed", detail }, { status: upload.status || 400 });
+    if (!upload?.ok) {
+      await removeUploaded(identity,paths);
+      return NextResponse.json({ error: "Community photo upload failed. No photos from this attempt were kept." }, { status: upload?.status || 400 });
     }
 
+    paths.push(path);
     urls.push(`${SUPABASE_AUTH_URL}/storage/v1/object/public/community/${path}`);
   }
 
   return NextResponse.json({ urls });
+}
+
+export async function DELETE(request:NextRequest){
+  const identity=await getServerIdentity();
+  if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});
+  const body=await request.json().catch(()=>null) as {urls?:unknown}|null;
+  const urls=Array.isArray(body?.urls)?body.urls.filter((value):value is string=>typeof value==="string").slice(0,MAX_IMAGES):[];
+  if(!urls.length)return NextResponse.json({ok:true,removed:0});
+  const publicPrefix=`${SUPABASE_AUTH_URL}/storage/v1/object/public/community/${identity.user.id}/`;
+  const base=`${SUPABASE_AUTH_URL}/storage/v1/object/public/community/`;
+  const paths=urls.filter((url)=>url.startsWith(publicPrefix)).map((url)=>url.slice(base.length));
+  await removeUploaded(identity,paths);
+  return NextResponse.json({ok:true,removed:paths.length});
 }
