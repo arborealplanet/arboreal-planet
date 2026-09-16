@@ -1,0 +1,1 @@
+Direct binary art is committed through Git data blobs. This marker prevents the older partial text-chunk asset pack from being treated as the canonical source.
