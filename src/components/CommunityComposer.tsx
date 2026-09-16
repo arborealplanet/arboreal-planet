@@ -41,26 +41,37 @@ export function CommunityComposer(){
 
   function toggleTag(tag:string){setSelectedTags(current=>current.includes(tag)?current.filter(item=>item!==tag):[...current,tag].slice(0,4))}
 
+  async function cleanup(urls:string[]){
+    if(!urls.length)return;
+    await fetch("/api/community/upload",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({urls})}).catch(()=>null);
+  }
+
   async function publish(){
     if(!ready||busy)return;
     setBusy(true);setError("");
     let media_urls:string[]=[];
-    if(files.length){
-      const form=new FormData();files.forEach(file=>form.append("images",file));
-      const upload=await fetch("/api/community/upload",{method:"POST",body:form});
-      const uploadData=await upload.json().catch(()=>({}));
-      if(!upload.ok){setError(uploadData.error||"Could not upload photos.");setBusy(false);return}
-      media_urls=uploadData.urls??[];
+    try{
+      if(files.length){
+        const form=new FormData();files.forEach(file=>form.append("images",file));
+        const upload=await fetch("/api/community/upload",{method:"POST",body:form});
+        const uploadData=await upload.json().catch(()=>({})) as {urls?:string[];error?:string};
+        if(!upload.ok)throw new Error(uploadData.error||"Could not upload photos.");
+        media_urls=uploadData.urls??[];
+      }
+      const response=await fetch("/api/community/posts",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({type,body:text,tags:selectedTags,media_urls,video_url:video,species_id:speciesId||null,plant_id:plantId||null}),
+      });
+      if(response.status===401){await cleanup(media_urls);router.push("/login?next=/community");return}
+      const data=await response.json().catch(()=>({})) as {error?:string};
+      if(!response.ok){await cleanup(media_urls);throw new Error(data.error||"Could not publish that post.")}
+      setText("");setFiles([]);setVideo("");setSpeciesId("");setPlantId("");setBusy(false);router.refresh();window.dispatchEvent(new Event("community-posted"));
+    }catch(err){
+      await cleanup(media_urls);
+      setError(err instanceof Error?err.message:"Could not publish that post.");
+      setBusy(false);
     }
-    const response=await fetch("/api/community/posts",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({type,body:text,tags:selectedTags,media_urls,video_url:video,species_id:speciesId||null,plant_id:plantId||null}),
-    });
-    if(response.status===401){router.push("/login?next=/community");return}
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok){setError(data.error||"Could not publish that post.");setBusy(false);return}
-    setText("");setFiles([]);setVideo("");setSpeciesId("");setPlantId("");setBusy(false);router.refresh();window.dispatchEvent(new Event("community-posted"));
   }
 
   const label=postTypes.find(item=>item[1]===type)?.[0]??"Post";
