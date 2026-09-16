@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   EMERALD_KEEPER_SAVE_KEY,
   sanitizeEmeraldKeeperSave,
@@ -12,7 +12,7 @@ const SAVE_EVENT = "arboreal-keeper-emerald-save-updated";
 const LOAD_EVENT = "arboreal-keeper-emerald-cloud-loaded";
 const STATUS_EVENT = "arboreal-keeper-cloud-status";
 
-type CloudStatus = "idle" | "loading" | "synced" | "local-only" | "error";
+type CloudStatus = "loading" | "synced" | "local-only" | "error";
 
 function localSave() {
   try {
@@ -50,25 +50,20 @@ async function upload(save: EmeraldKeeperSave) {
 }
 
 export function ArborealKeeperEmeraldCloudSync() {
-  const [status, setStatus] = useState<CloudStatus>("idle");
   const pending = useRef<EmeraldKeeperSave | null>(null);
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    emitStatus("loading");
 
     async function hydrate() {
-      setStatus("loading");
-      emitStatus("loading");
       const local = localSave();
 
       try {
         const response = await fetch(CLOUD_ENDPOINT, { cache: "no-store" });
         if (response.status === 401) {
-          if (!cancelled) {
-            setStatus("local-only");
-            emitStatus("local-only");
-          }
+          if (!cancelled) emitStatus("local-only");
           return;
         }
         if (!response.ok) throw new Error("Cloud load failed.");
@@ -90,22 +85,13 @@ export function ArborealKeeperEmeraldCloudSync() {
           window.dispatchEvent(new CustomEvent(LOAD_EVENT, { detail: { save: cloud } }));
         } else if (local && timestamp(local) > timestamp(cloud)) {
           const result = await upload(local);
-          if (!cancelled) {
-            setStatus(result);
-            emitStatus(result);
-          }
+          if (!cancelled) emitStatus(result);
           return;
         }
 
-        if (!cancelled) {
-          setStatus("synced");
-          emitStatus("synced");
-        }
+        if (!cancelled) emitStatus("synced");
       } catch {
-        if (!cancelled) {
-          setStatus("error");
-          emitStatus("error");
-        }
+        if (!cancelled) emitStatus("error");
       }
     }
 
@@ -126,11 +112,8 @@ export function ArborealKeeperEmeraldCloudSync() {
         timer.current = null;
         if (!next) return;
         try {
-          const result = await upload(next);
-          setStatus(result);
-          emitStatus(result);
+          emitStatus(await upload(next));
         } catch {
-          setStatus("error");
           emitStatus("error");
         }
       }, 900);
@@ -143,5 +126,5 @@ export function ArborealKeeperEmeraldCloudSync() {
     };
   }, []);
 
-  return <span className="sr-only" aria-live="polite">Emerald Tree Boa cloud save: {status}</span>;
+  return null;
 }
