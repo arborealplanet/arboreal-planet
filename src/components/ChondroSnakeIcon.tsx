@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-15-yellow-juveniles-live-v4";
+const TRAIT_ART_VERSION = "2026-09-16-yellow-neonates-live-v5";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -87,9 +87,9 @@ export function ChondroSnakeIcon({
   const adultRawSrc = adultPortraitArt(subspecies, traits);
   const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult";
   const rawSrc = isJuvenile ? juvenilePortraitArt(subspecies, neonateColor) : adultRawSrc;
-  const rawFallback = isJuvenile && neonateColor === "Yellow" && subspecies !== "Morelia viridis"
-    ? juvenilePortraitArt(subspecies, "Red")
-    : adultRawSrc;
+  // Never disguise a missing yellow juvenile asset as a red animal. If the requested
+  // juvenile portrait cannot load, fall back to the species portrait instead.
+  const rawFallback = adultRawSrc;
   const rawBaseFallback = baseArtBySubspecies[subspecies];
   const src = withVersion(rawSrc);
   const fallback = withVersion(rawFallback);
