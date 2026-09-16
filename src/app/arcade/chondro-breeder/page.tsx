@@ -1,1 +1,1 @@
-export { default } from "@/app/hatchery/chondro-breeder/page";
+export { default } from "@/app/hatchery/arboreal-keeper/page";
