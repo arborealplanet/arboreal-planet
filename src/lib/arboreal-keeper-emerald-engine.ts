@@ -10,6 +10,14 @@ import {
   enclosureSupportsAnimal,
   type KeeperEnclosureId,
 } from "@/lib/arboreal-keeper-enclosures";
+import {
+  ARBOREAL_KEEPER_RACKS,
+  createRackInstance,
+  emptyCompatibleRackTubs,
+  rackDefinition,
+  rackSupportsAnimal,
+  type KeeperRackInstance,
+} from "@/lib/arboreal-keeper-racks";
 
 export type EmeraldSpeciesId =
   | "northern_emerald_tree_boa"
@@ -90,20 +98,33 @@ export type EmeraldHousingUnit = {
   occupantId: string | null;
 };
 
+export type EmeraldHousingPlacement =
+  | { kind: "enclosure"; housingUnitId: string }
+  | { kind: "rack-tub"; rackId: string; tubId: string };
+
 export type EmeraldKeeperSave = {
+  schemaVersion: 2;
   animals: EmeraldAnimal[];
   purchasedOfferIds: string[];
   breedingJobs: EmeraldBreedingJob[];
   litters: EmeraldLitterRecord[];
   housingUnits: EmeraldHousingUnit[];
+  racks: KeeperRackInstance[];
   selectedSpecies: EmeraldSpeciesId;
   updatedAt: number;
 };
 
 export const EMERALD_KEEPER_SAVE_KEY = "arboreal_keeper_emeralds_v1";
 export const EMERALD_MARKET_DAY_MS = 86_400_000;
+export const STARTER_RACK_ID = "starter-arboreal-rack-1";
 
 const HOUR_MS = 3_600_000;
+
+type LegacyHousingUnit = {
+  id?: unknown;
+  enclosureId?: unknown;
+  occupantId?: unknown;
+};
 
 export const EMERALD_BREEDING_STAGES: Array<{
   id: EmeraldBreedingStage;
@@ -171,15 +192,30 @@ const LITTER_RANGE: Record<EmeraldSpeciesId, readonly [number, number]> = {
   amazon_basin_emerald_tree_boa: [4, 9],
 };
 
-export const EMPTY_EMERALD_KEEPER_SAVE: EmeraldKeeperSave = {
-  animals: [],
-  purchasedOfferIds: [],
-  breedingJobs: [],
-  litters: [],
-  housingUnits: [],
-  selectedSpecies: "northern_emerald_tree_boa",
-  updatedAt: 0,
-};
+export function createStarterRack(index = 1) {
+  return createRackInstance({
+    id: index === 1 ? STARTER_RACK_ID : `migrated-arboreal-rack-${index}`,
+    rackDefinitionId: "arboreal-rack-12",
+    roomId: "main-room",
+    position: { x: (index - 1) * 5, y: 0 },
+  });
+}
+
+export function createEmptyEmeraldKeeperSave(): EmeraldKeeperSave {
+  return {
+    schemaVersion: 2,
+    animals: [],
+    purchasedOfferIds: [],
+    breedingJobs: [],
+    litters: [],
+    housingUnits: [],
+    racks: [createStarterRack()],
+    selectedSpecies: "northern_emerald_tree_boa",
+    updatedAt: 0,
+  };
+}
+
+export const EMPTY_EMERALD_KEEPER_SAVE: EmeraldKeeperSave = createEmptyEmeraldKeeperSave();
 
 function clamp(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -270,8 +306,6 @@ function phaseForOffspring(
   random: () => number,
 ): KeeperPhase {
   if (speciesId !== "northern_emerald_tree_boa") return "standard";
-
-  // Gameplay placeholder until the project's final phase inheritance model is locked.
   const phaseParents = Number(dam.phase === "anaconda") + Number(sire.phase === "anaconda");
   const chance = phaseParents === 2 ? 0.72 : phaseParents === 1 ? 0.28 : 0.005;
   return random() < chance ? "anaconda" : "standard";
@@ -350,12 +384,7 @@ export function emeraldMarketForEpoch(epoch: number, keeperLevel: number): Emera
       condition: random() < 0.25 ? "Excellent" : "Good",
       random,
     });
-    return {
-      id,
-      animal,
-      price: emeraldMarketValue(animal),
-      available: true,
-    };
+    return { id, animal, price: emeraldMarketValue(animal), available: true };
   });
 }
 
@@ -373,11 +402,7 @@ export function emeraldMarketValue(animal: EmeraldAnimal) {
   ) * 50;
 }
 
-function inheritedTrait(
-  damValue: number,
-  sireValue: number,
-  random: () => number,
-) {
+function inheritedTrait(damValue: number, sireValue: number, random: () => number) {
   const midpoint = (damValue + sireValue) / 2;
   const spread = randomBetween(random, -14, 14);
   const rarePush = random() < 0.025 ? randomBetween(random, 6, 18) : 0;
@@ -460,12 +485,7 @@ export function advanceEmeraldBreedingJob(job: EmeraldBreedingJob, now = Date.no
   if (!next) return { job: null, completed: true as const };
   return {
     completed: false as const,
-    job: {
-      ...job,
-      stage: next.id,
-      startedAt: now,
-      completesAt: now + next.durationMs,
-    },
+    job: { ...job, stage: next.id, startedAt: now, completesAt: now + next.durationMs },
   };
 }
 
@@ -479,6 +499,48 @@ export function eligibleEmeraldEnclosures(animal: Pick<EmeraldAnimal, "speciesId
   );
 }
 
+export function housingPlacementForAnimal(
+  save: Pick<EmeraldKeeperSave, "housingUnits" | "racks">,
+  animalId: string,
+): EmeraldHousingPlacement | null {
+  const unit = save.housingUnits.find((item) => item.occupantId === animalId);
+  if (unit) return { kind: "enclosure", housingUnitId: unit.id };
+  for (const rack of save.racks) {
+    const tub = rack.tubs.find((item) => item.occupantId === animalId);
+    if (tub) return { kind: "rack-tub", rackId: rack.id, tubId: tub.id };
+  }
+  return null;
+}
+
+export function housingPlacementSupportsAnimal(
+  save: Pick<EmeraldKeeperSave, "housingUnits" | "racks">,
+  placement: EmeraldHousingPlacement,
+  animal: Pick<EmeraldAnimal, "speciesId" | "lifeStage">,
+) {
+  if (placement.kind === "enclosure") {
+    const unit = save.housingUnits.find((item) => item.id === placement.housingUnitId);
+    return Boolean(unit && enclosureSupportsAnimal(unit.enclosureId, animal.speciesId, animal.lifeStage));
+  }
+  const rack = save.racks.find((item) => item.id === placement.rackId);
+  return Boolean(rack && rackSupportsAnimal(rack.rackDefinitionId, animal.speciesId, animal.lifeStage));
+}
+
+export function availableHousingPlacement(
+  save: Pick<EmeraldKeeperSave, "housingUnits" | "racks">,
+  animal: Pick<EmeraldAnimal, "speciesId" | "lifeStage">,
+): EmeraldHousingPlacement | null {
+  const rackSlot = emptyCompatibleRackTubs(save.racks, animal.speciesId, animal.lifeStage)[0];
+  if (rackSlot) {
+    return { kind: "rack-tub", rackId: rackSlot.rack.id, tubId: rackSlot.tub.id };
+  }
+  const unit = save.housingUnits.find(
+    (item) =>
+      item.occupantId === null &&
+      enclosureSupportsAnimal(item.enclosureId, animal.speciesId, animal.lifeStage),
+  );
+  return unit ? { kind: "enclosure", housingUnitId: unit.id } : null;
+}
+
 export function availableHousingUnit(
   save: Pick<EmeraldKeeperSave, "housingUnits">,
   animal: Pick<EmeraldAnimal, "speciesId" | "lifeStage">,
@@ -490,15 +552,178 @@ export function availableHousingUnit(
   ) ?? null;
 }
 
-export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return { ...EMPTY_EMERALD_KEEPER_SAVE };
-  const input = value as Partial<EmeraldKeeperSave>;
+export function releaseAnimalHousing(save: EmeraldKeeperSave, animalId: string): EmeraldKeeperSave {
   return {
-    animals: Array.isArray(input.animals) ? input.animals : [],
+    ...save,
+    housingUnits: save.housingUnits.map((unit) =>
+      unit.occupantId === animalId ? { ...unit, occupantId: null } : unit,
+    ),
+    racks: save.racks.map((rack) => ({
+      ...rack,
+      tubs: rack.tubs.map((tub) =>
+        tub.occupantId === animalId ? { ...tub, occupantId: null } : tub,
+      ),
+    })),
+  };
+}
+
+export function assignAnimalToHousing(
+  save: EmeraldKeeperSave,
+  animalId: string,
+  placement: EmeraldHousingPlacement,
+): EmeraldKeeperSave {
+  const released = releaseAnimalHousing(save, animalId);
+  if (placement.kind === "enclosure") {
+    return {
+      ...released,
+      housingUnits: released.housingUnits.map((unit) =>
+        unit.id === placement.housingUnitId ? { ...unit, occupantId: animalId } : unit,
+      ),
+    };
+  }
+  return {
+    ...released,
+    racks: released.racks.map((rack) =>
+      rack.id === placement.rackId
+        ? {
+            ...rack,
+            tubs: rack.tubs.map((tub) =>
+              tub.id === placement.tubId ? { ...tub, occupantId: animalId } : tub,
+            ),
+          }
+        : rack,
+    ),
+  };
+}
+
+export function housingLabelForAnimal(
+  save: Pick<EmeraldKeeperSave, "housingUnits" | "racks">,
+  animalId: string,
+) {
+  const placement = housingPlacementForAnimal(save, animalId);
+  if (!placement) return "Unassigned";
+  if (placement.kind === "enclosure") {
+    const unit = save.housingUnits.find((item) => item.id === placement.housingUnitId);
+    return ARBOREAL_KEEPER_ENCLOSURES.find((item) => item.id === unit?.enclosureId)?.displayName ?? "Enclosure";
+  }
+  const rack = save.racks.find((item) => item.id === placement.rackId);
+  const tub = rack?.tubs.find((item) => item.id === placement.tubId);
+  const definition = rack ? rackDefinition(rack.rackDefinitionId) : null;
+  return `${definition?.displayName ?? "Arboreal Rack"} · ${tub?.label ?? "Tub"}`;
+}
+
+export function openRackTubCount(
+  save: Pick<EmeraldKeeperSave, "racks">,
+  speciesId: EmeraldSpeciesId,
+  lifeStage: KeeperLifeStage = "neonate",
+) {
+  return emptyCompatibleRackTubs(save.racks, speciesId, lifeStage).length;
+}
+
+function normalizeRack(raw: unknown, index: number): KeeperRackInstance | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const input = raw as Partial<KeeperRackInstance>;
+  const definition = ARBOREAL_KEEPER_RACKS.find((item) => item.id === input.rackDefinitionId);
+  if (!definition) return null;
+  const id = typeof input.id === "string" && input.id ? input.id : `arboreal-rack-${index + 1}`;
+  const normalized = createRackInstance({
+    id,
+    rackDefinitionId: definition.id,
+    roomId: typeof input.roomId === "string" && input.roomId ? input.roomId : "main-room",
+    position: {
+      x: Number.isFinite(Number(input.position?.x)) ? Number(input.position?.x) : index * 5,
+      y: Number.isFinite(Number(input.position?.y)) ? Number(input.position?.y) : 0,
+    },
+    rotation: input.rotation === 90 || input.rotation === 180 || input.rotation === 270 ? input.rotation : 0,
+  });
+  const oldTubs = Array.isArray(input.tubs) ? input.tubs : [];
+  normalized.tubs = normalized.tubs.map((tub) => {
+    const old = oldTubs.find((item) => item && typeof item === "object" && "id" in item && item.id === tub.id) as
+      | { occupantId?: unknown }
+      | undefined;
+    return {
+      ...tub,
+      occupantId: typeof old?.occupantId === "string" ? old.occupantId : null,
+    };
+  });
+  return normalized;
+}
+
+export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return createEmptyEmeraldKeeperSave();
+  const input = value as Partial<EmeraldKeeperSave> & { housingUnits?: LegacyHousingUnit[] };
+  const animals = Array.isArray(input.animals) ? input.animals : [];
+  const rawHousing = Array.isArray(input.housingUnits) ? input.housingUnits : [];
+  const legacyTubUnits = rawHousing.filter((unit) => unit?.enclosureId === "neonate-arboreal-tub");
+
+  let racks = Array.isArray(input.racks)
+    ? input.racks.map((rack, index) => normalizeRack(rack, index)).filter((rack): rack is KeeperRackInstance => Boolean(rack))
+    : [];
+
+  const legacyCapacityNeeded = legacyTubUnits.length;
+  const totalRackCapacity = () => racks.reduce((sum, rack) => sum + rack.tubs.length, 0);
+  if (!racks.length) racks = [createStarterRack()];
+  while (totalRackCapacity() < Math.max(12, legacyCapacityNeeded)) {
+    racks.push(createStarterRack(racks.length + 1));
+  }
+
+  const housingUnits: EmeraldHousingUnit[] = rawHousing.flatMap((unit, index) => {
+    const enclosureId = String(unit?.enclosureId ?? "");
+    if (enclosureId === "neonate-arboreal-tub") return [];
+    const migratedId: KeeperEnclosureId | null =
+      enclosureId === "chondro-dojo-bin"
+        ? "chondro-dojo-bin"
+        : enclosureId === "pvc-arboreal-medium" || enclosureId === "glass-arboreal-medium" || enclosureId === "glass-arboreal-large"
+          ? "pvc-arboreal-medium"
+          : null;
+    if (!migratedId) return [];
+    return [{
+      id: typeof unit?.id === "string" && unit.id ? unit.id : `keeper-housing-${index + 1}`,
+      enclosureId: migratedId,
+      occupantId: typeof unit?.occupantId === "string" ? unit.occupantId : null,
+    }];
+  });
+
+  const neonateIds = new Set(
+    animals.filter((animal) => animal.lifeStage === "neonate").map((animal) => animal.id),
+  );
+  const rackCandidateOccupants = new Set<string>();
+  for (const unit of legacyTubUnits) {
+    if (typeof unit?.occupantId === "string") rackCandidateOccupants.add(unit.occupantId);
+  }
+  for (const unit of housingUnits) {
+    if (unit.occupantId && neonateIds.has(unit.occupantId)) {
+      rackCandidateOccupants.add(unit.occupantId);
+      unit.occupantId = null;
+    }
+  }
+  for (const animal of animals) {
+    if (animal.lifeStage === "neonate") rackCandidateOccupants.add(animal.id);
+  }
+
+  const alreadyRacked = new Set(
+    racks.flatMap((rack) => rack.tubs.map((tub) => tub.occupantId).filter((id): id is string => Boolean(id))),
+  );
+  const pending = [...rackCandidateOccupants].filter((id) => !alreadyRacked.has(id));
+  let openSlots = racks.flatMap((rack) => rack.tubs.filter((tub) => tub.occupantId === null).map((tub) => ({ rack, tub })));
+  while (openSlots.length < pending.length) {
+    const extra = createStarterRack(racks.length + 1);
+    racks.push(extra);
+    openSlots = racks.flatMap((rack) => rack.tubs.filter((tub) => tub.occupantId === null).map((tub) => ({ rack, tub })));
+  }
+  pending.forEach((animalId, index) => {
+    const slot = openSlots[index];
+    if (slot) slot.tub.occupantId = animalId;
+  });
+
+  return {
+    schemaVersion: 2,
+    animals,
     purchasedOfferIds: Array.isArray(input.purchasedOfferIds) ? input.purchasedOfferIds : [],
     breedingJobs: Array.isArray(input.breedingJobs) ? input.breedingJobs : [],
     litters: Array.isArray(input.litters) ? input.litters : [],
-    housingUnits: Array.isArray(input.housingUnits) ? input.housingUnits : [],
+    housingUnits,
+    racks,
     selectedSpecies:
       input.selectedSpecies === "amazon_basin_emerald_tree_boa"
         ? "amazon_basin_emerald_tree_boa"
