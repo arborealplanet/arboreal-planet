@@ -35,11 +35,16 @@ const replacements = [
   ['{ id: "clutches", label: "Clutches", navLabel: "Clutch", detail: "Eggs, hatchlings and clutch history", icon: "◉" }', '{ id: "clutches", label: "Offspring", navLabel: "Offspring", detail: "Eggs, litters, hatchlings and offspring history", icon: "◉" }'],
   ['{ id: "market", label: "Store", detail: "Buy chondros and use the player market", icon: "$" }', '{ id: "market", label: "Animal Market", detail: "Browse animals across unlocked species and use the player market", icon: "$" }'],
   ['{ id: "guide", label: "Field Guide", detail: "Subspecies, locality and phenotype reference", icon: "?" }', '{ id: "guide", label: "Field Guide", detail: "Species, locality and phenotype reference", icon: "?" }'],
+  ['colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for naming, testing, notes, sale, retirement and detailed records. Enclosure management follows below the collection." }', 'colony: { eyebrow: "Collection", title: "My Animals", detail: "Browse animals across every active species program. Open an animal for naming, testing, notes, sale, retirement and detailed records. Enclosure management follows below the collection." }'],
+  ['clutches: { eyebrow: "Offspring", title: "Clutches", detail: "See the active clutch first, make establishment and holdback decisions, then review completed breeding history below." }', 'clutches: { eyebrow: "Offspring", title: "Offspring", detail: "Review active clutches and litters, make establishment and holdback decisions, then review completed breeding history below." }'],
+  ['market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Browse rotating game inventory first, then shop breeder-to-breeder listings and manage your seller activity." }', 'market: { eyebrow: "Animal exchange", title: "Animal Market", detail: "Browse rotating inventory across unlocked species, then shop breeder-to-breeder listings and manage your seller activity." }'],
   ["Illustrated Chondro Breeder incubator", "Illustrated Arboreal Keeper incubation room"],
   ["Breed, incubate, hatch and build a lineage.", "Breed, raise and build living lineages."],
   ["The Chondro Breeder artwork is part of the main experience. Move between breeding, colony, clutch and store screens to see the program progress visually.", "Arboreal Keeper brings multiple species into one shared facility. Move between breeding, animals, offspring and the market while each species keeps its own biology and progression."],
   ["Manage colony", "Manage animals"],
   ["Review clutches", "Review offspring"],
+  ["← Breeder Home", "← Keeper Home"],
+  ["Breeder tools", "Keeper tools"],
 ];
 
 for (const [before, after] of replacements) {
