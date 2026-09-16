@@ -95,7 +95,7 @@ export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
     },
   },
   neonates: {
-    redChance: 0.38,
+    redChance: 0.5,
     allowedColorsByTaxon: {
       "Morelia viridis": ["Yellow"],
     },
