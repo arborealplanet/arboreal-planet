@@ -13,17 +13,23 @@ function replaceOnce(source, before, after, label) {
   return source.replace(before, after);
 }
 
+function keepSingleLine(source, line) {
+  const parts = source.split(line);
+  if (parts.length <= 2) return source;
+  return `${parts[0]}${line}${parts.slice(1).join("")}`;
+}
+
 if (!fs.existsSync(workspacePath)) {
   console.warn("[keeper-facility] Workspace source not found; skipping facility planner mount.");
 } else {
   let source = fs.readFileSync(workspacePath, "utf8");
 
-  source = replaceOnce(
-    source,
-    'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
-    'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";\nimport { ArborealKeeperFacilityPlanner } from "@/components/ArborealKeeperFacilityPlanner";',
-    "facility planner import",
-  );
+  if (!source.includes('import { ArborealKeeperFacilityPlanner } from "@/components/ArborealKeeperFacilityPlanner";')) {
+    source = source.replace(
+      'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
+      'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";\nimport { ArborealKeeperFacilityPlanner } from "@/components/ArborealKeeperFacilityPlanner";',
+    );
+  }
 
   source = source.replace(
     '{ id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" }',
@@ -46,8 +52,18 @@ if (!fs.existsSync(workspacePath)) {
     "Create mixed-species rooms, install compatible enclosure shells, customize nine snap zones and save reusable cage templates alongside facility progression.",
   );
 
+  const keeperImports = [
+    'import { ArborealKeeperFacilityPlanner } from "@/components/ArborealKeeperFacilityPlanner";',
+    'import { ArborealKeeperSpeciesPrograms } from "@/components/ArborealKeeperSpeciesPrograms";',
+    'import { ArborealKeeperProgressionStrip } from "@/components/ArborealKeeperProgressionStrip";',
+    'import { ArborealKeeperEmeraldWorkspace } from "@/components/ArborealKeeperEmeraldWorkspace";',
+    'import { ArborealKeeperEmeraldCloudSync } from "@/components/ArborealKeeperEmeraldCloudSync";',
+  ];
+  for (const importLine of keeperImports) source = keepSingleLine(source, importLine);
+
   fs.writeFileSync(workspacePath, source);
   console.log("[keeper-facility] Mounted shared rooms and enclosure customization in the Facility screen.");
+  console.log("[keeper-facility] Deduplicated shared Keeper imports after repeated lint/build patch passes.");
 }
 
 if (fs.existsSync(facilityPlannerPath)) {
