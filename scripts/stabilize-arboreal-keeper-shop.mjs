@@ -31,12 +31,6 @@ update(gtpShopPath, (source) => {
 update(marketPath, (source) => {
   let next = source;
 
-  const progressionImport = 'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";';
-  const spriteImport = 'import { keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
-  if (!next.includes(spriteImport) && next.includes(progressionImport)) {
-    next = next.replace(progressionImport, `${progressionImport}\n${spriteImport}`);
-  }
-
   const oldHousing = `        housingUnits: [
           ...save.housingUnits,
           {
@@ -60,35 +54,6 @@ update(marketPath, (source) => {
     'setStatus(`${enclosure.displayName} added. ${enclosureId === "chondro-dojo-bin" ? "Two individual housing spaces are now available." : "One individual housing space is now available."}`);',
   );
 
-  const traitsLine = "                const traits = strongestTraits(offer.animal);";
-  const spriteLine = "                const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);";
-  next = next.split(`\n${spriteLine}`).join("");
-  if (next.includes(traitsLine)) next = next.replace(traitsLine, `${traitsLine}\n${spriteLine}`);
-
-  const imageBlock = `                      {showImage ? (
-                        <Image
-                          src={offer.animal.assetPath!}
-                          alt={\`${'${emeraldSpeciesDisplayName(offer.animal.speciesId)}'} ${'${offer.animal.lifeStage}'}\`}
-                          fill
-                          sizes="(max-width: 640px) 82vw, (max-width: 1024px) 48vw, 33vw"
-                          className="object-contain p-2"
-                          onError={() => setBrokenAssets((current) => current.includes(offer.animal.assetPath!) ? current : [...current, offer.animal.assetPath!])}
-                        />
-                      ) : (`;
-  const spriteBlock = `                      {spriteStyle ? (
-                        <div className="absolute inset-2 bg-no-repeat" style={spriteStyle} aria-label={\`${'${emeraldSpeciesDisplayName(offer.animal.speciesId)}'} ${'${offer.animal.lifeStage}'}\`} />
-                      ) : showImage ? (
-                        <Image
-                          src={offer.animal.assetPath!}
-                          alt={\`${'${emeraldSpeciesDisplayName(offer.animal.speciesId)}'} ${'${offer.animal.lifeStage}'}\`}
-                          fill
-                          sizes="(max-width: 640px) 82vw, (max-width: 1024px) 48vw, 33vw"
-                          className="object-contain p-2"
-                          onError={() => setBrokenAssets((current) => current.includes(offer.animal.assetPath!) ? current : [...current, offer.animal.assetPath!])}
-                        />
-                      ) : (`;
-  if (next.includes(imageBlock)) next = next.replace(imageBlock, spriteBlock);
-
   next = next
     .replace("Northern + Amazon Basin listings", "Emerald Tree Boa carousel")
     .replace("A separate horizontal market directly beneath the Green Tree Python store. Every Emerald Tree Boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.")
@@ -97,7 +62,7 @@ update(marketPath, (source) => {
     .replace('{enclosure.sizeClass} · one animal', '{enclosure.sizeClass} · {id === "chondro-dojo-bin" ? "two individual spaces" : "one individual space"}');
 
   return next;
-}, "Fixed Emerald market Dojo capacity, sprite cropping, and carousel copy.");
+}, "Fixed Emerald market Dojo capacity and carousel copy.");
 
 update(workspacePath, (source) => {
   let next = source;
