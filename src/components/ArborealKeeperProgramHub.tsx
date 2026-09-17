@@ -24,22 +24,22 @@ const EMERALD_VIEWS: Array<{ id: EmeraldView; label: string }> = [
   { id: "clutches", label: "Litters" },
 ];
 
-function isAnimalStoreActive() {
+function isKeeperHomeActive() {
   const dock = document.querySelector('nav[aria-label="Chondro Breeder navigation"]');
-  if (!dock) return false;
+  if (!dock) return true;
 
   const buttons = Array.from(dock.querySelectorAll("button"));
   const selected = buttons.findIndex((button) => button.getAttribute("aria-current") === "page");
-  return selected === 4;
+  return selected === 0;
 }
 
 export function ArborealKeeperProgramHub() {
   const [view, setView] = useState<HubView>("programs");
   const [emeraldView, setEmeraldView] = useState<EmeraldView>("market");
-  const [hiddenForAnimalStore, setHiddenForAnimalStore] = useState(false);
+  const [homeActive, setHomeActive] = useState(true);
 
   useEffect(() => {
-    const syncVisibility = () => setHiddenForAnimalStore(isAnimalStoreActive());
+    const syncVisibility = () => setHomeActive(isKeeperHomeActive());
     syncVisibility();
 
     const observer = new MutationObserver(syncVisibility);
@@ -53,7 +53,7 @@ export function ArborealKeeperProgramHub() {
     return () => observer.disconnect();
   }, []);
 
-  if (hiddenForAnimalStore) return null;
+  if (!homeActive) return null;
 
   return (
     <section className="border-b border-white/[.055] bg-[#030806] py-4 sm:py-5">
