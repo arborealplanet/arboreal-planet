@@ -31,14 +31,14 @@ for (const filePath of targets) {
     );
   }
 
-  // Main game locality -> taxon lookup. Numfor/Wamena remain accepted for
-  // backward-compatible saves, but newly generated animals use only the
-  // explicit canonical locality pools below.
+  // Canon used by Arboreal Keeper / Chondro Breeder.
+  // Important: Biak belongs to Morelia azurea azurea and Cyclops belongs to
+  // Morelia azurea utaraensis. Do not reverse these during build patches.
   next = next
-    .replace('  Biak: "Morelia azurea azurea",', '  Biak: "Morelia viridis",')
-    .replace('  Cyclops: "Morelia azurea utaraensis",', '  Cyclops: "Morelia azurea azurea",')
-    .replace('  Jayapura: "Morelia azurea utaraensis",', '  Jayapura: "Morelia azurea azurea",')
-    .replace('  Lereh: "Morelia azurea utaraensis",', '  Lereh: "Morelia azurea azurea",');
+    .replace('  Biak: "Morelia viridis",', '  Biak: "Morelia azurea azurea",')
+    .replace('  Cyclops: "Morelia azurea azurea",', '  Cyclops: "Morelia azurea utaraensis",')
+    .replace('  Jayapura: "Morelia azurea azurea",', '  Jayapura: "Morelia azurea utaraensis",')
+    .replace('  Lereh: "Morelia azurea azurea",', '  Lereh: "Morelia azurea utaraensis",');
 
   if (next.includes("const localitySubspecies: Record<Locality, Subspecies> = {") && !next.includes('  Yapen: "Morelia azurea utaraensis",')) {
     next = next.replace(
@@ -47,14 +47,12 @@ for (const filePath of targets) {
     );
   }
 
-  // The expanded store should only generate localities whose current project
-  // assignments are explicit. Legacy Numfor/Wamena values remain readable but
-  // are not introduced into new daily inventory.
+  // Keep the daily shop pools aligned with the breeder's locality map.
   if (next.includes("const localitiesBySubspecies: Record<Subspecies, Locality[]> = {")) {
     const start = next.indexOf("const localitiesBySubspecies: Record<Subspecies, Locality[]> = {");
     const end = next.indexOf("};", start);
     if (start >= 0 && end > start) {
-      const canonical = `const localitiesBySubspecies: Record<Subspecies, Locality[]> = {\n  "Morelia azurea azurea": ["Cyclops", "Jayapura", "Lereh"],\n  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],\n  "Morelia azurea utaraensis": ["Yapen"],\n  "Morelia viridis": ["Biak", "Aru", "Merauke"],\n}`;
+      const canonical = `const localitiesBySubspecies: Record<Subspecies, Locality[]> = {\n  "Morelia azurea azurea": ["Biak", "Numfor"],\n  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],\n  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],\n  "Morelia viridis": ["Aru", "Merauke"],\n}`;
       next = next.slice(0, start) + canonical + next.slice(end + 1);
     }
   }
