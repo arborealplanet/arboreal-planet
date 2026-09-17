@@ -28,10 +28,8 @@ const ECONOMY_EVENT = "arboreal-keeper-economy-action";
 const ECONOMY_UPDATED_EVENT = "arboreal-keeper-economy-updated";
 
 const HOUSING_IDS: KeeperEnclosureId[] = [
-  "neonate-arboreal-tub",
+  "chondro-dojo-bin",
   "pvc-arboreal-medium",
-  "glass-arboreal-medium",
-  "glass-arboreal-large",
 ];
 
 type EconomyAction = {
