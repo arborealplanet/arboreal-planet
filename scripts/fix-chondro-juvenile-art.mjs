@@ -90,54 +90,19 @@ if (expandedShop.includes(oldColorRoll)) {
   expandedShopChanged = true;
 }
 
-const oldBuildOffers = `function buildOffers(seed: number, rows: ConservationRow[]) {
-  const random = rng(seed * 7919 + 20260908);
-  const effects = effectMap(rows);
-  return Array.from({ length: 20 }, (_, index) => makeRandomOffer(seed, index, random, effects));
-}`;
-const newBuildOffers = `function buildOffers(seed: number, rows: ConservationRow[]) {
-  const random = rng(seed * 7919 + 20260908);
-  const effects = effectMap(rows);
-  const yellowShowcase: Array<[Subspecies, Locality]> = [
-    ["Morelia azurea azurea", "Biak"],
-    ["Morelia azurea pulcher", "Manokwari"],
-    ["Morelia azurea utaraensis", "Cyclops"],
-  ];
-
-  return Array.from({ length: 20 }, (_, index) => {
-    const offer = makeRandomOffer(seed, index, random, effects);
-    const forced = yellowShowcase[index];
-    if (!forced) return offer;
-
-    const [subspecies, locality] = forced;
-    return {
-      ...offer,
-      name: locality + " Yellow Juvenile",
-      subspecies,
-      locality,
-      neonateColor: "Yellow" as const,
-      lifeStage: "Neonate" as const,
-      localityAncestry: { [locality]: 100 },
-      body: subspecies,
-      tail: subspecies === "Morelia azurea utaraensis" ? "Matching body color and pattern" : "Black-dipped",
-      eyes: subspecies,
-      head: subspecies,
-      pattern: locality,
-      color: locality,
-      ancestry: { [subspecies]: 100 },
-      featured: true,
-      specialLabel: "Yellow juvenile showcase",
-    };
-  });
-}`;
-
-if (expandedShop.includes(oldBuildOffers)) {
-  expandedShop = expandedShop.replace(oldBuildOffers, newBuildOffers);
+// Remove the old hard-coded yellow showcase generator. It created invalid
+// locality/subspecies combinations (for example Biak + M. a. azurea) and forced
+// art that did not match the generated animal. Daily inventory should come only
+// from makeRandomOffer(), whose locality pool is canonicalized later in prebuild.
+const forcedShowcasePattern = /function buildOffers\(seed: number, rows: ConservationRow\[\]\) \{[\s\S]*?const yellowShowcase: Array<\[Subspecies, Locality\]> =[\s\S]*?\n\}\n\nfunction parseSave/;
+if (forcedShowcasePattern.test(expandedShop)) {
+  expandedShop = expandedShop.replace(
+    forcedShowcasePattern,
+    `function buildOffers(seed: number, rows: ConservationRow[]) {\n  const random = rng(seed * 7919 + 20260908);\n  const effects = effectMap(rows);\n  return Array.from({ length: 20 }, (_, index) => makeRandomOffer(seed, index, random, effects));\n}\n\nfunction parseSave`,
+  );
   expandedShopChanged = true;
-} else if (!expandedShop.includes("const yellowShowcase: Array<[Subspecies, Locality]>") ) {
-  throw new Error("Yellow juvenile shop showcase patch could not find buildOffers.");
 }
 
 if (expandedShopChanged) fs.writeFileSync(expandedShopFile, expandedShop);
 
-console.log("Applied Chondro juvenile-art wiring plus guaranteed yellow juvenile shop showcases.");
+console.log("Applied Chondro stage-aware art wiring without forced showcase animals.");
