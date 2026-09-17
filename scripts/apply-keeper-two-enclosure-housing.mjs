@@ -104,7 +104,7 @@ for (const filePath of [marketPath, workspacePath]) {
   );
 }
 
-if (fs.existsSync(gtpShopPath)) {
+if (fs.existsSync(gtpShopPath) && !fs.readFileSync(gtpShopPath, "utf8").includes("function hasCompatibleHousing(")) {
   const source = fs.readFileSync(gtpShopPath, "utf8");
   let next = source;
 
