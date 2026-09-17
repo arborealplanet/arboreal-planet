@@ -52,6 +52,7 @@ async function upload(save: EmeraldKeeperSave) {
 export function ArborealKeeperEmeraldCloudSync() {
   const pending = useRef<EmeraldKeeperSave | null>(null);
   const timer = useRef<number | null>(null);
+  const lastObservedAt = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +60,7 @@ export function ArborealKeeperEmeraldCloudSync() {
 
     async function hydrate() {
       const local = localSave();
+      lastObservedAt.current = timestamp(local);
 
       try {
         const response = await fetch(CLOUD_ENDPOINT, { cache: "no-store" });
@@ -81,6 +83,7 @@ export function ArborealKeeperEmeraldCloudSync() {
         }
 
         if (cloud && timestamp(cloud) > timestamp(local)) {
+          lastObservedAt.current = timestamp(cloud);
           window.localStorage.setItem(EMERALD_KEEPER_SAVE_KEY, JSON.stringify(cloud));
           window.dispatchEvent(new CustomEvent(LOAD_EVENT, { detail: { save: cloud } }));
         } else if (local && timestamp(local) > timestamp(cloud)) {
@@ -105,23 +108,37 @@ export function ArborealKeeperEmeraldCloudSync() {
     function queueSave(event: Event) {
       const detail = (event as CustomEvent<{ save?: unknown }>).detail;
       if (!detail?.save) return;
-      pending.current = sanitizeEmeraldKeeperSave(detail.save);
+      const next = sanitizeEmeraldKeeperSave(detail.save);
+      lastObservedAt.current = Math.max(lastObservedAt.current, timestamp(next));
+      pending.current = next;
       if (timer.current !== null) window.clearTimeout(timer.current);
       timer.current = window.setTimeout(async () => {
-        const next = pending.current;
+        const queued = pending.current;
         timer.current = null;
-        if (!next) return;
+        if (!queued) return;
         try {
-          emitStatus(await upload(next));
+          emitStatus(await upload(queued));
         } catch {
           emitStatus("error");
         }
       }, 900);
     }
 
+    // Some older Arboreal Keeper writers persist directly to localStorage and
+    // do not emit SAVE_EVENT. Watch the save timestamp so those changes still
+    // reach cloud sync and the shared facility bridge in the same tab.
+    const localWatch = window.setInterval(() => {
+      const current = localSave();
+      const currentAt = timestamp(current);
+      if (!current || currentAt <= lastObservedAt.current) return;
+      lastObservedAt.current = currentAt;
+      window.dispatchEvent(new CustomEvent(SAVE_EVENT, { detail: { save: current } }));
+    }, 1_000);
+
     window.addEventListener(SAVE_EVENT, queueSave);
     return () => {
       window.removeEventListener(SAVE_EVENT, queueSave);
+      window.clearInterval(localWatch);
       if (timer.current !== null) window.clearTimeout(timer.current);
     };
   }, []);
