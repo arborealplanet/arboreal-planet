@@ -90,7 +90,6 @@ update(marketPath, (source) => {
   if (next.includes(imageBlock)) next = next.replace(imageBlock, spriteBlock);
 
   next = next
-    .replace("Emerald Tree Boas", "Emerald Tree Boas")
     .replace("Northern + Amazon Basin listings", "Emerald Tree Boa carousel")
     .replace("A separate horizontal market directly beneath the Green Tree Python store. Every Emerald Tree Boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.")
     .replace("Quick-buy an individual compatible enclosure without leaving the shop.", "Quick-buy compatible housing without leaving the shop. Chondro Dojo 2 Stacks add two individual neonate spaces.")
@@ -136,33 +135,42 @@ update(keeperWorkspacePath, (source) => {
     .replace('market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Browse rotating game inventory first, then shop breeder-to-breeder listings and manage your seller activity." },', 'market: { eyebrow: "Arboreal Keeper", title: "Repti-Shop", detail: "Enclosures first, followed by one carousel for each animal group in the store." },')
     .replace('{view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}', '{view === "breeding" || view === "colony" ? <ChondroBreederScreenArt screen={view} /> : null}');
 
-  const oldMarketIntro = `      {view === "market" ? (
-        <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[24px] border border-amber-200/15 bg-amber-200/[.035] px-4 py-3 text-sm text-amber-50/70">
-              <strong className="text-amber-100">Snake Store:</strong> rotating chondros are below. Purchases use your breeder cash and require an open enclosure.
-            </div>
-            <div className="rounded-[24px] border border-emerald-300/12 bg-emerald-300/[.03] px-4 py-3 text-xs leading-5 text-white/48">
-              <strong className="text-emerald-100/80">48-hour market fallback:</strong> player listings that remain unsold for two days are cleared automatically at 85% of their asking price. Pure subspecies animals are acquired by the conservation program and count toward the shared conservation goal, but the seller receives no personal conservation credit. Other animals are placed through the game&apos;s NPC pet market.
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {view === "market" ? <ChondroBreederExpandedShop /> : null}
-      {view === "market" ? <ChondroPlayerMarket /> : null}`;
-  const newMarketIntro = `      {view === "market" ? (
+  const introStart = '      {view === "market" ? (\n        <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">';
+  const introEnd = '      ) : null}';
+  const startIndex = next.indexOf(introStart);
+  if (startIndex >= 0) {
+    const endIndex = next.indexOf(introEnd, startIndex);
+    if (endIndex >= 0) {
+      next = next.slice(0, startIndex) + next.slice(endIndex + introEnd.length + 1);
+    }
+  }
+
+  const stackedMarket = `      {view === "market" ? (<>
+        <ChondroBreederExpandedShop />
+        <ArborealKeeperEmeraldMarketBar />
+      </>) : null}`;
+  const canonicalMarket = `      {view === "market" ? (
         <>
           <ChondroBreederExpandedShop />
           <ArborealKeeperEmeraldMarketBar />
         </>
       ) : null}`;
-  if (next.includes(oldMarketIntro)) next = next.replace(oldMarketIntro, newMarketIntro);
 
-  next = next.replace('      {view === "market" ? <ChondroFavoritesMarketPanel /> : null}\n', "");
-  next = next.replace(
-    '      <ChondroBreederGameV3 screen={view} />',
-    '      <div className={view === "market" ? "hidden" : undefined} aria-hidden={view === "market" ? true : undefined}><ChondroBreederGameV3 screen={view} /></div>',
-  );
+  next = next
+    .replace(`${stackedMarket}\n`, "")
+    .replace(`${canonicalMarket}\n`, "")
+    .replace('      {view === "market" ? <ChondroBreederExpandedShop /> : null}\n', "")
+    .replace('      {view === "market" ? <ChondroPlayerMarket /> : null}\n', "")
+    .replace('      {view === "market" ? <ChondroFavoritesMarketPanel /> : null}\n', "");
+
+  const clutchAnchor = '      {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}';
+  if (!next.includes(canonicalMarket) && next.includes(clutchAnchor)) {
+    next = next.replace(clutchAnchor, `${canonicalMarket}\n${clutchAnchor}`);
+  }
+
+  const rawCore = '      <ChondroBreederGameV3 screen={view} />';
+  const wrappedCore = '      <div className={view === "market" ? "hidden" : undefined} aria-hidden={view === "market" ? true : undefined}><ChondroBreederGameV3 screen={view} /></div>';
+  next = next.replace(rawCore, wrappedCore);
 
   return next;
 }, "Reduced Repti-Shop to Enclosures, Green Tree Python carousel, and Emerald Tree Boa carousel.");
