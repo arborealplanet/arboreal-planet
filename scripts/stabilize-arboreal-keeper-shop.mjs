@@ -105,10 +105,14 @@ update(keeperWorkspacePath, (source) => {
     .replace('{ id: "market", label: "Repti-Shop", detail: "Enclosures and rotating animal listings", icon: "$" },', '{ id: "market", label: "Repti-Shop", navLabel: "Shop", detail: "Enclosures and rotating animal listings", icon: "$" },');
 
   const functionStart = 'function CoreGameScreen({ view }: { view: CoreView }) {';
-  const earlyReturn = `${functionStart}\n  if (view === "market") return <ArborealKeeperReptiShop />;`;
-  if (!next.includes(earlyReturn) && next.includes(functionStart)) {
-    next = next.replace(functionStart, earlyReturn);
+  const obsoleteEarlyReturn = `${functionStart}\n  if (view === "market") return <ArborealKeeperReptiShop />;`;
+  next = next.replace(obsoleteEarlyReturn, functionStart);
+
+  const legacyCoreMount = '{coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}';
+  const routedCoreMount = '{view === "market" ? <ArborealKeeperReptiShop /> : coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}';
+  if (!next.includes(routedCoreMount) && next.includes(legacyCoreMount)) {
+    next = next.replace(legacyCoreMount, routedCoreMount);
   }
 
   return next;
-}, "Routed the Shop tab directly to the dedicated Repti-Shop component.");
+}, "Routed the Shop tab before the legacy core screen without narrowing CoreGameScreen types.");
