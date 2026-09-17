@@ -10,9 +10,34 @@ if (!fs.existsSync(file)) {
 let source = fs.readFileSync(file, "utf8");
 const before = source;
 
+// Match the Green Tree Python carousel exactly: same responsive card width,
+// same internal padding and the same 160px / 192px portrait window.
+source = source.replace(
+  'className="w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[.06] bg-black/10 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)]"',
+  'className="w-[82%] shrink-0 snap-start rounded-2xl border border-white/[.06] bg-black/10 p-3 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)]"',
+);
+
 source = source.replace(
   'className="relative aspect-square overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c]"',
+  'className="relative h-40 overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 sm:h-48"',
+);
+source = source.replace(
   'className="relative h-40 overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c] sm:h-48"',
+  'className="relative h-40 overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 sm:h-48"',
+);
+
+// The injected sprite renderer must fill the exact same portrait window as the
+// Chondro image. The crop itself is controlled by emeraldSpriteStyle.
+source = source.replace(
+  'className="absolute inset-2 rounded-xl bg-black"',
+  'className="absolute inset-0 rounded-2xl bg-black"',
+);
+
+// Avoid double-padding the Emerald card now that the card shell itself matches
+// the Chondro card padding.
+source = source.replace(
+  '<div className="p-3">\n                      <div className="flex flex-wrap gap-1.5">',
+  '<div className="pt-3">\n                      <div className="flex flex-wrap gap-1.5">',
 );
 
 source = source.replace(
@@ -35,7 +60,7 @@ if (!source.includes('>Virtual</div>') && source.includes(imageEndMarker)) {
 
 if (source !== before) {
   fs.writeFileSync(file, source);
-  console.log("[keeper-emerald-carousel] Matched Emerald market card proportions to the Green Tree Python carousel.");
+  console.log("[keeper-emerald-carousel] Matched Emerald sprite crops and card dimensions to the Green Tree Python carousel.");
 } else {
   console.log("[keeper-emerald-carousel] Emerald carousel already aligned.");
 }
