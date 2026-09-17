@@ -56,7 +56,51 @@ update(marketPath, (source) => {
 
   next = next
     .replace("Northern + Amazon Basin listings", "Emerald Tree Boa carousel")
-    .replace("A separate horizontal market directly beneath the Green Tree Python store. Every Emerald Tree Boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.");
+    .replace("A separate horizontal market directly beneath the Green Tree Python store. Every Emerald Tree Boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.")
+    .replace("Northern and Amazon Basin Emerald Tree Boas in the same swipeable card format as the Green Tree Pythons above. Every boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.");
+
+  // Use one canonical sprite mapper. The legacy art patch may inject a local
+  // emeraldSpriteStyle helper, but the final shop should use the shared species
+  // mapping so market, collection and breeding views cannot drift apart.
+  const canonicalImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
+  next = next.replace(
+    'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";',
+    canonicalImport,
+  );
+  if (!next.includes(canonicalImport) && next.includes('import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";')) {
+    next = next.replace(
+      'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";',
+      'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";\n' + canonicalImport,
+    );
+  }
+
+  next = next.replace(
+    'const spriteStyle = emeraldSpriteStyle(offer.animal);',
+    'const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);',
+  );
+
+  // Match the Chondro carousel exactly: same responsive card width and same
+  // 160/192px portrait window. Never fall back to rendering an entire sprite sheet.
+  next = next.replace(
+    'className="relative aspect-square overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c]"',
+    'className="relative h-40 overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c] sm:h-48"',
+  );
+  next = next.replace(
+    'className="absolute inset-2 rounded-xl bg-black"',
+    'className="absolute inset-0 bg-black"',
+  );
+
+  next = next.replace(
+    'const showImage = Boolean(offer.animal.assetPath) && !brokenAssets.includes(offer.animal.assetPath ?? "");\n                const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);',
+    'const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);\n                const showImage = Boolean(offer.animal.assetPath && spriteStyle) && !brokenAssets.includes(offer.animal.assetPath ?? "");',
+  );
+
+  // If a mapper cannot resolve an asset ID, use the explicit asset-slot fallback
+  // rather than showing the complete sprite sheet as if it were one animal.
+  next = next.replace(
+    /\{showImage \? \(\s*spriteStyle \? \([\s\S]*?\) : \(\s*<Image[\s\S]*?\/>\s*\)\s*\) : \(/,
+    `{showImage && spriteStyle ? (\n                        <div\n                          role="img"\n                          aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}\n                          className="absolute inset-0 bg-black"\n                          style={spriteStyle}\n                        />\n                      ) : (`,
+  );
 
   const housingStartMarker = '\n        <div className="mt-4 border-t border-white/[.055] pt-4">';
   const statusMarker = '\n\n        {status ?';
@@ -69,7 +113,7 @@ update(marketPath, (source) => {
   }
 
   return next;
-}, "Removed duplicate Emerald housing shop and kept only the Emerald Tree Boa carousel.");
+}, "Canonicalized Emerald sprite crops and removed duplicate Emerald housing shop.");
 
 update(workspacePath, (source) => {
   let next = source;
