@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
@@ -18,7 +19,6 @@ import {
   type EmeraldAnimal,
   type EmeraldKeeperSave,
 } from "@/lib/arboreal-keeper-emerald-engine";
-import { keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
 
 const CHONDRO_SAVE_KEY = "arboreal_chondro_breeder_v2";
@@ -111,6 +111,7 @@ export function ArborealKeeperEmeraldMarketBar() {
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [brokenAssets, setBrokenAssets] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -263,26 +264,28 @@ export function ArborealKeeperEmeraldMarketBar() {
                 const sold = purchased.has(offer.id);
                 const housing = compatibleEmptyHousingCount(save, offer.animal);
                 const traits = strongestTraits(offer.animal);
-                const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);
+                const showImage = Boolean(offer.animal.assetPath) && !brokenAssets.includes(offer.animal.assetPath ?? "");
                 return (
                   <article
                     key={offer.id}
                     className="w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[.06] bg-black/10 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)]"
                   >
                     <div className="relative aspect-square overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c]">
-                      {spriteStyle ? (
-                        <div
-                          className="absolute inset-2 rounded-xl bg-black"
-                          style={spriteStyle}
-                          role="img"
-                          aria-label={`${emeraldSpeciesDisplayName(offer.animal.speciesId)} ${offer.animal.lifeStage}`}
+                      {showImage ? (
+                        <Image
+                          src={offer.animal.assetPath!}
+                          alt={`${emeraldSpeciesDisplayName(offer.animal.speciesId)} ${offer.animal.lifeStage}`}
+                          fill
+                          sizes="(max-width: 640px) 82vw, (max-width: 1024px) 48vw, 33vw"
+                          className="object-contain p-2"
+                          onError={() => setBrokenAssets((current) => current.includes(offer.animal.assetPath!) ? current : [...current, offer.animal.assetPath!])}
                         />
                       ) : (
                         <div className="absolute inset-0 grid place-items-center p-7 text-center">
                           <div>
                             <div className="text-5xl text-emerald-200/30">◒</div>
-                            <div className="mt-3 text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/35">Emerald asset unavailable</div>
-                            <div className="mt-1 text-xs text-white/25">{offer.animal.assetId ?? "No asset assigned"}</div>
+                            <div className="mt-3 text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/35">Emerald asset slot</div>
+                            <div className="mt-1 text-xs text-white/25">{offer.animal.assetId ?? "Artwork pending"}</div>
                           </div>
                         </div>
                       )}
