@@ -8,7 +8,6 @@ import {
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
   enclosureSupportsAnimal,
-  normalizeKeeperEnclosureId,
   type KeeperEnclosureId,
 } from "@/lib/arboreal-keeper-enclosures";
 
@@ -272,6 +271,7 @@ function phaseForOffspring(
 ): KeeperPhase {
   if (speciesId !== "northern_emerald_tree_boa") return "standard";
 
+  // Gameplay placeholder until the project's final phase inheritance model is locked.
   const phaseParents = Number(dam.phase === "anaconda") + Number(sire.phase === "anaconda");
   const chance = phaseParents === 2 ? 0.72 : phaseParents === 1 ? 0.28 : 0.005;
   return random() < chance ? "anaconda" : "standard";
@@ -490,55 +490,15 @@ export function availableHousingUnit(
   ) ?? null;
 }
 
-function sanitizeHousingUnits(value: unknown, animals: EmeraldAnimal[]): EmeraldHousingUnit[] {
-  if (!Array.isArray(value)) return [];
-  const animalById = new Map(animals.map((animal) => [animal.id, animal]));
-  const seenUnitIds = new Set<string>();
-  const seenOccupants = new Set<string>();
-  const result: EmeraldHousingUnit[] = [];
-
-  for (const candidate of value) {
-    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
-    const input = candidate as { id?: unknown; enclosureId?: unknown; occupantId?: unknown };
-    const id = typeof input.id === "string" ? input.id.slice(0, 180) : "";
-    const enclosureId = normalizeKeeperEnclosureId(input.enclosureId);
-    if (!id || !enclosureId || seenUnitIds.has(id)) continue;
-    seenUnitIds.add(id);
-
-    let occupantId = typeof input.occupantId === "string" && input.occupantId
-      ? input.occupantId.slice(0, 180)
-      : null;
-    if (occupantId) {
-      const animal = animalById.get(occupantId);
-      if (
-        !animal ||
-        seenOccupants.has(occupantId) ||
-        !enclosureSupportsAnimal(enclosureId, animal.speciesId, animal.lifeStage)
-      ) {
-        occupantId = null;
-      } else {
-        seenOccupants.add(occupantId);
-      }
-    }
-
-    result.push({ id, enclosureId, occupantId });
-  }
-
-  return result;
-}
-
 export function sanitizeEmeraldKeeperSave(value: unknown): EmeraldKeeperSave {
   if (!value || typeof value !== "object" || Array.isArray(value)) return { ...EMPTY_EMERALD_KEEPER_SAVE };
   const input = value as Partial<EmeraldKeeperSave>;
-  const animals = Array.isArray(input.animals) ? input.animals : [];
   return {
-    animals,
-    purchasedOfferIds: Array.isArray(input.purchasedOfferIds)
-      ? [...new Set(input.purchasedOfferIds.filter((id): id is string => typeof id === "string" && Boolean(id)))]
-      : [],
+    animals: Array.isArray(input.animals) ? input.animals : [],
+    purchasedOfferIds: Array.isArray(input.purchasedOfferIds) ? input.purchasedOfferIds : [],
     breedingJobs: Array.isArray(input.breedingJobs) ? input.breedingJobs : [],
     litters: Array.isArray(input.litters) ? input.litters : [],
-    housingUnits: sanitizeHousingUnits(input.housingUnits, animals),
+    housingUnits: Array.isArray(input.housingUnits) ? input.housingUnits : [],
     selectedSpecies:
       input.selectedSpecies === "amazon_basin_emerald_tree_boa"
         ? "amazon_basin_emerald_tree_boa"
