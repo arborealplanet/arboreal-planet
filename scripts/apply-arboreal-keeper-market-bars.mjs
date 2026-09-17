@@ -4,6 +4,10 @@ import path from "node:path";
 const root = process.cwd();
 const workspacePath = path.join(root, "src/components/ChondroBreederWorkspace.tsx");
 const chondroShopPath = path.join(root, "src/components/ChondroBreederExpandedShop.tsx");
+const emeraldMarketPaths = [
+  path.join(root, "src/components/ArborealKeeperEmeraldMarketBar.tsx"),
+  path.join(root, "src/components/ArborealKeeperStoreEmeraldCarousel.tsx"),
+];
 
 if (fs.existsSync(chondroShopPath)) {
   let shop = fs.readFileSync(chondroShopPath, "utf8");
@@ -16,6 +20,17 @@ if (fs.existsSync(chondroShopPath)) {
   fs.writeFileSync(chondroShopPath, shop);
   console.log("[keeper-market-bars] Normalized the Green Tree Python carousel labels.");
 }
+
+for (const marketPath of emeraldMarketPaths) {
+  if (!fs.existsSync(marketPath)) continue;
+  const source = fs.readFileSync(marketPath, "utf8");
+  const next = source.replace(
+    "const marketEpoch = Math.floor((now || Date.now()) / EMERALD_MARKET_DAY_MS);",
+    "const marketEpoch = Math.floor(now / EMERALD_MARKET_DAY_MS);",
+  );
+  if (next !== source) fs.writeFileSync(marketPath, next);
+}
+console.log("[keeper-market-bars] Kept Emerald market epoch calculation render-pure after hydration.");
 
 if (!fs.existsSync(workspacePath)) {
   console.warn("[keeper-market-bars] Workspace source not found; skipping Animal Market layout patch.");
