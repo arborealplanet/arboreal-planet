@@ -12,6 +12,7 @@ import {
   ARBOREAL_KEEPER_FACILITY_SAVE_KEY,
   mirrorEmeraldHousingIntoFacility,
   sanitizeKeeperFacilitySave,
+  type KeeperFacilitySave,
 } from "@/lib/arboreal-keeper-facility";
 import { mirrorLegacyGtpHousingIntoFacility } from "@/lib/arboreal-keeper-facility-migration";
 import {
@@ -22,6 +23,7 @@ import type { KeeperSpeciesId } from "@/lib/arboreal-keeper-species";
 
 const EMERALD_SAVE_EVENT = "arboreal-keeper-emerald-save-updated";
 const EMERALD_CLOUD_EVENT = "arboreal-keeper-emerald-cloud-loaded";
+const FACILITY_HOUSING_PREFIX = "facility:";
 
 type LegacyGtpSave = {
   colony?: LegacyGtpAnimalInput[];
@@ -37,6 +39,41 @@ function readJson(key: string) {
   }
 }
 
+function applyFacilityBackedEmeraldOccupancy(
+  save: KeeperFacilitySave,
+  housingUnits: Array<{ id: string; occupantId: string | null; enclosureId: unknown }>,
+  speciesByAnimalId: Map<string, KeeperSpeciesId>,
+) {
+  const facilityUnits = housingUnits.filter((unit) => unit.id.startsWith(FACILITY_HOUSING_PREFIX));
+  if (!facilityUnits.length) return save;
+
+  const occupantIds = new Set(facilityUnits.map((unit) => unit.occupantId).filter((id): id is string => Boolean(id)));
+  const assignmentByEnclosure = new Map(
+    facilityUnits.map((unit) => [unit.id.slice(FACILITY_HOUSING_PREFIX.length), unit]),
+  );
+
+  return {
+    ...save,
+    enclosures: save.enclosures.map((enclosure) => {
+      const assignment = assignmentByEnclosure.get(enclosure.id);
+      if (assignment) {
+        return {
+          ...enclosure,
+          occupantId: assignment.occupantId,
+          occupantSpeciesId: assignment.occupantId
+            ? speciesByAnimalId.get(assignment.occupantId) ?? null
+            : null,
+        };
+      }
+      if (enclosure.occupantId && occupantIds.has(enclosure.occupantId)) {
+        return { ...enclosure, occupantId: null, occupantSpeciesId: null };
+      }
+      return enclosure;
+    }),
+    updatedAt: Date.now(),
+  };
+}
+
 export function ArborealKeeperFacilityBridge() {
   useEffect(() => {
     const sync = () => {
@@ -47,7 +84,6 @@ export function ArborealKeeperFacilityBridge() {
         emerald.animals.map((animal) => [animal.id, animal.speciesId]),
       );
 
-      const withEmeralds = mirrorEmeraldHousingIntoFacility(current, emerald.housingUnits, speciesByAnimalId);
       const gtpAnimals = (legacyGtp.colony ?? []).map((animal) => {
         const record = keeperAnimalFromGtp(animal);
         return {
@@ -56,7 +92,16 @@ export function ArborealKeeperFacilityBridge() {
           lifeStage: record.lifeStage,
         };
       });
-      const next = mirrorLegacyGtpHousingIntoFacility(withEmeralds, legacyGtp.enclosures, gtpAnimals);
+
+      // Rebuild legacy GTP enclosure instances first, then legacy Emerald-only housing,
+      // and finally re-apply facility-backed Emerald assignments. This makes a shared
+      // empty enclosure usable by either program without creating a duplicate mirror.
+      const withGtps = mirrorLegacyGtpHousingIntoFacility(current, legacyGtp.enclosures, gtpAnimals);
+      const legacyEmeraldHousing = emerald.housingUnits.filter(
+        (unit) => !unit.id.startsWith(FACILITY_HOUSING_PREFIX),
+      );
+      const withLegacyEmeralds = mirrorEmeraldHousingIntoFacility(withGtps, legacyEmeraldHousing, speciesByAnimalId);
+      const next = applyFacilityBackedEmeraldOccupancy(withLegacyEmeralds, emerald.housingUnits, speciesByAnimalId);
 
       const currentComparable = JSON.stringify({ ...current, updatedAt: 0 });
       const nextComparable = JSON.stringify({ ...next, updatedAt: 0 });
