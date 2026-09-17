@@ -26,7 +26,7 @@ update(gtpShopPath, (source) => {
     .replace("20 daily listings", "Green Tree Python carousel")
     .replace("Browse the current rotation. Every card shows the housing type the animal can actually use.", "Browse the current Green Tree Python rotation.");
   return next;
-}, "Simplified Green Tree Python shop section labels.");
+}, "Kept Repti-Shop enclosure and Green Tree Python sections concise.");
 
 update(marketPath, (source) => {
   let next = source;
@@ -56,13 +56,20 @@ update(marketPath, (source) => {
 
   next = next
     .replace("Northern + Amazon Basin listings", "Emerald Tree Boa carousel")
-    .replace("A separate horizontal market directly beneath the Green Tree Python store. Every Emerald Tree Boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.")
-    .replace("Quick-buy an individual compatible enclosure without leaving the shop.", "Quick-buy compatible housing without leaving the shop. Chondro Dojo 2 Stacks add two individual neonate spaces.")
-    .replace("Owned: {save.housingUnits.length}", "Housing spaces: {save.housingUnits.length}")
-    .replace('{enclosure.sizeClass} · one animal', '{enclosure.sizeClass} · {id === "chondro-dojo-bin" ? "two individual spaces" : "one individual space"}');
+    .replace("A separate horizontal market directly beneath the Green Tree Python store. Every Emerald Tree Boa requires its own enclosure.", "Browse Northern and Amazon Basin Emerald Tree Boas in the same carousel format.");
+
+  const housingStartMarker = '\n        <div className="mt-4 border-t border-white/[.055] pt-4">';
+  const statusMarker = '\n\n        {status ?';
+  const housingStart = next.indexOf(housingStartMarker);
+  if (housingStart >= 0) {
+    const statusStart = next.indexOf(statusMarker, housingStart);
+    if (statusStart >= 0) {
+      next = next.slice(0, housingStart) + next.slice(statusStart);
+    }
+  }
 
   return next;
-}, "Fixed Emerald market Dojo capacity and carousel copy.");
+}, "Removed duplicate Emerald housing shop and kept only the Emerald Tree Boa carousel.");
 
 update(workspacePath, (source) => {
   let next = source;
@@ -82,60 +89,26 @@ update(workspacePath, (source) => {
     setMessage(\`${'${enclosure.displayName}'} added. ${'${enclosureId === "chondro-dojo-bin" ? "Two individual housing spaces are now available." : "One individual housing space is now available."}'}\`);`;
   if (next.includes(oldBlock)) next = next.replace(oldBlock, newBlock);
   return next;
-}, "Fixed Emerald workspace Dojo 2 Stack capacity.");
+}, "Kept Emerald Dojo 2 Stack capacity correct.");
 
 update(keeperWorkspacePath, (source) => {
   let next = source;
 
-  const expandedImport = 'import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";';
-  const emeraldImport = 'import { ArborealKeeperEmeraldMarketBar } from "@/components/ArborealKeeperEmeraldMarketBar";';
-  if (!next.includes(emeraldImport) && next.includes(expandedImport)) {
-    next = next.replace(expandedImport, `${expandedImport}\n${emeraldImport}`);
+  const anchorImport = 'import { ChondroBreederNavIcon } from "@/components/ChondroBreederNavIcon";';
+  const shopImport = 'import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";';
+  if (!next.includes(shopImport) && next.includes(anchorImport)) {
+    next = next.replace(anchorImport, `${anchorImport}\n${shopImport}`);
   }
 
   next = next
-    .replace('import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";\n', "")
-    .replace('import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";\n', "")
     .replace('{ id: "market", label: "Store", detail: "Buy chondros and use the player market", icon: "$" },', '{ id: "market", label: "Repti-Shop", navLabel: "Shop", detail: "Enclosures and rotating animal listings", icon: "$" },')
-    .replace('market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Browse rotating game inventory first, then shop breeder-to-breeder listings and manage your seller activity." },', 'market: { eyebrow: "Arboreal Keeper", title: "Repti-Shop", detail: "Enclosures first, followed by one carousel for each animal group in the store." },')
-    .replace('{view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}', '{view === "breeding" || view === "colony" ? <ChondroBreederScreenArt screen={view} /> : null}');
+    .replace('{ id: "market", label: "Repti-Shop", detail: "Enclosures and rotating animal listings", icon: "$" },', '{ id: "market", label: "Repti-Shop", navLabel: "Shop", detail: "Enclosures and rotating animal listings", icon: "$" },');
 
-  const introStart = '      {view === "market" ? (\n        <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">';
-  const introEnd = '      ) : null}';
-  const startIndex = next.indexOf(introStart);
-  if (startIndex >= 0) {
-    const endIndex = next.indexOf(introEnd, startIndex);
-    if (endIndex >= 0) {
-      next = next.slice(0, startIndex) + next.slice(endIndex + introEnd.length + 1);
-    }
+  const functionStart = 'function CoreGameScreen({ view }: { view: CoreView }) {';
+  const earlyReturn = `${functionStart}\n  if (view === "market") return <ArborealKeeperReptiShop />;`;
+  if (!next.includes(earlyReturn) && next.includes(functionStart)) {
+    next = next.replace(functionStart, earlyReturn);
   }
-
-  const stackedMarket = `      {view === "market" ? (<>
-        <ChondroBreederExpandedShop />
-        <ArborealKeeperEmeraldMarketBar />
-      </>) : null}`;
-  const canonicalMarket = `      {view === "market" ? (
-        <>
-          <ChondroBreederExpandedShop />
-          <ArborealKeeperEmeraldMarketBar />
-        </>
-      ) : null}`;
-
-  next = next
-    .replace(`${stackedMarket}\n`, "")
-    .replace(`${canonicalMarket}\n`, "")
-    .replace('      {view === "market" ? <ChondroBreederExpandedShop /> : null}\n', "")
-    .replace('      {view === "market" ? <ChondroPlayerMarket /> : null}\n', "")
-    .replace('      {view === "market" ? <ChondroFavoritesMarketPanel /> : null}\n', "");
-
-  const clutchAnchor = '      {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}';
-  if (!next.includes(canonicalMarket) && next.includes(clutchAnchor)) {
-    next = next.replace(clutchAnchor, `${canonicalMarket}\n${clutchAnchor}`);
-  }
-
-  const rawCore = '      <ChondroBreederGameV3 screen={view} />';
-  const wrappedCore = '      <div className={view === "market" ? "hidden" : undefined} aria-hidden={view === "market" ? true : undefined}><ChondroBreederGameV3 screen={view} /></div>';
-  next = next.replace(rawCore, wrappedCore);
 
   return next;
-}, "Reduced Repti-Shop to Enclosures, Green Tree Python carousel, and Emerald Tree Boa carousel.");
+}, "Routed the Shop tab directly to the dedicated Repti-Shop component.");
