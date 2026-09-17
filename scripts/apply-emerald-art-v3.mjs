@@ -19,8 +19,6 @@ function update(filePath, transform, label) {
 update(enginePath, (source) => {
   let next = source;
 
-  // V3 artwork is selected from the exact user-supplied Emerald atlas rather than
-  // the legacy generated sprite sheets in arboreal-keeper-species.ts.
   if (!next.includes('from "@/lib/arboreal-keeper-emerald-art"')) {
     next = next.replace(
       '} from "@/lib/arboreal-keeper-species";',
@@ -47,13 +45,10 @@ update(enginePath, (source) => {
 function randomNeonateColor`,
   );
 
-  // Never persist the large atlas/data URI inside saves; assetId is the stable key.
   next = next
     .replace('assetPath: asset?.path ?? null,', 'assetPath: null,')
     .replace('assetPath: asset?.path ?? animal.assetPath,', 'assetPath: null,');
 
-  // Keep both Emerald groups visible in the carousel, show all life stages, and
-  // enforce progression with offer.available rather than hiding species entirely.
   next = next.replace(
     /export function emeraldMarketForEpoch\(epoch: number, keeperLevel: number\): EmeraldMarketOffer\[\] \{[\s\S]*?\n}\n\nexport function emeraldMarketValue/,
 `export function emeraldMarketForEpoch(epoch: number, keeperLevel: number): EmeraldMarketOffer[] {
@@ -93,8 +88,6 @@ function randomNeonateColor`,
 export function emeraldMarketValue`,
   );
 
-  // Migrate existing saved animals away from old sprite IDs every time a save is
-  // sanitized. The deterministic seed keeps each animal's V3 art stable.
   const migrationHelper = `\nfunction migrateEmeraldAnimalArt(animal: EmeraldAnimal) {\n  const random = seededRandom(hashString(\`${'${animal.id}:${animal.lifeStage}:${animal.phase}:emerald-art-v3'}\`));\n  const asset = assetForAnimal(animal.speciesId, animal.lifeStage, animal.phase, animal.neonateColor, random);\n  return { ...animal, assetId: asset?.id ?? null, assetPath: null };\n}\n`;
   if (!next.includes("function migrateEmeraldAnimalArt")) {
     next = next.replace("export function sanitizeEmeraldKeeperSave", migrationHelper + "\nexport function sanitizeEmeraldKeeperSave");
@@ -118,24 +111,48 @@ update(marketPath, (source) => {
     next = next.replace(anchor, `${anchor}\n${artImport}`);
   }
 
+  const speciesImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";';
+  if (!next.includes(speciesImport)) {
+    next = next.replace(artImport, `${artImport}\n${speciesImport}`);
+  }
+
   next = next
     .replace('const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);', 'const spriteStyle = emeraldArtStyle(offer.animal.assetId);')
     .replace('const spriteStyle = emeraldSpriteStyle(offer.animal);', 'const spriteStyle = emeraldArtStyle(offer.animal.assetId);');
+
+  if (!next.includes('const spriteStyle = emeraldArtStyle(offer.animal.assetId);')) {
+    next = next.replace(
+      '                const traits = strongestTraits(offer.animal);',
+      '                const traits = strongestTraits(offer.animal);\n                const spriteStyle = emeraldArtStyle(offer.animal.assetId);\n                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n                const locked = !offer.available;',
+    );
+  } else {
+    if (!next.includes('const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;')) {
+      next = next.replace(
+        '                const spriteStyle = emeraldArtStyle(offer.animal.assetId);',
+        '                const spriteStyle = emeraldArtStyle(offer.animal.assetId);\n                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n                const locked = !offer.available;',
+      );
+    }
+  }
 
   next = next.replace(
     /const showImage = Boolean\(offer\.animal\.assetPath[^;]*;/,
     'const showImage = Boolean(spriteStyle);',
   );
 
-  // The final stabilizer has already converted the card to a background-image div.
-  // If a legacy Image block survived, replace it with the V3 art cell explicitly.
+  if (!next.includes('if (!offer.available) {')) {
+    next = next.replace(
+      '    const offer = offers.find((item) => item.id === offerId);\n    if (!offer || purchased.has(offer.id) || busy) return;',
+      '    const offer = offers.find((item) => item.id === offerId);\n    if (!offer || purchased.has(offer.id) || busy) return;\n    if (!offer.available) {\n      const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n      setStatus(emeraldSpeciesDisplayName(offer.animal.speciesId) + " unlocks at Keeper Level " + requiredLevel + ".");\n      return;\n    }',
+    );
+  }
+
   next = next.replace(
     /\{showImage \? \(\s*<Image[\s\S]*?\/>\s*\) : \(/,
 `{showImage && spriteStyle ? (
                         <div
                           role="img"
                           aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
-                          className="absolute inset-0 bg-black"
+                          className="absolute inset-0 rounded-2xl bg-black"
                           style={spriteStyle}
                         />
                       ) : (`,
@@ -147,16 +164,32 @@ update(marketPath, (source) => {
                         <div
                           role="img"
                           aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
-                          className="absolute inset-0 bg-black"
+                          className="absolute inset-0 rounded-2xl bg-black"
                           style={spriteStyle}
                         />
                       ) : (`,
   );
 
-  // If the canonical div already exists, only its style source needed changing.
   next = next.replace(/keeperAssetSpriteStyle\(offer\.animal\.speciesId, offer\.animal\.assetId\)/g, 'emeraldArtStyle(offer.animal.assetId)');
 
+  if (!next.includes("Unlocks Level {requiredLevel}")) {
+    next = next.replace(
+      '<div className="flex flex-wrap gap-1.5">\n                        {offer.animal.phase === "anaconda" ? (',
+      '<div className="flex flex-wrap gap-1.5">\n                        {locked ? (\n                          <span className="rounded-full border border-amber-200/15 bg-amber-200/[.05] px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-amber-100/70">Unlocks Level {requiredLevel}</span>\n                        ) : null}\n                        {offer.animal.phase === "anaconda" ? (',
+    );
+  }
+
+  next = next.replace(
+    'disabled={sold || busy !== null || cash < offer.price || housing <= 0}',
+    'disabled={locked || sold || busy !== null || cash < offer.price || housing <= 0}',
+  );
+  next = next.replace(
+    '{sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
+    '{locked ? "Level " + requiredLevel : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
+  );
+
   if (!next.includes("emeraldArtStyle(offer.animal.assetId)")) throw new Error("Market V3 sprite style was not installed.");
+  if (!next.includes("const locked = !offer.available;")) throw new Error("Market V3 lock state was not installed.");
   return next;
 }, "Switched Repti-Shop Emerald cards to the V3 user-supplied atlas.");
 
