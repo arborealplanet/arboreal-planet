@@ -1,5 +1,6 @@
 "use client";
 
+import { ArborealKeeperEmeraldCloudSync } from "@/components/ArborealKeeperEmeraldCloudSync";
 import { ArborealKeeperFacilityBridge } from "@/components/ArborealKeeperFacilityBridge";
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
 import { ChondroBreederWorkspace } from "@/components/ChondroBreederWorkspace";
@@ -10,6 +11,7 @@ import { ChondroBreederWorkspace } from "@/components/ChondroBreederWorkspace";
 export function ArborealKeeperWorkspace() {
   return (
     <>
+      <ArborealKeeperEmeraldCloudSync />
       <ArborealKeeperFacilityBridge />
       <ArborealKeeperProgramHub />
       <ChondroBreederWorkspace />
