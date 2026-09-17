@@ -133,22 +133,23 @@ if (fs.existsSync(gtpShopPath)) {
     next = next.replace(componentAnchor, helper + componentAnchor);
   }
 
-  next = next.replace(
-    "    if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;",
-`    if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
-    if (!hasCompatibleGtpHousingForStage(save.enclosures, save.colony, offer.lifeStage)) {
+  const basePurchaseGuard = "    if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;";
+  const housingGuard = `    if (!hasCompatibleGtpHousingForStage(save.enclosures, save.colony, offer.lifeStage)) {
       setStatus(\`${'${offer.name}'} needs compatible housing before purchase. ${'${gtpHousingRequirement(offer.lifeStage)}'}.\`);
       return;
-    }`,
-  );
+    }`;
+  next = next.split(`\n${housingGuard}`).join("");
+  if (next.includes(basePurchaseGuard)) {
+    next = next.replace(basePurchaseGuard, `${basePurchaseGuard}\n${housingGuard}`);
+  }
 
-  next = next.replace(
-`            const sold = purchased.has(offer.id);
-            const effect = conservation.find((row) => row.subspecies === offer.subspecies);`,
-`            const sold = purchased.has(offer.id);
-            const effect = conservation.find((row) => row.subspecies === offer.subspecies);
-            const compatibleHousing = hasCompatibleGtpHousingForStage(save.enclosures, save.colony, offer.lifeStage);`,
-  );
+  const compatibleHousingLine = "            const compatibleHousing = hasCompatibleGtpHousingForStage(save.enclosures, save.colony, offer.lifeStage);";
+  next = next.split(`\n${compatibleHousingLine}`).join("");
+  const cardAnchor = `            const sold = purchased.has(offer.id);
+            const effect = conservation.find((row) => row.subspecies === offer.subspecies);`;
+  if (next.includes(cardAnchor)) {
+    next = next.replace(cardAnchor, `${cardAnchor}\n${compatibleHousingLine}`);
+  }
 
   next = next.replace(
     'disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0}',
