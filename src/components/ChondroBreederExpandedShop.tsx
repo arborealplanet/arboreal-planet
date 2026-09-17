@@ -54,14 +54,8 @@ const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
 const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
-  "Chondro Dojo Bin": {
-    label: "Chondro Dojo 2 Stack",
-    detail: "Two separate individual Dojo enclosures sold as one stack. The stack uses one facility slot and provides two individually occupied young-snake spaces.",
-  },
-  "PVC Arboreal": {
-    label: "PVC Enclosure",
-    detail: "Permanent front-opening arboreal housing for subadult and adult Green Tree Pythons.",
-  },
+  "Chondro Dojo Bin": { label: "Chondro Dojo Pair", detail: "Two space-saving Dojo enclosures sold as one set. The pair uses one facility slot and houses two snakes." },
+  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing built around PVC structure and perching." },
 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
@@ -189,40 +183,6 @@ function parseSave(value: unknown): GameSave | null {
   return save as GameSave;
 }
 
-function hasCompatibleHousing(
-  enclosures: Record<string, number> | undefined,
-  colony: Snake[],
-  stage: LifeStage,
-) {
-  const dojoSpaces = Math.max(0, Number(enclosures?.["Chondro Dojo Bin"] ?? 0) || 0) * 2;
-  const pvcSpaces = Math.max(0, Number(enclosures?.["PVC Arboreal"] ?? 0) || 0);
-  const young = colony.filter((snake) => snake.lifeStage === "Hatchling" || snake.lifeStage === "Neonate").length;
-  const subadults = colony.filter((snake) => snake.lifeStage === "Subadult").length;
-  const adults = colony.filter((snake) => snake.lifeStage === "Adult").length;
-
-  const dojoAfterMandatoryYoung = dojoSpaces - young;
-  const pvcAfterMandatoryAdults = pvcSpaces - adults;
-  if (dojoAfterMandatoryYoung < 0 || pvcAfterMandatoryAdults < 0) return false;
-
-  if (stage === "Hatchling" || stage === "Neonate") {
-    const subadultsForcedIntoDojo = Math.max(0, subadults - pvcAfterMandatoryAdults);
-    return dojoAfterMandatoryYoung - subadultsForcedIntoDojo > 0;
-  }
-
-  if (stage === "Adult") {
-    const subadultsForcedIntoPvc = Math.max(0, subadults - dojoAfterMandatoryYoung);
-    return pvcAfterMandatoryAdults - subadultsForcedIntoPvc > 0;
-  }
-
-  return dojoAfterMandatoryYoung + pvcAfterMandatoryAdults - subadults > 0;
-}
-
-function housingRequirement(stage: LifeStage) {
-  if (stage === "Adult") return "PVC required";
-  if (stage === "Subadult") return "Dojo or PVC";
-  return "Dojo required";
-}
-
 export function ChondroBreederExpandedShop() {
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
@@ -333,22 +293,18 @@ export function ChondroBreederExpandedShop() {
   function buyEnclosure(type: EnclosureType) {
     if (!save || busy || roomEnclosureSlots <= 0 || save.cash < enclosurePrices[type]) return;
     setBusy(`enclosure:${type}`);
-    setStatus(`Buying ${enclosureDisplay[type].label}…`);
+    setStatus(`Buying ${type}…`);
     window.dispatchEvent(new CustomEvent("arboreal-chondro-enclosure-action", {
       detail: { action: "buy-enclosure", type },
     }));
     window.setTimeout(() => {
       setBusy(null);
-      setStatus(`${enclosureDisplay[type].label} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
+      setStatus(`${type} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
     }, 350);
   }
 
   async function buy(offer: Offer) {
-    if (!save || busy || purchased.has(offer.id) || save.cash < offer.price) return;
-    if (!hasCompatibleHousing(save.enclosures, save.colony, offer.lifeStage)) {
-      setStatus(`${offer.name} cannot be purchased yet. ${housingRequirement(offer.lifeStage)} and no compatible individual space is currently open.`);
-      return;
-    }
+    if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
     setBusy(offer.id);
     setStatus("");
     const next: GameSave = {
@@ -359,7 +315,6 @@ export function ChondroBreederExpandedShop() {
     };
     try {
       window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(next));
-      window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
       if (authenticated) {
         const response = await fetch("/api/hatchery/chondro-breeder/save", {
           method: "PUT",
@@ -389,7 +344,7 @@ export function ChondroBreederExpandedShop() {
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">Buy housing before you buy snakes.</h3>
-            <p className="mt-1 text-xs leading-5 text-white/38">A PVC Enclosure uses one facility slot for one snake. A Chondro Dojo 2 Stack uses one facility slot but contains two separate individual young-snake enclosures. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
+            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake. A Chondro Dojo Pair uses that same single facility slot for two snakes. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
           </div>
           <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
@@ -426,7 +381,7 @@ export function ChondroBreederExpandedShop() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-[10px] uppercase tracking-[.12em] text-white/30">Owned</div>
-                      <div className="mt-1 text-sm font-semibold text-white/70">{owned} owned · {type === "Chondro Dojo Bin" ? "+2 individual spaces per stack" : "+1 individual space each"}</div>
+                      <div className="mt-1 text-sm font-semibold text-white/70">{owned} owned · {type === "Chondro Dojo Bin" ? "+2 snake capacity per set" : "+1 snake capacity each"}</div>
                     </div>
                     <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
                   </div>
@@ -459,7 +414,7 @@ export function ChondroBreederExpandedShop() {
 
         <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/32">
           <span>Swipe to browse all {offers.length} listings</span>
-          <span>{openSlots} total open space{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</span>
+          <span>{openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</span>
         </div>
 
         <div
@@ -469,7 +424,6 @@ export function ChondroBreederExpandedShop() {
           {offers.map((offer) => {
             const sold = purchased.has(offer.id);
             const effect = conservation.find((row) => row.subspecies === offer.subspecies);
-            const compatibleSpace = hasCompatibleHousing(save.enclosures, save.colony, offer.lifeStage);
             return (
               <article
                 key={offer.id}
@@ -486,7 +440,6 @@ export function ChondroBreederExpandedShop() {
                 <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
                 <div className="mt-1 text-[10px] text-white/32">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
                 <div className={`mt-1 text-[10px] font-semibold ${offer.neonateColor === "Red" ? "text-red-100/65" : "text-amber-100/65"}`}>Neonate color: {offer.neonateColor}</div>
-                <div className="mt-1 text-[9px] font-semibold uppercase tracking-[.08em] text-sky-100/45">Housing · {housingRequirement(offer.lifeStage)}</div>
                 {offer.specialLabel ? <div className="mt-2 rounded-full border border-amber-200/20 px-2 py-1 text-center text-[9px] font-black uppercase text-amber-100/75">{offer.specialLabel}</div> : null}
                 {offer.source === "Import" && effect && Number(effect.stewardship_score) > 0 ? <div className="mt-2 text-[9px] font-semibold text-emerald-100/55">Conservation-supported import · stewardship {Number(effect.stewardship_score).toFixed(1)}</div> : null}
                 <div className="mt-3 rounded-xl border border-white/[.06] p-2 text-[10px] leading-5 text-white/42">
@@ -495,8 +448,8 @@ export function ChondroBreederExpandedShop() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !compatibleSpace} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Purchased" : !compatibleSpace ? "Need housing" : save.cash < offer.price ? "Need cash" : "Buy"}
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}
                   </button>
                 </div>
               </article>
