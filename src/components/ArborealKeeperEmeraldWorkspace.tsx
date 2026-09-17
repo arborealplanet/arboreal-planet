@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
@@ -29,10 +30,7 @@ import {
   type EmeraldKeeperSave,
   type EmeraldSpeciesId,
 } from "@/lib/arboreal-keeper-emerald-engine";
-import {
-  ARBOREAL_KEEPER_SPECIES_BY_ID,
-  keeperAssetSpriteStyle,
-} from "@/lib/arboreal-keeper-species";
+import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
 
 type EmeraldWorkspaceMode = "breeding" | "colony" | "clutches" | "market";
@@ -46,7 +44,6 @@ type EconomyAction = {
 };
 
 const CHONDRO_SAVE_KEY = "arboreal_chondro_breeder_v2";
-const EMERALD_SAVE_EVENT = "arboreal-keeper-emerald-save-updated";
 const SPECIES: EmeraldSpeciesId[] = [
   "northern_emerald_tree_boa",
   "amazon_basin_emerald_tree_boa",
@@ -218,9 +215,10 @@ export function ArborealKeeperEmeraldWorkspace({ mode }: { mode: EmeraldWorkspac
 
   useEffect(() => {
     if (!hydrated) return;
-    const snapshot = { ...save, updatedAt: Date.now() };
-    window.localStorage.setItem(EMERALD_KEEPER_SAVE_KEY, JSON.stringify(snapshot));
-    window.dispatchEvent(new CustomEvent(EMERALD_SAVE_EVENT, { detail: { save: snapshot } }));
+    window.localStorage.setItem(
+      EMERALD_KEEPER_SAVE_KEY,
+      JSON.stringify({ ...save, updatedAt: Date.now() }),
+    );
   }, [hydrated, save]);
 
   useEffect(() => {
@@ -451,10 +449,20 @@ export function ArborealKeeperEmeraldWorkspace({ mode }: { mode: EmeraldWorkspac
         ) : (
           <div className="p-4 sm:p-5">
             {mode === "market" ? (
-              <MarketView market={market} purchasedOfferIds={save.purchasedOfferIds} save={save} onBuy={buyAnimal} />
+              <MarketView
+                market={market}
+                purchasedOfferIds={save.purchasedOfferIds}
+                save={save}
+                onBuy={buyAnimal}
+              />
             ) : null}
             {mode === "colony" ? (
-              <ColonyView animals={animalsForSpecies} save={save} onGrow={growAnimal} onSell={sellAnimal} />
+              <ColonyView
+                animals={animalsForSpecies}
+                save={save}
+                onGrow={growAnimal}
+                onSell={sellAnimal}
+              />
             ) : null}
             {mode === "breeding" ? (
               <BreedingView
@@ -482,7 +490,12 @@ export function ArborealKeeperEmeraldWorkspace({ mode }: { mode: EmeraldWorkspac
   );
 }
 
-function MarketView({ market, purchasedOfferIds, save, onBuy }: {
+function MarketView({
+  market,
+  purchasedOfferIds,
+  save,
+  onBuy,
+}: {
   market: ReturnType<typeof emeraldMarketForEpoch>;
   purchasedOfferIds: string[];
   save: EmeraldKeeperSave;
@@ -522,7 +535,12 @@ function MarketView({ market, purchasedOfferIds, save, onBuy }: {
   );
 }
 
-function ColonyView({ animals, save, onGrow, onSell }: {
+function ColonyView({
+  animals,
+  save,
+  onGrow,
+  onSell,
+}: {
   animals: EmeraldAnimal[];
   save: EmeraldKeeperSave;
   onGrow: (id: string) => void;
@@ -564,7 +582,20 @@ function ColonyView({ animals, save, onGrow, onSell }: {
   );
 }
 
-function BreedingView({ speciesId, currentJob, animals, females, males, damId, sireId, now, save, onDam, onSire, onStart }: {
+function BreedingView({
+  speciesId,
+  currentJob,
+  animals,
+  females,
+  males,
+  damId,
+  sireId,
+  now,
+  save,
+  onDam,
+  onSire,
+  onStart,
+}: {
   speciesId: EmeraldSpeciesId;
   currentJob: EmeraldBreedingJob | null;
   animals: EmeraldAnimal[];
@@ -685,7 +716,11 @@ function LitterView({ save, speciesId }: { save: EmeraldKeeperSave; speciesId: E
   );
 }
 
-function HousingShop({ save, speciesId, onBuy }: {
+function HousingShop({
+  save,
+  speciesId,
+  onBuy,
+}: {
   save: EmeraldKeeperSave;
   speciesId: EmeraldSpeciesId;
   onBuy: (id: KeeperEnclosureId) => void;
@@ -722,13 +757,14 @@ function HousingShop({ save, speciesId, onBuy }: {
 }
 
 function AnimalCard({ animal, children }: { animal: EmeraldAnimal; children?: React.ReactNode }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const strongestTraits = Object.entries(animal.traits)
     .sort(([, a], [, b]) => Number(b ?? 0) - Number(a ?? 0))
     .slice(0, 3);
 
   return (
     <article className="overflow-hidden rounded-[22px] border border-white/[.06] bg-[#07110d] p-3">
-      <EmeraldPortrait animal={animal} />
+      <EmeraldPortrait animal={animal} failed={imageFailed} onFail={() => setImageFailed(true)} />
       <div className="mt-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -751,23 +787,24 @@ function AnimalCard({ animal, children }: { animal: EmeraldAnimal; children?: Re
   );
 }
 
-function EmeraldPortrait({ animal }: { animal: EmeraldAnimal }) {
-  const spriteStyle = keeperAssetSpriteStyle(animal.speciesId, animal.assetId);
+function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
-      {spriteStyle ? (
-        <div
-          className="absolute inset-1 rounded-[16px] bg-black"
-          style={spriteStyle}
-          role="img"
-          aria-label={`${emeraldSpeciesDisplayName(animal.speciesId)} game asset`}
+      {animal.assetPath && !failed ? (
+        <Image
+          src={animal.assetPath}
+          alt={`${emeraldSpeciesDisplayName(animal.speciesId)} game asset`}
+          fill
+          sizes="(max-width: 768px) 90vw, 320px"
+          className="object-contain p-1"
+          onError={onFail}
         />
       ) : (
         <div className="absolute inset-0 grid place-items-center p-5 text-center">
           <div>
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-emerald-300/10 bg-emerald-300/[.04] text-2xl text-emerald-100/40">◆</div>
-            <div className="mt-3 text-[10px] font-black uppercase tracking-[.15em] text-white/30">Asset unavailable</div>
-            <div className="mt-1 text-xs text-white/22">{animal.assetId ?? "No asset assigned"}</div>
+            <div className="mt-3 text-[10px] font-black uppercase tracking-[.15em] text-white/30">Asset slot ready</div>
+            <div className="mt-1 text-xs text-white/22">{animal.assetId ?? "Emerald artwork pending upload"}</div>
           </div>
         </div>
       )}
