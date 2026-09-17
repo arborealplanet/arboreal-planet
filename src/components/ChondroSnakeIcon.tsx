@@ -4,7 +4,8 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-16-yellow-neonates-live-v6";
+const TRAIT_ART_VERSION = "2026-09-16-yellow-neonates-live-v7";
+const STORE_ART_SPRITE = "/hatchery/keeper-store-art-v1.webp?v=2026-09-16-store-recording-fix-1";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -69,6 +70,23 @@ function juvenilePortraitArt(subspecies: ChondroSubspecies, neonateColor?: Neona
   return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${assetColor}.webp`;
 }
 
+function yellowStoreSpriteStyle(subspecies: ChondroSubspecies): React.CSSProperties | null {
+  const column = subspecies === "Morelia azurea azurea"
+    ? 0
+    : subspecies === "Morelia azurea pulcher"
+      ? 1
+      : subspecies === "Morelia azurea utaraensis"
+        ? 2
+        : null;
+  if (column === null) return null;
+  return {
+    backgroundImage: `url("${STORE_ART_SPRITE}")`,
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "500% 200%",
+    backgroundPosition: `${(column / 4) * 100}% 0%`,
+  };
+}
+
 export function ChondroSnakeIcon({
   subspecies,
   name,
@@ -86,9 +104,8 @@ export function ChondroSnakeIcon({
 }) {
   const adultRawSrc = adultPortraitArt(subspecies, traits);
   const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult";
+  const yellowSpriteStyle = isJuvenile && neonateColor === "Yellow" ? yellowStoreSpriteStyle(subspecies) : null;
   const rawSrc = isJuvenile ? juvenilePortraitArt(subspecies, neonateColor) : adultRawSrc;
-  // Never disguise a missing yellow juvenile asset as a red animal. If the requested
-  // juvenile portrait cannot load, fall back to the species portrait instead.
   const rawFallback = adultRawSrc;
   const rawBaseFallback = baseArtBySubspecies[subspecies];
   const src = withVersion(rawSrc);
@@ -97,22 +114,31 @@ export function ChondroSnakeIcon({
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
-      <img
-        key={src}
-        src={src}
-        onError={(event) => {
-          const current = event.currentTarget.src;
-          if (!current.includes(rawFallback) && rawSrc !== rawFallback) {
-            event.currentTarget.src = fallback;
-            return;
-          }
-          if (!current.includes(rawBaseFallback) && rawFallback !== rawBaseFallback) {
-            event.currentTarget.src = baseFallback;
-          }
-        }}
-        alt={`${name} illustrated virtual game portrait`}
-        className="h-full w-full object-contain p-1 sm:p-2"
-      />
+      {yellowSpriteStyle ? (
+        <div
+          role="img"
+          aria-label={`${name} illustrated yellow juvenile game portrait`}
+          className="absolute inset-1 rounded-xl bg-black bg-no-repeat"
+          style={yellowSpriteStyle}
+        />
+      ) : (
+        <img
+          key={src}
+          src={src}
+          onError={(event) => {
+            const current = event.currentTarget.src;
+            if (!current.includes(rawFallback) && rawSrc !== rawFallback) {
+              event.currentTarget.src = fallback;
+              return;
+            }
+            if (!current.includes(rawBaseFallback) && rawFallback !== rawBaseFallback) {
+              event.currentTarget.src = baseFallback;
+            }
+          }}
+          alt={`${name} illustrated virtual game portrait`}
+          className="h-full w-full object-contain p-1 sm:p-2"
+        />
+      )}
       <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
         Virtual
       </div>
