@@ -12,7 +12,7 @@ source = source.replace('import { ChondroBreederNavIcon } from "@/components/Cho
 if (!source.includes("const dockIconByView")) {
   source = source.replace(
     'const dockViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];\n',
-    'const dockViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];\nconst dockIconByView: Record<(typeof dockViews)[number], string> = {\n  home: "/hatchery/game/dock/home.webp",\n  breeding: "/hatchery/game/dock/breed.webp",\n  colony: "/hatchery/game/dock/animals.webp",\n  clutches: "/hatchery/game/dock/offspring.webp",\n  market: "/hatchery/game/dock/store.webp",\n};\n',
+    'const dockViews: WorkspaceView[] = ["home", "breeding", "colony", "clutches", "market"];\nconst dockIconByView: Record<"home" | "breeding" | "colony" | "clutches" | "market", string> = {\n  home: "/hatchery/game/dock/home.webp",\n  breeding: "/hatchery/game/dock/breed.webp",\n  colony: "/hatchery/game/dock/animals.webp",\n  clutches: "/hatchery/game/dock/offspring.webp",\n  market: "/hatchery/game/dock/store.webp",\n};\n',
   );
 }
 
@@ -28,7 +28,7 @@ const oldInner = `              <span className={\`grid h-10 w-10 place-items-ce
 
 const newInner = `              <span className={\`relative block h-[58px] w-[58px] overflow-hidden rounded-[18px] border transition sm:h-[64px] sm:w-[64px] \${selected ? "scale-[1.04] border-emerald-200/45 shadow-[0_0_24px_rgba(110,231,183,.18)]" : "border-white/[.07] opacity-80 group-hover:opacity-100"}\`}>
                 <Image
-                  src={dockIconByView[id]}
+                  src={dockIconByView[id as "home" | "breeding" | "colony" | "clutches" | "market"]}
                   alt=""
                   fill
                   sizes="64px"
