@@ -76,8 +76,13 @@ update(marketPath, (source) => {
                       ) : (`;
   if (next.includes(imageBlock)) next = next.replace(imageBlock, spriteBlock);
 
+  next = next
+    .replace("Quick-buy an individual compatible enclosure without leaving the shop.", "Quick-buy compatible housing without leaving the shop. Chondro Dojo 2 Stacks add two individual neonate spaces.")
+    .replace("Owned: {save.housingUnits.length}", "Housing spaces: {save.housingUnits.length}")
+    .replace('{enclosure.sizeClass} · one animal', '{enclosure.sizeClass} · {id === "chondro-dojo-bin" ? "two individual spaces" : "one individual space"}');
+
   return next;
-}, "Fixed Emerald market Dojo capacity and sprite cropping.");
+}, "Fixed Emerald market Dojo capacity, sprite cropping, and housing copy.");
 
 update(workspacePath, (source) => {
   let next = source;
