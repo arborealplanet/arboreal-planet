@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-16-yellow-neonates-live-v6";
+const TRAIT_ART_VERSION = "2026-09-17-stage-sprite-cleanup-v7";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
@@ -34,6 +34,15 @@ const verifiedTraitArtBySubspecies: Record<ChondroSubspecies, readonly TraitKey[
   "Morelia azurea utaraensis": ["blueStripe", "yellowRetention"],
   "Morelia viridis": [],
 };
+
+// These three yellow juvenile files currently render as empty/placeholder art in the
+// live shop. Until corrected standalone yellow juvenile art is committed, fall back
+// to the correct subspecies portrait instead of showing a blank card or another taxon.
+const unavailableYellowJuvenileArt = new Set<ChondroSubspecies>([
+  "Morelia azurea azurea",
+  "Morelia azurea pulcher",
+  "Morelia azurea utaraensis",
+]);
 
 const withVersion = (src: string) => `${src}?v=${TRAIT_ART_VERSION}`;
 
@@ -66,6 +75,7 @@ function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits
 
 function juvenilePortraitArt(subspecies: ChondroSubspecies, neonateColor?: NeonateColor) {
   const assetColor = subspecies === "Morelia viridis" ? "yellow" : neonateColor === "Yellow" ? "yellow" : "red";
+  if (assetColor === "yellow" && unavailableYellowJuvenileArt.has(subspecies)) return null;
   return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${assetColor}.webp`;
 }
 
@@ -85,10 +95,11 @@ export function ChondroSnakeIcon({
   neonateColor?: NeonateColor;
 }) {
   const adultRawSrc = adultPortraitArt(subspecies, traits);
-  const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult";
-  const rawSrc = isJuvenile ? juvenilePortraitArt(subspecies, neonateColor) : adultRawSrc;
-  // Never disguise a missing yellow juvenile asset as a red animal. If the requested
-  // juvenile portrait cannot load, fall back to the species portrait instead.
+  // Subadults must use later-stage art. Treating them as neonates is what caused
+  // Biak/Merauke subadults to display the viridis-yellow neonate portrait.
+  const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate";
+  const juvenileRawSrc = isJuvenile ? juvenilePortraitArt(subspecies, neonateColor) : null;
+  const rawSrc = juvenileRawSrc ?? adultRawSrc;
   const rawFallback = adultRawSrc;
   const rawBaseFallback = baseArtBySubspecies[subspecies];
   const src = withVersion(rawSrc);
