@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArborealKeeperEmeraldWorkspace } from "@/components/ArborealKeeperEmeraldWorkspace";
 import { ArborealKeeperFacilityOverview } from "@/components/ArborealKeeperFacilityOverview";
 import { ArborealKeeperMyAnimals } from "@/components/ArborealKeeperMyAnimals";
@@ -24,9 +24,36 @@ const EMERALD_VIEWS: Array<{ id: EmeraldView; label: string }> = [
   { id: "clutches", label: "Litters" },
 ];
 
+function isAnimalStoreActive() {
+  const dock = document.querySelector('nav[aria-label="Chondro Breeder navigation"]');
+  if (!dock) return false;
+
+  const buttons = Array.from(dock.querySelectorAll("button"));
+  const selected = buttons.findIndex((button) => button.getAttribute("aria-current") === "page");
+  return selected === 4;
+}
+
 export function ArborealKeeperProgramHub() {
   const [view, setView] = useState<HubView>("programs");
   const [emeraldView, setEmeraldView] = useState<EmeraldView>("market");
+  const [hiddenForAnimalStore, setHiddenForAnimalStore] = useState(false);
+
+  useEffect(() => {
+    const syncVisibility = () => setHiddenForAnimalStore(isAnimalStoreActive());
+    syncVisibility();
+
+    const observer = new MutationObserver(syncVisibility);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-current"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (hiddenForAnimalStore) return null;
 
   return (
     <section className="border-b border-white/[.055] bg-[#030806] py-4 sm:py-5">
