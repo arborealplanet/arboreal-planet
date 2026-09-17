@@ -6,9 +6,6 @@ if (fs.existsSync(marketPath)) {
   const source = fs.readFileSync(marketPath, "utf8");
   let next = source;
 
-  // The canonical source may still import the legacy sprite helper alongside the
-  // species registry. V3 owns rendering now, so normalize this to a single registry
-  // import after the V3 transform instead of allowing duplicate symbol imports.
   next = next.replace(
     'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";\nimport { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";',
     'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";',
@@ -36,12 +33,14 @@ const requiredFiles = [
   "public/hatchery/snakes/neonates/utaraensis-red.webp",
   "public/hatchery/snakes/neonates/utaraensis-yellow.webp",
   "public/hatchery/snakes/neonates/viridis-yellow.webp",
+  "public/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp",
 ];
 
 for (const file of requiredFiles) {
   if (!fs.existsSync(file)) throw new Error(`[keeper-art-guard] Missing required store art: ${file}`);
   const size = fs.statSync(file).size;
-  if (size < 5000) throw new Error(`[keeper-art-guard] Suspiciously small store art (${size} bytes): ${file}`);
+  const minimum = file.includes("emerald-atlas-v3.webp") ? 100000 : 5000;
+  if (size < minimum) throw new Error(`[keeper-art-guard] Suspiciously small store art (${size} bytes): ${file}`);
 }
 
 const yellowFiles = [
@@ -62,9 +61,17 @@ if (chondroIcon.includes("unavailableYellowJuvenileArt")) {
   throw new Error("[keeper-art-guard] Restored yellow juvenile portraits are still blocked by fallback logic.");
 }
 
+const chondroShop = fs.readFileSync("src/components/ChondroBreederExpandedShop.tsx", "utf8");
+if (/traits=\{\{ highBlack: offer\.highBlack/.test(chondroShop)) {
+  throw new Error("[keeper-art-guard] GTP store cards are still feeding trait artwork into listing portraits.");
+}
+if (!chondroShop.includes('"Morelia azurea azurea": ["Biak", "Numfor"]')) {
+  throw new Error("[keeper-art-guard] Canonical GTP store locality mapping regressed.");
+}
+
 const emeraldHelper = fs.readFileSync("src/lib/arboreal-keeper-emerald-art.ts", "utf8");
-if (!emeraldHelper.includes("data:image/webp;base64,UklGR")) {
-  throw new Error("[keeper-art-guard] Emerald V3 helper does not contain the preserved user-supplied atlas.");
+if (!emeraldHelper.includes('/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp')) {
+  throw new Error("[keeper-art-guard] Emerald V3 renderer is not using the materialized public atlas.");
 }
 if (!emeraldHelper.includes('weight: 6') || !emeraldHelper.includes('weight: 47')) {
   throw new Error("[keeper-art-guard] Northern Emerald adult 6/47/47 art weighting is missing.");
@@ -85,4 +92,4 @@ if (!emeraldEngine.includes("emeraldArtForAnimal")) {
   throw new Error("[keeper-art-guard] Emerald generation is not using the V3 art selector after prebuild.");
 }
 
-console.log("[keeper-art-guard] Store art verified: Chondro portraits are distinct and Emerald V3 rendering is active.");
+console.log("[keeper-art-guard] Store art verified: single-animal GTP portraits and public Emerald V3 atlas rendering are active.");
