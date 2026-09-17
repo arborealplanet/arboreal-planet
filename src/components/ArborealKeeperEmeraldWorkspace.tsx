@@ -50,10 +50,8 @@ const SPECIES: EmeraldSpeciesId[] = [
 ];
 
 const HOUSING_SHOP_IDS: KeeperEnclosureId[] = [
-  "neonate-arboreal-tub",
+  "chondro-dojo-bin",
   "pvc-arboreal-medium",
-  "glass-arboreal-medium",
-  "glass-arboreal-large",
 ];
 
 const money = (value: number) =>
@@ -146,7 +144,6 @@ function resolveReadyJobs(save: EmeraldKeeperSave, now: number) {
       );
 
       if (availableUnits.length < offspring.length) {
-        // Birth remains ready until each neonate has an individual enclosure.
         job = original;
         break;
       }
@@ -737,9 +734,10 @@ function HousingShop({
         </div>
         <div className="text-[10px] text-white/25">{save.housingUnits.filter((unit) => unit.occupantId === null).length} empty</div>
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {HOUSING_SHOP_IDS.map((id) => {
-          const enclosure = ARBOREAL_KEEPER_ENCLOSURES.find((item) => item.id === id)!;
+          const enclosure = ARBOREAL_KEEPER_ENCLOSURES.find((item) => item.id === id);
+          if (!enclosure) return null;
           const compatible = Boolean(enclosure.compatibleSpecies[speciesId]);
           const count = save.housingUnits.filter((unit) => unit.enclosureId === id).length;
           return (
