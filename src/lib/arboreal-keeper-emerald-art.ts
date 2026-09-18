@@ -19,7 +19,6 @@ type EmeraldArt = {
 export const EMERALD_ART: EmeraldArt[] = [
   { id: "etb-northern-neonate-red-01-v3", speciesId: "northern_emerald_tree_boa", stage: "neonate", phase: "standard", neonateColor: "red", cell: 0 },
   { id: "etb-northern-neonate-red-02-v3", speciesId: "northern_emerald_tree_boa", stage: "neonate", phase: "standard", neonateColor: "red", cell: 1 },
-  { id: "etb-northern-neonate-green-01-v3", speciesId: "northern_emerald_tree_boa", stage: "neonate", phase: "standard", neonateColor: "green", cell: 2 },
   { id: "etb-northern-neonate-red-03-v3", speciesId: "northern_emerald_tree_boa", stage: "neonate", phase: "standard", neonateColor: "red", cell: 3 },
   { id: "etb-northern-anaconda-neonate-v3", speciesId: "northern_emerald_tree_boa", stage: "neonate", phase: "anaconda", neonateColor: "green", cell: 2 },
   { id: "etb-northern-anaconda-subadult-v3", speciesId: "northern_emerald_tree_boa", stage: "subadult", phase: "anaconda", cell: 2 },
