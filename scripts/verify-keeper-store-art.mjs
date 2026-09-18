@@ -6,18 +6,30 @@ if (fs.existsSync(marketPath)) {
   const source = fs.readFileSync(marketPath, "utf8");
   let next = source;
 
+  // Final normalization after every legacy/prebuild patch has run. The current
+  // Emerald renderer needs both the species registry and legacy sprite mapper.
   next = next.replace(
-    'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";\nimport { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";',
-    'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";',
+    /^import \{[^\n]*ARBOREAL_KEEPER_SPECIES_BY_ID[^\n]*\} from "@\/lib\/arboreal-keeper-species";\n/gm,
+    "",
   );
   next = next.replace(
-    'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";',
-    'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";',
+    /^import \{[^\n]*keeperAssetSpriteStyle[^\n]*\} from "@\/lib\/arboreal-keeper-species";\n/gm,
+    "",
   );
+
+  const artImport = 'import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";';
+  const combinedImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
+  if (!next.includes(combinedImport)) {
+    if (next.includes(artImport)) {
+      next = next.replace(artImport, artImport + "\n" + combinedImport);
+    } else {
+      next = combinedImport + "\n" + next;
+    }
+  }
 
   if (next !== source) {
     fs.writeFileSync(marketPath, next);
-    console.log("[keeper-art-guard] Normalized Emerald V3 imports.");
+    console.log("[keeper-art-guard] Normalized Emerald V3 + fallback imports.");
   }
 }
 
@@ -120,6 +132,9 @@ const emeraldMarket = fs.readFileSync(marketPath, "utf8");
 const emeraldEngine = fs.readFileSync("src/lib/arboreal-keeper-emerald-engine.ts", "utf8");
 if (!emeraldMarket.includes("emeraldArtStyleForAnimal(offer.animal.speciesId")) {
   throw new Error("[keeper-art-guard] Repti-Shop Emerald cards are not using the V3 art renderer after prebuild.");
+}
+if (!emeraldMarket.includes("const fallbackStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));")) {
+  throw new Error("[keeper-art-guard] Repti-Shop Emerald fallback sprite layer is missing after prebuild.");
 }
 if (!emeraldMarket.includes("const locked = !offer.available;")) {
   throw new Error("[keeper-art-guard] Repti-Shop Emerald level-lock state is missing after prebuild.");
