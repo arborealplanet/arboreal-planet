@@ -1,5 +1,6 @@
 "use client";
 
+import { ArborealKeeperEmeraldAnimalRecord } from "@/components/ArborealKeeperEmeraldAnimalRecord";
 import { useEffect, useMemo, useState } from "react";
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
