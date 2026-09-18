@@ -105,7 +105,7 @@ export function emeraldMarketValue`,
 update(marketPath, (source) => {
   let next = source;
 
-  const artImport = 'import { emeraldArtStyle } from "@/lib/arboreal-keeper-emerald-art";';
+  const artImport = 'import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";';
   if (!next.includes(artImport)) {
     const anchor = 'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";';
     next = next.replace(anchor, `${anchor}\n${artImport}`);
@@ -117,19 +117,19 @@ update(marketPath, (source) => {
   }
 
   next = next
-    .replace('const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);', 'const spriteStyle = emeraldArtStyle(offer.animal.assetId);')
-    .replace('const spriteStyle = emeraldSpriteStyle(offer.animal);', 'const spriteStyle = emeraldArtStyle(offer.animal.assetId);');
+    .replace('const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);', 'const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);')
+    .replace('const spriteStyle = emeraldSpriteStyle(offer.animal);', 'const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);');
 
-  if (!next.includes('const spriteStyle = emeraldArtStyle(offer.animal.assetId);')) {
+  if (!next.includes('const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);')) {
     next = next.replace(
       '                const traits = strongestTraits(offer.animal);',
-      '                const traits = strongestTraits(offer.animal);\n                const spriteStyle = emeraldArtStyle(offer.animal.assetId);\n                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n                const locked = !offer.available;',
+      '                const traits = strongestTraits(offer.animal);\n                const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);\n                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n                const locked = !offer.available;',
     );
   } else {
     if (!next.includes('const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;')) {
       next = next.replace(
-        '                const spriteStyle = emeraldArtStyle(offer.animal.assetId);',
-        '                const spriteStyle = emeraldArtStyle(offer.animal.assetId);\n                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n                const locked = !offer.available;',
+        '                const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);',
+        '                const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);\n                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;\n                const locked = !offer.available;',
       );
     }
   }
@@ -170,7 +170,7 @@ update(marketPath, (source) => {
                       ) : (`,
   );
 
-  next = next.replace(/keeperAssetSpriteStyle\(offer\.animal\.speciesId, offer\.animal\.assetId\)/g, 'emeraldArtStyle(offer.animal.assetId)');
+  next = next.replace(/keeperAssetSpriteStyle\(offer\.animal\.speciesId, offer\.animal\.assetId\)/g, 'emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId)');
 
   if (!next.includes("Unlocks Level {requiredLevel}")) {
     next = next.replace(
@@ -188,7 +188,7 @@ update(marketPath, (source) => {
     '{locked ? "Level " + requiredLevel : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}',
   );
 
-  if (!next.includes("emeraldArtStyle(offer.animal.assetId)")) throw new Error("Market V3 sprite style was not installed.");
+  if (!next.includes("emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId)")) throw new Error("Market V3 sprite style was not installed.");
   if (!next.includes("const locked = !offer.available;")) throw new Error("Market V3 lock state was not installed.");
   return next;
 }, "Switched Repti-Shop Emerald cards to the V3 user-supplied atlas.");
@@ -202,7 +202,7 @@ update(workspacePath, (source) => {
   }
 
   const portrait = `function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
-  const spriteStyle = emeraldArtStyle(animal.assetId);
+  const spriteStyle = emeraldArtStyleForAnimal(animal.speciesId, animal.lifeStage, animal.phase, animal.neonateColor, animal.assetId);
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
       {spriteStyle && !failed ? (
@@ -227,7 +227,7 @@ update(workspacePath, (source) => {
 }`;
 
   next = next.replace(/function EmeraldPortrait\([\s\S]*?\n}\n\nfunction EmptyState/, portrait + "\n\nfunction EmptyState");
-  if (!next.includes("emeraldArtStyle(animal.assetId)")) throw new Error("Workspace V3 portrait was not installed.");
+  if (!next.includes("emeraldArtStyleForAnimal(animal.speciesId, animal.lifeStage, animal.phase, animal.neonateColor, animal.assetId)")) throw new Error("Workspace V3 portrait was not installed.");
   return next;
 }, "Switched My Animals and breeding portraits to the V3 user-supplied atlas.");
 
