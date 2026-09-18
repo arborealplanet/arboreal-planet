@@ -19,7 +19,6 @@ import {
   type EmeraldKeeperSave,
 } from "@/lib/arboreal-keeper-emerald-engine";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
-import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";
 import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";
 
 const CHONDRO_SAVE_KEY = "arboreal_chondro_breeder_v2";
@@ -275,11 +274,10 @@ export function ArborealKeeperEmeraldMarketBar() {
                 const sold = purchased.has(offer.id);
                 const housing = compatibleEmptyHousingCount(save, offer.animal);
                 const traits = strongestTraits(offer.animal);
-                const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);
-                const fallbackStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));
+                const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));
                 const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;
                 const locked = !offer.available;
-                const showImage = Boolean(spriteStyle || fallbackStyle);
+                const showImage = Boolean(spriteStyle);
                 return (
                   <article
                     key={offer.id}
@@ -288,15 +286,7 @@ export function ArborealKeeperEmeraldMarketBar() {
                     <div className="relative aspect-square overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c]">
                       {showImage ? (
                         <>
-                          {fallbackStyle ? (
-                            <div
-                              role="img"
-                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage + " fallback"}
-                              className="absolute inset-0 bg-black"
-                              style={fallbackStyle}
-                            />
-                          ) : null}
-                          {spriteStyle ? (
+{spriteStyle ? (
                             <div
                               role="img"
                               aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
