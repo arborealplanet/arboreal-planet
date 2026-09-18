@@ -46,6 +46,24 @@ for (const file of requiredFiles) {
   if (size < 2500) throw new Error(`[keeper-art-guard] Suspiciously small store/dock art (${size} bytes): ${file}`);
 }
 
+
+const juvenileWebps = [
+  "public/hatchery/snakes/neonates/azurea-red.webp",
+  "public/hatchery/snakes/neonates/azurea-yellow.webp",
+  "public/hatchery/snakes/neonates/pulcher-red.webp",
+  "public/hatchery/snakes/neonates/pulcher-yellow.webp",
+  "public/hatchery/snakes/neonates/utaraensis-red.webp",
+  "public/hatchery/snakes/neonates/utaraensis-yellow.webp",
+  "public/hatchery/snakes/neonates/viridis-yellow.webp",
+];
+for (const file of juvenileWebps) {
+  const bytes = fs.readFileSync(file);
+  const signature = bytes.subarray(0, 12).toString("ascii");
+  if (!signature.startsWith("RIFF") || !signature.includes("WEBP")) {
+    throw new Error(`[keeper-art-guard] Juvenile portrait is not a valid WebP: ${file}`);
+  }
+}
+
 const yellowFiles = [
   "public/hatchery/snakes/neonates/azurea-yellow.webp",
   "public/hatchery/snakes/neonates/pulcher-yellow.webp",
