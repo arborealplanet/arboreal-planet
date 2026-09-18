@@ -112,9 +112,13 @@ if (emeraldHelper.includes('id: "etb-northern-neonate-green-01-v3"')) {
   throw new Error("[keeper-art-guard] Standard Northern Emerald neonates must not use Anaconda green juvenile art.");
 }
 
+if (!emeraldHelper.includes("emeraldArtStyleForAnimal(")) {
+  throw new Error("[keeper-art-guard] Emerald stale asset fallback is missing.");
+}
+
 const emeraldMarket = fs.readFileSync(marketPath, "utf8");
 const emeraldEngine = fs.readFileSync("src/lib/arboreal-keeper-emerald-engine.ts", "utf8");
-if (!emeraldMarket.includes("emeraldArtStyle(offer.animal.assetId)")) {
+if (!emeraldMarket.includes("emeraldArtStyleForAnimal(offer.animal.speciesId")) {
   throw new Error("[keeper-art-guard] Repti-Shop Emerald cards are not using the V3 art renderer after prebuild.");
 }
 if (!emeraldMarket.includes("const locked = !offer.available;")) {
