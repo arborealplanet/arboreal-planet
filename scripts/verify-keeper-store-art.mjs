@@ -1,39 +1,19 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 
-const marketPath = "src/components/ArborealKeeperEmeraldMarketBar.tsx";
-if (fs.existsSync(marketPath)) {
-  const source = fs.readFileSync(marketPath, "utf8");
-  let next = source;
-  next = next.replace(/^import \{ emeraldArtStyleForAnimal \} from "@\/lib\/arboreal-keeper-emerald-art";\n/gm, "");
-  next = next.replace(
-    /^import \{[^\n]*ARBOREAL_KEEPER_SPECIES_BY_ID[^\n]*\} from "@\/lib\/arboreal-keeper-species";\n/gm,
-    "",
-  );
-  next = next.replace(
-    /^import \{[^\n]*keeperAssetSpriteStyle[^\n]*\} from "@\/lib\/arboreal-keeper-species";\n/gm,
-    "",
-  );
-  const combinedImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
-  if (!next.includes(combinedImport)) {
-    const clientDirective = '"use client";';
-    if (next.startsWith(clientDirective)) {
-      next = next.replace(clientDirective, clientDirective + "\n\n" + combinedImport);
-    } else {
-      next = combinedImport + "\n" + next;
-    }
-  }
-  if (next !== source) {
-    fs.writeFileSync(marketPath, next);
-    console.log("[keeper-art-guard] Normalized Emerald stable sprite imports.");
-  }
-}
+const atlasPath = "public/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp";
+const atlasExpectedBytes = 196492;
+const atlasExpectedHash = "62644f94c24ff408c6af5e639c1d581207a01c089cfca041f65f5e7a24a87af0";
 
 const requiredFiles = [
   "public/hatchery/snakes/azurea.avif",
   "public/hatchery/snakes/pulcher.avif",
   "public/hatchery/snakes/utaraensis.avif",
   "public/hatchery/snakes/viridis.avif",
+  "public/hatchery/snakes/game-base/azurea.webp",
+  "public/hatchery/snakes/game-base/pulcher.webp",
+  "public/hatchery/snakes/game-base/utaraensis.webp",
+  "public/hatchery/snakes/game-base/viridis.webp",
   "public/hatchery/snakes/neonates/azurea-red.webp",
   "public/hatchery/snakes/neonates/azurea-yellow.webp",
   "public/hatchery/snakes/neonates/pulcher-red.webp",
@@ -46,14 +26,26 @@ const requiredFiles = [
   "public/hatchery/game/dock/animals.webp",
   "public/hatchery/game/dock/offspring.webp",
   "public/hatchery/game/dock/store.webp",
+  atlasPath,
 ];
 
 for (const file of requiredFiles) {
-  if (!fs.existsSync(file)) throw new Error(`[keeper-art-guard] Missing required store/dock art: ${file}`);
+  if (!fs.existsSync(file)) throw new Error(`[keeper-art-guard] Missing required game art: ${file}`);
   const size = fs.statSync(file).size;
-  if (size < 2500) throw new Error(`[keeper-art-guard] Suspiciously small store/dock art (${size} bytes): ${file}`);
+  if (size < 2500) throw new Error(`[keeper-art-guard] Suspiciously small game art (${size} bytes): ${file}`);
 }
 
+const atlas = fs.readFileSync(atlasPath);
+const atlasHash = crypto.createHash("sha256").update(atlas).digest("hex");
+if (atlas.length !== atlasExpectedBytes) {
+  throw new Error(`[keeper-art-guard] Emerald V3 atlas size mismatch: ${atlas.length}`);
+}
+if (atlasHash !== atlasExpectedHash) {
+  throw new Error(`[keeper-art-guard] Emerald V3 atlas hash mismatch: ${atlasHash}`);
+}
+if (atlas.subarray(0, 4).toString("ascii") !== "RIFF" || atlas.subarray(8, 12).toString("ascii") !== "WEBP") {
+  throw new Error("[keeper-art-guard] Emerald V3 atlas is not a WebP RIFF container.");
+}
 
 const juvenileWebps = [
   "public/hatchery/snakes/neonates/azurea-red.webp",
@@ -68,7 +60,7 @@ for (const file of juvenileWebps) {
   const bytes = fs.readFileSync(file);
   const signature = bytes.subarray(0, 12).toString("ascii");
   if (!signature.startsWith("RIFF") || !signature.includes("WEBP")) {
-    throw new Error(`[keeper-art-guard] Juvenile portrait is not a valid WebP: ${file}`);
+    throw new Error(`[keeper-art-guard] Juvenile portrait is not a WebP: ${file}`);
   }
 }
 
@@ -77,54 +69,74 @@ const yellowFiles = [
   "public/hatchery/snakes/neonates/pulcher-yellow.webp",
   "public/hatchery/snakes/neonates/utaraensis-yellow.webp",
 ];
-const hashes = yellowFiles.map((file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex"));
-if (new Set(hashes).size !== yellowFiles.length) {
-  throw new Error("[keeper-art-guard] Yellow Azurea/Pulcher/Utaraensis juvenile portraits must be distinct files.");
+const yellowHashes = yellowFiles.map((file) =>
+  crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex"),
+);
+if (new Set(yellowHashes).size !== yellowFiles.length) {
+  throw new Error("[keeper-art-guard] Yellow Azurea/Pulcher/Utaraensis portraits must remain distinct.");
 }
 
 const chondroIcon = fs.readFileSync("src/components/ChondroSnakeIcon.tsx", "utf8");
-if (!chondroIcon.includes('lifeStage === "Hatchling" || lifeStage === "Neonate"')) {
-  throw new Error("[keeper-art-guard] Chondro stage-aware portrait selector regressed.");
+if (!chondroIcon.includes('lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult"')) {
+  throw new Error("[keeper-art-guard] GTP juvenile-through-Subadult art rule regressed.");
 }
-if (chondroIcon.includes("unavailableYellowJuvenileArt")) {
-  throw new Error("[keeper-art-guard] Restored yellow juvenile portraits are still blocked by fallback logic.");
+if (!chondroIcon.includes("/hatchery/snakes/game-base/azurea.webp")) {
+  throw new Error("[keeper-art-guard] Approved GTP base game sprites are no longer wired.");
 }
 
 const chondroShop = fs.readFileSync("src/components/ChondroBreederExpandedShop.tsx", "utf8");
 if (/traits=\{\{ highBlack: offer\.highBlack/.test(chondroShop)) {
-  throw new Error("[keeper-art-guard] GTP store cards are still feeding trait artwork into listing portraits.");
+  throw new Error("[keeper-art-guard] GTP store is feeding trait art into ordinary listings.");
 }
-if (!chondroShop.includes('"Morelia azurea azurea": ["Biak", "Numfor"]')) {
-  throw new Error("[keeper-art-guard] Canonical GTP store locality mapping regressed.");
+if (!chondroShop.includes('"Morelia azurea azurea": ["Biak", "Numfor"]') ||
+    !chondroShop.includes('"Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"]') ||
+    !chondroShop.includes('"Morelia viridis": ["Aru", "Merauke"]')) {
+  throw new Error("[keeper-art-guard] Canonical GTP locality mapping regressed.");
 }
 
-const emeraldMarket = fs.readFileSync(marketPath, "utf8");
+const emeraldHelper = fs.readFileSync("src/lib/arboreal-keeper-emerald-art.ts", "utf8");
+const emeraldMarket = fs.readFileSync("src/components/ArborealKeeperEmeraldMarketBar.tsx", "utf8");
 const emeraldWorkspace = fs.readFileSync("src/components/ArborealKeeperEmeraldWorkspace.tsx", "utf8");
 const emeraldEngine = fs.readFileSync("src/lib/arboreal-keeper-emerald-engine.ts", "utf8");
 
-for (const file of [
-  "public/hatchery/animals/emerald-tree-boas/northern/northern-sprite.webp",
-  "public/hatchery/animals/emerald-tree-boas/amazon-basin/neonate-sprite.webp",
-  "public/hatchery/animals/emerald-tree-boas/amazon-basin/later-sprite.webp",
+if (!emeraldHelper.includes('const EMERALD_ATLAS = "/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp";')) {
+  throw new Error("[keeper-art-guard] Emerald helper is not pointed at the verified public V3 atlas.");
+}
+if (emeraldHelper.includes("data:image/webp;base64,")) {
+  throw new Error("[keeper-art-guard] Corrupt embedded Emerald atlas data returned.");
+}
+if (emeraldHelper.includes("etb-northern-neonate-green-01-v3")) {
+  throw new Error("[keeper-art-guard] Green Northern standard neonate slot returned; green juvenile art is Anaconda-only.");
+}
+if (!emeraldHelper.includes('id: "etb-northern-anaconda-subadult-v3"') ||
+    !emeraldHelper.includes('stage: "subadult", phase: "anaconda", cell: 2')) {
+  throw new Error("[keeper-art-guard] Northern Anaconda juvenile/subadult mapping regressed.");
+}
+for (const marker of ["weight: 6", "weight: 47"]) {
+  if (!emeraldHelper.includes(marker)) throw new Error(`[keeper-art-guard] Northern adult weighting missing: ${marker}`);
+}
+for (const marker of [
+  "etb-basin-neonate-05-v3",
+  "etb-basin-subadult-02-v3",
+  "etb-basin-adult-03-v3",
 ]) {
-  if (!fs.existsSync(file) || fs.statSync(file).size < 5000) {
-    throw new Error(`[keeper-art-guard] Missing Emerald stable sprite sheet: ${file}`);
-  }
+  if (!emeraldHelper.includes(marker)) throw new Error(`[keeper-art-guard] Emerald V3 mapping missing: ${marker}`);
 }
-if (!emeraldMarket.includes("keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal))")) {
-  throw new Error("[keeper-art-guard] Repti-Shop Emerald cards are not using stable stage sprites.");
+if (!emeraldMarket.includes("emeraldArtStyleForAnimal(offer.animal.speciesId")) {
+  throw new Error("[keeper-art-guard] Repti-Shop Emerald cards are not using the V3 atlas renderer.");
 }
-if (emeraldMarket.includes("emeraldArtStyleForAnimal(")) {
-  throw new Error("[keeper-art-guard] Corrupt Emerald V3 atlas renderer is still mounted in Repti-Shop.");
+if (emeraldMarket.includes("keeperAssetSpriteStyle(offer.animal.speciesId")) {
+  throw new Error("[keeper-art-guard] Broken legacy Emerald sprite-sheet renderer returned to Repti-Shop.");
 }
-if (!emeraldWorkspace.includes("keeperAssetSpriteStyle(animal.speciesId, legacyEmeraldAssetId(animal))")) {
-  throw new Error("[keeper-art-guard] Emerald collection cards are not using stable stage sprites.");
+if (!emeraldWorkspace.includes("emeraldArtStyleForAnimal(animal.speciesId")) {
+  throw new Error("[keeper-art-guard] My Animals Emerald portraits are not using the V3 atlas renderer.");
 }
-if (emeraldWorkspace.includes("emeraldArtStyleForAnimal(")) {
-  throw new Error("[keeper-art-guard] Corrupt Emerald V3 atlas renderer is still mounted in My Animals.");
+if (emeraldWorkspace.includes("keeperAssetSpriteStyle(animal.speciesId")) {
+  throw new Error("[keeper-art-guard] Broken legacy Emerald sprite-sheet renderer returned to My Animals.");
 }
-if (!emeraldEngine.includes("emeraldArtForAnimal")) {
-  console.log("[keeper-art-guard] Emerald engine uses stable stored animal data without V3 art selection.");
+if (!emeraldEngine.includes("emeraldArtForAnimal(") ||
+    !emeraldEngine.includes('EMERALD_V3_ATLAS_PATH = "/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp"')) {
+  throw new Error("[keeper-art-guard] Emerald engine is not assigning V3 art IDs/paths.");
 }
 
 const dock = fs.readFileSync("src/components/ChondroBreederWorkspace.tsx", "utf8");
@@ -134,7 +146,7 @@ for (const icon of ["home.webp", "breed.webp", "animals.webp", "offspring.webp",
   }
 }
 if (dock.includes("<ChondroBreederNavIcon")) {
-  throw new Error("[keeper-art-guard] Legacy symbol dock icons are still mounted after the custom dock pass.");
+  throw new Error("[keeper-art-guard] Legacy symbol dock icons are mounted.");
 }
 
-console.log("[keeper-art-guard] Store art and the five custom Arboreal Keeper dock icons are wired and verified.");
+console.log(`[keeper-art-guard] Verified GTP sprites, canonical localities, dock icons, and Emerald V3 atlas ${atlasHash}.`);
