@@ -16,7 +16,12 @@ if (fs.existsSync(marketPath)) {
   );
   const combinedImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
   if (!next.includes(combinedImport)) {
-    next = combinedImport + "\n" + next;
+    const clientDirective = '"use client";';
+    if (next.startsWith(clientDirective)) {
+      next = next.replace(clientDirective, clientDirective + "\n\n" + combinedImport);
+    } else {
+      next = combinedImport + "\n" + next;
+    }
   }
   if (next !== source) {
     fs.writeFileSync(marketPath, next);
