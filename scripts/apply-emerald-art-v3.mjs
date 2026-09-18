@@ -145,6 +145,13 @@ update(marketPath, (source) => {
     .replace('const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, offer.animal.assetId);', 'const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);')
     .replace('const spriteStyle = emeraldSpriteStyle(offer.animal);', 'const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);');
 
+  if (!next.includes('const fallbackStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));')) {
+    next = next.replace(
+      'const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);',
+      'const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);\\n                const fallbackStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));',
+    );
+  }
+
   if (!next.includes('const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);')) {
     next = next.replace(
       '                const traits = strongestTraits(offer.animal);',
