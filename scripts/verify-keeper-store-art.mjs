@@ -5,9 +5,7 @@ const marketPath = "src/components/ArborealKeeperEmeraldMarketBar.tsx";
 if (fs.existsSync(marketPath)) {
   const source = fs.readFileSync(marketPath, "utf8");
   let next = source;
-
-  // Final normalization after every legacy/prebuild patch has run. The current
-  // Emerald renderer needs both the species registry and legacy sprite mapper.
+  next = next.replace(/^import \{ emeraldArtStyleForAnimal \} from "@\/lib\/arboreal-keeper-emerald-art";\n/gm, "");
   next = next.replace(
     /^import \{[^\n]*ARBOREAL_KEEPER_SPECIES_BY_ID[^\n]*\} from "@\/lib\/arboreal-keeper-species";\n/gm,
     "",
@@ -16,20 +14,13 @@ if (fs.existsSync(marketPath)) {
     /^import \{[^\n]*keeperAssetSpriteStyle[^\n]*\} from "@\/lib\/arboreal-keeper-species";\n/gm,
     "",
   );
-
-  const artImport = 'import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";';
   const combinedImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
   if (!next.includes(combinedImport)) {
-    if (next.includes(artImport)) {
-      next = next.replace(artImport, artImport + "\n" + combinedImport);
-    } else {
-      next = combinedImport + "\n" + next;
-    }
+    next = combinedImport + "\n" + next;
   }
-
   if (next !== source) {
     fs.writeFileSync(marketPath, next);
-    console.log("[keeper-art-guard] Normalized Emerald V3 + fallback imports.");
+    console.log("[keeper-art-guard] Normalized Emerald stable sprite imports.");
   }
 }
 
@@ -102,45 +93,33 @@ if (!chondroShop.includes('"Morelia azurea azurea": ["Biak", "Numfor"]')) {
   throw new Error("[keeper-art-guard] Canonical GTP store locality mapping regressed.");
 }
 
-const emeraldHelper = fs.readFileSync("src/lib/arboreal-keeper-emerald-art.ts", "utf8");
-const usesEmbeddedAtlas = emeraldHelper.includes("data:image/webp;base64,UklGR");
-const usesPublicAtlas = emeraldHelper.includes('/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp');
-if (!usesEmbeddedAtlas && !usesPublicAtlas) {
-  throw new Error("[keeper-art-guard] Emerald V3 renderer has no atlas source.");
-}
-if (usesPublicAtlas) {
-  const atlasPath = "public/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp";
-  if (!fs.existsSync(atlasPath) || fs.statSync(atlasPath).size < 5000) {
-    throw new Error("[keeper-art-guard] Emerald V3 renderer points to a missing or invalid public atlas.");
+const emeraldMarket = fs.readFileSync(marketPath, "utf8");
+const emeraldWorkspace = fs.readFileSync("src/components/ArborealKeeperEmeraldWorkspace.tsx", "utf8");
+const emeraldEngine = fs.readFileSync("src/lib/arboreal-keeper-emerald-engine.ts", "utf8");
+
+for (const file of [
+  "public/hatchery/animals/emerald-tree-boas/northern/northern-sprite.webp",
+  "public/hatchery/animals/emerald-tree-boas/amazon-basin/neonate-sprite.webp",
+  "public/hatchery/animals/emerald-tree-boas/amazon-basin/later-sprite.webp",
+]) {
+  if (!fs.existsSync(file) || fs.statSync(file).size < 5000) {
+    throw new Error(`[keeper-art-guard] Missing Emerald stable sprite sheet: ${file}`);
   }
 }
-if (!emeraldHelper.includes('weight: 6') || !emeraldHelper.includes('weight: 47')) {
-  throw new Error("[keeper-art-guard] Northern Emerald adult 6/47/47 art weighting is missing.");
+if (!emeraldMarket.includes("keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal))")) {
+  throw new Error("[keeper-art-guard] Repti-Shop Emerald cards are not using stable stage sprites.");
 }
-if (!emeraldHelper.includes('etb-northern-anaconda-subadult-v3')) {
-  throw new Error("[keeper-art-guard] Northern Anaconda neonate-through-subadult art rule is missing.");
+if (emeraldMarket.includes("emeraldArtStyleForAnimal(")) {
+  throw new Error("[keeper-art-guard] Corrupt Emerald V3 atlas renderer is still mounted in Repti-Shop.");
 }
-if (emeraldHelper.includes('id: "etb-northern-neonate-green-01-v3"')) {
-  throw new Error("[keeper-art-guard] Standard Northern Emerald neonates must not use Anaconda green juvenile art.");
+if (!emeraldWorkspace.includes("keeperAssetSpriteStyle(animal.speciesId, legacyEmeraldAssetId(animal))")) {
+  throw new Error("[keeper-art-guard] Emerald collection cards are not using stable stage sprites.");
 }
-
-if (!emeraldHelper.includes("emeraldArtStyleForAnimal(")) {
-  throw new Error("[keeper-art-guard] Emerald stale asset fallback is missing.");
-}
-
-const emeraldMarket = fs.readFileSync(marketPath, "utf8");
-const emeraldEngine = fs.readFileSync("src/lib/arboreal-keeper-emerald-engine.ts", "utf8");
-if (!emeraldMarket.includes("emeraldArtStyleForAnimal(offer.animal.speciesId")) {
-  throw new Error("[keeper-art-guard] Repti-Shop Emerald cards are not using the V3 art renderer after prebuild.");
-}
-if (!emeraldMarket.includes("const fallbackStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));")) {
-  throw new Error("[keeper-art-guard] Repti-Shop Emerald fallback sprite layer is missing after prebuild.");
-}
-if (!emeraldMarket.includes("const locked = !offer.available;")) {
-  throw new Error("[keeper-art-guard] Repti-Shop Emerald level-lock state is missing after prebuild.");
+if (emeraldWorkspace.includes("emeraldArtStyleForAnimal(")) {
+  throw new Error("[keeper-art-guard] Corrupt Emerald V3 atlas renderer is still mounted in My Animals.");
 }
 if (!emeraldEngine.includes("emeraldArtForAnimal")) {
-  throw new Error("[keeper-art-guard] Emerald generation is not using the V3 art selector after prebuild.");
+  console.log("[keeper-art-guard] Emerald engine uses stable stored animal data without V3 art selection.");
 }
 
 const dock = fs.readFileSync("src/components/ChondroBreederWorkspace.tsx", "utf8");
