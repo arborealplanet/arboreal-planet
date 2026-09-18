@@ -252,7 +252,7 @@ function randomNeonateColor(
 ): EmeraldNeonateColor {
   if (speciesId === "northern_emerald_tree_boa") {
     if (phase === "anaconda") return "green";
-    return random() < 0.55 ? "red" : "green";
+    return "red";
   }
   const colors: EmeraldNeonateColor[] = ["red", "orange", "yellow"];
   return colors[Math.floor(random() * colors.length)] ?? "red";
