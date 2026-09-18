@@ -137,8 +137,11 @@ update(marketPath, (source) => {
   }
 
   const speciesImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
+  next = next
+    .replace('import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";\\n', "")
+    .replace('import { keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";\\n', "");
   if (!next.includes(speciesImport)) {
-    next = next.replace(artImport, `${artImport}\n${speciesImport}`);
+    next = next.replace(artImport, `${artImport}\\n${speciesImport}`);
   }
 
   next = next
