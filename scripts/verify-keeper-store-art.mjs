@@ -108,6 +108,9 @@ if (!emeraldHelper.includes('weight: 6') || !emeraldHelper.includes('weight: 47'
 if (!emeraldHelper.includes('etb-northern-anaconda-subadult-v3')) {
   throw new Error("[keeper-art-guard] Northern Anaconda neonate-through-subadult art rule is missing.");
 }
+if (emeraldHelper.includes('id: "etb-northern-neonate-green-01-v3"')) {
+  throw new Error("[keeper-art-guard] Standard Northern Emerald neonates must not use Anaconda green juvenile art.");
+}
 
 const emeraldMarket = fs.readFileSync(marketPath, "utf8");
 const emeraldEngine = fs.readFileSync("src/lib/arboreal-keeper-emerald-engine.ts", "utf8");
