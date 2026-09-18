@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
@@ -30,8 +29,9 @@ import {
   type EmeraldKeeperSave,
   type EmeraldSpeciesId,
 } from "@/lib/arboreal-keeper-emerald-engine";
-import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";
+import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
+import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";
 
 type EmeraldWorkspaceMode = "breeding" | "colony" | "clutches" | "market";
 
@@ -787,24 +787,48 @@ function AnimalCard({ animal, children }: { animal: EmeraldAnimal; children?: Re
   );
 }
 
-function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
+function legacyEmeraldAssetId(animal: Pick<EmeraldAnimal, "speciesId" | "lifeStage" | "phase" | "neonateColor">) {
+  if (animal.speciesId === "northern_emerald_tree_boa") {
+    if (animal.lifeStage === "adult") return animal.phase === "anaconda" ? "etb_northern_adult_anaconda_01" : "etb_northern_adult_standard_02";
+    if (animal.lifeStage === "subadult") return animal.phase === "anaconda" ? "etb_northern_neonate_anaconda_01" : "etb_northern_subadult_01";
+    return animal.phase === "anaconda" ? "etb_northern_neonate_anaconda_01" : "etb_northern_neonate_red_01";
+  }
+  if (animal.lifeStage === "adult") return "etb_basin_adult_01";
+  if (animal.lifeStage === "subadult") return "etb_basin_subadult_01";
+  return "etb_basin_neonate_01";
+}
+
+function EmeraldPortrait({ animal, failed }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
+  const spriteStyle = emeraldArtStyleForAnimal(animal.speciesId, animal.lifeStage, animal.phase, animal.neonateColor, animal.assetId);
+  const fallbackStyle = keeperAssetSpriteStyle(animal.speciesId, legacyEmeraldAssetId(animal));
+
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
-      {animal.assetPath && !failed ? (
-        <Image
-          src={animal.assetPath}
-          alt={`${emeraldSpeciesDisplayName(animal.speciesId)} game asset`}
-          fill
-          sizes="(max-width: 768px) 90vw, 320px"
-          className="object-contain p-1"
-          onError={onFail}
-        />
+      {(spriteStyle || fallbackStyle) && !failed ? (
+        <>
+          {fallbackStyle ? (
+            <div
+              role="img"
+              aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " fallback game asset"}
+              className="absolute inset-0 bg-black"
+              style={fallbackStyle}
+            />
+          ) : null}
+          {spriteStyle ? (
+            <div
+              role="img"
+              aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " game asset"}
+              className="absolute inset-0"
+              style={spriteStyle}
+            />
+          ) : null}
+        </>
       ) : (
         <div className="absolute inset-0 grid place-items-center p-5 text-center">
           <div>
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-emerald-300/10 bg-emerald-300/[.04] text-2xl text-emerald-100/40">◆</div>
-            <div className="mt-3 text-[10px] font-black uppercase tracking-[.15em] text-white/30">Asset slot ready</div>
-            <div className="mt-1 text-xs text-white/22">{animal.assetId ?? "Emerald artwork pending upload"}</div>
+            <div className="mt-3 text-[10px] font-black uppercase tracking-[.15em] text-white/30">Asset unavailable</div>
+            <div className="mt-1 text-xs text-white/22">{animal.assetId ?? "Emerald artwork unavailable"}</div>
           </div>
         </div>
       )}
