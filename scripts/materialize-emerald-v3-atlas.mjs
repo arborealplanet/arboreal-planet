@@ -42,11 +42,19 @@ const headBytes = Buffer.from(
 // tail-03: bytes 111375..125999
 // tail-04: bytes 126000..140717
 const tail00 = Buffer.from(tail("tail-00"), "base64");
+const tail00Patch = Buffer.from("eeWEXzur9/CruMYmYaNFFMeYSXgpRJ4gUliWyq3sR9BEbSgEBetftpwGBPiPCvGLpIEuVQ1gb8PTh7aRcd5hYwMEL/WDa/tHwfiYDhcrwKoj/md1A5ZA9nF9vR63VbEMmdV0uJQEwgd07vcCTSzNpSV/wsO06nTjOYgH6lYuC29lFnns1qzP+1ApBF1XDkXPVj0DBA4mb0HFd/DZr+tREaRrjnsgW2UspnZPrvAxtXMesAUavsZlUSXQnfdgnzTWg4oJ5DIVQnTbtdxpPP1IPoDK5EbakbI3lUUFZokuhfsV", "base64");
+tail00Patch.copy(tail00, 13824);
 const bridge = Buffer.from(chunk("gap-108000-109499"), "base64").subarray(549);
 const tail01 = Buffer.from(tail("tail-01"), "base64");
 const tail02 = Buffer.from(tail("tail-02"), "base64");
 const tail03 = Buffer.from(tail("tail-03"), "base64");
 const tail04 = Buffer.from(tail("tail-04"), "base64");
+const tail04Patch = Buffer.from(
+  readText("src/lib/emerald-atlas-v3-patches/tail04-a.txt") +
+    readText("src/lib/emerald-atlas-v3-patches/tail04-b.txt"),
+  "base64",
+);
+tail04Patch.copy(tail04, 1984);
 
 // Binary byte 140718 begins at global Base64 character 187624. The two chars
 // "Gz" precede the first uploaded exact gap and restore quartet alignment.
@@ -80,14 +88,15 @@ const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
 if (headBytes.length !== 67500) {
   throw new Error(`[emerald-atlas] Head length mismatch: ${headBytes.length}`);
 }
-if (tail00.length !== 14049 || bridge.length !== 576) {
-  throw new Error(`[emerald-atlas] First tail/bridge mismatch: ${tail00.length}/${bridge.length}`);
+if (tail00.length !== 14049 || tail00Patch.length !== 225 || bridge.length !== 576) {
+  throw new Error(`[emerald-atlas] First tail/patch/bridge mismatch: ${tail00.length}/${tail00Patch.length}/${bridge.length}`);
 }
 for (const [label, part, expected] of [
   ["tail-01", tail01, 14625],
   ["tail-02", tail02, 14625],
   ["tail-03", tail03, 14625],
   ["tail-04", tail04, 14718],
+  ["tail-04-patch", tail04Patch, 12734],
   ["suffix", suffixBytes, 55774],
 ]) {
   if (part.length !== expected) {
