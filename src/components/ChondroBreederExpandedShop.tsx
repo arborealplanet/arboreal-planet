@@ -83,10 +83,10 @@ const subspeciesList: Subspecies[] = [
 ];
 
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
-  "Morelia azurea azurea": ["Cyclops", "Jayapura", "Lereh"],
+  "Morelia azurea azurea": ["Biak", "Numfor"],
   "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],
-  "Morelia azurea utaraensis": ["Yapen"],
-  "Morelia viridis": ["Biak", "Aru", "Merauke"],
+  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],
+  "Morelia viridis": ["Aru", "Merauke"],
 };
 
 function money(value: number) {
