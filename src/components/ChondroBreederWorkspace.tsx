@@ -7,6 +7,7 @@ import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
 import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
+import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
