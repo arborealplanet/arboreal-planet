@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-18-restored-game-sprites-v11";
+const TRAIT_ART_VERSION = "2026-09-18-subadult-juvenile-art-v12";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/game-base/azurea.webp",
@@ -69,6 +69,11 @@ function juvenilePortraitArt(subspecies: ChondroSubspecies, neonateColor?: Neona
   return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${assetColor}.webp`;
 }
 
+function juvenileFallbackArt(subspecies: ChondroSubspecies, neonateColor?: NeonateColor) {
+  if (subspecies === "Morelia viridis") return juvenilePortraitArt(subspecies, "Yellow");
+  return juvenilePortraitArt(subspecies, neonateColor === "Yellow" ? "Red" : "Yellow");
+}
+
 export function ChondroSnakeIcon({
   subspecies,
   name,
@@ -87,11 +92,11 @@ export function ChondroSnakeIcon({
   const adultRawSrc = adultPortraitArt(subspecies, traits);
   // Hatchlings and neonates use their color-specific juvenile portraits.
   // Subadults and adults use later-stage subspecies/trait art.
-  const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate";
+  const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult";
   const juvenileRawSrc = isJuvenile ? juvenilePortraitArt(subspecies, neonateColor) : null;
   const rawSrc = juvenileRawSrc ?? adultRawSrc;
-  const rawFallback = adultRawSrc;
-  const rawBaseFallback = baseArtBySubspecies[subspecies];
+  const rawFallback = isJuvenile ? juvenileFallbackArt(subspecies, neonateColor) : adultRawSrc;
+  const rawBaseFallback = isJuvenile ? rawFallback : baseArtBySubspecies[subspecies];
   const src = withVersion(rawSrc);
   const fallback = withVersion(rawFallback);
   const baseFallback = withVersion(rawBaseFallback);
