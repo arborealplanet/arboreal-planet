@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
+import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
@@ -40,7 +41,7 @@ const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "breeding", label: "Breeding", navLabel: "Breed", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
   { id: "colony", label: "Colony", navLabel: "Snakes", detail: "Animals and breeder records", icon: "◎" },
   { id: "clutches", label: "Clutches", navLabel: "Clutch", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
-  { id: "market", label: "Store", detail: "Buy chondros and use the player market", icon: "$" },
+  { id: "market", label: "Repti-Shop", navLabel: "Shop", detail: "Enclosures and rotating animal listings", icon: "$" },
   { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
   { id: "projects", label: "Projects", detail: "Lines, traits and breeding goals", icon: "◈" },
   { id: "conservation", label: "Conservation", detail: "Regional conservation program", icon: "⌁" },
@@ -93,7 +94,7 @@ export function ChondroBreederWorkspace() {
 
       <main>
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
-        {coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}
+        {view === "market" ? <ArborealKeeperReptiShop /> : coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}
         {view === "career" ? (
           <SecondaryScreen active={active} onBack={() => openView("home")}>
             <section className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">
