@@ -32,7 +32,6 @@ import {
 } from "@/lib/arboreal-keeper-emerald-engine";
 import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
-import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";
 
 type EmeraldWorkspaceMode = "breeding" | "colony" | "clutches" | "market";
 
@@ -800,22 +799,13 @@ function legacyEmeraldAssetId(animal: Pick<EmeraldAnimal, "speciesId" | "lifeSta
 }
 
 function EmeraldPortrait({ animal, failed }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
-  const spriteStyle = emeraldArtStyleForAnimal(animal.speciesId, animal.lifeStage, animal.phase, animal.neonateColor, animal.assetId);
-  const fallbackStyle = keeperAssetSpriteStyle(animal.speciesId, legacyEmeraldAssetId(animal));
+  const spriteStyle = keeperAssetSpriteStyle(animal.speciesId, legacyEmeraldAssetId(animal));
 
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
-      {(spriteStyle || fallbackStyle) && !failed ? (
+      {spriteStyle && !failed ? (
         <>
-          {fallbackStyle ? (
-            <div
-              role="img"
-              aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " fallback game asset"}
-              className="absolute inset-0 bg-black"
-              style={fallbackStyle}
-            />
-          ) : null}
-          {spriteStyle ? (
+{spriteStyle ? (
             <div
               role="img"
               aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " game asset"}
