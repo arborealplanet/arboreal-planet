@@ -4,7 +4,7 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-17-restored-yellow-neonates-v8";
+const TRAIT_ART_VERSION = "2026-09-18-valid-yellow-neonates-v9";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
   "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
