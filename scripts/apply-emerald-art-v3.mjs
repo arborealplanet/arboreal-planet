@@ -3,6 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const enginePath = path.join(root, "src/lib/arboreal-keeper-emerald-engine.ts");
+const artPath = path.join(root, "src/lib/arboreal-keeper-emerald-art.ts");
 const marketPath = path.join(root, "src/components/ArborealKeeperEmeraldMarketBar.tsx");
 const workspacePath = path.join(root, "src/components/ArborealKeeperEmeraldWorkspace.tsx");
 
@@ -15,6 +16,12 @@ function update(filePath, transform, label) {
     console.log(`[emerald-art-v3] ${label}`);
   }
 }
+
+update(artPath, (source) => {
+  const standardGreen = '  { id: "etb-northern-neonate-green-01-v3", speciesId: "northern_emerald_tree_boa", stage: "neonate", phase: "standard", neonateColor: "green", cell: 2 },\\n';
+  const next = source.replace(standardGreen, "");
+  return next;
+}, "Removed standard Northern green V3 slot; green juvenile art is Anaconda-only.");
 
 update(enginePath, (source) => {
   let next = source;
@@ -48,6 +55,24 @@ function randomNeonateColor`,
   next = next
     .replace('assetPath: asset?.path ?? null,', 'assetPath: null,')
     .replace('assetPath: asset?.path ?? animal.assetPath,', 'assetPath: null,');
+
+  next = next.replace(
+    /function randomNeonateColor\([\s\S]*?\n}\n\nfunction marketPhase/,
+`function randomNeonateColor(
+  speciesId: EmeraldSpeciesId,
+  phase: KeeperPhase,
+  random: () => number,
+): EmeraldNeonateColor {
+  if (speciesId === "northern_emerald_tree_boa") {
+    return phase === "anaconda" ? "green" : "red";
+  }
+  const colors: EmeraldNeonateColor[] = ["red", "orange", "yellow"];
+  return colors[Math.floor(random() * colors.length)] ?? "red";
+}
+
+function marketPhase`,
+  );
+  console.log("[emerald-art-v3] Northern standard neonates use red artwork; green juvenile art remains Anaconda-only.");
 
   next = next.replace(
     /export function emeraldMarketForEpoch\(epoch: number, keeperLevel: number\): EmeraldMarketOffer\[\] \{[\s\S]*?\n}\n\nexport function emeraldMarketValue/,
@@ -111,7 +136,7 @@ update(marketPath, (source) => {
     next = next.replace(anchor, `${anchor}\n${artImport}`);
   }
 
-  const speciesImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";';
+  const speciesImport = 'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";';
   if (!next.includes(speciesImport)) {
     next = next.replace(artImport, `${artImport}\n${speciesImport}`);
   }
@@ -148,25 +173,49 @@ update(marketPath, (source) => {
 
   next = next.replace(
     /\{showImage \? \(\s*<Image[\s\S]*?\/>\s*\) : \(/,
-`{showImage && spriteStyle ? (
-                        <div
-                          role="img"
-                          aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
-                          className="absolute inset-0 rounded-2xl bg-black"
-                          style={spriteStyle}
-                        />
+`{showImage ? (
+                        <>
+                          {fallbackStyle ? (
+                            <div
+                              role="img"
+                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage + " fallback"}
+                              className="absolute inset-0 bg-black"
+                              style={fallbackStyle}
+                            />
+                          ) : null}
+                          {spriteStyle ? (
+                            <div
+                              role="img"
+                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
+                              className="absolute inset-0 rounded-2xl"
+                              style={spriteStyle}
+                            />
+                          ) : null}
+                        </>
                       ) : (`,
   );
 
   next = next.replace(
     /\{showImage \? \(\s*spriteStyle \? \([\s\S]*?\) : \(\s*<Image[\s\S]*?\/>\s*\)\s*\) : \(/,
-`{showImage && spriteStyle ? (
-                        <div
-                          role="img"
-                          aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
-                          className="absolute inset-0 rounded-2xl bg-black"
-                          style={spriteStyle}
-                        />
+`{showImage ? (
+                        <>
+                          {fallbackStyle ? (
+                            <div
+                              role="img"
+                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage + " fallback"}
+                              className="absolute inset-0 bg-black"
+                              style={fallbackStyle}
+                            />
+                          ) : null}
+                          {spriteStyle ? (
+                            <div
+                              role="img"
+                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
+                              className="absolute inset-0 rounded-2xl"
+                              style={spriteStyle}
+                            />
+                          ) : null}
+                        </>
                       ) : (`,
   );
 
@@ -197,6 +246,16 @@ update(workspacePath, (source) => {
   let next = source;
   const artImport = 'import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";';
   next = next.replace('import { emeraldArtStyle } from "@/lib/arboreal-keeper-emerald-art";', artImport);
+  next = next.replace(
+    'import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";',
+    'import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";',
+  );
+  if (!next.includes("keeperAssetSpriteStyle")) {
+    next = next.replace(artImport, artImport + '\\nimport { keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";');
+  }
+  if (!next.includes("function legacyEmeraldAssetId(")) {
+    next = next.replace("function EmeraldPortrait(", "function legacyEmeraldAssetId(animal: Pick<EmeraldAnimal, \"speciesId\" | \"lifeStage\" | \"phase\" | \"neonateColor\">) {\n  if (animal.speciesId === \"northern_emerald_tree_boa\") {\n    if (animal.lifeStage === \"adult\") return animal.phase === \"anaconda\" ? \"etb_northern_adult_anaconda_01\" : \"etb_northern_adult_standard_02\";\n    if (animal.lifeStage === \"subadult\") return animal.phase === \"anaconda\" ? \"etb_northern_neonate_anaconda_01\" : \"etb_northern_subadult_01\";\n    return animal.phase === \"anaconda\" ? \"etb_northern_neonate_anaconda_01\" : \"etb_northern_neonate_red_01\";\n  }\n  if (animal.lifeStage === \"adult\") return \"etb_basin_adult_01\";\n  if (animal.lifeStage === \"subadult\") return \"etb_basin_subadult_01\";\n  return \"etb_basin_neonate_01\";\n}\n" + "\nfunction EmeraldPortrait(");
+  }
   if (!next.includes(artImport)) {
     const anchor = 'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";';
     next = next.replace(anchor, `${anchor}\n${artImport}`);
@@ -204,15 +263,28 @@ update(workspacePath, (source) => {
 
   const portrait = `function EmeraldPortrait({ animal, failed, onFail }: { animal: EmeraldAnimal; failed: boolean; onFail: () => void }) {
   const spriteStyle = emeraldArtStyleForAnimal(animal.speciesId, animal.lifeStage, animal.phase, animal.neonateColor, animal.assetId);
+  const fallbackStyle = keeperAssetSpriteStyle(animal.speciesId, legacyEmeraldAssetId(animal));
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/[.055] bg-[radial-gradient(circle_at_50%_38%,rgba(52,211,153,.12),transparent_42%),#020605]">
-      {spriteStyle && !failed ? (
-        <div
-          role="img"
-          aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " game asset"}
-          className="absolute inset-0 bg-black"
-          style={spriteStyle}
-        />
+      {(spriteStyle || fallbackStyle) && !failed ? (
+        <>
+          {fallbackStyle ? (
+            <div
+              role="img"
+              aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " fallback game asset"}
+              className="absolute inset-0 bg-black"
+              style={fallbackStyle}
+            />
+          ) : null}
+          {spriteStyle ? (
+            <div
+              role="img"
+              aria-label={emeraldSpeciesDisplayName(animal.speciesId) + " game asset"}
+              className="absolute inset-0"
+              style={spriteStyle}
+            />
+          ) : null}
+        </>
       ) : (
         <div className="absolute inset-0 grid place-items-center p-5 text-center">
           <div>
