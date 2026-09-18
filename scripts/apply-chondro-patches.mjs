@@ -70,7 +70,8 @@ const checks = [
       'import Image from "next/image";',
       'import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";',
       'import { ChondroGameNotifications } from "@/components/ChondroGameNotifications";',
-      'import { ChondroBreederNavIcon } from "@/components/ChondroBreederNavIcon";',
+      'const dockIconByView: Record<(typeof dockViews)[number], string> = {',
+      '/hatchery/game/dock/home.webp',
       'import { ChondroClutchStageArt } from "@/components/ChondroClutchStageArt";',
       'import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";',
       'import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";',
@@ -78,6 +79,9 @@ const checks = [
       "<ChondroClutchStageArt />",
       "Your program is alive",
       "/hatchery/game/incubator.webp",
+    ],
+    forbidden: [
+      'import { ChondroBreederNavIcon } from "@/components/ChondroBreederNavIcon";',
     ],
   },
   {
