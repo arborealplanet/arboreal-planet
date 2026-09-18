@@ -42,10 +42,7 @@ export const EMERALD_ART: EmeraldArt[] = [
 
 const BY_ID = new Map(EMERALD_ART.map((asset) => [asset.id, asset]));
 
-export function emeraldArtStyle(assetId: string | null | undefined): CSSProperties | null {
-  if (!assetId) return null;
-  const asset = BY_ID.get(assetId);
-  if (!asset) return null;
+function emeraldStyleForAsset(asset: EmeraldArt): CSSProperties {
   const column = asset.cell % COLS;
   const row = Math.floor(asset.cell / COLS);
   return {
@@ -54,6 +51,35 @@ export function emeraldArtStyle(assetId: string | null | undefined): CSSProperti
     backgroundSize: `${COLS * 100}% ${ROWS * 100}%`,
     backgroundPosition: `${(column / (COLS - 1)) * 100}% ${(row / (ROWS - 1)) * 100}%`,
   };
+}
+
+export function emeraldArtStyle(assetId: string | null | undefined): CSSProperties | null {
+  if (!assetId) return null;
+  const asset = BY_ID.get(assetId);
+  return asset ? emeraldStyleForAsset(asset) : null;
+}
+
+export function emeraldArtStyleForAnimal(
+  speciesId: EmeraldSpeciesId,
+  stage: KeeperLifeStage,
+  phase: KeeperPhase,
+  neonateColor: string | null | undefined,
+  assetId: string | null | undefined,
+): CSSProperties | null {
+  const exact = assetId ? BY_ID.get(assetId) : undefined;
+  if (exact && exact.speciesId === speciesId && exact.stage === stage && exact.phase === phase) {
+    return emeraldStyleForAsset(exact);
+  }
+
+  let pool = EMERALD_ART.filter(
+    (asset) => asset.speciesId === speciesId && asset.stage === stage && asset.phase === phase,
+  );
+  if (neonateColor) {
+    const colorPool = pool.filter((asset) => !asset.neonateColor || asset.neonateColor === neonateColor);
+    if (colorPool.length) pool = colorPool;
+  }
+  const fallback = pool[0];
+  return fallback ? emeraldStyleForAsset(fallback) : null;
 }
 
 export function emeraldArtForAnimal(
