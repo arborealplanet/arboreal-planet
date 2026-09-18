@@ -102,7 +102,7 @@ function maxLitterSize(speciesId: EmeraldSpeciesId) {
 
 function resolveReadyJobs(save: EmeraldKeeperSave, now: number) {
   let animals = [...save.animals];
-  let housingUnits = save.housingUnits.map((unit) => ({ ...unit }));
+  const housingUnits = save.housingUnits.map((unit) => ({ ...unit }));
   const litters = [...save.litters];
   const jobs: EmeraldBreedingJob[] = [];
   let changed = false;
@@ -194,7 +194,7 @@ function resolveReadyJobs(save: EmeraldKeeperSave, now: number) {
 export function ArborealKeeperEmeraldWorkspace({ mode }: { mode: EmeraldWorkspaceMode }) {
   const [save, setSave] = useState<EmeraldKeeperSave>(EMPTY_EMERALD_KEEPER_SAVE);
   const [hydrated, setHydrated] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   const [cash, setCash] = useState(30000);
   const [reputation, setReputation] = useState(0);
   const [message, setMessage] = useState("");
@@ -202,16 +202,20 @@ export function ArborealKeeperEmeraldWorkspace({ mode }: { mode: EmeraldWorkspac
   const [sireId, setSireId] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(EMERALD_KEEPER_SAVE_KEY);
-      setSave(raw ? sanitizeEmeraldKeeperSave(JSON.parse(raw)) : EMPTY_EMERALD_KEEPER_SAVE);
-    } catch {
-      setSave(EMPTY_EMERALD_KEEPER_SAVE);
-    }
-    const progress = readSharedProgress();
-    setCash(progress.cash);
-    setReputation(progress.reputation);
-    setHydrated(true);
+    const timer = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(EMERALD_KEEPER_SAVE_KEY);
+        setSave(raw ? sanitizeEmeraldKeeperSave(JSON.parse(raw)) : EMPTY_EMERALD_KEEPER_SAVE);
+      } catch {
+        setSave(EMPTY_EMERALD_KEEPER_SAVE);
+      }
+      const progress = readSharedProgress();
+      setCash(progress.cash);
+      setReputation(progress.reputation);
+      setNow(Date.now());
+      setHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -242,14 +246,17 @@ export function ArborealKeeperEmeraldWorkspace({ mode }: { mode: EmeraldWorkspac
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !save.breedingJobs.length) return;
-    const resolved = resolveReadyJobs(save, now);
-    if (!resolved.changed) return;
-    setSave(resolved.save);
-    if (resolved.reputationEarned > 0) {
-      requestEconomyAction("reputation", resolved.reputationEarned, "Emerald Tree Boa litter");
-      setMessage(`Live litter produced. +${resolved.reputationEarned} keeper reputation.`);
-    }
+    if (!hydrated || !save.breedingJobs.length || now <= 0) return;
+    const timer = window.setTimeout(() => {
+      const resolved = resolveReadyJobs(save, now);
+      if (!resolved.changed) return;
+      setSave(resolved.save);
+      if (resolved.reputationEarned > 0) {
+        requestEconomyAction("reputation", resolved.reputationEarned, "Emerald Tree Boa litter");
+        setMessage(`Live litter produced. +${resolved.reputationEarned} keeper reputation.`);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [hydrated, now, save]);
 
   const keeperLevel = keeperLevelFromReputation(reputation);
