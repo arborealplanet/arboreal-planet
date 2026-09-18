@@ -195,7 +195,8 @@ update(marketPath, (source) => {
 
 update(workspacePath, (source) => {
   let next = source;
-  const artImport = 'import { emeraldArtStyle } from "@/lib/arboreal-keeper-emerald-art";';
+  const artImport = 'import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";';
+  next = next.replace('import { emeraldArtStyle } from "@/lib/arboreal-keeper-emerald-art";', artImport);
   if (!next.includes(artImport)) {
     const anchor = 'import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";';
     next = next.replace(anchor, `${anchor}\n${artImport}`);
