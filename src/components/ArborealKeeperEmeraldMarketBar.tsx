@@ -19,7 +19,8 @@ import {
   type EmeraldKeeperSave,
 } from "@/lib/arboreal-keeper-emerald-engine";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
-import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";
+import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";
+import { ARBOREAL_KEEPER_SPECIES_BY_ID } from "@/lib/arboreal-keeper-species";
 
 const CHONDRO_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SAVE_EVENT = "arboreal-keeper-emerald-save-updated";
@@ -101,17 +102,6 @@ function compatibleEmptyHousingCount(save: EmeraldKeeperSave, animal: EmeraldAni
       unit.occupantId === null &&
       enclosureSupportsAnimal(unit.enclosureId, animal.speciesId, animal.lifeStage),
   ).length;
-}
-
-function legacyEmeraldAssetId(animal: Pick<EmeraldAnimal, "speciesId" | "lifeStage" | "phase" | "neonateColor">) {
-  if (animal.speciesId === "northern_emerald_tree_boa") {
-    if (animal.lifeStage === "adult") return animal.phase === "anaconda" ? "etb_northern_adult_anaconda_01" : "etb_northern_adult_standard_02";
-    if (animal.lifeStage === "subadult") return animal.phase === "anaconda" ? "etb_northern_neonate_anaconda_01" : "etb_northern_subadult_01";
-    return animal.phase === "anaconda" ? "etb_northern_neonate_anaconda_01" : "etb_northern_neonate_red_01";
-  }
-  if (animal.lifeStage === "adult") return "etb_basin_adult_01";
-  if (animal.lifeStage === "subadult") return "etb_basin_subadult_01";
-  return "etb_basin_neonate_01";
 }
 
 export function ArborealKeeperEmeraldMarketBar() {
@@ -274,7 +264,7 @@ export function ArborealKeeperEmeraldMarketBar() {
                 const sold = purchased.has(offer.id);
                 const housing = compatibleEmptyHousingCount(save, offer.animal);
                 const traits = strongestTraits(offer.animal);
-                const spriteStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));
+                const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);
                 const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;
                 const locked = !offer.available;
                 const showImage = Boolean(spriteStyle);
