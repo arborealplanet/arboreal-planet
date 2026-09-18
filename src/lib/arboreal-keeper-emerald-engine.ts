@@ -5,6 +5,7 @@ import {
   type KeeperLifeStage,
   type KeeperPhase,
 } from "@/lib/arboreal-keeper-species";
+import { emeraldArtForAnimal } from "@/lib/arboreal-keeper-emerald-art";
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
   enclosureSupportsAnimal,
@@ -102,6 +103,7 @@ export type EmeraldKeeperSave = {
 
 export const EMERALD_KEEPER_SAVE_KEY = "arboreal_keeper_emeralds_v1";
 export const EMERALD_MARKET_DAY_MS = 86_400_000;
+const EMERALD_V3_ATLAS_PATH = "/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp";
 
 const HOUR_MS = 3_600_000;
 
@@ -293,7 +295,7 @@ export function createEmeraldAnimal(args: {
   random?: () => number;
 }) {
   const random = args.random ?? seededRandom(hashString(args.id));
-  const asset = assetForAnimal(
+  const asset = emeraldArtForAnimal(
     args.speciesId,
     args.lifeStage,
     args.phase,
@@ -316,7 +318,7 @@ export function createEmeraldAnimal(args: {
     parentIds: args.parentIds ?? [],
     condition: args.condition ?? "Good",
     assetId: asset?.id ?? null,
-    assetPath: asset?.path ?? null,
+    assetPath: asset ? EMERALD_V3_ATLAS_PATH : null,
     notes: "",
     createdAt: args.createdAt ?? Date.now(),
   } satisfies EmeraldAnimal;
@@ -523,13 +525,13 @@ export function growEmeraldAnimal(animal: EmeraldAnimal) {
   const next = nextLifeStage(animal.lifeStage);
   if (!next) return animal;
   const random = seededRandom(hashString(`${animal.id}:${next}:${Date.now()}`));
-  const asset = assetForAnimal(animal.speciesId, next, animal.phase, null, random);
+  const asset = emeraldArtForAnimal(animal.speciesId, next, animal.phase, null, random);
   return {
     ...animal,
     lifeStage: next,
     neonateColor: next === "neonate" ? animal.neonateColor : null,
     assetId: asset?.id ?? animal.assetId,
-    assetPath: asset?.path ?? animal.assetPath,
+    assetPath: asset ? EMERALD_V3_ATLAS_PATH : animal.assetPath,
   };
 }
 
