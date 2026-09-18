@@ -153,7 +153,7 @@ export function ArborealKeeperEmeraldMarketBar() {
   }, []);
 
   const keeperLevel = keeperLevelFromReputation(reputation);
-  const marketEpoch = Math.floor((now || Date.now()) / EMERALD_MARKET_DAY_MS);
+  const marketEpoch = Math.floor(now / EMERALD_MARKET_DAY_MS);
   const offers = useMemo(
     () => emeraldMarketForEpoch(marketEpoch, keeperLevel),
     [keeperLevel, marketEpoch],
