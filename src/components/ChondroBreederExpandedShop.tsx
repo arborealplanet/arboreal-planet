@@ -501,7 +501,6 @@ export function ChondroBreederExpandedShop() {
                 <ChondroSnakeIcon
                   subspecies={offer.subspecies}
                   name={offer.name}
-                  traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }}
                   lifeStage={offer.lifeStage}
                   neonateColor={offer.neonateColor}
                   compact
