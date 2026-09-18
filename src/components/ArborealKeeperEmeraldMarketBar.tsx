@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ARBOREAL_KEEPER_ENCLOSURES,
@@ -20,6 +19,8 @@ import {
   type EmeraldKeeperSave,
 } from "@/lib/arboreal-keeper-emerald-engine";
 import { keeperLevelFromReputation } from "@/lib/arboreal-keeper-progression";
+import { emeraldArtStyleForAnimal } from "@/lib/arboreal-keeper-emerald-art";
+import { ARBOREAL_KEEPER_SPECIES_BY_ID, keeperAssetSpriteStyle } from "@/lib/arboreal-keeper-species";
 
 const CHONDRO_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SAVE_EVENT = "arboreal-keeper-emerald-save-updated";
@@ -103,6 +104,17 @@ function compatibleEmptyHousingCount(save: EmeraldKeeperSave, animal: EmeraldAni
   ).length;
 }
 
+function legacyEmeraldAssetId(animal: Pick<EmeraldAnimal, "speciesId" | "lifeStage" | "phase" | "neonateColor">) {
+  if (animal.speciesId === "northern_emerald_tree_boa") {
+    if (animal.lifeStage === "adult") return animal.phase === "anaconda" ? "etb_northern_adult_anaconda_01" : "etb_northern_adult_standard_02";
+    if (animal.lifeStage === "subadult") return animal.phase === "anaconda" ? "etb_northern_neonate_anaconda_01" : "etb_northern_subadult_01";
+    return animal.phase === "anaconda" ? "etb_northern_neonate_anaconda_01" : "etb_northern_neonate_red_01";
+  }
+  if (animal.lifeStage === "adult") return "etb_basin_adult_01";
+  if (animal.lifeStage === "subadult") return "etb_basin_subadult_01";
+  return "etb_basin_neonate_01";
+}
+
 export function ArborealKeeperEmeraldMarketBar() {
   const [save, setSave] = useState<EmeraldKeeperSave>(EMPTY_EMERALD_KEEPER_SAVE);
   const [cash, setCash] = useState(30000);
@@ -111,7 +123,6 @@ export function ArborealKeeperEmeraldMarketBar() {
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
-  const [brokenAssets, setBrokenAssets] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -264,7 +275,11 @@ export function ArborealKeeperEmeraldMarketBar() {
                 const sold = purchased.has(offer.id);
                 const housing = compatibleEmptyHousingCount(save, offer.animal);
                 const traits = strongestTraits(offer.animal);
-                const showImage = Boolean(offer.animal.assetPath) && !brokenAssets.includes(offer.animal.assetPath ?? "");
+                const spriteStyle = emeraldArtStyleForAnimal(offer.animal.speciesId, offer.animal.lifeStage, offer.animal.phase, offer.animal.neonateColor, offer.animal.assetId);
+                const fallbackStyle = keeperAssetSpriteStyle(offer.animal.speciesId, legacyEmeraldAssetId(offer.animal));
+                const requiredLevel = ARBOREAL_KEEPER_SPECIES_BY_ID[offer.animal.speciesId].unlockLevel;
+                const locked = !offer.available;
+                const showImage = Boolean(spriteStyle || fallbackStyle);
                 return (
                   <article
                     key={offer.id}
@@ -272,14 +287,24 @@ export function ArborealKeeperEmeraldMarketBar() {
                   >
                     <div className="relative aspect-square overflow-hidden border-b border-white/[.055] bg-[radial-gradient(circle_at_50%_35%,rgba(110,231,183,.09),transparent_46%),#06100c]">
                       {showImage ? (
-                        <Image
-                          src={offer.animal.assetPath!}
-                          alt={`${emeraldSpeciesDisplayName(offer.animal.speciesId)} ${offer.animal.lifeStage}`}
-                          fill
-                          sizes="(max-width: 640px) 82vw, (max-width: 1024px) 48vw, 33vw"
-                          className="object-contain p-2"
-                          onError={() => setBrokenAssets((current) => current.includes(offer.animal.assetPath!) ? current : [...current, offer.animal.assetPath!])}
-                        />
+                        <>
+                          {fallbackStyle ? (
+                            <div
+                              role="img"
+                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage + " fallback"}
+                              className="absolute inset-0 bg-black"
+                              style={fallbackStyle}
+                            />
+                          ) : null}
+                          {spriteStyle ? (
+                            <div
+                              role="img"
+                              aria-label={emeraldSpeciesDisplayName(offer.animal.speciesId) + " " + offer.animal.lifeStage}
+                              className="absolute inset-0"
+                              style={spriteStyle}
+                            />
+                          ) : null}
+                        </>
                       ) : (
                         <div className="absolute inset-0 grid place-items-center p-7 text-center">
                           <div>
@@ -297,6 +322,7 @@ export function ArborealKeeperEmeraldMarketBar() {
 
                     <div className="p-3">
                       <div className="flex flex-wrap gap-1.5">
+                        {locked ? <span className="rounded-full border border-amber-200/15 bg-amber-200/[.05] px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-amber-100/70">Unlocks Level {requiredLevel}</span> : null}
                         {offer.animal.phase === "anaconda" ? (
                           <span className="rounded-full border border-lime-200/15 bg-lime-200/[.05] px-2 py-1 text-[9px] font-black uppercase tracking-[.08em] text-lime-100/70">Anaconda Phase</span>
                         ) : null}
@@ -321,11 +347,11 @@ export function ArborealKeeperEmeraldMarketBar() {
                         </div>
                         <button
                           type="button"
-                          disabled={sold || busy !== null || cash < offer.price || housing <= 0}
+                          disabled={locked || sold || busy !== null || cash < offer.price || housing <= 0}
                           onClick={() => buyAnimal(offer.id)}
                           className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30"
                         >
-                          {sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}
+                          {locked ? "Level " + requiredLevel : sold ? "Purchased" : housing <= 0 ? "Need space" : cash < offer.price ? "Need cash" : busy === offer.id ? "Buying…" : "Buy"}
                         </button>
                       </div>
                     </div>
