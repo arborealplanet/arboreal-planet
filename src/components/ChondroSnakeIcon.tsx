@@ -4,20 +4,13 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type NeonateColor = "Red" | "Yellow";
 
-const TRAIT_ART_VERSION = "2026-09-18-sprite-fallback-v10";
+const TRAIT_ART_VERSION = "2026-09-18-restored-game-sprites-v11";
 
 const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
-  "Morelia azurea azurea": "/hatchery/snakes/azurea.avif",
-  "Morelia azurea pulcher": "/hatchery/snakes/pulcher.avif",
-  "Morelia azurea utaraensis": "/hatchery/snakes/utaraensis.avif",
-  "Morelia viridis": "/hatchery/snakes/viridis.avif",
-};
-
-const svgFallbackBySubspecies: Record<ChondroSubspecies, string> = {
-  "Morelia azurea azurea": "/hatchery/snakes/azurea.svg",
-  "Morelia azurea pulcher": "/hatchery/snakes/pulcher.svg",
-  "Morelia azurea utaraensis": "/hatchery/snakes/utaraensis.svg",
-  "Morelia viridis": "/hatchery/snakes/viridis.svg",
+  "Morelia azurea azurea": "/hatchery/snakes/game-base/azurea.webp",
+  "Morelia azurea pulcher": "/hatchery/snakes/game-base/pulcher.webp",
+  "Morelia azurea utaraensis": "/hatchery/snakes/game-base/utaraensis.webp",
+  "Morelia viridis": "/hatchery/snakes/game-base/viridis.webp",
 };
 
 const slugBySubspecies: Record<ChondroSubspecies, string> = {
@@ -99,11 +92,9 @@ export function ChondroSnakeIcon({
   const rawSrc = juvenileRawSrc ?? adultRawSrc;
   const rawFallback = adultRawSrc;
   const rawBaseFallback = baseArtBySubspecies[subspecies];
-  const rawSvgFallback = svgFallbackBySubspecies[subspecies];
   const src = withVersion(rawSrc);
   const fallback = withVersion(rawFallback);
   const baseFallback = withVersion(rawBaseFallback);
-  const svgFallback = withVersion(rawSvgFallback);
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
@@ -120,9 +111,8 @@ export function ChondroSnakeIcon({
             event.currentTarget.src = baseFallback;
             return;
           }
-          if (!current.includes(rawSvgFallback)) {
-            event.currentTarget.src = svgFallback;
-          }
+          // If the approved base game sprite also fails, leave the portrait
+          // empty rather than substituting unrelated decorative/logo artwork.
         }}
         alt={`${name} illustrated virtual game portrait`}
         className="h-full w-full object-contain p-1 sm:p-2"
