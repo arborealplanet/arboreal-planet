@@ -18,6 +18,7 @@ type Locality =
   | "Biak"
   | "Numfor"
   | "Manokwari"
+  | "Arfak"
   | "Sorong"
   | "Timika"
   | "Cyclops"
@@ -137,6 +138,7 @@ const localitySubspecies: Record<Locality, Subspecies> = {
   Biak: "Morelia azurea azurea",
   Numfor: "Morelia azurea azurea",
   Manokwari: "Morelia azurea pulcher",
+  Arfak: "Morelia azurea pulcher",
   Sorong: "Morelia azurea pulcher",
   Timika: "Morelia azurea pulcher",
   Cyclops: "Morelia azurea utaraensis",
