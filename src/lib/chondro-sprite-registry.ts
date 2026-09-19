@@ -68,7 +68,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
     },
     adult: {
       Red: [variant("/hatchery/snakes/localities/manokwari/red-adult.png")],
-      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.png")],
+      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp")],
     },
   },
   Arfak: {
