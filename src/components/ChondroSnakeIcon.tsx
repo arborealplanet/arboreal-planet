@@ -6,7 +6,6 @@ type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
 export function ChondroSnakeIcon({
   subspecies,
   name,
-  traits,
   compact = false,
   lifeStage,
   neonateColor,
