@@ -47,7 +47,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.png")],
     },
     adult: {
-      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-adult.png")],
+      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-adult.webp")],
     },
   },
   Wamena: {
@@ -72,9 +72,9 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Arfak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/arfak/red-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/arfak/red-neonate.webp")],
     },
-    adultAny: [variant("/hatchery/snakes/localities/arfak/adult.png")],
+    adultAny: [variant("/hatchery/snakes/localities/arfak/adult.webp")],
   },
   Sorong: {
     juvenile: {
@@ -112,7 +112,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
 const specificHybridSprites: Record<string, StageSpriteSet> = {
   "wamena-aru": {
     juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.png")],
+      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.webp")],
     },
   },
   "wamena-merauke": {
