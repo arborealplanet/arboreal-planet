@@ -111,12 +111,12 @@ const localitySprites: Record<string, StageSpriteSet> = {
 };
 
 const specificHybridSprites: Record<string, StageSpriteSet> = {
-  "wamena-aru": {
+  "aru-wamena": {
     juvenile: {
       Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.webp")],
     },
   },
-  "wamena-merauke": {
+  "merauke-wamena": {
     juvenile: {
       Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.webp")],
     },
