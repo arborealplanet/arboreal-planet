@@ -105,33 +105,6 @@ fs.mkdirSync(path.dirname(homeVideoOutput), { recursive: true });
 fs.writeFileSync(homeVideoOutput, homeVideoBytes);
 console.log(`Materialized ${path.relative(root, homeVideoOutput)} (${homeVideoBytes.length} bytes).`);
 
-const hatcheryAssetsDir = path.join(root, "src/lib/hatchery-assets");
-const hatcheryOutputDir = path.join(root, "public/hatchery/snakes/traits");
-
-if (fs.existsSync(hatcheryAssetsDir)) {
-  const hatcheryFiles = fs
-    .readdirSync(hatcheryAssetsDir)
-    .filter((name) => name.endsWith(".b64"))
-    .sort((a, b) => a.localeCompare(b));
-
-  fs.mkdirSync(hatcheryOutputDir, { recursive: true });
-
-  for (const name of hatcheryFiles) {
-    const payload = fs.readFileSync(path.join(hatcheryAssetsDir, name), "utf8").trim();
-    const imageBytes = Buffer.from(payload, "base64");
-    const imageSignature = imageBytes.subarray(0, 12).toString("ascii");
-
-    if (!imageSignature.startsWith("RIFF") || !imageSignature.includes("WEBP")) {
-      throw new Error(`${name} is not a valid WEBP payload.`);
-    }
-
-    const outputName = `${path.basename(name, ".b64")}.webp`;
-    fs.writeFileSync(path.join(hatcheryOutputDir, outputName), imageBytes);
-  }
-
-  console.log(`Materialized ${hatcheryFiles.length} Chondro Breeder trait icons.`);
-}
-
 const hatcheryUiAssetsDir = path.join(root, "src/lib/hatchery-ui-assets");
 const hatcheryUiOutputDir = path.join(root, "public/hatchery/game");
 

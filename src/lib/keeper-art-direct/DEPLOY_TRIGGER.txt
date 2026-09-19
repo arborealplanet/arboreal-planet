@@ -1,1 +1,0 @@
-Arboreal Keeper artwork deployment cache refresh v6. This marker intentionally accompanies the neonate art cache-version bump so the production build receives a fresh immutable deployment.

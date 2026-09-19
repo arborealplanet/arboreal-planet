@@ -1,131 +1,65 @@
-type ChondroSubspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
+import { chondroSpecificSpriteFor, type ChondroClassification, type ChondroLifeStage, type ChondroNeonateColor, type ChondroSubspecies } from "@/lib/chondro-sprite-registry";
+
 type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
 type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
-type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
-type NeonateColor = "Red" | "Yellow";
-
-const TRAIT_ART_VERSION = "2026-09-18-subadult-juvenile-art-v12";
-
-const baseArtBySubspecies: Record<ChondroSubspecies, string> = {
-  "Morelia azurea azurea": "/hatchery/snakes/game-base/azurea.webp",
-  "Morelia azurea pulcher": "/hatchery/snakes/game-base/pulcher.webp",
-  "Morelia azurea utaraensis": "/hatchery/snakes/game-base/utaraensis.webp",
-  "Morelia viridis": "/hatchery/snakes/game-base/viridis.webp",
-};
-
-const slugBySubspecies: Record<ChondroSubspecies, string> = {
-  "Morelia azurea azurea": "azurea",
-  "Morelia azurea pulcher": "pulcher",
-  "Morelia azurea utaraensis": "utaraensis",
-  "Morelia viridis": "viridis",
-};
-
-const slugByTrait: Record<TraitKey, string> = {
-  highBlack: "high-black",
-  highWhite: "high-white",
-  blueStripe: "blue",
-  yellowRetention: "yellow",
-  blotches: "blotches",
-};
-
-const verifiedTraitArtBySubspecies: Record<ChondroSubspecies, readonly TraitKey[]> = {
-  "Morelia azurea azurea": ["highBlack", "highWhite", "blueStripe", "yellowRetention", "blotches"],
-  "Morelia azurea pulcher": ["highBlack", "highWhite", "blueStripe", "yellowRetention", "blotches"],
-  "Morelia azurea utaraensis": ["blueStripe", "yellowRetention"],
-  "Morelia viridis": [],
-};
-
-const withVersion = (src: string) => `${src}?v=${TRAIT_ART_VERSION}`;
-
-function portraitTier(value: number) {
-  if (value >= 100) return 100;
-  if (value >= 95) return 95;
-  if (value >= 85) return 85;
-  if (value >= 70) return 70;
-  return null;
-}
-
-function traitValue(traits: PortraitTraits, key: TraitKey) {
-  if (key === "blueStripe") return Number(traits.blueStripe ?? traits.blue ?? 0);
-  return Number(traits[key] ?? 0);
-}
-
-function adultPortraitArt(subspecies: ChondroSubspecies, traits?: PortraitTraits) {
-  if (!traits) return baseArtBySubspecies[subspecies];
-
-  const allowedTraits = verifiedTraitArtBySubspecies[subspecies];
-  if (allowedTraits.length === 0) return baseArtBySubspecies[subspecies];
-
-  const entries = allowedTraits.map(key => [key, traitValue(traits, key)] as const);
-  const [trait, value] = entries.reduce((best, current) => (current[1] > best[1] ? current : best), entries[0]);
-  const tier = portraitTier(value);
-  if (tier === null) return baseArtBySubspecies[subspecies];
-
-  return `/hatchery/snakes/traits/${slugBySubspecies[subspecies]}-${slugByTrait[trait]}-${tier}.webp`;
-}
-
-function juvenilePortraitArt(subspecies: ChondroSubspecies, neonateColor?: NeonateColor) {
-  const assetColor = subspecies === "Morelia viridis" ? "yellow" : neonateColor === "Yellow" ? "yellow" : "red";
-  return `/hatchery/snakes/neonates/${slugBySubspecies[subspecies]}-${assetColor}.webp`;
-}
-
-function juvenileFallbackArt(subspecies: ChondroSubspecies, neonateColor?: NeonateColor) {
-  if (subspecies === "Morelia viridis") return juvenilePortraitArt(subspecies, "Yellow");
-  return juvenilePortraitArt(subspecies, neonateColor === "Yellow" ? "Red" : "Yellow");
-}
 
 export function ChondroSnakeIcon({
   subspecies,
   name,
-  traits,
   compact = false,
   lifeStage,
   neonateColor,
+  locality,
+  classification,
+  ancestry,
+  phenotypeScore,
 }: {
   subspecies: ChondroSubspecies;
   name: string;
   traits?: PortraitTraits;
   compact?: boolean;
-  lifeStage?: LifeStage;
-  neonateColor?: NeonateColor;
+  lifeStage?: ChondroLifeStage;
+  neonateColor?: ChondroNeonateColor;
+  locality?: string;
+  classification?: ChondroClassification;
+  ancestry?: Partial<Record<ChondroSubspecies, number>>;
+  phenotypeScore?: number;
 }) {
-  const adultRawSrc = adultPortraitArt(subspecies, traits);
-  // Hatchlings and neonates use their color-specific juvenile portraits.
-  // Subadults and adults use later-stage subspecies/trait art.
-  const isJuvenile = lifeStage === "Hatchling" || lifeStage === "Neonate" || lifeStage === "Subadult";
-  const juvenileRawSrc = isJuvenile ? juvenilePortraitArt(subspecies, neonateColor) : null;
-  const rawSrc = juvenileRawSrc ?? adultRawSrc;
-  const rawFallback = isJuvenile ? juvenileFallbackArt(subspecies, neonateColor) : adultRawSrc;
-  const rawBaseFallback = isJuvenile ? rawFallback : baseArtBySubspecies[subspecies];
-  const src = withVersion(rawSrc);
-  const fallback = withVersion(rawFallback);
-  const baseFallback = withVersion(rawBaseFallback);
+  const rawSrc = chondroSpecificSpriteFor({
+    subspecies,
+    locality,
+    lifeStage,
+    neonateColor,
+    classification,
+    ancestry,
+    phenotypeScore,
+  });
+  const isSubadult = lifeStage === "Subadult";
+  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-19-locality-only-v14` : null;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
       <img
-        key={src}
-        src={src}
+        key={versionedSrc ?? "missing-sprite"}
+        src={versionedSrc ?? ""}
         onError={(event) => {
-          const current = event.currentTarget.src;
-          if (!current.includes(rawFallback) && rawSrc !== rawFallback) {
-            event.currentTarget.src = fallback;
-            return;
-          }
-          if (!current.includes(rawBaseFallback)) {
-            event.currentTarget.src = baseFallback;
-            return;
-          }
-          // If the approved base game sprite also fails, leave the portrait
-          // empty rather than substituting unrelated decorative/logo artwork.
+          event.currentTarget.style.display = "none";
         }}
         alt={`${name} illustrated virtual game portrait`}
-        className="h-full w-full object-contain p-1 sm:p-2"
+        className={`h-full w-full object-contain p-1 sm:p-2 ${isSubadult ? "scale-[0.86]" : ""} ${versionedSrc ? "" : "hidden"}`}
       />
+      {!versionedSrc ? (
+        <div className="absolute inset-0 grid place-items-center p-6 text-center">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-100/55">Sprite pending</div>
+            <div className="mt-2 text-xs font-semibold text-white/45">{locality ?? classification ?? subspecies}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
         Virtual
       </div>
-      {isJuvenile ? (
+      {lifeStage && lifeStage !== "Adult" ? (
         <div className={`pointer-events-none absolute right-2 top-2 rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.12em] shadow-lg backdrop-blur-sm ${neonateColor === "Red" ? "border-red-200/20 bg-red-950/75 text-red-100/80" : "border-amber-100/20 bg-amber-950/75 text-amber-100/80"}`}>
           {lifeStage ?? "Juvenile"}
         </div>
