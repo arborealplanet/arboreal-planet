@@ -12,6 +12,7 @@ export function ChondroSnakeIcon({
   locality,
   classification,
   ancestry,
+  localityAncestry,
   phenotypeScore,
   spriteSeed,
 }: {
@@ -24,6 +25,7 @@ export function ChondroSnakeIcon({
   locality?: string;
   classification?: ChondroClassification;
   ancestry?: Partial<Record<ChondroSubspecies, number>>;
+  localityAncestry?: Partial<Record<string, number>>;
   phenotypeScore?: number;
   spriteSeed?: string;
 }) {
@@ -34,6 +36,7 @@ export function ChondroSnakeIcon({
     neonateColor,
     classification,
     ancestry,
+    localityAncestry,
     phenotypeScore,
     variantSeed: spriteSeed ?? name,
   });
