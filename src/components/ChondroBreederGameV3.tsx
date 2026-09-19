@@ -1626,7 +1626,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
               const sold = purchasedStoreIds.includes(offer.id);
               return (
                 <article className="rounded-3xl border border-white/[.06] bg-white/[.015] p-4">
-                  <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={portraitTraits(offer)} compact lifeStage={offer.lifeStage} neonateColor={offer.neonateColor} locality={offer.locality} classification={offer.classification} ancestry={offer.ancestry} phenotypeScore={offer.phenotypeScore} spriteSeed={offer.id} />
+                  <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={portraitTraits(offer)} compact lifeStage={offer.lifeStage} neonateColor={offer.neonateColor} locality={offer.locality} classification={offer.classification} ancestry={offer.ancestry} localityAncestry={offer.localityAncestry} phenotypeScore={offer.phenotypeScore} spriteSeed={offer.id} />
                   <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="font-semibold text-white/75">{offer.name}</div>
@@ -1709,7 +1709,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                 const kept = holdbacks.includes(baby.id);
                 return (
                   <button key={baby.id} disabled={!clutchEstablished} onClick={() => toggleHoldback(baby.id)} className={`rounded-3xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-55 ${kept ? "border-amber-200/35 bg-amber-200/[.05]" : "border-white/[.06] bg-white/[.015]"}`}>
-                    <ChondroSnakeIcon subspecies={baby.subspecies} name={baby.name} traits={portraitTraits(baby)} compact lifeStage={clutchEstablished ? "Neonate" : "Hatchling"} neonateColor={baby.neonateColor} locality={baby.locality} classification={baby.classification} ancestry={baby.ancestry} phenotypeScore={baby.phenotypeScore} spriteSeed={baby.id} />
+                    <ChondroSnakeIcon subspecies={baby.subspecies} name={baby.name} traits={portraitTraits(baby)} compact lifeStage={clutchEstablished ? "Neonate" : "Hatchling"} neonateColor={baby.neonateColor} locality={baby.locality} classification={baby.classification} ancestry={baby.ancestry} localityAncestry={baby.localityAncestry} phenotypeScore={baby.phenotypeScore} spriteSeed={baby.id} />
                     <div className="mt-3 flex flex-wrap items-center gap-2"><span className="font-semibold text-white/75">{baby.name}</span><PhenotypeBadge animal={baby} /></div>
                     <div className="mt-1 text-[10px] text-white/30">{baby.sex} · {clutchEstablished ? "Neonate" : "Hatchling"} · {baby.classification} · {baby.locality}</div>
                     <div className="mt-3 text-[10px] text-white/35">Genetics untested · percentages hidden</div>
@@ -1742,7 +1742,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
               const recoverySeason = Number(femaleRecovery[animal.id] ?? 0);
               return (
                 <article key={animal.id} className="panel rounded-[28px] p-5">
-                  <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} lifeStage={animal.lifeStage} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification} ancestry={animal.ancestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} />
+                  <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} lifeStage={animal.lifeStage} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification} ancestry={animal.ancestry} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} />
                   <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="text-xl font-semibold">{animal.name || "Unnamed snake"}</div>
@@ -1791,7 +1791,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
               const animal = listing.snake;
               return (
                 <article key={listing.id} className="rounded-3xl border border-white/[.06] bg-black/10 p-4">
-                  <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} compact lifeStage={animal.lifeStage} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification} ancestry={animal.ancestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} />
+                  <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} compact lifeStage={animal.lifeStage} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification} ancestry={animal.ancestry} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} />
                   <div className="mt-3 flex flex-wrap items-start justify-between gap-2"><div><div className="font-semibold text-white/75">{animal.name}</div><div className="mt-1 text-[10px] text-white/30">{animal.sex} · {animal.lifeStage} · Gen {animal.generation}</div></div><PhenotypeBadge animal={animal} /></div>
                   <div className="mt-3 text-[10px] text-white/34">{traitSummary(animal)}</div>
                   <div className="mt-2 text-[10px] text-white/30">{animal.subspecies} · {animal.locality} · Nido {animal.nidoStatus}</div>
@@ -1846,7 +1846,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
             <div className="flex items-center justify-between gap-4"><div><div className="section-kicker">Snake record · {selectedAnimal.id}</div><h2 className="mt-2 text-3xl font-semibold">{selectedAnimal.name || "Unnamed snake"}</h2></div><button onClick={() => setSelectedSnakeId(null)} className="rounded-xl border border-white/[.09] px-4 py-2 text-sm font-bold text-white/60">Close</button></div>
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               <div>
-                <ChondroSnakeIcon subspecies={selectedAnimal.subspecies} name={selectedAnimal.name} traits={portraitTraits(selectedAnimal)} lifeStage={selectedAnimal.lifeStage} neonateColor={selectedAnimal.neonateColor} locality={selectedAnimal.locality} classification={selectedAnimal.classification} ancestry={selectedAnimal.ancestry} phenotypeScore={selectedAnimal.phenotypeScore} spriteSeed={selectedAnimal.id} />
+                <ChondroSnakeIcon subspecies={selectedAnimal.subspecies} name={selectedAnimal.name} traits={portraitTraits(selectedAnimal)} lifeStage={selectedAnimal.lifeStage} neonateColor={selectedAnimal.neonateColor} locality={selectedAnimal.locality} classification={selectedAnimal.classification} ancestry={selectedAnimal.ancestry} localityAncestry={selectedAnimal.localityAncestry} phenotypeScore={selectedAnimal.phenotypeScore} spriteSeed={selectedAnimal.id} />
                 <div className="mt-4"><TraitGrid animal={selectedAnimal} /></div>
                 <div className="mt-4 flex flex-wrap gap-2"><PhenotypeBadge animal={selectedAnimal} /><span className="rounded-full border border-white/[.08] px-3 py-1 text-[10px] text-white/45">{selectedAnimal.classification} · {selectedAnimal.locality}</span></div>
               </div>
