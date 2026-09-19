@@ -435,6 +435,11 @@ export function ChondroBreederExpandedShop() {
                   traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }}
                   lifeStage={offer.lifeStage}
                   neonateColor={offer.neonateColor}
+                  locality={offer.locality}
+                  classification={offer.classification}
+                  ancestry={offer.ancestry}
+                  phenotypeScore={offer.phenotypeScore}
+                  spriteSeed={offer.id}
                   compact
                 />
                 <div className="mt-3 font-semibold text-white/75">{offer.name}</div>
