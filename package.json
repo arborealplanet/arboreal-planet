@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/install-chondro-pairing-lab.mjs && node scripts/fix-chondro-juvenile-art.mjs && node scripts/fix-gtp-family-tree-ancestry.mjs && node scripts/apply-chondro-patches.mjs && node scripts/migrate-arboreal-keeper-api-paths.mjs && node scripts/normalize-arboreal-keeper-branding.mjs && node scripts/apply-keeper-dock-icons.mjs && node scripts/move-keeper-program-hub-home.mjs",
+    "predev": "node scripts/install-chondro-pairing-lab.mjs && node scripts/fix-gtp-family-tree-ancestry.mjs && node scripts/apply-chondro-patches.mjs && node scripts/migrate-arboreal-keeper-api-paths.mjs && node scripts/normalize-arboreal-keeper-branding.mjs && node scripts/apply-keeper-dock-icons.mjs && node scripts/move-keeper-program-hub-home.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/install-chondro-pairing-lab.mjs && node scripts/fix-chondro-juvenile-art.mjs && node scripts/fix-gtp-family-tree-ancestry.mjs && node scripts/apply-chondro-patches.mjs && node scripts/migrate-arboreal-keeper-api-paths.mjs && node scripts/normalize-arboreal-keeper-branding.mjs && node scripts/apply-keeper-dock-icons.mjs && node scripts/move-keeper-program-hub-home.mjs",
+    "prebuild": "node scripts/install-chondro-pairing-lab.mjs && node scripts/fix-gtp-family-tree-ancestry.mjs && node scripts/apply-chondro-patches.mjs && node scripts/migrate-arboreal-keeper-api-paths.mjs && node scripts/normalize-arboreal-keeper-branding.mjs && node scripts/apply-keeper-dock-icons.mjs && node scripts/move-keeper-program-hub-home.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "node scripts/fix-gtp-family-tree-ancestry.mjs && node scripts/migrate-arboreal-keeper-api-paths.mjs && node scripts/normalize-arboreal-keeper-branding.mjs && eslint"
