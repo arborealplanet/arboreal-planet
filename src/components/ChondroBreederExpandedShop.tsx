@@ -438,6 +438,7 @@ export function ChondroBreederExpandedShop() {
                   locality={offer.locality}
                   classification={offer.classification}
                   ancestry={offer.ancestry}
+                  localityAncestry={offer.localityAncestry}
                   phenotypeScore={offer.phenotypeScore}
                   spriteSeed={offer.id}
                   compact
