@@ -46,6 +46,9 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Red: [variant("/hatchery/snakes/localities/lereh/red-neonate.png")],
       Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.png")],
     },
+    adult: {
+      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-adult.png")],
+    },
   },
   Wamena: {
     juvenile: {
@@ -66,6 +69,12 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Red: [variant("/hatchery/snakes/localities/manokwari/red-adult.png")],
       Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.png")],
     },
+  },
+  Arfak: {
+    juvenile: {
+      Red: [variant("/hatchery/snakes/localities/arfak/red-neonate.png")],
+    },
+    adultAny: [variant("/hatchery/snakes/localities/arfak/adult.png")],
   },
   Sorong: {
     juvenile: {
@@ -97,6 +106,19 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Merauke: {
     adultAny: [variant("/hatchery/snakes/localities/merauke/adult.png")],
+  },
+};
+
+const specificHybridSprites: Record<string, StageSpriteSet> = {
+  "wamena-aru": {
+    juvenile: {
+      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.png")],
+    },
+  },
+  "wamena-merauke": {
+    juvenile: {
+      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.png")],
+    },
   },
 };
 
@@ -186,6 +208,17 @@ function poolForStage(set: StageSpriteSet, request: ChondroSpriteRequest) {
   return set.juvenile?.[color] ?? set.juvenileAny;
 }
 
+function normalizeLocalityToken(value?: string) {
+  return value?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ?? "";
+}
+
+function specificHybridKey(locality?: string) {
+  if (!locality || !locality.includes("×")) return null;
+  const parts = locality.split("×").map((part) => normalizeLocalityToken(part)).filter(Boolean).sort();
+  if (parts.length !== 2) return null;
+  return parts.join("-");
+}
+
 function hybridKey(ancestry?: Partial<Record<ChondroSubspecies, number>>) {
   if (!ancestry) return null;
   const parents = (Object.entries(ancestry) as Array<[ChondroSubspecies, number | undefined]>)
@@ -208,6 +241,16 @@ export function localitySpriteFor(request: ChondroSpriteRequest) {
 
 export function hybridSpriteFor(request: ChondroSpriteRequest) {
   if (request.classification !== "Hybrid") return null;
+
+  const exactKey = specificHybridKey(request.locality);
+  if (exactKey) {
+    const exactSet = specificHybridSprites[exactKey];
+    const exactSprite = exactSet
+      ? pickVariant(poolForStage(exactSet, request), request, `hybrid-locality:${exactKey}`)
+      : null;
+    if (exactSprite) return exactSprite;
+  }
+
   const key = hybridKey(request.ancestry);
   if (!key) return null;
   const set = hybridSprites[key];
