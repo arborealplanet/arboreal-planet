@@ -6,7 +6,7 @@ import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
 
 type Sex = "Male" | "Female";
-type Locality = "Biak" | "Numfor" | "Manokwari" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
+type Locality = "Biak" | "Numfor" | "Manokwari" | "Arfak" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
 type Subspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type ConservationRow = { subspecies: Subspecies; import_multiplier: number; phenotype_bonus: number; stewardship_score: number; contribution_count: number };
@@ -60,7 +60,7 @@ const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }>
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
   "Morelia azurea azurea": ["Biak", "Numfor"],
-  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],
+  "Morelia azurea pulcher": ["Manokwari", "Arfak", "Sorong", "Timika"],
   "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena"],
   "Morelia viridis": ["Aru", "Merauke"],
 };
@@ -435,6 +435,11 @@ export function ChondroBreederExpandedShop() {
                   traits={{ highBlack: offer.highBlack, highWhite: offer.highWhite, blueStripe: offer.blueStripe, yellowRetention: offer.yellowRetention, blotches: offer.blotches }}
                   lifeStage={offer.lifeStage}
                   neonateColor={offer.neonateColor}
+                  locality={offer.locality}
+                  classification={offer.classification}
+                  ancestry={offer.ancestry}
+                  phenotypeScore={offer.phenotypeScore}
+                  spriteSeed={offer.id}
                   compact
                 />
                 <div className="mt-3 font-semibold text-white/75">{offer.name}</div>

@@ -13,6 +13,7 @@ export function ChondroSnakeIcon({
   classification,
   ancestry,
   phenotypeScore,
+  spriteSeed,
 }: {
   subspecies: ChondroSubspecies;
   name: string;
@@ -24,6 +25,7 @@ export function ChondroSnakeIcon({
   classification?: ChondroClassification;
   ancestry?: Partial<Record<ChondroSubspecies, number>>;
   phenotypeScore?: number;
+  spriteSeed?: string;
 }) {
   const rawSrc = chondroSpecificSpriteFor({
     subspecies,
@@ -33,9 +35,10 @@ export function ChondroSnakeIcon({
     classification,
     ancestry,
     phenotypeScore,
+    variantSeed: spriteSeed ?? name,
   });
   const isSubadult = lifeStage === "Subadult";
-  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-19-locality-only-v14` : null;
+  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-19-variant-pools-v15` : null;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>

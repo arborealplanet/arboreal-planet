@@ -18,6 +18,25 @@ for (const filePath of targets) {
   const source = fs.readFileSync(filePath, "utf8");
   let next = source;
 
+
+  if (!next.includes('| "Arfak"')) {
+    next = next.replace(
+      '| "Manokwari"\n  | "Sorong"',
+      '| "Manokwari"\n  | "Arfak"\n  | "Sorong"',
+    );
+    next = next.replace(
+      '| "Manokwari" | "Sorong"',
+      '| "Manokwari" | "Arfak" | "Sorong"',
+    );
+  }
+
+  if (next.includes("const localitySubspecies: Record<Locality, Subspecies> = {") && !next.includes('  Arfak: "Morelia azurea pulcher",')) {
+    next = next.replace(
+      '  Manokwari: "Morelia azurea pulcher",\n  Sorong: "Morelia azurea pulcher",',
+      '  Manokwari: "Morelia azurea pulcher",\n  Arfak: "Morelia azurea pulcher",\n  Sorong: "Morelia azurea pulcher",',
+    );
+  }
+
   // Preserve legacy locality strings for old saves while making Yapen available
   // to the current Utaraensis program.
   if (!next.includes('| "Yapen"')) {
@@ -52,7 +71,7 @@ for (const filePath of targets) {
     const start = next.indexOf("const localitiesBySubspecies: Record<Subspecies, Locality[]> = {");
     const end = next.indexOf("};", start);
     if (start >= 0 && end > start) {
-      const canonical = `const localitiesBySubspecies: Record<Subspecies, Locality[]> = {\n  "Morelia azurea azurea": ["Biak", "Numfor"],\n  "Morelia azurea pulcher": ["Manokwari", "Sorong", "Timika"],\n  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],\n  "Morelia viridis": ["Aru", "Merauke"],\n}`;
+      const canonical = `const localitiesBySubspecies: Record<Subspecies, Locality[]> = {\n  "Morelia azurea azurea": ["Biak", "Numfor"],\n  "Morelia azurea pulcher": ["Manokwari", "Arfak", "Sorong", "Timika"],\n  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],\n  "Morelia viridis": ["Aru", "Merauke"],\n}`;
       next = next.slice(0, start) + canonical + next.slice(end + 1);
     }
   }
