@@ -31,6 +31,7 @@ export type ChondroSpriteRequest = {
   neonateColor?: ChondroNeonateColor;
   classification?: ChondroClassification;
   ancestry?: Partial<Record<ChondroSubspecies, number>>;
+  localityAncestry?: Partial<Record<string, number>>;
   phenotypeScore?: number;
   variantSeed?: string;
 };
@@ -117,7 +118,7 @@ const specificHybridSprites: Record<string, StageSpriteSet> = {
   },
   "wamena-merauke": {
     juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.png")],
+      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.webp")],
     },
   },
 };
@@ -212,7 +213,22 @@ function normalizeLocalityToken(value?: string) {
   return value?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ?? "";
 }
 
-function specificHybridKey(locality?: string) {
+function specificHybridKey(
+  locality?: string,
+  localityAncestry?: Partial<Record<string, number>>,
+) {
+  if (localityAncestry) {
+    const parents = Object.entries(localityAncestry)
+      .filter(([, value]) => Number(value ?? 0) > 0)
+      .sort((a, b) => Number(b[1] ?? 0) - Number(a[1] ?? 0))
+      .slice(0, 2)
+      .map(([name]) => normalizeLocalityToken(name))
+      .filter(Boolean)
+      .sort();
+
+    if (parents.length === 2) return parents.join("-");
+  }
+
   if (!locality || !locality.includes("×")) return null;
   const parts = locality.split("×").map((part) => normalizeLocalityToken(part)).filter(Boolean).sort();
   if (parts.length !== 2) return null;
@@ -242,7 +258,7 @@ export function localitySpriteFor(request: ChondroSpriteRequest) {
 export function hybridSpriteFor(request: ChondroSpriteRequest) {
   if (request.classification !== "Hybrid") return null;
 
-  const exactKey = specificHybridKey(request.locality);
+  const exactKey = specificHybridKey(request.locality, request.localityAncestry);
   if (exactKey) {
     const exactSet = specificHybridSprites[exactKey];
     const exactSprite = exactSet
