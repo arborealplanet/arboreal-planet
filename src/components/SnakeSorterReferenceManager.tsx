@@ -155,7 +155,7 @@ export function SnakeSorterReferenceManager({
       life_stage_override: patch.life_stage_override ?? item.life_stage_override ?? "",
       neonate_color_override: patch.neonate_color_override ?? item.neonate_color_override ?? "",
       capture_date: patch.capture_date ?? item.capture_date ?? "",
-      approximate_age_days: patch.approximate_age_days ?? item.approximate_age_days ?? "",
+      approximate_age_days: patch.approximate_age_days ?? item.approximate_age_days ?? null,
     };
     const response = await fetch(`/api/snake-sorter/media/${item.id}`, {
       method: "PATCH",
