@@ -8,7 +8,7 @@ import torch
 from sklearn.metrics import f1_score
 from torch import nn
 from torch.optim import AdamW
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 from transformers import AutoImageProcessor
@@ -50,6 +50,25 @@ def taxon_weights_by_individual(dataset: SnakeSorterDataset) -> torch.Tensor:
     if len(positive):
         tensor = tensor / positive.mean()
     return tensor
+
+
+def individual_balanced_sampler(
+    dataset: SnakeSorterDataset,
+    seed: int,
+) -> WeightedRandomSampler:
+    image_counts = dataset.frame["animal_id"].value_counts()
+    weights = [
+        1.0 / float(image_counts[str(animal_id)])
+        for animal_id in dataset.frame["animal_id"]
+    ]
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    return WeightedRandomSampler(
+        weights=torch.tensor(weights, dtype=torch.double),
+        num_samples=len(dataset),
+        replacement=True,
+        generator=generator,
+    )
 
 
 def build_train_transform():
@@ -141,7 +160,7 @@ def main():
     train_loader = DataLoader(
         train_data,
         batch_size=args.batch_size,
-        shuffle=True,
+        sampler=individual_balanced_sampler(train_data, args.seed),
         num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
         collate_fn=collate,
@@ -180,6 +199,11 @@ def main():
         "freeze_backbone": not args.unfreeze_backbone,
         "seed": args.seed,
         "taxon_weighting": "inverse distinct-animal frequency",
+        "sampling": {
+            "strategy": "inverse images-per-individual",
+            "replacement": True,
+            "samples_per_epoch": len(train_data),
+        },
         "augmentation": {
             "horizontal_flip_probability": 0.5,
             "random_affine_probability": 0.65,
