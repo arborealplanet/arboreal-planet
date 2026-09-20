@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+type DatasetSnapshot = {
+  id: string;
+  name: string;
+  manifest_sha256: string;
+  animal_count: number;
+  media_count: number;
+  notes: string | null;
+  created_at: string;
+};
+
 type ModelVersion = {
   id: string;
   name: string;
@@ -37,23 +47,40 @@ function metricValue(metrics: Record<string, unknown> | null, key: string) {
 
 export function SnakeSorterModelStatus() {
   const [models, setModels] = useState<ModelVersion[]>([]);
+  const [snapshots, setSnapshots] = useState<DatasetSnapshot[]>([]);
+  const [snapshotName, setSnapshotName] = useState("");
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState("");
   const [message, setMessage] = useState("");
 
   async function load() {
-    const response = await fetch("/api/snake-sorter/models", { cache: "no-store" });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok) setModels(data.models ?? []);
+    const [modelsResponse, snapshotsResponse] = await Promise.all([
+      fetch("/api/snake-sorter/models", { cache: "no-store" }),
+      fetch("/api/snake-sorter/snapshots", { cache: "no-store" }),
+    ]);
+    const [modelsData, snapshotsData] = await Promise.all([
+      modelsResponse.json().catch(() => ({})),
+      snapshotsResponse.json().catch(() => ({})),
+    ]);
+    if (modelsResponse.ok) setModels(modelsData.models ?? []);
+    if (snapshotsResponse.ok) setSnapshots(snapshotsData.snapshots ?? []);
     setLoading(false);
   }
 
   useEffect(() => {
     let active = true;
-    void fetch("/api/snake-sorter/models", { cache: "no-store" })
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-        if (active && response.ok) setModels(data.models ?? []);
+    void Promise.all([
+      fetch("/api/snake-sorter/models", { cache: "no-store" }),
+      fetch("/api/snake-sorter/snapshots", { cache: "no-store" }),
+    ])
+      .then(async ([modelsResponse, snapshotsResponse]) => {
+        const [modelsData, snapshotsData] = await Promise.all([
+          modelsResponse.json().catch(() => ({})),
+          snapshotsResponse.json().catch(() => ({})),
+        ]);
+        if (!active) return;
+        if (modelsResponse.ok) setModels(modelsData.models ?? []);
+        if (snapshotsResponse.ok) setSnapshots(snapshotsData.snapshots ?? []);
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -72,6 +99,26 @@ export function SnakeSorterModelStatus() {
       setMessage(`${model.name} ${model.version} is now active.`);
       await load();
     } else setMessage(data.error ?? "Could not activate model.");
+    setActivating("");
+  }
+
+  async function createSnapshot() {
+    setActivating("snapshot");
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/snapshots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: snapshotName }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setMessage(`Frozen dataset snapshot created: ${data.animal_count} animals / ${data.media_count} images.`);
+      setSnapshotName("");
+      await load();
+    } else {
+      const extra = data.unassigned_animals ? ` ${data.unassigned_animals} animal(s) still need dataset splits.` : data.animals_without_accepted_media ? ` ${data.animals_without_accepted_media} animal(s) need an accepted image.` : "";
+      setMessage((data.error ?? "Could not create dataset snapshot.") + extra);
+    }
     setActivating("");
   }
 
@@ -120,6 +167,22 @@ export function SnakeSorterModelStatus() {
           })}
         </div>
       )}
+
+      <div className="mt-6 border-t border-white/[.06] pt-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[.12em] text-white/26">Training snapshots</div>
+            <p className="mt-2 text-xs leading-5 text-white/22">Freeze the currently approved dataset before training so the exact labels, splits and image set can be reproduced later.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input value={snapshotName} onChange={(e) => setSnapshotName(e.target.value)} placeholder="Optional snapshot name" className="rounded-xl border border-white/[.07] bg-black/10 px-3 py-2 text-[10px] text-white/55 outline-none placeholder:text-white/18" />
+            <button type="button" disabled={Boolean(activating)} onClick={() => void createSnapshot()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[10px] font-black text-emerald-100/60 disabled:opacity-40">{activating === "snapshot" ? "Freezing…" : "Create training snapshot"}</button>
+          </div>
+        </div>
+        {snapshots.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/[.07] p-4 text-[10px] text-white/22">No immutable dataset snapshots yet.</div> :
+          <div className="mt-4 space-y-2">{snapshots.slice(0,6).map((snapshot) => <div key={snapshot.id} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xs font-semibold text-white/48">{snapshot.name}</div><div className="mt-1 text-[9px] text-white/20">{snapshot.animal_count} animals · {snapshot.media_count} images</div></div><div className="text-right"><div className="font-mono text-[8px] text-white/20">{snapshot.manifest_sha256.slice(0,12)}…</div><div className="mt-1 text-[8px] text-white/18">{new Date(snapshot.created_at).toLocaleDateString()}</div></div></div></div>)}</div>
+        }
+      </div>
 
       {candidates.length > 1 && <div className="mt-4 rounded-2xl border border-amber-300/10 bg-amber-300/[.025] p-3 text-[10px] leading-5 text-amber-50/40">Multiple candidate models are available. Compare held-out metrics and error patterns before promoting one.</div>}
       {message && <div className="mt-3 text-xs text-white/38">{message}</div>}
