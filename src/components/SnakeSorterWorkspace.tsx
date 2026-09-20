@@ -62,6 +62,21 @@ export function SnakeSorterWorkspace() {
     return counts;
   }, [media]);
 
+
+  const taxonStats = useMemo(() => {
+    const taxa = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
+    return taxa.map((taxon) => {
+      const rows = animals.filter((animal) => animal.taxon === taxon);
+      return {
+        taxon,
+        total: rows.length,
+        red: rows.filter((animal) => animal.neonate_color === "red").length,
+        yellow: rows.filter((animal) => animal.neonate_color === "yellow").length,
+        images: rows.reduce((sum, animal) => sum + (mediaCount.get(animal.id) ?? 0), 0),
+      };
+    });
+  }, [animals, mediaCount]);
+
   async function addReference(formData: FormData) {
     setSaving(true);
     setMessage("");
@@ -93,6 +108,8 @@ export function SnakeSorterWorkspace() {
           </div>
         ))}
       </div>
+
+      <div className="mt-6"><SnakeSorterScanner /></div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <div className="panel rounded-[28px] p-5 sm:p-6">
@@ -178,7 +195,44 @@ export function SnakeSorterWorkspace() {
           </form>
         </div>
 
-        <SnakeSorterScanner />
+        <aside className="space-y-6">
+          <div className="panel rounded-[28px] p-5 sm:p-6">
+            <div className="section-kicker">Dataset health</div>
+            <h2 className="mt-3 text-2xl font-semibold">Coverage by taxon</h2>
+            <p className="mt-2 text-sm leading-6 text-white/32">This view will help us spot weak areas before training so one color phase, locality or individual cannot dominate the model.</p>
+            <div className="mt-5 space-y-3">
+              {taxonStats.map((row) => (
+                <div key={row.taxon} className="rounded-2xl border border-white/[.06] bg-black/[.08] p-4">
+                  <div className="text-sm font-semibold text-white/62">{row.taxon}</div>
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+                    {[["Animals",row.total],["Images",row.images],["Red",row.red],["Yellow",row.yellow]].map(([name,value]) => <div key={String(name)}><div className="text-lg font-semibold text-white/58">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/20">{name}</div></div>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel rounded-[28px] p-5 sm:p-6">
+            <div className="section-kicker">System readiness</div>
+            <div className="mt-4 space-y-3 text-sm">
+              {[
+                ["Owner-only access", "Live"],
+                ["Reference animal database", "Live"],
+                ["Private reference image storage", "Live"],
+                ["Photo upload", "Live"],
+                ["Video upload", "Live"],
+                ["Live camera preview", "Live"],
+                ["Live video recording", "Live"],
+                ["Still capture", "Live"],
+                ["Local video frame sampling", "Live"],
+                ["Scan/reference separation", "Live"],
+                ["Multi-view analysis API", "Ready"],
+                ["Vision classifier", "Needs trained model"],
+                ["Nearest-reference search", "Needs embeddings"],
+              ].map(([name, status]) => <div key={name} className="flex items-center justify-between gap-4 border-b border-white/[.05] pb-3 last:border-0 last:pb-0"><span className="text-white/45">{name}</span><span className={status === "Live" || status === "Ready" ? "text-emerald-200/60" : "text-white/25"}>{status}</span></div>)}
+            </div>
+          </div>
+        </aside>
       </div>
 
       <div className="mt-6 panel rounded-[28px] p-5 sm:p-6">
