@@ -180,6 +180,9 @@ export function SnakeSorterScanner() {
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
   const [analysisMessage, setAnalysisMessage] = useState("");
   const [analysisResult, setAnalysisResult] = useState<SnakeSorterAnalysisResult | null>(null);
+  const [analysisRunId, setAnalysisRunId] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [correctionTaxon, setCorrectionTaxon] = useState("Unknown / review");
   const [scanMode, setScanMode] = useState<ScanMode>("deep");
   const [liveQuality, setLiveQuality] = useState<LiveQuality | null>(null);
   const [stageHint, setStageHint] = useState("auto");
@@ -228,6 +231,10 @@ export function SnakeSorterScanner() {
 
   function invalidateAnalysis() {
     setAnalysisResult(null);
+    setAnalysisRunId(null);
+    setFeedbackMessage("");
+    setAnalysisRunId(null);
+    setFeedbackMessage("");
     setAnalysisStatus("idle");
     setAnalysisMessage("");
   }
@@ -248,6 +255,8 @@ export function SnakeSorterScanner() {
     setAnalysisStatus("idle");
     setAnalysisMessage("");
     setAnalysisResult(null);
+    setAnalysisRunId(null);
+    setFeedbackMessage("");
   }
 
   function removeAsset(id: string) {
@@ -265,6 +274,8 @@ export function SnakeSorterScanner() {
     setAnalysisStatus("idle");
     setAnalysisMessage("");
     setAnalysisResult(null);
+    setAnalysisRunId(null);
+    setFeedbackMessage("");
   }
 
   function updateAssetView(id: string, viewType: ScanView) {
@@ -391,12 +402,16 @@ export function SnakeSorterScanner() {
       setAnalysisMessage(`Prepared ${evidence.length} evidence frame(s). Running the private analysis pipeline…`);
       const response = await fetch("/api/snake-sorter/analyze", { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
+      setAnalysisRunId(typeof data.analysis_run_id === "string" ? data.analysis_run_id : null);
+      setFeedbackMessage("");
       if (response.ok && data.result) {
         setAnalysisResult(data.result as SnakeSorterAnalysisResult);
         setAnalysisStatus("ready");
         setAnalysisMessage("Analysis complete.");
       } else {
         setAnalysisResult(null);
+    setAnalysisRunId(null);
+    setFeedbackMessage("");
         setAnalysisStatus("error");
         setAnalysisMessage(data.message ?? data.error ?? "The analysis engine is not connected yet.");
       }
@@ -404,6 +419,25 @@ export function SnakeSorterScanner() {
       setAnalysisStatus("error");
       setAnalysisMessage(error instanceof Error ? error.message : "The analysis request could not be completed.");
     }
+  }
+
+  async function submitFeedback(feedbackType: "confirmed" | "corrected" | "uncertain" | "insufficient_media") {
+    if (!analysisRunId || !analysisResult) return;
+    setFeedbackMessage("Saving feedback…");
+    const response = await fetch("/api/snake-sorter/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        analysis_run_id: analysisRunId,
+        feedback_type: feedbackType,
+        predicted_taxon: analysisResult.taxon,
+        corrected_taxon: feedbackType === "corrected" ? correctionTaxon : null,
+        corrected_life_stage: null,
+        corrected_neonate_color: null,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setFeedbackMessage(response.ok ? "Feedback saved for model review." : (data.error ?? "Could not save feedback."));
   }
 
   return (
@@ -636,6 +670,30 @@ export function SnakeSorterScanner() {
 
               {analysisResult.flags.length > 0 && <div className="rounded-[24px] border border-amber-300/12 bg-amber-300/[.025] p-4"><div className="text-[9px] font-black uppercase tracking-[.1em] text-amber-100/45">Flags</div><div className="mt-3 space-y-2">{analysisResult.flags.map((flag) => <div key={flag} className="text-[10px] leading-5 text-amber-50/45">• {flag}</div>)}</div></div>}
             </div>
+          </div>
+        )}
+
+        {analysisResult && analysisRunId && (
+          <div className="mt-5 rounded-[24px] border border-white/[.06] bg-black/[.06] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Owner verification</div>
+                <div className="mt-1 text-xs text-white/32">This records whether the model was right. It does not add scan media to the training library.</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => void submitFeedback("confirmed")} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[10px] font-black text-emerald-100/60">Confirm result</button>
+                <button type="button" onClick={() => void submitFeedback("uncertain")} className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-3 py-2 text-[10px] font-black text-amber-100/60">Still uncertain</button>
+                <button type="button" onClick={() => void submitFeedback("insufficient_media")} className="rounded-xl border border-white/[.07] bg-white/[.02] px-3 py-2 text-[10px] font-black text-white/40">Need better media</button>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <select value={correctionTaxon} onChange={(e) => setCorrectionTaxon(e.target.value)} className="min-w-[220px] flex-1 rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[10px] text-white/48 outline-none">
+                <option value="Unknown / review">Correct answer: Unknown / review</option>
+                {SNAKE_SORTER_TAXA.map((taxon) => <option key={taxon} value={taxon}>{taxon}</option>)}
+              </select>
+              <button type="button" onClick={() => void submitFeedback("corrected")} className="rounded-xl border border-rose-300/12 bg-rose-300/[.035] px-3 py-2 text-[10px] font-black text-rose-100/55">Save correction</button>
+            </div>
+            {feedbackMessage && <div className="mt-3 text-[10px] text-white/32">{feedbackMessage}</div>}
           </div>
         )}
       </section>
