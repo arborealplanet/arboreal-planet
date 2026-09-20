@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
+import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 import { runSnakeSorterEngine } from "@/lib/snake-sorter/engine";
 import type { PreparedEvidence, SnakeSorterColor, SnakeSorterLifeStage, SnakeSorterScanMode, SnakeSorterViewType } from "@/lib/snake-sorter/types";
 
 export const runtime = "nodejs";
+
+const restHeaders = (token: string) => ({
+  apikey: SUPABASE_AUTH_KEY,
+  Authorization: `Bearer ${token}`,
+  Accept: "application/json",
+});
 
 async function ownerIdentity() {
   const identity = await getServerIdentity();
@@ -55,6 +61,53 @@ export async function POST(request: NextRequest) {
     viewType: (evidenceViews[index] ?? "auto") as SnakeSorterViewType,
   })));
 
+  const contextFlags = {
+    localityMode: String(form.get("locality_mode") ?? "true") === "true",
+    nearestNeighbors: String(form.get("nearest_neighbors") ?? "true") === "true",
+    conservativeMode: String(form.get("conservative_mode") ?? "true") === "true",
+  };
+
+  let analysisRunId: string | null = null;
+  let activeModelId: string | null = null;
+
+  const activeModelResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_model_versions?status=eq.active&select=id&limit=1`,
+    { headers: restHeaders(identity.token), cache: "no-store" }
+  );
+  if (activeModelResponse.ok) {
+    const rows = await activeModelResponse.json() as Array<{ id: string }>;
+    activeModelId = rows[0]?.id ?? null;
+  }
+
+  const historyResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs`, {
+    method: "POST",
+    headers: {
+      ...restHeaders(identity.token),
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      created_by: identity.user.id,
+      model_version_id: activeModelId,
+      evidence_frame_count: prepared.length,
+      source_asset_count: Number(form.get("source_assets") ?? 0) || 0,
+      source_image_count: Number(form.get("source_images") ?? 0) || 0,
+      source_video_count: Number(form.get("source_videos") ?? 0) || 0,
+      life_stage_hint: lifeStageHint,
+      color_hint: colorHint,
+      conservative_mode: contextFlags.conservativeMode,
+      locality_mode: contextFlags.localityMode,
+      nearest_neighbors: contextFlags.nearestNeighbors,
+      scan_mode: scanMode,
+      status: "prepared",
+    }),
+    cache: "no-store",
+  });
+  if (historyResponse.ok) {
+    const rows = await historyResponse.json() as Array<{ id: string }>;
+    analysisRunId = rows[0]?.id ?? null;
+  }
+
   // Intentionally no database or Storage write here.
   // Scan media is transient evidence only and is passed to the engine in memory.
   const engineResponse = await runSnakeSorterEngine({
@@ -63,19 +116,37 @@ export async function POST(request: NextRequest) {
       scanMode: scanMode as SnakeSorterScanMode,
       lifeStage: lifeStageHint as SnakeSorterLifeStage | "auto",
       color: colorHint as SnakeSorterColor | "auto",
-      localityMode: String(form.get("locality_mode") ?? "true") === "true",
-      nearestNeighbors: String(form.get("nearest_neighbors") ?? "true") === "true",
-      conservativeMode: String(form.get("conservative_mode") ?? "true") === "true",
+      localityMode: contextFlags.localityMode,
+      nearestNeighbors: contextFlags.nearestNeighbors,
+      conservativeMode: contextFlags.conservativeMode,
     },
   });
 
   if (engineResponse.status === "ready") {
-    return NextResponse.json({ result: engineResponse.result });
+    if (analysisRunId) {
+      await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
+        method: "PATCH",
+        headers: {
+          ...restHeaders(identity.token),
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          result_taxon: engineResponse.result.taxon,
+          result_confidence: engineResponse.result.confidence,
+          result_payload: engineResponse.result,
+          status: "completed",
+        }),
+        cache: "no-store",
+      }).catch(() => undefined);
+    }
+    return NextResponse.json({ result: engineResponse.result, analysis_run_id: analysisRunId });
   }
 
   return NextResponse.json({
     error: "model_not_connected",
     message: engineResponse.message,
+    analysis_run_id: analysisRunId,
     ready: {
       evidence_frames: engineResponse.preparedFrames,
       life_stage_hint: lifeStageHint,
@@ -83,9 +154,9 @@ export async function POST(request: NextRequest) {
       frame_sampling: frameSampling,
       scan_mode: scanMode,
       evidence_views: prepared.map((frame) => frame.viewType),
-      locality_mode: String(form.get("locality_mode") ?? "true") === "true",
-      nearest_neighbors: String(form.get("nearest_neighbors") ?? "true") === "true",
-      conservative_mode: String(form.get("conservative_mode") ?? "true") === "true",
+      locality_mode: contextFlags.localityMode,
+      nearest_neighbors: contextFlags.nearestNeighbors,
+      conservative_mode: contextFlags.conservativeMode,
     },
   }, { status: 503 });
 }
