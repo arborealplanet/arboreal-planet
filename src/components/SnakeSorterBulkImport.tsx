@@ -92,6 +92,14 @@ function normalizeHeader(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
+async function sha256File(file: File) {
+  const bytes = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function downloadTemplate() {
   const headers = [
     "animal_code","file_name","view_type","taxon","locality","life_stage","neonate_color",
@@ -274,6 +282,71 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
     setImporting(true);
     setResult("");
 
+    const referencedNames = new Set(
+      validation.animals.flatMap((animal) => animal.images.map((image) => image.fileName))
+    );
+    const referencedFiles = files.filter((file) => referencedNames.has(file.name));
+
+    const hashes: Array<{ name: string; sha256: string }> = [];
+    try {
+      for (let index = 0; index < referencedFiles.length; index++) {
+        setProgress(`Hashing ${index + 1} of ${referencedFiles.length}: ${referencedFiles[index].name}`);
+        hashes.push({
+          name: referencedFiles[index].name,
+          sha256: await sha256File(referencedFiles[index]),
+        });
+      }
+
+      setProgress("Checking existing Snake Sorter references…");
+      const preflightResponse = await fetch("/api/snake-sorter/references/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          animal_codes: validation.animals.map((animal) => animal.animalCode),
+          files: hashes,
+        }),
+      });
+      const preflight = await preflightResponse.json().catch(() => ({}));
+      if (!preflightResponse.ok) {
+        setProgress("");
+        setImporting(false);
+        setResult(preflight.error ?? "Could not complete server preflight.");
+        return;
+      }
+
+      const existingCodes = Array.isArray(preflight.existing_animal_codes)
+        ? preflight.existing_animal_codes as string[]
+        : [];
+      const duplicateExisting = Array.isArray(preflight.duplicate_existing_files)
+        ? preflight.duplicate_existing_files as Array<{ selected_names?: string[] }>
+        : [];
+      const duplicateBatch = Array.isArray(preflight.duplicate_within_batch)
+        ? preflight.duplicate_within_batch as Array<{ names?: string[] }>
+        : [];
+
+      if (existingCodes.length || duplicateExisting.length || duplicateBatch.length) {
+        const problems: string[] = [];
+        if (existingCodes.length) problems.push(`existing animal code(s): ${existingCodes.slice(0,8).join(", ")}`);
+        if (duplicateExisting.length) {
+          const names = duplicateExisting.flatMap((item) => item.selected_names ?? []);
+          problems.push(`image(s) already in the library: ${names.slice(0,8).join(", ")}`);
+        }
+        if (duplicateBatch.length) {
+          const names = duplicateBatch.flatMap((item) => item.names ?? []);
+          problems.push(`duplicate image content within this batch: ${names.slice(0,8).join(", ")}`);
+        }
+        setProgress("");
+        setImporting(false);
+        setResult(`Preflight blocked the import — ${problems.join("; ")}. Nothing was written.`);
+        return;
+      }
+    } catch (error) {
+      setProgress("");
+      setImporting(false);
+      setResult(error instanceof Error ? error.message : "Bulk import preflight failed.");
+      return;
+    }
+
     let importedAnimals = 0;
     let importedImages = 0;
     let duplicateImages = 0;
@@ -410,7 +483,7 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
       </div>
 
       <div className="mt-4 rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[9px] leading-4 text-white/20">
-        The import runs one individual at a time through the normal owner-only reference endpoint. If an individual fails, the batch stops immediately so later animals are not silently added. Exact duplicate images are detected by SHA-256 on the server.
+        Before the first write, the browser hashes every referenced image and the server checks the batch against existing animal codes and image hashes. After a clean preflight, the import runs one individual at a time through the normal owner-only reference endpoint and stops on the first failure.
       </div>
     </section>
   );
