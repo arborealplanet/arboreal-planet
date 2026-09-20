@@ -117,11 +117,16 @@ export async function POST(request: NextRequest) {
   if (!animal?.id) return NextResponse.json({ error: "Reference animal was not returned" }, { status: 500 });
 
   const files = form.getAll("images").filter((item): item is File => item instanceof File && item.size > 0).slice(0, 12);
+  const requestedViews = form.getAll("image_view").map((item) => String(item));
+  const allowedViews = new Set(["unknown","full_body","head","dorsal","left_lateral","right_lateral","tail","other","auto"]);
   const uploaded: Array<{ id?: string; name: string }> = [];
   const failed: string[] = [];
   const duplicates: string[] = [];
 
-  for (const file of files) {
+  for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+    const file = files[fileIndex];
+    const requestedView = requestedViews[fileIndex] ?? "unknown";
+    const viewType = allowedViews.has(requestedView) && requestedView !== "auto" ? requestedView : "unknown";
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) {
       failed.push(file.name);
       continue;
@@ -168,6 +173,7 @@ export async function POST(request: NextRequest) {
         mime_type: file.type,
         content_sha256: sha256,
         file_size_bytes: file.size,
+        view_type: viewType,
       }),
       cache: "no-store",
     });
