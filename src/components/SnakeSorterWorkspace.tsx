@@ -27,6 +27,7 @@ type ReferenceAnimal = {
   rights_notes?: string | null;
   training_eligible: boolean;
   challenge_eligible?: boolean;
+  challenge_expectation?: "reject" | "classify" | "review";
   created_at: string;
 };
 
@@ -445,6 +446,14 @@ export function SnakeSorterWorkspace() {
             <label className="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-amber-300/10 bg-amber-300/[.02] p-4 text-xs text-white/45">
               <input name="challenge_eligible" value="true" type="checkbox" className="mt-0.5 h-4 w-4 accent-amber-300" />
               <span><span className="block font-semibold text-amber-50/55">Challenge / OOD example</span><span className="mt-1 block text-[10px] leading-4 text-white/24">Use this animal to test rejection, mixed ancestry, mislabeled-looking phenotypes, or difficult look-alikes. Challenge examples are never added to clean classifier supervision.</span></span>
+            </label>
+
+            <label className={`${label} sm:col-span-2`}>Challenge expectation
+              <select name="challenge_expectation" defaultValue="review" className={`${field} mt-2`}>
+                <option value="reject">Reject / Unknown — model should refuse to force a class</option>
+                <option value="classify">Classify — trusted hard case should still be identified</option>
+                <option value="review">Review only — diagnostic example, do not tune thresholds from it</option>
+              </select>
             </label>
 
             <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
