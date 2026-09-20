@@ -44,8 +44,8 @@ const variant = (
 const localitySprites: Record<string, StageSpriteSet> = {
   Lereh: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/lereh/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/lereh/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.webp")],
     },
     adult: {
       Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-adult.webp")],
@@ -53,22 +53,25 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Wamena: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate.jpg")],
-      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.jpg")],
+      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-adult.png")],
-      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-adult.png")],
+      Red: [variant("/hatchery/snakes/localities/wamena/red-adult.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-adult.webp")],
     },
   },
   Manokwari: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/manokwari/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/manokwari/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/manokwari/red-adult.png")],
-      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.png")],
+      Red: [
+        variant("/hatchery/snakes/localities/manokwari/red-adult.webp", { maxPhenotypeScore: 84 }),
+        variant("/hatchery/snakes/special/manokwari-red-adult-a-plus.webp", { minPhenotypeScore: 85 }),
+      ],
+      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp")],
     },
   },
   Arfak: {
@@ -79,27 +82,28 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Sorong: {
     juvenile: {
-      Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-neonate.png")],
+      Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-neonate.webp")],
     },
   },
   Biak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-adult.png")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-adult.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-adult.webp")],
     },
   },
   Numfor: {
     // Temporary fallback requested by the owner while dedicated Numfor art is produced.
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-adult.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/numfor/yellow-adult.webp")],
     },
   },
   Aru: {
@@ -165,12 +169,20 @@ function hashString(value: string) {
 function eligibleVariants(variants: SpriteVariant[] | undefined, phenotypeScore?: number) {
   if (!variants?.length) return [];
   const score = Number.isFinite(phenotypeScore) ? Number(phenotypeScore) : null;
-  const filtered = variants.filter((item) => {
-    if (score !== null && typeof item.minPhenotypeScore === "number" && score < item.minPhenotypeScore) return false;
-    if (score !== null && typeof item.maxPhenotypeScore === "number" && score > item.maxPhenotypeScore) return false;
+  if (score === null) {
+    const core = variants.filter(
+      (item) =>
+        typeof item.minPhenotypeScore !== "number" &&
+        typeof item.maxPhenotypeScore !== "number",
+    );
+    return core.length ? core : [];
+  }
+
+  return variants.filter((item) => {
+    if (typeof item.minPhenotypeScore === "number" && score < item.minPhenotypeScore) return false;
+    if (typeof item.maxPhenotypeScore === "number" && score > item.maxPhenotypeScore) return false;
     return true;
   });
-  return filtered.length ? filtered : variants;
 }
 
 function pickVariant(
@@ -285,12 +297,10 @@ export function chondroSpecificSpriteFor(request: ChondroSpriteRequest) {
 
 export const CHONDRO_SPRITE_ASSET_PLAN = {
   special: {
-    manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.png",
+    manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.webp",
     sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.png",
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.png",
     designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.png",
   },
-  pending: {
-    numforYellowAdult: "/hatchery/snakes/localities/numfor/yellow-adult.png",
-  },
+  pending: {},
 } as const;
