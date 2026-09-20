@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
   const animalCode = text(form.get("animal_code"), 100);
   const notes = text(form.get("notes"), 4000);
   const trainingEligible = text(form.get("training_eligible"), 10) !== "false";
+  const rightsStatus = text(form.get("rights_status"), 40) || "unknown";
+  const rightsNotes = text(form.get("rights_notes"), 2000);
 
   const allowedTaxa = new Set(["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis", "Unknown / review"]);
   const allowedStages = new Set(["neonate", "juvenile", "subadult", "adult", "unknown"]);
@@ -69,8 +71,9 @@ export async function POST(request: NextRequest) {
   const allowedConfidence = new Set(["confirmed", "strong", "provisional", "uncertain"]);
   const allowedPurity = new Set(["known_pure", "believed_pure", "possible_mixed", "hybrid", "unknown"]);
   const allowedSources = new Set(["personal", "breeder", "listing", "publication", "other"]);
+  const allowedRights = new Set(["owned_by_owner","permission_granted","private_reference_only","unknown"]);
 
-  if (!allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedSources.has(sourceType)) {
+  if (!allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedSources.has(sourceType) || !allowedRights.has(rightsStatus)) {
     return NextResponse.json({ error: "Invalid reference metadata" }, { status: 400 });
   }
 
@@ -97,6 +100,8 @@ export async function POST(request: NextRequest) {
       source_url: sourceUrl || null,
       notes: notes || null,
       training_eligible: trainingEligible,
+      rights_status: rightsStatus,
+      rights_notes: rightsNotes || null,
     }),
     cache: "no-store",
   });
