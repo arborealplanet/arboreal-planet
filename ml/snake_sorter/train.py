@@ -9,6 +9,7 @@ from sklearn.metrics import f1_score
 from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
+from torchvision import transforms
 from tqdm import tqdm
 from transformers import AutoImageProcessor
 
@@ -49,6 +50,30 @@ def taxon_weights_by_individual(dataset: SnakeSorterDataset) -> torch.Tensor:
     if len(positive):
         tensor = tensor / positive.mean()
     return tensor
+
+
+def build_train_transform():
+    # Preserve diagnostic morphology and red/yellow phase while teaching the
+    # encoder normal handheld-camera variation.
+    return transforms.Compose([
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomApply([
+            transforms.RandomAffine(
+                degrees=8,
+                translate=(0.04, 0.04),
+                scale=(0.94, 1.06),
+                fill=0,
+            )
+        ], p=0.65),
+        transforms.RandomApply([
+            transforms.ColorJitter(
+                brightness=0.10,
+                contrast=0.10,
+                saturation=0.04,
+                hue=0.0,
+            )
+        ], p=0.45),
+    ])
 
 
 def build_collate(processor):
@@ -106,7 +131,12 @@ def main():
     processor = AutoImageProcessor.from_pretrained(args.encoder)
     collate = build_collate(processor)
 
-    train_data = SnakeSorterDataset(args.manifest, args.media_root, "train")
+    train_data = SnakeSorterDataset(
+        args.manifest,
+        args.media_root,
+        "train",
+        image_transform=build_train_transform(),
+    )
     val_data = SnakeSorterDataset(args.manifest, args.media_root, "validation")
     train_loader = DataLoader(
         train_data,
@@ -150,6 +180,18 @@ def main():
         "freeze_backbone": not args.unfreeze_backbone,
         "seed": args.seed,
         "taxon_weighting": "inverse distinct-animal frequency",
+        "augmentation": {
+            "horizontal_flip_probability": 0.5,
+            "random_affine_probability": 0.65,
+            "rotation_degrees": 8,
+            "translation_fraction": 0.04,
+            "scale_range": [0.94, 1.06],
+            "color_jitter_probability": 0.45,
+            "brightness": 0.10,
+            "contrast": 0.10,
+            "saturation": 0.04,
+            "hue": 0.0,
+        },
     }
     (output / "config.json").write_text(json.dumps(config, indent=2))
 
