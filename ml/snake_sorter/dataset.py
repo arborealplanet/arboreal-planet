@@ -110,7 +110,11 @@ class SnakeSorterDataset(Dataset):
         return {
             "image": image,
             "taxon": LABELS.taxon[str(row["taxon"])],
+            "taxon_name": str(row["taxon"]),
+            "locality": None if pd.isna(row.get("locality")) else str(row.get("locality")),
             "stage": LABELS.stage[stage],
+            "stage_name": stage,
+            "color_name": color,
             "color": LABELS.color[color],
             "animal_id": str(row["animal_id"]),
             "media_id": str(row.get("media_id", "")),

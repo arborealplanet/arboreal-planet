@@ -39,6 +39,10 @@ def main():
         batch["media_id"] = [item["media_id"] for item in items]
         batch["path"] = [item["path"] for item in items]
         batch["view_type"] = [item["view_type"] for item in items]
+        batch["taxon_name"] = [item["taxon_name"] for item in items]
+        batch["locality"] = [item["locality"] for item in items]
+        batch["stage_name"] = [item["stage_name"] for item in items]
+        batch["color_name"] = [item["color_name"] for item in items]
         return batch
 
     loader = DataLoader(
@@ -72,6 +76,10 @@ def main():
                         "media_id": batch["media_id"][i] or None,
                         "path": batch["path"][i],
                         "view_type": batch["view_type"][i],
+                        "taxon": batch["taxon_name"][i],
+                        "locality": batch["locality"][i],
+                        "life_stage": batch["stage_name"][i],
+                        "neonate_color": batch["color_name"][i],
                         "embedding": embeddings[i].tolist(),
                         "taxon_scores": {
                             taxon: float(probabilities[i, j].item())

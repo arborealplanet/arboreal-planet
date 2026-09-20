@@ -65,7 +65,7 @@ class SnakeSorterModel(nn.Module):
             dim=1,
         )
 
-        if self.training and stage_targets is not None:
+        if stage_targets is not None:
             stage_weights = F.one_hot(
                 stage_targets,
                 num_classes=len(STAGES),

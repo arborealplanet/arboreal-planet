@@ -118,3 +118,26 @@ After training, `evaluate.py` fits a temperature scalar using validation individ
 Use `export_embeddings.py` to create JSONL reference embeddings for a model version. These records are intended for the versioned `snake_sorter_reference_embeddings` table and nearest-reference search in Arboreal Planet.
 
 The out-of-distribution threshold is intentionally a placeholder until we have a real validation population. It must be calibrated from held-out known snakes plus deliberately unrelated / mixed / low-quality examples before production use.
+
+
+## Private inference service
+
+`service.py` is the production-facing Python inference boundary. It accepts normalized still frames from the Next.js server, performs multi-view inference in memory, and returns the Snake Sorter result contract.
+
+Required service environment:
+
+- `SNAKE_SORTER_CHECKPOINT` — trained checkpoint path
+- `SNAKE_SORTER_SERVICE_TOKEN` — private bearer token shared only with the Next.js server
+
+Optional:
+
+- `SNAKE_SORTER_REFERENCE_EMBEDDINGS` — JSONL produced by `export_embeddings.py`
+- `SNAKE_SORTER_TEMPERATURE` — validation-fitted calibration temperature
+- `SNAKE_SORTER_MODEL_VERSION` — registry version string
+
+Arboreal Planet server environment:
+
+- `SNAKE_SORTER_INFERENCE_URL`
+- `SNAKE_SORTER_INFERENCE_TOKEN`
+
+Scan frames are sent server-to-server for the request and are not written to disk by this service.
