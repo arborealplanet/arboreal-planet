@@ -82,7 +82,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Sorong: {
     juvenile: {
-      Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-neonate.png")],
+      Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-neonate.webp")],
     },
   },
   Biak: {
@@ -103,6 +103,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
     },
     adult: {
       Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/numfor/yellow-adult.webp")],
     },
   },
   Aru: {
@@ -301,7 +302,5 @@ export const CHONDRO_SPRITE_ASSET_PLAN = {
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.png",
     designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.png",
   },
-  pending: {
-    numforYellowAdult: "/hatchery/snakes/localities/numfor/yellow-adult.png",
-  },
+  pending: {},
 } as const;
