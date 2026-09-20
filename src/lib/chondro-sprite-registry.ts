@@ -53,7 +53,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Wamena: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate.webp")],
+      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate-fixed.webp")],
       Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
