@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const storageUrl = `${SUPABASE_AUTH_URL}/storage/v1`;
@@ -112,25 +113,43 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const h = { ...authHeaders(identity.token), "Content-Type": "application/json", Prefer: "return=representation" };
   let uploaded = 0;
   const failed: string[] = [];
+  const duplicates: string[] = [];
 
   for (const file of files) {
     if (!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) { failed.push(file.name); continue; }
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const duplicateResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?content_sha256=eq.${sha256}&select=id&limit=1`, {
+      headers: authHeaders(identity.token),
+      cache: "no-store",
+    });
+    const duplicateRows = duplicateResponse.ok ? await duplicateResponse.json() as Array<{ id: string }> : [];
+    if (duplicateRows.length) { duplicates.push(file.name); continue; }
+
     const path = `${id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
     const upload = await fetch(`${storageUrl}/object/snake-sorter-reference/${path}`, {
       method: "POST",
       headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}`, "Content-Type": file.type, "x-upsert": "false" },
-      body: await file.arrayBuffer(),
+      body: bytes,
       cache: "no-store",
     });
     if (!upload.ok) { failed.push(file.name); continue; }
     const mediaResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media`, {
       method: "POST",
       headers: h,
-      body: JSON.stringify({ animal_id: id, created_by: identity.user.id, storage_path: path, original_name: file.name.slice(0,255), mime_type: file.type }),
+      body: JSON.stringify({ animal_id: id, created_by: identity.user.id, storage_path: path, original_name: file.name.slice(0,255), mime_type: file.type, content_sha256: sha256, file_size_bytes: file.size }),
       cache: "no-store",
     });
-    if (mediaResponse.ok) uploaded += 1; else failed.push(file.name);
+    if (mediaResponse.ok) uploaded += 1;
+    else {
+      await fetch(`${storageUrl}/object/snake-sorter-reference/${path}`, {
+        method: "DELETE",
+        headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}` },
+        cache: "no-store",
+      }).catch(() => undefined);
+      failed.push(file.name);
+    }
   }
 
-  return NextResponse.json({ ok: true, uploaded, failed });
+  return NextResponse.json({ ok: true, uploaded, duplicates, failed });
 }
