@@ -44,6 +44,7 @@ type ModelVersion = {
   artifact_format?: string | null;
   rules_version?: string | null;
   inference_config?: Record<string, unknown> | null;
+  reference_embedding_count?: number | null;
   created_at: string;
   activated_at: string | null;
 };
@@ -252,6 +253,7 @@ export function SnakeSorterModelStatus() {
             const deployMissing = [
               !model.artifact_storage_path || !model.artifact_sha256 ? "artifact" : null,
               !model.dataset_snapshot_id || !model.training_manifest_hash ? "dataset snapshot" : null,
+              !model.reference_embedding_count || model.reference_embedding_count <= 0 ? "reference embeddings" : null,
               accuracy == null || macroF1 == null ? "held-out metrics" : null,
               !individualEvaluationReady ? "held-out individual evaluation" : null,
               metricValue(model.calibration, "temperature") == null || calibrationEce == null || !individualCalibrationReady ? "individual-level calibration" : null,
@@ -273,10 +275,14 @@ export function SnakeSorterModelStatus() {
                 <div><div className="text-[8px] uppercase text-white/18">Macro F1</div><div className="mt-1 text-xs text-white/45">{macroF1 == null ? "—" : `${Math.round(macroF1 * 1000) / 10}%`}</div></div>
                 <div><div className="text-[8px] uppercase text-white/18">Calibration ECE</div><div className="mt-1 text-xs text-white/45">{calibrationEce == null ? "—" : `${Math.round(calibrationEce * 1000) / 10}%`}</div></div>
               </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 sm:grid-cols-4">
                 <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
                   <div className="text-[8px] uppercase tracking-[.08em] text-white/18">Artifact</div>
                   <div className={`mt-1 text-[10px] font-semibold ${model.artifact_storage_path ? "text-emerald-100/55" : "text-amber-100/40"}`}>{model.artifact_storage_path ? "Stored" : "Not uploaded"}</div>
+                </div>
+                <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
+                  <div className="text-[8px] uppercase tracking-[.08em] text-white/18">Reference vectors</div>
+                  <div className={`mt-1 text-[10px] font-semibold ${model.reference_embedding_count && model.reference_embedding_count > 0 ? "text-emerald-100/55" : "text-amber-100/40"}`}>{model.reference_embedding_count ?? 0}</div>
                 </div>
                 <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
                   <div className="text-[8px] uppercase tracking-[.08em] text-white/18">Artifact hash</div>
