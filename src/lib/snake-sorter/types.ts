@@ -19,6 +19,8 @@ export type SnakeSorterHints = {
   lifeStage: SnakeSorterLifeStage | "auto";
   color: SnakeSorterColor | "auto";
   localityMode: boolean;
+  provenanceHint?: string | null;
+  useProvenancePrior: boolean;
   nearestNeighbors: boolean;
   conservativeMode: boolean;
 };
