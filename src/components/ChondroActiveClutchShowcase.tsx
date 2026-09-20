@@ -11,6 +11,10 @@ type Snake = {
   subspecies: string;
   locality?: string;
   neonateColor?: "Red" | "Yellow";
+  classification?: string;
+  ancestry?: Record<string, number>;
+  localityAncestry?: Record<string, number>;
+  phenotypeScore?: number;
   highBlack?: number;
   highWhite?: number;
   blueStripe?: number;
@@ -124,6 +128,12 @@ export function ChondroActiveClutchShowcase() {
                       traits={{ highBlack: Number(baby.highBlack ?? 0), highWhite: Number(baby.highWhite ?? 0), blueStripe: Number(baby.blueStripe ?? 0), yellowRetention: Number(baby.yellowRetention ?? 0), blotches: Number(baby.blotches ?? 0) }}
                       lifeStage={save.clutchEstablished ? "Neonate" : "Hatchling"}
                       neonateColor={baby.neonateColor}
+                      locality={baby.locality}
+                      classification={baby.classification as never}
+                      ancestry={baby.ancestry as never}
+                      localityAncestry={baby.localityAncestry}
+                      phenotypeScore={baby.phenotypeScore}
+                      spriteSeed={baby.id}
                     />
                   </div>
                   <div className="mt-3 flex items-start justify-between gap-2">

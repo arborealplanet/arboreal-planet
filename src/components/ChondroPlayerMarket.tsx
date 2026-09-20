@@ -13,6 +13,8 @@ type SnakeLite = {
   lifeStage?: string;
   neonateColor?: "Red" | "Yellow";
   classification?: string;
+  ancestry?: Record<string, number>;
+  localityAncestry?: Record<string, number>;
   generation?: number;
   nidoStatus?: string;
   geneticsTested?: boolean;
@@ -155,6 +157,12 @@ export function ChondroPlayerMarket() {
                     }}
                     lifeStage={(animal.lifeStage ?? "Adult") as never}
                     neonateColor={animal.neonateColor}
+                    locality={animal.locality}
+                    classification={animal.classification as never}
+                    ancestry={animal.ancestry as never}
+                    localityAncestry={animal.localityAncestry}
+                    phenotypeScore={animal.phenotypeScore}
+                    spriteSeed={animal.id}
                     compact
                   />
                 </div>
