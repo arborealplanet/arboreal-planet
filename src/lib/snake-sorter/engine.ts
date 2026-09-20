@@ -27,9 +27,11 @@ export async function runSnakeSorterEngine(input: SnakeSorterEngineInput): Promi
 
   const form = new FormData();
   for (const frame of input.evidence) {
+    const bytes = new Uint8Array(frame.bytes.byteLength);
+    bytes.set(frame.bytes);
     form.append(
       "evidence",
-      new Blob([frame.bytes], { type: frame.mimeType }),
+      new Blob([bytes.buffer], { type: frame.mimeType }),
       frame.name,
     );
     form.append("evidence_view", frame.viewType);
