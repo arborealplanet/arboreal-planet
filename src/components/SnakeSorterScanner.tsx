@@ -209,10 +209,7 @@ export function SnakeSorterScanner() {
   }, []);
 
   useEffect(() => {
-    if (!cameraOpen) {
-      setLiveQuality(null);
-      return;
-    }
+    if (!cameraOpen) return;
     const timer = window.setInterval(() => {
       const video = videoRef.current;
       if (!video) return;
@@ -285,6 +282,7 @@ export function SnakeSorterScanner() {
 
   async function openCamera() {
     setCameraError("");
+    setLiveQuality(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
@@ -310,6 +308,7 @@ export function SnakeSorterScanner() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    setLiveQuality(null);
     setCameraOpen(false);
   }
 
