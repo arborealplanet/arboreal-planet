@@ -28,6 +28,8 @@ def parse_args():
     parser.add_argument("--calibration-json")
     parser.add_argument("--reference-embeddings")
     parser.add_argument("--error-review-json")
+    parser.add_argument("--rejection-policy-json")
+    parser.add_argument("--rejection-evaluation-json")
     parser.add_argument("--rules-version", default="rules-v1")
     parser.add_argument("--notes", default="")
     parser.add_argument("--status", choices=["evaluating", "candidate"], default="candidate")
@@ -192,6 +194,8 @@ def build_bundle(
     calibration_path: str | None,
     embeddings_path: str | None,
     error_review_path: str | None,
+    rejection_policy_path: str | None,
+    rejection_evaluation_path: str | None,
     metadata: dict,
 ) -> Path:
     temp = Path(tempfile.mkdtemp(prefix="snake-sorter-model-"))
@@ -210,6 +214,10 @@ def build_bundle(
             archive.add(embeddings_path, arcname="reference-embeddings.jsonl")
         if error_review_path:
             archive.add(error_review_path, arcname="error-review.json")
+        if rejection_policy_path:
+            archive.add(rejection_policy_path, arcname="rejection-policy.json")
+        if rejection_evaluation_path:
+            archive.add(rejection_evaluation_path, arcname="rejection-evaluation.json")
     return bundle
 
 
@@ -254,6 +262,8 @@ def main():
 
     metrics = load_json(args.metrics_json)
     calibration = load_json(args.calibration_json)
+    rejection_policy = load_json(args.rejection_policy_json)
+    rejection_evaluation = load_json(args.rejection_evaluation_json)
 
     release_metadata = {
         "name": args.name,
@@ -265,6 +275,12 @@ def main():
         "rules_version": args.rules_version,
         "metrics": metrics,
         "calibration": calibration,
+        "rejection_policy": rejection_policy,
+        "rejection_evaluation_summary": (
+            rejection_evaluation.get("test")
+            if rejection_evaluation
+            else None
+        ),
     }
 
     bundle = build_bundle(
@@ -273,6 +289,8 @@ def main():
         args.calibration_json,
         args.reference_embeddings,
         args.error_review_json,
+        args.rejection_policy_json,
+        args.rejection_evaluation_json,
         release_metadata,
     )
     artifact_hash = sha256_file(bundle)
@@ -333,6 +351,8 @@ def main():
             "temperature": calibration.get("temperature", 1.0),
             "reference_embeddings_in_bundle": bool(args.reference_embeddings),
             "error_review_in_bundle": bool(args.error_review_json),
+            "rejection_policy_in_bundle": bool(args.rejection_policy_json),
+            "rejection_policy": rejection_policy or None,
         },
     }
 
