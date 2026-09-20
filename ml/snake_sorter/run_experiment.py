@@ -26,6 +26,10 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--near-duplicate-distance", type=int, default=5)
+    parser.add_argument(
+        "--challenge-dataset",
+        help="Optional prepared challenge snapshot directory.",
+    )
     parser.add_argument("--unfreeze-backbone", action="store_true")
     return parser.parse_args()
 
@@ -58,6 +62,8 @@ def main():
     error_review_path = output / "error-review.json"
     embeddings_path = output / "reference-embeddings-train.jsonl"
     audit_path = output / "dataset-audit.json"
+    rejection_eval_path = output / "rejection-evaluation.json"
+    rejection_policy_path = output / "rejection-policy.json"
     experiment_path = output / "experiment.json"
 
     snapshot = json.loads(snapshot_metadata.read_text(encoding="utf-8"))
@@ -81,6 +87,11 @@ def main():
             "validation": "unseen individuals, predicted stage",
             "test": "untouched unseen individuals, predicted stage",
             "retrieval_embeddings": "train split only",
+            "challenge_dataset": (
+                str(Path(args.challenge_dataset).resolve())
+                if args.challenge_dataset
+                else None
+            ),
         },
     }
     experiment_path.write_text(json.dumps(experiment, indent=2), encoding="utf-8")
@@ -139,8 +150,45 @@ def main():
         "--batch-size", str(args.batch_size),
     ])
 
+    if args.challenge_dataset:
+        challenge_dataset = Path(args.challenge_dataset).resolve()
+        for required in (
+            challenge_dataset / "manifest.csv",
+            challenge_dataset / "media",
+            challenge_dataset / "snapshot.json",
+        ):
+            if not required.exists():
+                raise RuntimeError(
+                    f"Prepared challenge dataset is incomplete: missing {required}"
+                )
+
+        run([
+            sys.executable,
+            str(root / "evaluate_rejection.py"),
+            "--classifier-dataset", str(dataset),
+            "--challenge-dataset", str(challenge_dataset),
+            "--checkpoint", str(checkpoint),
+            "--reference-embeddings", str(embeddings_path),
+            "--calibration-json", str(calibration_path),
+            "--output", str(rejection_eval_path),
+            "--policy-output", str(rejection_policy_path),
+            "--batch-size", str(args.batch_size),
+            "--num-workers", str(args.num_workers),
+        ])
+
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
     calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+    rejection_evaluation = (
+        json.loads(rejection_eval_path.read_text(encoding="utf-8"))
+        if rejection_eval_path.exists()
+        else None
+    )
+    rejection_policy = (
+        json.loads(rejection_policy_path.read_text(encoding="utf-8"))
+        if rejection_policy_path.exists()
+        else None
+    )
+
     experiment.update({
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "checkpoint": str(checkpoint),
@@ -149,6 +197,8 @@ def main():
         "calibration": calibration,
         "error_review": json.loads(error_review_path.read_text(encoding="utf-8")),
         "reference_embeddings": str(embeddings_path),
+        "rejection_evaluation": rejection_evaluation,
+        "rejection_policy": rejection_policy,
     })
     experiment_path.write_text(json.dumps(experiment, indent=2), encoding="utf-8")
 
@@ -161,6 +211,12 @@ def main():
         "calibration": str(calibration_path),
         "error_review": str(error_review_path),
         "reference_embeddings": str(embeddings_path),
+        "rejection_evaluation": (
+            str(rejection_eval_path) if rejection_eval_path.exists() else None
+        ),
+        "rejection_policy": (
+            str(rejection_policy_path) if rejection_policy_path.exists() else None
+        ),
     }, indent=2))
 
 
