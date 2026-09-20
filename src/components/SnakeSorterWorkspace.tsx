@@ -26,6 +26,7 @@ type ReferenceAnimal = {
   rights_status?: string;
   rights_notes?: string | null;
   training_eligible: boolean;
+  challenge_eligible?: boolean;
   created_at: string;
 };
 
@@ -439,6 +440,11 @@ export function SnakeSorterWorkspace() {
             <label className="sm:col-span-2 flex items-center gap-3 rounded-2xl border border-white/[.06] bg-black/10 p-4 text-xs text-white/45">
               <input name="training_eligible" value="true" defaultChecked type="checkbox" className="h-4 w-4 accent-emerald-300" />
               Eligible for future training/validation after owner review
+            </label>
+
+            <label className="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-amber-300/10 bg-amber-300/[.02] p-4 text-xs text-white/45">
+              <input name="challenge_eligible" value="true" type="checkbox" className="mt-0.5 h-4 w-4 accent-amber-300" />
+              <span><span className="block font-semibold text-amber-50/55">Challenge / OOD example</span><span className="mt-1 block text-[10px] leading-4 text-white/24">Use this animal to test rejection, mixed ancestry, mislabeled-looking phenotypes, or difficult look-alikes. Challenge examples are never added to clean classifier supervision.</span></span>
             </label>
 
             <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
