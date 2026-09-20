@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
 import { SnakeSorterReferenceManager } from "@/components/SnakeSorterReferenceManager";
 import { SnakeSorterModelStatus } from "@/components/SnakeSorterModelStatus";
+import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
 
 type ReferenceAnimal = {
   id: string;
@@ -223,6 +224,8 @@ export function SnakeSorterWorkspace() {
       </div>
 
       <div id="snake-sorter-scanner" className="mt-6 scroll-mt-6"><SnakeSorterScanner /></div>
+
+      <div className="mt-6"><SnakeSorterScanHistory /></div>
 
       <div id="snake-sorter-models" className="mt-6 scroll-mt-6"><SnakeSorterModelStatus /></div>
 
