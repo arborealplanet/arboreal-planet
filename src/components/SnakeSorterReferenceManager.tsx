@@ -22,6 +22,7 @@ export type SnakeReferenceAnimal = {
   rights_status?: string;
   rights_notes?: string | null;
   training_eligible: boolean;
+  challenge_eligible?: boolean;
   created_at: string;
 };
 
@@ -65,6 +66,7 @@ export function SnakeSorterReferenceManager({
   const [purity, setPurity] = useState("all");
   const [rights, setRights] = useState("all");
   const [training, setTraining] = useState("all");
+  const [challenge, setChallenge] = useState("all");
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -90,6 +92,8 @@ export function SnakeSorterReferenceManager({
       if (rights !== "all" && (animal.rights_status ?? "unknown") !== rights) return false;
       if (training === "eligible" && !animal.training_eligible) return false;
       if (training === "excluded" && animal.training_eligible) return false;
+      if (challenge === "eligible" && !animal.challenge_eligible) return false;
+      if (challenge === "excluded" && animal.challenge_eligible) return false;
       if (attentionOnly) {
         const needsAttention =
           (animal.review_status ?? "pending") !== "approved" ||
@@ -104,7 +108,7 @@ export function SnakeSorterReferenceManager({
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalized));
     });
-  }, [animals, query, taxon, stage, color, review, split, confidence, purity, rights, training, attentionOnly]);
+  }, [animals, query, taxon, stage, color, review, split, confidence, purity, rights, training, challenge, attentionOnly]);
 
   async function openAnimal(id: string) {
     setDetailLoading(true);
@@ -122,6 +126,7 @@ export function SnakeSorterReferenceManager({
     setMessage("");
     const payload: Record<string, unknown> = Object.fromEntries(formData.entries());
     payload.training_eligible = formData.get("training_eligible") === "true";
+    payload.challenge_eligible = formData.get("challenge_eligible") === "true";
     const response = await fetch(`/api/snake-sorter/references/${detail.animal.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -258,8 +263,11 @@ export function SnakeSorterReferenceManager({
           <select value={training} onChange={(e) => setTraining(e.target.value)} className={field}>
             <option value="all">All training states</option><option value="eligible">Training eligible</option><option value="excluded">Reference only / excluded</option>
           </select>
+          <select value={challenge} onChange={(e) => setChallenge(e.target.value)} className={field}>
+            <option value="all">All challenge states</option><option value="eligible">Challenge / OOD eligible</option><option value="excluded">Not challenge eligible</option>
+          </select>
           <button type="button" onClick={() => setAttentionOnly((value) => !value)} className={`${mini} ${attentionOnly ? "border-amber-300/20 bg-amber-300/[.05] text-amber-100/65" : ""}`}>{attentionOnly ? "Showing needs attention" : "Needs attention"}</button>
-          <button type="button" onClick={() => { setQuery(""); setTaxon("all"); setStage("all"); setColor("all"); setReview("all"); setSplit("all"); setConfidence("all"); setPurity("all"); setRights("all"); setTraining("all"); setAttentionOnly(false); }} className={mini}>Reset filters</button>
+          <button type="button" onClick={() => { setQuery(""); setTaxon("all"); setStage("all"); setColor("all"); setReview("all"); setSplit("all"); setConfidence("all"); setPurity("all"); setRights("all"); setTraining("all"); setChallenge("all"); setAttentionOnly(false); }} className={mini}>Reset filters</button>
         </div>
 
         <div className="mt-5 max-h-[760px] space-y-2 overflow-y-auto pr-1">
@@ -358,6 +366,7 @@ export function SnakeSorterReferenceManager({
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights notes<input name="rights_notes" defaultValue={detail.animal.rights_notes ?? ""} className={`${field} mt-2 normal-case tracking-normal`} /></label>
               </div>
               <label className="mt-3 flex items-center gap-3 rounded-xl border border-white/[.05] p-3 text-xs text-white/40"><input name="training_eligible" value="true" type="checkbox" defaultChecked={detail.animal.training_eligible} className="h-4 w-4 accent-emerald-300" />Candidate for future model training/validation</label>
+              <label className="mt-3 flex items-start gap-3 rounded-xl border border-amber-300/10 bg-amber-300/[.02] p-3 text-xs text-white/40"><input name="challenge_eligible" value="true" type="checkbox" defaultChecked={Boolean(detail.animal.challenge_eligible)} className="mt-0.5 h-4 w-4 accent-amber-300" /><span><span className="block text-amber-50/55">Challenge / OOD example</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Held out of clean classifier supervision; useful for rejection and difficult-case evaluation.</span></span></label>
               <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Review notes<textarea name="review_notes" defaultValue={detail.animal.review_notes ?? ""} className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="Why approved, held or rejected; label concerns; provenance issues…" /></label>
             </div>
 
