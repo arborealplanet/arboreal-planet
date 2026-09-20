@@ -42,31 +42,58 @@ export function ChondroSnakeIcon({
   });
   const isSubadult = lifeStage === "Subadult";
   const versionedCandidates = rawCandidates.map(
-    (src) => `${src}?v=2026-09-20-runtime-fallback-v1`,
+    (src) => `${src}?v=2026-09-20-visible-recovery-v2`,
   );
   const versionedSrc = versionedCandidates[0] ?? null;
 
+  const advanceSprite = (image: HTMLImageElement) => {
+    const currentIndex = Number(image.dataset.spriteIndex ?? "0");
+    const nextIndex = currentIndex + 1;
+    const nextSrc = versionedCandidates[nextIndex];
+    if (nextSrc) {
+      image.dataset.spriteIndex = String(nextIndex);
+      image.src = nextSrc;
+      return;
+    }
+    image.style.display = "none";
+    const fallback = image.nextElementSibling as HTMLElement | null;
+    if (fallback) fallback.style.display = "grid";
+  };
+
+  const recoverIfVisuallyEmpty = (image: HTMLImageElement) => {
+    try {
+      const width = Math.max(1, Math.min(48, image.naturalWidth || 1));
+      const height = Math.max(1, Math.min(48, image.naturalHeight || 1));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      const pixels = context.getImageData(0, 0, width, height).data;
+      let visiblePixels = 0;
+      const totalPixels = width * height;
+      for (let index = 3; index < pixels.length; index += 4) {
+        if (pixels[index] > 12) visiblePixels += 1;
+      }
+      if (visiblePixels / totalPixels < 0.005) advanceSprite(image);
+    } catch {
+      // Same-origin Keeper sprites should be readable. If a browser blocks
+      // canvas inspection, keep the successfully-loaded image rather than
+      // incorrectly hiding valid art.
+    }
+  };
+
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
       {versionedSrc ? (
         <img
           key={versionedSrc}
           src={versionedSrc}
           data-sprite-index="0"
-          onError={(event) => {
-            const image = event.currentTarget;
-            const currentIndex = Number(image.dataset.spriteIndex ?? "0");
-            const nextIndex = currentIndex + 1;
-            const nextSrc = versionedCandidates[nextIndex];
-            if (nextSrc) {
-              image.dataset.spriteIndex = String(nextIndex);
-              image.src = nextSrc;
-              return;
-            }
-            image.style.display = "none";
-            const fallback = image.nextElementSibling as HTMLElement | null;
-            if (fallback) fallback.style.display = "grid";
-          }}
+          onLoad={(event) => recoverIfVisuallyEmpty(event.currentTarget)}
+          onError={(event) => advanceSprite(event.currentTarget)}
           alt={`${name} illustrated virtual game portrait`}
           className={`h-full w-full object-contain p-1 sm:p-2 ${isSubadult ? "scale-[0.86]" : ""}`}
         />
