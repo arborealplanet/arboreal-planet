@@ -336,6 +336,27 @@ export function SnakeSorterWorkspace() {
         ))}
       </div>
 
+      {stats.animals === 0 && (
+        <div className="mt-6 rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.02] p-5 sm:p-6">
+          <div className="section-kicker">Start here</div>
+          <h2 className="mt-2 text-2xl font-semibold">Build the first clean reference set</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/30">Snake Sorter is structurally ready, but the live reference library is empty. The fastest safe path is to import known animals, review them, assign independent splits, freeze a classifier snapshot, and only then train the first experimental model.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              ["1", "Import", "Add known individuals and their images."],
+              ["2", "Review", "Approve only labels and provenance you trust."],
+              ["3", "Split", "Use Auto-assign splits after review."],
+              ["4", "Snapshot", "Freeze the exact classifier dataset."],
+              ["5", "Train", "Run the versioned experiment pipeline."],
+            ].map(([step,title,copy]) => <div key={step} className="rounded-2xl border border-white/[.055] bg-black/[.05] p-3"><div className="text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/38">Step {step}</div><div className="mt-1 text-xs font-semibold text-white/48">{title}</div><div className="mt-1 text-[9px] leading-4 text-white/20">{copy}</div></div>)}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href="#snake-sorter-bulk-import" className="rounded-xl bg-emerald-300 px-4 py-2.5 text-[10px] font-black text-[#06100c]">Go to bulk import</a>
+            <a href="#snake-sorter-reference-library" className="rounded-xl border border-white/[.08] bg-white/[.025] px-4 py-2.5 text-[10px] font-black text-white/45">Go to review queue</a>
+          </div>
+        </div>
+      )}
+
       <div id="snake-sorter-scanner" className="mt-6 scroll-mt-6"><SnakeSorterScanner onReferenceAdded={() => void load()} /></div>
 
       <div className="mt-6"><SnakeSorterScanHistory /></div>
@@ -619,7 +640,7 @@ export function SnakeSorterWorkspace() {
         </aside>
       </div>
 
-      <div className="mt-6">
+      <div id="snake-sorter-reference-library" className="mt-6 scroll-mt-6">
         <SnakeSorterReferenceManager animals={animals} media={media} onRefresh={load} />
       </div>
     </section>
