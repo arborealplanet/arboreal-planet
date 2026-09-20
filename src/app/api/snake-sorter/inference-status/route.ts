@@ -51,6 +51,7 @@ export async function GET() {
       modelRegistryId: typeof data.modelRegistryId === "string" ? data.modelRegistryId : null,
       device: typeof data.device === "string" ? data.device : null,
       references: typeof data.references === "number" ? data.references : 0,
+      embeddingDimension: typeof data.embeddingDimension === "number" ? data.embeddingDimension : null,
     });
   } catch (error) {
     return NextResponse.json({
