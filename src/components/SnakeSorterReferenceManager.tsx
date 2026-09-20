@@ -91,7 +91,7 @@ export function SnakeSorterReferenceManager({
     if (!detail) return;
     setSaving(true);
     setMessage("");
-    const payload = Object.fromEntries(formData.entries());
+    const payload: Record<string, unknown> = Object.fromEntries(formData.entries());
     payload.training_eligible = formData.get("training_eligible") === "true";
     const response = await fetch(`/api/snake-sorter/references/${detail.animal.id}`, {
       method: "PATCH",
