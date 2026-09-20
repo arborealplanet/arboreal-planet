@@ -34,16 +34,42 @@ function fitSize(width: number, height: number, maxDimension = 1800) {
 }
 
 async function normalizeImage(file: File, index: number) {
-  const bitmap = await createImageBitmap(file);
-  const size = fitSize(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
-  canvas.width = size.width;
-  canvas.height = size.height;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas unavailable");
-  context.drawImage(bitmap, 0, 0, size.width, size.height);
-  bitmap.close();
-  return canvasToFile(canvas, `evidence-image-${index + 1}.jpg`);
+
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      const size = fitSize(bitmap.width, bitmap.height);
+      canvas.width = size.width;
+      canvas.height = size.height;
+      context.drawImage(bitmap, 0, 0, size.width, size.height);
+      bitmap.close();
+      return canvasToFile(canvas, `evidence-image-${index + 1}.jpg`);
+    } catch {
+      // Fall through to browser image decoding for formats/devices that
+      // createImageBitmap cannot decode reliably.
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error(`This browser could not decode ${file.name}.`));
+    });
+    const size = fitSize(image.naturalWidth || image.width, image.naturalHeight || image.height);
+    canvas.width = size.width;
+    canvas.height = size.height;
+    context.drawImage(image, 0, 0, size.width, size.height);
+    return canvasToFile(canvas, `evidence-image-${index + 1}.jpg`);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 async function sampleVideo(file: File, mode: string, sourceIndex: number) {
