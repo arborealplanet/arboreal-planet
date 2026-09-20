@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
   const notes = text(form.get("notes"), 4000);
   const trainingEligible = text(form.get("training_eligible"), 10) !== "false";
   const challengeEligible = text(form.get("challenge_eligible"), 10) === "true";
+  const challengeExpectation = text(form.get("challenge_expectation"), 20) || "review";
   const rightsStatus = text(form.get("rights_status"), 40) || "unknown";
   const rightsNotes = text(form.get("rights_notes"), 2000);
 
@@ -75,8 +76,9 @@ export async function POST(request: NextRequest) {
   const allowedPurity = new Set(["known_pure", "believed_pure", "possible_mixed", "hybrid", "unknown"]);
   const allowedSources = new Set(["personal", "breeder", "listing", "publication", "other"]);
   const allowedRights = new Set(["owned_by_owner","permission_granted","private_reference_only","unknown"]);
+  const allowedChallengeExpectation = new Set(["reject","classify","review"]);
 
-  if (!allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedSources.has(sourceType) || !allowedRights.has(rightsStatus)) {
+  if (!allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedSources.has(sourceType) || !allowedRights.has(rightsStatus) || !allowedChallengeExpectation.has(challengeExpectation)) {
     return NextResponse.json({ error: "Invalid reference metadata" }, { status: 400 });
   }
 
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
       training_eligible: trainingEligible,
       challenge_eligible: challengeEligible,
+      challenge_expectation: challengeExpectation,
       rights_status: rightsStatus,
       rights_notes: rightsNotes || null,
     }),
