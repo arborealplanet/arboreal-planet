@@ -113,6 +113,25 @@ export async function POST(request: NextRequest) {
     }, { status: 409 });
   }
 
+  if (purpose === "challenge") {
+    const challengeGroupExpectations = new Map<string, Set<string>>();
+    for (const animal of animals) {
+      const group = String(animal.split_group ?? "").trim();
+      if (!group) continue;
+      const expectations = challengeGroupExpectations.get(group) ?? new Set<string>();
+      expectations.add(String(animal.challenge_expectation ?? "review"));
+      challengeGroupExpectations.set(group, expectations);
+    }
+    const conflictingExpectation = [...challengeGroupExpectations.entries()]
+      .find(([, expectations]) => expectations.size > 1);
+    if (conflictingExpectation) {
+      return NextResponse.json({
+        error: "A related challenge group has conflicting expected behaviors. Keep each related group consistently Reject, Classify, or Review.",
+        split_group: conflictingExpectation[0],
+      }, { status: 409 });
+    }
+  }
+
   const animalMap = new Map(animals.map((animal) => [String(animal.id), animal]));
   const rows = media.flatMap((item) => {
     const animal = animalMap.get(String(item.animal_id));
