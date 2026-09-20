@@ -242,14 +242,14 @@ def main():
 
     snapshot_response = requests.get(
         f"{supabase_url}/rest/v1/snake_sorter_dataset_snapshots",
-        params={"id": f"eq.{args.snapshot_id}", "finalized": "eq.true", "select": "*", "limit": "1"},
+        params={"id": f"eq.{args.snapshot_id}", "finalized": "eq.true", "purpose": "eq.classifier", "select": "*", "limit": "1"},
         headers=api_headers(publishable_key, access_token),
         timeout=30,
     )
     snapshot_response.raise_for_status()
     snapshots = snapshot_response.json()
     if not snapshots:
-        raise RuntimeError("Finalized dataset snapshot was not found or is not accessible")
+        raise RuntimeError("Finalized classifier snapshot was not found or is not accessible")
     snapshot = snapshots[0]
 
     metrics = load_json(args.metrics_json)
