@@ -97,6 +97,44 @@ export function SnakeSorterWorkspace() {
     });
   }, [animals, mediaCount]);
 
+
+  const diagnostics = useMemo(() => {
+    const approved = animals.filter((animal) => animal.review_status === "approved");
+    const pending = animals.filter((animal) => !animal.review_status || animal.review_status === "pending");
+    const noImages = animals.filter((animal) => (mediaCount.get(animal.id) ?? 0) === 0);
+    const approvedUnassigned = approved.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned");
+    const train = approved.filter((animal) => animal.dataset_split === "train").length;
+    const validation = approved.filter((animal) => animal.dataset_split === "validation").length;
+    const test = approved.filter((animal) => animal.dataset_split === "test").length;
+
+    const targets = [
+      ["M. a. azurea · red neonate", "Morelia azurea azurea", "red"],
+      ["M. a. azurea · yellow neonate", "Morelia azurea azurea", "yellow"],
+      ["M. a. pulcher · red neonate", "Morelia azurea pulcher", "red"],
+      ["M. a. pulcher · yellow neonate", "Morelia azurea pulcher", "yellow"],
+      ["M. a. utaraensis · red neonate", "Morelia azurea utaraensis", "red"],
+      ["M. a. utaraensis · yellow neonate", "Morelia azurea utaraensis", "yellow"],
+      ["M. viridis · yellow neonate", "Morelia viridis", "yellow"],
+    ] as const;
+
+    const collectionTargets = targets.map(([label, taxon, color]) => {
+      const count = animals.filter((animal) => animal.taxon === taxon && animal.life_stage === "neonate" && animal.neonate_color === color).length;
+      const priority = count < 10 ? "High" : count < 25 ? "Medium" : "Lower";
+      return { label, count, priority };
+    }).sort((a, b) => a.count - b.count);
+
+    return {
+      approved: approved.length,
+      pending: pending.length,
+      noImages: noImages.length,
+      approvedUnassigned: approvedUnassigned.length,
+      train,
+      validation,
+      test,
+      collectionTargets,
+    };
+  }, [animals, mediaCount]);
+
   async function addReference(formData: FormData) {
     setSaving(true);
     setMessage("");
@@ -230,6 +268,22 @@ export function SnakeSorterWorkspace() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="panel rounded-[28px] p-5 sm:p-6">
+            <div className="section-kicker">Dataset diagnostics</div>
+            <h2 className="mt-3 text-2xl font-semibold">Collection priorities</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {[["Approved",diagnostics.approved],["Pending review",diagnostics.pending],["No images",diagnostics.noImages],["Approved / unassigned",diagnostics.approvedUnassigned]].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.07] p-3"><div className="text-lg font-semibold text-white/60">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/22">{name}</div></div>)}
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/[.055] bg-black/[.07] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Approved split balance</div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><div className="text-lg font-semibold text-white/58">{diagnostics.train}</div><div className="text-[8px] uppercase text-white/20">Train</div></div><div><div className="text-lg font-semibold text-white/58">{diagnostics.validation}</div><div className="text-[8px] uppercase text-white/20">Validation</div></div><div><div className="text-lg font-semibold text-white/58">{diagnostics.test}</div><div className="text-[8px] uppercase text-white/20">Test</div></div></div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {diagnostics.collectionTargets.map((target) => <div key={target.label} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2.5"><div><div className="text-[11px] font-semibold text-white/48">{target.label}</div><div className="mt-1 text-[9px] text-white/20">{target.count} individual(s)</div></div><span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${target.priority==="High"?"border-rose-300/15 bg-rose-300/[.04] text-rose-100/55":target.priority==="Medium"?"border-amber-300/15 bg-amber-300/[.04] text-amber-100/55":"border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/55"}`}>{target.priority}</span></div>)}
+            </div>
+            <p className="mt-4 text-[10px] leading-5 text-white/20">Priority labels are collection guidance only; they do not mean a group is scientifically sufficient for training.</p>
           </div>
 
           <div className="panel rounded-[28px] p-5 sm:p-6">
