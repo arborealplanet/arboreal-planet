@@ -74,6 +74,11 @@ class ReferenceIndex:
                 vectors.append(vector)
 
         if vectors:
+            dimensions = {len(vector) for vector in vectors}
+            if dimensions != {256}:
+                raise RuntimeError(
+                    f"Reference embeddings must all be 256-D; found {sorted(dimensions)}"
+                )
             self.matrix = F.normalize(torch.tensor(vectors, dtype=torch.float32), dim=-1)
 
     def nearest(self, embedding: torch.Tensor, limit: int = 8) -> list[dict[str, Any]]:
@@ -117,6 +122,10 @@ class Runtime:
 
         checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
         self.config = checkpoint["config"]
+        if int(self.config.get("embedding_dim", 0)) != 256:
+            raise RuntimeError(
+                "Production Snake Sorter inference requires 256-D embeddings"
+            )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoImageProcessor.from_pretrained(self.config["encoder"])
         self.model = SnakeSorterModel(
@@ -141,7 +150,22 @@ class Runtime:
             "SNAKE_SORTER_MODEL_REGISTRY_ID",
             "",
         ).strip() or None
-        self.references = ReferenceIndex(os.environ.get("SNAKE_SORTER_REFERENCE_EMBEDDINGS"))
+        reference_path = os.environ.get("SNAKE_SORTER_REFERENCE_EMBEDDINGS")
+        self.references = ReferenceIndex(reference_path)
+
+        if self.model_registry_id:
+            if not os.environ.get("SNAKE_SORTER_MODEL_VERSION", "").strip():
+                raise RuntimeError(
+                    "Registry-bound inference requires SNAKE_SORTER_MODEL_VERSION"
+                )
+            if not reference_path:
+                raise RuntimeError(
+                    "Registry-bound inference requires SNAKE_SORTER_REFERENCE_EMBEDDINGS"
+                )
+            if not self.references.records:
+                raise RuntimeError(
+                    "Registry-bound inference requires a non-empty reference index"
+                )
 
 
 app = FastAPI(title="Snake Sorter Inference", version="1")
@@ -172,6 +196,11 @@ def health(authorization: str | None = Header(default=None)) -> dict[str, Any]:
         "modelRegistryId": runtime.model_registry_id if runtime else None,
         "device": str(runtime.device) if runtime else None,
         "references": len(runtime.references.records) if runtime else 0,
+        "embeddingDimension": (
+            int(runtime.references.matrix.shape[1])
+            if runtime and runtime.references.matrix.ndim == 2 and runtime.references.matrix.numel()
+            else None
+        ),
     }
 
 
