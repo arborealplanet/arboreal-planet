@@ -9,6 +9,12 @@ type DatasetSnapshot = {
   animal_count: number;
   media_count: number;
   notes: string | null;
+  artifact_storage_path?: string | null;
+  artifact_sha256?: string | null;
+  artifact_size_bytes?: number | null;
+  artifact_format?: string | null;
+  rules_version?: string | null;
+  inference_config?: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -160,6 +166,20 @@ export function SnakeSorterModelStatus() {
                 <div><div className="text-[8px] uppercase text-white/18">Images</div><div className="mt-1 text-xs text-white/45">{model.training_media_count ?? "—"}</div></div>
                 <div><div className="text-[8px] uppercase text-white/18">Accuracy</div><div className="mt-1 text-xs text-white/45">{accuracy == null ? "—" : `${Math.round(accuracy * 1000) / 10}%`}</div></div>
                 <div><div className="text-[8px] uppercase text-white/18">Macro F1</div><div className="mt-1 text-xs text-white/45">{macroF1 == null ? "—" : `${Math.round(macroF1 * 1000) / 10}%`}</div></div>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
+                  <div className="text-[8px] uppercase tracking-[.08em] text-white/18">Artifact</div>
+                  <div className={`mt-1 text-[10px] font-semibold ${model.artifact_storage_path ? "text-emerald-100/55" : "text-amber-100/40"}`}>{model.artifact_storage_path ? "Stored" : "Not uploaded"}</div>
+                </div>
+                <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
+                  <div className="text-[8px] uppercase tracking-[.08em] text-white/18">Artifact hash</div>
+                  <div className="mt-1 truncate font-mono text-[9px] text-white/34">{model.artifact_sha256 ? `${model.artifact_sha256.slice(0,16)}…` : "—"}</div>
+                </div>
+                <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
+                  <div className="text-[8px] uppercase tracking-[.08em] text-white/18">Rules version</div>
+                  <div className="mt-1 text-[10px] text-white/34">{model.rules_version || "—"}</div>
+                </div>
               </div>
               {model.notes && <div className="mt-3 text-[10px] leading-5 text-white/24">{model.notes}</div>}
               {model.status === "candidate" && <button type="button" disabled={Boolean(activating)} onClick={() => void activate(model)} className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-3 py-2 text-[10px] font-black text-amber-100/60 disabled:opacity-40">{activating === model.id ? "Activating…" : "Promote candidate to active"}</button>}
