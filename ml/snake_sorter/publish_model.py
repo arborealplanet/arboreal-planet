@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument("--name", default="Snake Sorter DINOv3")
     parser.add_argument("--version", required=True)
     parser.add_argument("--snapshot-id", required=True)
+    parser.add_argument("--challenge-snapshot-id")
     parser.add_argument("--metrics-json")
     parser.add_argument("--calibration-json")
     parser.add_argument("--reference-embeddings")
@@ -265,11 +266,45 @@ def main():
     rejection_policy = load_json(args.rejection_policy_json)
     rejection_evaluation = load_json(args.rejection_evaluation_json)
 
+    challenge_snapshot = None
+    if rejection_policy.get("source") == "challenge_calibrated":
+        if not args.challenge_snapshot_id:
+            raise RuntimeError(
+                "Challenge-calibrated rejection policies require --challenge-snapshot-id"
+            )
+        challenge_response = requests.get(
+            f"{supabase_url}/rest/v1/snake_sorter_dataset_snapshots",
+            params={
+                "id": f"eq.{args.challenge_snapshot_id}",
+                "finalized": "eq.true",
+                "purpose": "eq.challenge",
+                "select": "*",
+                "limit": "1",
+            },
+            headers=api_headers(publishable_key, access_token),
+            timeout=30,
+        )
+        challenge_response.raise_for_status()
+        challenge_rows = challenge_response.json()
+        if not challenge_rows:
+            raise RuntimeError(
+                "Finalized challenge snapshot was not found or is not accessible"
+            )
+        challenge_snapshot = challenge_rows[0]
+
     release_metadata = {
         "name": args.name,
         "version": args.version,
         "dataset_snapshot_id": args.snapshot_id,
         "dataset_manifest_sha256": snapshot["manifest_sha256"],
+        "challenge_snapshot_id": (
+            challenge_snapshot["id"] if challenge_snapshot else None
+        ),
+        "challenge_manifest_sha256": (
+            challenge_snapshot["manifest_sha256"]
+            if challenge_snapshot
+            else None
+        ),
         "encoder": config["encoder"],
         "embedding_dimension": config["embedding_dim"],
         "rules_version": args.rules_version,
@@ -341,6 +376,9 @@ def main():
         "notes": args.notes or None,
         "created_by": user_id,
         "dataset_snapshot_id": args.snapshot_id,
+        "challenge_snapshot_id": (
+            challenge_snapshot["id"] if challenge_snapshot else None
+        ),
         "artifact_storage_path": object_path,
         "artifact_sha256": artifact_hash,
         "artifact_size_bytes": bundle.stat().st_size,
@@ -353,6 +391,14 @@ def main():
             "error_review_in_bundle": bool(args.error_review_json),
             "rejection_policy_in_bundle": bool(args.rejection_policy_json),
             "rejection_policy": rejection_policy or None,
+            "challenge_snapshot_id": (
+                challenge_snapshot["id"] if challenge_snapshot else None
+            ),
+            "challenge_manifest_sha256": (
+                challenge_snapshot["manifest_sha256"]
+                if challenge_snapshot
+                else None
+            ),
         },
     }
 
@@ -422,6 +468,9 @@ def main():
         "artifact_sha256": artifact_hash,
         "artifact_size_bytes": bundle.stat().st_size,
         "dataset_snapshot_id": args.snapshot_id,
+        "challenge_snapshot_id": (
+            challenge_snapshot["id"] if challenge_snapshot else None
+        ),
         "reference_embedding_count": registered.get("reference_embedding_count", 0),
     }, indent=2))
 
