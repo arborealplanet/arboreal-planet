@@ -9,6 +9,7 @@ import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
 type ReferenceAnimal = {
   id: string;
   animal_code: string | null;
+  split_group?: string | null;
   taxon: string;
   locality: string | null;
   life_stage: string;
@@ -145,13 +146,19 @@ export function SnakeSorterWorkspace() {
     const approvedTrainingRightsUnknown = approved.filter((animal) => animal.training_eligible && (!animal.rights_status || animal.rights_status === "unknown")).length;
 
     const targetTaxa = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"] as const;
+    const independentGroupKey = (animal: ReferenceAnimal) => animal.split_group?.trim() || animal.id;
     const taxonSplitCoverage = targetTaxa.map((taxon) => {
       const rows = eligibleApproved.filter((animal) => animal.taxon === taxon);
+      const countGroups = (splitName: string) => new Set(
+        rows
+          .filter((animal) => animal.dataset_split === splitName)
+          .map(independentGroupKey)
+      ).size;
       return {
         taxon,
-        train: rows.filter((animal) => animal.dataset_split === "train").length,
-        validation: rows.filter((animal) => animal.dataset_split === "validation").length,
-        test: rows.filter((animal) => animal.dataset_split === "test").length,
+        train: countGroups("train"),
+        validation: countGroups("validation"),
+        test: countGroups("test"),
       };
     });
 
@@ -161,9 +168,9 @@ export function SnakeSorterWorkspace() {
     if (approvedTrainingRightsUnknown) readinessBlockers.push(`${approvedTrainingRightsUnknown} approved training animal(s) still have unknown rights status.`);
     if (approvedTrainingNoAcceptedMedia) readinessBlockers.push(`${approvedTrainingNoAcceptedMedia} approved training animal(s) have no accepted image.`);
     for (const row of taxonSplitCoverage) {
-      if (!row.train) readinessBlockers.push(`${row.taxon} has no train individual.`);
-      if (!row.validation) readinessBlockers.push(`${row.taxon} has no validation individual.`);
-      if (!row.test) readinessBlockers.push(`${row.taxon} has no test individual.`);
+      if (!row.train) readinessBlockers.push(`${row.taxon} has no independent train group.`);
+      if (!row.validation) readinessBlockers.push(`${row.taxon} has no independent validation group.`);
+      if (!row.test) readinessBlockers.push(`${row.taxon} has no independent test group.`);
     }
 
     const readinessWarnings: string[] = [];
@@ -458,6 +465,7 @@ export function SnakeSorterWorkspace() {
                 </div>
                 <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${diagnostics.structurallyReady ? "border-emerald-300/15 text-emerald-100/60" : "border-amber-300/15 text-amber-100/55"}`}>{diagnostics.structurallyReady ? "Ready to experiment" : "Blocked"}</span>
               </div>
+              <div className="mt-3 text-[9px] leading-4 text-white/20">T / V / X below count independent evaluation groups, not raw sibling animals.</div>
               <div className="mt-3 space-y-2">
                 {diagnostics.taxonSplitCoverage.map((row) => (
                   <div key={row.taxon} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 rounded-xl border border-white/[.045] bg-black/[.05] px-3 py-2">
