@@ -39,7 +39,8 @@ const checks = [
       'arboreal-chondro-clutch-action',
       'arboreal-chondro-enclosure-action',
       'aria-label="Open game options"',
-      'subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"',
+      "function normalizeChondroNeonateColor(",
+      'if (locality === "Kofiau") return "Yellow";',
       "updatedAt: Date.now()",
       "keepalive: true",
       "const [breederIdentityLoaded, setBreederIdentityLoaded] = useState(false);",
@@ -110,7 +111,7 @@ const checks = [
   {
     file: "src/components/ChondroBreederExpandedShop.tsx",
     markers: [
-      'subspecies === "Morelia viridis" ? "Yellow"',
+      'subspecies === "Morelia viridis" || locality === "Kofiau"',
       'const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";',
       "const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;",
       "Next shop refresh",
