@@ -21,6 +21,9 @@ jobs:
       - name: Validate Snake Sorter Python
         run: python -m compileall -q ml/snake_sorter
 
+      - name: Test Snake Sorter policy rules
+        run: python -m unittest discover -s ml/snake_sorter/tests -p "test_*.py" -v
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
