@@ -53,7 +53,8 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Wamena: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate-v3.webp")],
+      // Red temporarily disabled: the current binary renders blank/corrupt in production.
+      // Re-enable only after a clean owner-supplied Wamena red neonate asset is ingested.
       Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
