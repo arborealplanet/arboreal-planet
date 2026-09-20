@@ -223,7 +223,7 @@ export function SnakeSorterWorkspace() {
         ))}
       </div>
 
-      <div id="snake-sorter-scanner" className="mt-6 scroll-mt-6"><SnakeSorterScanner /></div>
+      <div id="snake-sorter-scanner" className="mt-6 scroll-mt-6"><SnakeSorterScanner onReferenceAdded={() => void load()} /></div>
 
       <div className="mt-6"><SnakeSorterScanHistory /></div>
 
