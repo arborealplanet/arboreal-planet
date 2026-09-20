@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
   const colorHint = String(form.get("color_hint") ?? "auto");
   const frameSampling = String(form.get("frame_sampling") ?? "balanced");
   const scanMode = String(form.get("scan_mode") ?? "deep");
+  const provenanceHint = String(form.get("provenance_hint") ?? "").trim().slice(0, 120);
+  const useProvenancePrior = String(form.get("use_provenance_prior") ?? "false") === "true";
   const evidenceViews = form.getAll("evidence_view").map((value) => String(value));
   if (!allowedStages.has(lifeStageHint) || !allowedColors.has(colorHint) || !allowedSampling.has(frameSampling) || !allowedModes.has(scanMode) || evidenceViews.some((view) => !allowedViews.has(view))) {
     return NextResponse.json({ error: "Invalid analysis settings." }, { status: 400 });
@@ -99,6 +101,8 @@ export async function POST(request: NextRequest) {
       locality_mode: contextFlags.localityMode,
       nearest_neighbors: contextFlags.nearestNeighbors,
       scan_mode: scanMode,
+      provenance_hint: provenanceHint || null,
+      use_provenance_prior: useProvenancePrior,
       status: "prepared",
     }),
     cache: "no-store",
@@ -117,6 +121,8 @@ export async function POST(request: NextRequest) {
       lifeStage: lifeStageHint as SnakeSorterLifeStage | "auto",
       color: colorHint as SnakeSorterColor | "auto",
       localityMode: contextFlags.localityMode,
+      provenanceHint: provenanceHint || null,
+      useProvenancePrior,
       nearestNeighbors: contextFlags.nearestNeighbors,
       conservativeMode: contextFlags.conservativeMode,
     },
@@ -154,6 +160,8 @@ export async function POST(request: NextRequest) {
       frame_sampling: frameSampling,
       scan_mode: scanMode,
       evidence_views: prepared.map((frame) => frame.viewType),
+      provenance_hint: provenanceHint || null,
+      use_provenance_prior: useProvenancePrior,
       locality_mode: contextFlags.localityMode,
       nearest_neighbors: contextFlags.nearestNeighbors,
       conservative_mode: contextFlags.conservativeMode,
