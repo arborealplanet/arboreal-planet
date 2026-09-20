@@ -38,6 +38,7 @@ type ModelVersion = {
   training_animal_count: number | null;
   training_media_count: number | null;
   dataset_snapshot_id?: string | null;
+  challenge_snapshot_id?: string | null;
   training_manifest_hash?: string | null;
   metrics: Record<string, unknown> | null;
   calibration: Record<string, unknown> | null;
@@ -272,6 +273,9 @@ export function SnakeSorterModelStatus() {
             const weakestView = weakestSubgroup(model.metrics, "by_view");
             const classificationReport = objectValue(model.metrics, "classification_report");
             const rejectionPolicy = objectValue(model.inference_config ?? null, "rejection_policy");
+            const challengeSnapshot = model.challenge_snapshot_id
+              ? snapshots.find((snapshot) => snapshot.id === model.challenge_snapshot_id)
+              : null;
             const rejectionSource = textValue(rejectionPolicy, "source") || "fallback";
             const rejectionValidated = rejectionPolicy?.validated === true;
             const deployMissing = [
@@ -344,6 +348,13 @@ export function SnakeSorterModelStatus() {
                 <div className="text-[8px] font-black uppercase tracking-[.08em] text-white/20">Unknown / Review policy</div>
                 <div className="mt-1 text-[10px] font-semibold text-white/42">{rejectionValidated ? "Challenge validated" : rejectionSource === "challenge_calibrated" ? "Challenge calibrated · more challenge data needed" : "Fallback thresholds only"}</div>
                 <div className="mt-1 text-[9px] leading-4 text-white/20">{rejectionValidated ? "Difficult-case rejection behavior has passed the challenge-policy validation minimum." : "This does not block experimental model activation, but rejection behavior should be treated as provisional."}</div>
+                {rejectionSource === "challenge_calibrated" && (
+                  <div className="mt-2 border-t border-white/[.05] pt-2">
+                    <div className="text-[8px] uppercase tracking-[.08em] text-white/16">Challenge snapshot</div>
+                    <div className="mt-1 text-[9px] text-white/32">{challengeSnapshot?.name || (model.challenge_snapshot_id ? "Linked immutable snapshot" : "Missing challenge snapshot")}</div>
+                    {model.challenge_snapshot_id && <div className="mt-1 truncate font-mono text-[8px] text-white/16">{model.challenge_snapshot_id}</div>}
+                  </div>
+                )}
               </div>
               {model.notes && <div className="mt-3 text-[10px] leading-5 text-white/24">{model.notes}</div>}
               {model.status === "candidate" && (
