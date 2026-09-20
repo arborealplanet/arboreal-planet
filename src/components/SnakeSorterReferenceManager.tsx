@@ -23,6 +23,7 @@ export type SnakeReferenceAnimal = {
   rights_notes?: string | null;
   training_eligible: boolean;
   challenge_eligible?: boolean;
+  challenge_expectation?: "reject" | "classify" | "review";
   created_at: string;
 };
 
@@ -367,6 +368,7 @@ export function SnakeSorterReferenceManager({
               </div>
               <label className="mt-3 flex items-center gap-3 rounded-xl border border-white/[.05] p-3 text-xs text-white/40"><input name="training_eligible" value="true" type="checkbox" defaultChecked={detail.animal.training_eligible} className="h-4 w-4 accent-emerald-300" />Candidate for future model training/validation</label>
               <label className="mt-3 flex items-start gap-3 rounded-xl border border-amber-300/10 bg-amber-300/[.02] p-3 text-xs text-white/40"><input name="challenge_eligible" value="true" type="checkbox" defaultChecked={Boolean(detail.animal.challenge_eligible)} className="mt-0.5 h-4 w-4 accent-amber-300" /><span><span className="block text-amber-50/55">Challenge / OOD example</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Held out of clean classifier supervision; useful for rejection and difficult-case evaluation.</span></span></label>
+              <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Challenge expectation<select name="challenge_expectation" defaultValue={detail.animal.challenge_expectation ?? "review"} className={`${field} mt-2`}><option value="reject">Reject / Unknown</option><option value="classify">Classify trusted hard case</option><option value="review">Review only / diagnostic</option></select></label>
               <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Review notes<textarea name="review_notes" defaultValue={detail.animal.review_notes ?? ""} className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="Why approved, held or rejected; label concerns; provenance issues…" /></label>
             </div>
 
