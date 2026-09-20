@@ -57,8 +57,8 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-adult.webp")],
-      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-adult.webp")],
+      Red: [variant("/hatchery/snakes/localities/wamena/red-adult-live-v2.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-adult-live-v2.webp")],
     },
   },
   Cyclops: {
@@ -97,7 +97,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Biak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate-live-v2.webp")],
       Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
     },
     adult: {
@@ -120,10 +120,10 @@ const localitySprites: Record<string, StageSpriteSet> = {
     juvenile: {
       Yellow: [variant("/hatchery/snakes/localities/aru/yellow-neonate.webp")],
     },
-    adultAny: [variant("/hatchery/snakes/localities/aru/adult.webp")],
+    adultAny: [variant("/hatchery/snakes/localities/aru/adult-live-v2.webp")],
   },
   Merauke: {
-    adultAny: [variant("/hatchery/snakes/localities/merauke/adult.webp")],
+    adultAny: [variant("/hatchery/snakes/localities/merauke/adult-live-v2.webp")],
   },
 };
 
@@ -273,11 +273,45 @@ function hybridKey(ancestry?: Partial<Record<ChondroSubspecies, number>>) {
   return parents.join("-");
 }
 
+function canonicalLocalityKey(value?: string) {
+  const token = normalizeLocalityToken(value);
+  if (!token) return null;
+  return Object.keys(localitySprites).find(
+    (key) => normalizeLocalityToken(key) === token,
+  ) ?? null;
+}
+
+function localityCandidates(request: ChondroSpriteRequest) {
+  const candidates: string[] = [];
+  const direct = canonicalLocalityKey(request.locality);
+  if (direct) candidates.push(direct);
+
+  if (request.localityAncestry) {
+    const ancestryLocalities = Object.entries(request.localityAncestry)
+      .filter(([, value]) => Number(value ?? 0) > 0)
+      .sort((a, b) => Number(b[1] ?? 0) - Number(a[1] ?? 0))
+      .map(([name]) => canonicalLocalityKey(name))
+      .filter((name): name is string => Boolean(name));
+
+    for (const name of ancestryLocalities) {
+      if (!candidates.includes(name)) candidates.push(name);
+    }
+  }
+
+  return candidates;
+}
+
 export function localitySpriteFor(request: ChondroSpriteRequest) {
-  if (!request.locality) return null;
-  const set = localitySprites[request.locality];
-  if (!set) return null;
-  return pickVariant(poolForStage(set, request), request, `locality:${request.locality}`);
+  for (const locality of localityCandidates(request)) {
+    const set = localitySprites[locality];
+    const sprite = pickVariant(
+      poolForStage(set, request),
+      request,
+      `locality:${locality}`,
+    );
+    if (sprite) return sprite;
+  }
+  return null;
 }
 
 export function hybridSpriteFor(request: ChondroSpriteRequest) {
