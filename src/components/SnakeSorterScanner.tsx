@@ -20,6 +20,69 @@ function humanBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+
+async function canvasToFile(canvas: HTMLCanvasElement, name: string, quality = 0.86) {
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  if (!blob) throw new Error("Could not encode analysis frame");
+  return new File([blob], name, { type: "image/jpeg" });
+}
+
+function fitSize(width: number, height: number, maxDimension = 1800) {
+  const scale = Math.min(1, maxDimension / Math.max(width, height));
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
+
+async function normalizeImage(file: File, index: number) {
+  const bitmap = await createImageBitmap(file);
+  const size = fitSize(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas unavailable");
+  context.drawImage(bitmap, 0, 0, size.width, size.height);
+  bitmap.close();
+  return canvasToFile(canvas, `evidence-image-${index + 1}.jpg`);
+}
+
+async function sampleVideo(file: File, mode: string, sourceIndex: number) {
+  const requested = mode === "dense" ? 8 : mode === "keyframes" ? 3 : 5;
+  const url = URL.createObjectURL(file);
+  try {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.src = url;
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error("Could not read video metadata"));
+    });
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+    const times = Array.from({ length: requested }, (_, i) => duration * ((i + 1) / (requested + 1)));
+    const frames: File[] = [];
+    for (let i = 0; i < times.length; i++) {
+      video.currentTime = Math.min(Math.max(times[i], 0), Math.max(0, duration - 0.05));
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        video.onseeked = done;
+        window.setTimeout(done, 1200);
+      });
+      if (!video.videoWidth || !video.videoHeight) continue;
+      const size = fitSize(video.videoWidth, video.videoHeight);
+      const canvas = document.createElement("canvas");
+      canvas.width = size.width;
+      canvas.height = size.height;
+      const context = canvas.getContext("2d");
+      if (!context) continue;
+      context.drawImage(video, 0, 0, size.width, size.height);
+      frames.push(await canvasToFile(canvas, `video-${sourceIndex + 1}-frame-${i + 1}.jpg`));
+    }
+    return frames;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export function SnakeSorterScanner() {
   const [assets, setAssets] = useState<ScanAsset[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -163,19 +226,36 @@ export function SnakeSorterScanner() {
   async function runAnalysis() {
     if (!assets.length) return;
     setAnalysisStatus("preparing");
-    setAnalysisMessage("Preparing media and analysis settings…");
-    const form = new FormData();
-    assets.forEach((asset) => form.append("media", asset.file, asset.file.name));
-    form.set("life_stage_hint", stageHint);
-    form.set("color_hint", colorHint);
-    form.set("locality_mode", String(localityMode));
-    form.set("nearest_neighbors", String(nearestNeighbors));
-    form.set("conservative_mode", String(conservativeMode));
-    form.set("frame_sampling", frameSampling);
+    setAnalysisMessage("Extracting and normalizing evidence frames in your browser…");
 
     try {
+      const evidence: File[] = [];
+      for (let i = 0; i < assets.length && evidence.length < 24; i++) {
+        const asset = assets[i];
+        if (asset.kind === "image") {
+          evidence.push(await normalizeImage(asset.file, evidence.length));
+        } else {
+          const frames = await sampleVideo(asset.file, frameSampling, i);
+          evidence.push(...frames.slice(0, Math.max(0, 24 - evidence.length)));
+        }
+      }
+
+      if (!evidence.length) throw new Error("No usable analysis frames could be prepared.");
+
+      const form = new FormData();
+      evidence.forEach((file) => form.append("evidence", file, file.name));
+      form.set("source_assets", String(assets.length));
+      form.set("source_images", String(totals.images));
+      form.set("source_videos", String(totals.videos));
+      form.set("life_stage_hint", stageHint);
+      form.set("color_hint", colorHint);
+      form.set("locality_mode", String(localityMode));
+      form.set("nearest_neighbors", String(nearestNeighbors));
+      form.set("conservative_mode", String(conservativeMode));
+      form.set("frame_sampling", frameSampling);
+
       setAnalysisStatus("running");
-      setAnalysisMessage("Sending this analysis job through the private Snake Sorter pipeline…");
+      setAnalysisMessage(`Prepared ${evidence.length} evidence frame(s). Running the private analysis pipeline…`);
       const response = await fetch("/api/snake-sorter/analyze", { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.result) {
@@ -185,9 +265,9 @@ export function SnakeSorterScanner() {
         setAnalysisStatus("error");
         setAnalysisMessage(data.message ?? data.error ?? "The analysis engine is not connected yet.");
       }
-    } catch {
+    } catch (error) {
       setAnalysisStatus("error");
-      setAnalysisMessage("The analysis request could not be completed.");
+      setAnalysisMessage(error instanceof Error ? error.message : "The analysis request could not be completed.");
     }
   }
 
@@ -214,7 +294,7 @@ export function SnakeSorterScanner() {
           <label className={`${buttonBase} cursor-pointer border-violet-300/16 bg-violet-300/[.045] text-violet-100/75 hover:bg-violet-300/[.08]`}>
             <span className="block text-lg">▶</span>
             <span className="mt-2 block">Upload video</span>
-            <span className="mt-1 block text-[10px] font-medium text-white/28">Frames will be sampled for analysis</span>
+            <span className="mt-1 block text-[10px] font-medium text-white/28">Video is sampled locally into evidence frames</span>
             <input type="file" accept="video/*" multiple className="hidden" onChange={(e) => addFiles(Array.from(e.target.files ?? []), "upload")} />
           </label>
 
@@ -243,7 +323,7 @@ export function SnakeSorterScanner() {
               ) : (
                 <button type="button" onClick={stopRecording} className={`${buttonBase} border-rose-300/25 bg-rose-300/[.12] text-rose-100`}>Stop recording</button>
               )}
-              <span className="ml-auto self-center text-[10px] text-white/24">Camera footage stays local until you press Analyze.</span>
+              <span className="ml-auto self-center text-[10px] text-white/24">Camera footage stays local; Analyze sends sampled evidence frames only.</span>
             </div>
           </div>
         )}
