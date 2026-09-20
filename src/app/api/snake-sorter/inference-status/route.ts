@@ -48,6 +48,7 @@ export async function GET() {
       configured: true,
       online: data.ok === true,
       modelVersion: typeof data.modelVersion === "string" ? data.modelVersion : null,
+      modelRegistryId: typeof data.modelRegistryId === "string" ? data.modelRegistryId : null,
       device: typeof data.device === "string" ? data.device : null,
       references: typeof data.references === "number" ? data.references : 0,
     });
