@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
       approximate_age_days: item.approximate_age_days == null ? null : Number(item.approximate_age_days),
       label_confidence: String(animal.label_confidence),
       purity_status: String(animal.purity_status),
+      challenge_expectation: purpose === "challenge" ? String(animal.challenge_expectation ?? "review") : null,
       split_group: animal.split_group ? String(animal.split_group) : null,
       dataset_split: purpose === "challenge" ? "challenge" : String(animal.dataset_split),
       view_type: String(item.view_type ?? "unknown"),
