@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 import { runSnakeSorterEngine } from "@/lib/snake-sorter/engine";
-import type { PreparedEvidence, SnakeSorterColor, SnakeSorterLifeStage } from "@/lib/snake-sorter/types";
+import type { PreparedEvidence, SnakeSorterColor, SnakeSorterLifeStage, SnakeSorterScanMode, SnakeSorterViewType } from "@/lib/snake-sorter/types";
 
 export const runtime = "nodejs";
 
@@ -13,9 +13,11 @@ async function ownerIdentity() {
   return identity;
 }
 
-const allowedStages = new Set(["auto", "neonate", "juvenile", "subadult", "adult"]);
+const allowedStages = new Set(["auto", "hatchling", "neonate", "juvenile", "subadult", "adult"]);
 const allowedColors = new Set(["auto", "red", "yellow", "not_applicable"]);
 const allowedSampling = new Set(["balanced", "dense", "keyframes"]);
+const allowedModes = new Set(["quick","deep","live"]);
+const allowedViews = new Set(["auto","full_body","head","dorsal","left_lateral","right_lateral","tail","other"]);
 
 export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
@@ -40,14 +42,17 @@ export async function POST(request: NextRequest) {
   const lifeStageHint = String(form.get("life_stage_hint") ?? "auto");
   const colorHint = String(form.get("color_hint") ?? "auto");
   const frameSampling = String(form.get("frame_sampling") ?? "balanced");
-  if (!allowedStages.has(lifeStageHint) || !allowedColors.has(colorHint) || !allowedSampling.has(frameSampling)) {
+  const scanMode = String(form.get("scan_mode") ?? "deep");
+  const evidenceViews = form.getAll("evidence_view").map((value) => String(value));
+  if (!allowedStages.has(lifeStageHint) || !allowedColors.has(colorHint) || !allowedSampling.has(frameSampling) || !allowedModes.has(scanMode) || evidenceViews.some((view) => !allowedViews.has(view))) {
     return NextResponse.json({ error: "Invalid analysis settings." }, { status: 400 });
   }
 
-  const prepared: PreparedEvidence[] = await Promise.all(evidence.map(async (file) => ({
+  const prepared: PreparedEvidence[] = await Promise.all(evidence.map(async (file, index) => ({
     name: file.name,
     mimeType: file.type,
     bytes: new Uint8Array(await file.arrayBuffer()),
+    viewType: (evidenceViews[index] ?? "auto") as SnakeSorterViewType,
   })));
 
   // Intentionally no database or Storage write here.
@@ -55,6 +60,7 @@ export async function POST(request: NextRequest) {
   const engineResponse = await runSnakeSorterEngine({
     evidence: prepared,
     hints: {
+      scanMode: scanMode as SnakeSorterScanMode,
       lifeStage: lifeStageHint as SnakeSorterLifeStage | "auto",
       color: colorHint as SnakeSorterColor | "auto",
       localityMode: String(form.get("locality_mode") ?? "true") === "true",
@@ -75,6 +81,8 @@ export async function POST(request: NextRequest) {
       life_stage_hint: lifeStageHint,
       color_hint: colorHint,
       frame_sampling: frameSampling,
+      scan_mode: scanMode,
+      evidence_views: prepared.map((frame) => frame.viewType),
       locality_mode: String(form.get("locality_mode") ?? "true") === "true",
       nearest_neighbors: String(form.get("nearest_neighbors") ?? "true") === "true",
       conservative_mode: String(form.get("conservative_mode") ?? "true") === "true",
