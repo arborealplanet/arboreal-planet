@@ -31,6 +31,10 @@ type ReferenceMedia = {
   animal_id: string;
   original_name: string | null;
   mime_type: string | null;
+  view_type?: string;
+  quality_status?: string;
+  is_primary?: boolean;
+  file_size_bytes?: number | null;
   created_at: string;
 };
 
@@ -105,6 +109,22 @@ export function SnakeSorterWorkspace() {
     const pending = animals.filter((animal) => !animal.review_status || animal.review_status === "pending");
     const noImages = animals.filter((animal) => (mediaCount.get(animal.id) ?? 0) === 0);
     const approvedUnassigned = approved.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned");
+    const acceptedMedia = media.filter((item) => (item.quality_status ?? "accepted") === "accepted");
+    const approvedIds = new Set(approved.map((animal) => animal.id));
+    const approvedViewCoverage = approved.map((animal) => {
+      const views = new Set(acceptedMedia.filter((item) => item.animal_id === animal.id).map((item) => item.view_type ?? "unknown"));
+      return {
+        id: animal.id,
+        hasFullBody: views.has("full_body"),
+        hasHead: views.has("head"),
+        hasDorsal: views.has("dorsal"),
+        hasLateral: views.has("left_lateral") || views.has("right_lateral"),
+      };
+    });
+    const approvedMissingCoreViews = approvedViewCoverage.filter((row) => !(row.hasFullBody && row.hasHead && row.hasDorsal && row.hasLateral)).length;
+    const rejectedImages = media.filter((item) => item.quality_status === "rejected").length;
+    const heldImages = media.filter((item) => item.quality_status === "hold").length;
+    const acceptedApprovedImages = acceptedMedia.filter((item) => approvedIds.has(item.animal_id)).length;
     const train = approved.filter((animal) => animal.dataset_split === "train").length;
     const validation = approved.filter((animal) => animal.dataset_split === "validation").length;
     const test = approved.filter((animal) => animal.dataset_split === "test").length;
@@ -130,6 +150,10 @@ export function SnakeSorterWorkspace() {
       pending: pending.length,
       noImages: noImages.length,
       approvedUnassigned: approvedUnassigned.length,
+      approvedMissingCoreViews,
+      acceptedApprovedImages,
+      rejectedImages,
+      heldImages,
       train,
       validation,
       test,
@@ -143,8 +167,9 @@ export function SnakeSorterWorkspace() {
     const response = await fetch("/api/snake-sorter/references", { method: "POST", body: formData });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      const failed = Array.isArray(data.failed) && data.failed.length ? ` ${data.failed.length} image(s) were skipped.` : "";
-      setMessage(`Reference animal added.${failed}`);
+      const failed = Array.isArray(data.failed) && data.failed.length ? ` ${data.failed.length} image(s) failed.` : "";
+      const duplicates = Array.isArray(data.duplicates) && data.duplicates.length ? ` ${data.duplicates.length} exact duplicate image(s) were not added.` : "";
+      setMessage(`Reference animal added.${duplicates}${failed}`);
       await load();
     } else {
       setMessage(data.error ?? "Could not add reference animal.");
@@ -289,7 +314,7 @@ export function SnakeSorterWorkspace() {
             <div className="section-kicker">Dataset diagnostics</div>
             <h2 className="mt-3 text-2xl font-semibold">Collection priorities</h2>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              {[["Approved",diagnostics.approved],["Pending review",diagnostics.pending],["No images",diagnostics.noImages],["Approved / unassigned",diagnostics.approvedUnassigned]].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.07] p-3"><div className="text-lg font-semibold text-white/60">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/22">{name}</div></div>)}
+              {[["Approved",diagnostics.approved],["Pending review",diagnostics.pending],["No images",diagnostics.noImages],["Approved / unassigned",diagnostics.approvedUnassigned],["Missing core views",diagnostics.approvedMissingCoreViews],["Accepted approved images",diagnostics.acceptedApprovedImages],["Held images",diagnostics.heldImages],["Rejected images",diagnostics.rejectedImages]].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.07] p-3"><div className="text-lg font-semibold text-white/60">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/22">{name}</div></div>)}
             </div>
             <div className="mt-4 rounded-2xl border border-white/[.055] bg-black/[.07] p-4">
               <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Approved split balance</div>
