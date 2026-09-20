@@ -26,6 +26,7 @@ const purities = new Set(["known_pure","believed_pure","possible_mixed","hybrid"
 const sources = new Set(["personal","breeder","listing","publication","other"]);
 const reviews = new Set(["pending","approved","hold","rejected"]);
 const splits = new Set(["unassigned","train","validation","test"]);
+const rights = new Set(["owned_by_owner","permission_granted","private_reference_only","unknown"]);
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const identity = await ownerIdentity();
@@ -57,8 +58,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const sourceType = clean(body.source_type, 30);
   const reviewStatus = clean(body.review_status, 30);
   const datasetSplit = clean(body.dataset_split, 30);
+  const rightsStatus = clean(body.rights_status, 40) || "unknown";
 
-  if (!taxa.has(taxon) || !stages.has(lifeStage) || !colors.has(neonateColor) || !confidences.has(labelConfidence) || !purities.has(purityStatus) || !sources.has(sourceType) || !reviews.has(reviewStatus) || !splits.has(datasetSplit)) {
+  if (!taxa.has(taxon) || !stages.has(lifeStage) || !colors.has(neonateColor) || !confidences.has(labelConfidence) || !purities.has(purityStatus) || !sources.has(sourceType) || !reviews.has(reviewStatus) || !splits.has(datasetSplit) || !rights.has(rightsStatus)) {
     return NextResponse.json({ error: "Invalid reference metadata" }, { status: 400 });
   }
 
@@ -78,6 +80,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     review_notes: clean(body.review_notes, 4000) || null,
     dataset_split: datasetSplit,
     training_eligible: Boolean(body.training_eligible),
+    rights_status: rightsStatus,
+    rights_notes: clean(body.rights_notes, 2000) || null,
     updated_at: new Date().toISOString(),
   };
 
