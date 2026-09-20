@@ -114,6 +114,8 @@ export function ChondroSnakeIcon({
           onLoad={(event) => recoverIfVisuallyEmpty(event.currentTarget)}
           onError={(event) => advanceSprite(event.currentTarget)}
           alt={`${name} illustrated virtual game portrait`}
+          loading="lazy"
+          decoding="async"
           className={`h-full w-full object-contain p-1 sm:p-2 ${isSubadult ? "scale-[0.86]" : ""}`}
         />
       ) : null}
