@@ -65,6 +65,174 @@ const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
   "Morelia viridis": ["Aru", "Merauke"],
 };
 
+type SpriteQaItem = {
+  id: string;
+  label: string;
+  detail: string;
+  subspecies: Subspecies;
+  locality?: string;
+  neonateColor: "Red" | "Yellow";
+  lifeStage: LifeStage;
+  classification: "Pure" | "Hybrid" | "Designer";
+  ancestry?: Partial<Record<Subspecies, number>>;
+  localityAncestry?: Record<string, number>;
+  phenotypeScore?: number;
+  spriteSeed: string;
+};
+
+const spriteQaPureLocalities: Array<{
+  locality: Locality;
+  subspecies: Subspecies;
+  colors: Array<"Red" | "Yellow">;
+}> = [
+  { locality: "Biak", subspecies: "Morelia azurea azurea", colors: ["Red", "Yellow"] },
+  { locality: "Numfor", subspecies: "Morelia azurea azurea", colors: ["Red", "Yellow"] },
+  { locality: "Manokwari", subspecies: "Morelia azurea pulcher", colors: ["Red", "Yellow"] },
+  { locality: "Arfak", subspecies: "Morelia azurea pulcher", colors: ["Red", "Yellow"] },
+  { locality: "Sorong", subspecies: "Morelia azurea pulcher", colors: ["Red", "Yellow"] },
+  { locality: "Timika", subspecies: "Morelia azurea pulcher", colors: ["Red", "Yellow"] },
+  { locality: "Kofiau", subspecies: "Morelia azurea pulcher", colors: ["Yellow"] },
+  { locality: "Cyclops", subspecies: "Morelia azurea utaraensis", colors: ["Red", "Yellow"] },
+  { locality: "Jayapura", subspecies: "Morelia azurea utaraensis", colors: ["Red", "Yellow"] },
+  { locality: "Lereh", subspecies: "Morelia azurea utaraensis", colors: ["Red", "Yellow"] },
+  { locality: "Wamena", subspecies: "Morelia azurea utaraensis", colors: ["Red", "Yellow"] },
+  { locality: "Yapen", subspecies: "Morelia azurea utaraensis", colors: ["Red", "Yellow"] },
+  { locality: "Aru", subspecies: "Morelia viridis", colors: ["Yellow"] },
+  { locality: "Merauke", subspecies: "Morelia viridis", colors: ["Yellow"] },
+];
+
+const spriteQaItems: SpriteQaItem[] = [
+  ...spriteQaPureLocalities.flatMap(({ locality, subspecies, colors }) =>
+    colors.flatMap((neonateColor) =>
+      (["Neonate", "Adult"] as LifeStage[]).map((lifeStage) => ({
+        id: `qa-pure-${locality.toLowerCase()}-${neonateColor.toLowerCase()}-${lifeStage.toLowerCase()}`,
+        label: `${locality} · ${neonateColor}`,
+        detail: lifeStage === "Neonate" ? "Juvenile · Hatchling / Neonate" : "Adult · Subadult / Adult",
+        subspecies,
+        locality,
+        neonateColor,
+        lifeStage,
+        classification: "Pure" as const,
+        localityAncestry: { [locality]: 100 },
+        ancestry: { [subspecies]: 100 },
+        spriteSeed: `qa-pure-${locality}-${neonateColor}-${lifeStage}`,
+      })),
+    ),
+  ),
+  {
+    id: "qa-manokwari-aplus-1",
+    label: "Manokwari · Red A+ #1",
+    detail: "Special adult phenotype variant",
+    subspecies: "Morelia azurea pulcher",
+    locality: "Manokwari",
+    neonateColor: "Red",
+    lifeStage: "Adult",
+    classification: "Pure",
+    localityAncestry: { Manokwari: 100 },
+    ancestry: { "Morelia azurea pulcher": 100 },
+    phenotypeScore: 95,
+    spriteSeed: "manokwari-a-plus-variant-1",
+  },
+  {
+    id: "qa-manokwari-aplus-2",
+    label: "Manokwari · Red A+ #2",
+    detail: "Special adult phenotype variant",
+    subspecies: "Morelia azurea pulcher",
+    locality: "Manokwari",
+    neonateColor: "Red",
+    lifeStage: "Adult",
+    classification: "Pure",
+    localityAncestry: { Manokwari: 100 },
+    ancestry: { "Morelia azurea pulcher": 100 },
+    phenotypeScore: 95,
+    spriteSeed: "manokwari-a-plus-variant-2",
+  },
+  {
+    id: "qa-sorong-aplus-yellow",
+    label: "Sorong · Yellow A+",
+    detail: "Special adult phenotype variant",
+    subspecies: "Morelia azurea pulcher",
+    locality: "Sorong",
+    neonateColor: "Yellow",
+    lifeStage: "Adult",
+    classification: "Pure",
+    localityAncestry: { Sorong: 100 },
+    ancestry: { "Morelia azurea pulcher": 100 },
+    phenotypeScore: 95,
+    spriteSeed: "qa-sorong-a-plus",
+  },
+  {
+    id: "qa-designer-red-juvenile",
+    label: "Designer · Red",
+    detail: "Juvenile designer pool",
+    subspecies: "Morelia azurea pulcher",
+    neonateColor: "Red",
+    lifeStage: "Neonate",
+    classification: "Designer",
+    spriteSeed: "qa-designer-red-juvenile",
+  },
+  {
+    id: "qa-designer-adult",
+    label: "Designer · Adult",
+    detail: "Adult designer pool",
+    subspecies: "Morelia azurea pulcher",
+    neonateColor: "Yellow",
+    lifeStage: "Adult",
+    classification: "Designer",
+    spriteSeed: "qa-designer-adult",
+  },
+  {
+    id: "qa-pulcher-utaraensis-red",
+    label: "Pulcher × Utaraensis · Red",
+    detail: "Hybrid juvenile",
+    subspecies: "Morelia azurea pulcher",
+    locality: "Mixed Locality",
+    neonateColor: "Red",
+    lifeStage: "Neonate",
+    classification: "Hybrid",
+    ancestry: { "Morelia azurea pulcher": 50, "Morelia azurea utaraensis": 50 },
+    spriteSeed: "qa-pulcher-utaraensis-red",
+  },
+  {
+    id: "qa-pulcher-utaraensis-yellow",
+    label: "Pulcher × Utaraensis · Yellow",
+    detail: "Hybrid juvenile",
+    subspecies: "Morelia azurea pulcher",
+    locality: "Mixed Locality",
+    neonateColor: "Yellow",
+    lifeStage: "Neonate",
+    classification: "Hybrid",
+    ancestry: { "Morelia azurea pulcher": 50, "Morelia azurea utaraensis": 50 },
+    spriteSeed: "qa-pulcher-utaraensis-yellow",
+  },
+  {
+    id: "qa-wamena-aru-red",
+    label: "Wamena × Aru · Red",
+    detail: "Exact hybrid juvenile",
+    subspecies: "Morelia azurea utaraensis",
+    locality: "Mixed Locality",
+    neonateColor: "Red",
+    lifeStage: "Neonate",
+    classification: "Hybrid",
+    ancestry: { "Morelia azurea utaraensis": 50, "Morelia viridis": 50 },
+    localityAncestry: { Wamena: 50, Aru: 50 },
+    spriteSeed: "qa-wamena-aru-red",
+  },
+  {
+    id: "qa-wamena-merauke-red",
+    label: "Wamena × Merauke · Red",
+    detail: "Exact hybrid juvenile",
+    subspecies: "Morelia azurea utaraensis",
+    locality: "Mixed Locality",
+    neonateColor: "Red",
+    lifeStage: "Neonate",
+    classification: "Hybrid",
+    ancestry: { "Morelia azurea utaraensis": 50, "Morelia viridis": 50 },
+    localityAncestry: { Wamena: 50, Merauke: 50 },
+    spriteSeed: "qa-wamena-merauke-red",
+  },
+];
+
 function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
@@ -344,6 +512,54 @@ export function ChondroBreederExpandedShop() {
 
   return (
     <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+      <section className="mb-4 overflow-hidden rounded-[26px] border border-violet-300/15 bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,.08),transparent_38%),#0a0810] p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[.16em] text-violet-100/60">Sprite QA · All game animals</div>
+            <h3 className="mt-2 text-xl font-semibold text-white/82">Check every sprite slot in one place.</h3>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-white/40">This strip is for artwork review only; these cards are not store listings. Juvenile cards verify the shared Hatchling/Neonate art. Adult cards verify the shared Subadult/Adult art. Any unresolved slot will say Sprite pending instead of borrowing unrelated artwork.</p>
+          </div>
+          <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.04] px-4 py-2 text-right">
+            <div className="text-[9px] font-black uppercase tracking-[.14em] text-violet-100/45">QA slots</div>
+            <div className="mt-1 text-sm font-black text-violet-100/80">{spriteQaItems.length}</div>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 text-[10px] text-white/32">
+          <span>Swipe horizontally to inspect every registered or pending sprite slot.</span>
+          <span>Pure · Hybrid · Designer · Specials</span>
+        </div>
+
+        <div
+          aria-label="Sprite QA carousel"
+          className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(196,181,253,.28)_transparent]"
+        >
+          {spriteQaItems.map((item) => (
+            <article key={item.id} className="w-[78%] shrink-0 snap-start rounded-2xl border border-white/[.065] bg-black/15 p-3 sm:w-[260px]">
+              <ChondroSnakeIcon
+                subspecies={item.subspecies}
+                name={item.label}
+                lifeStage={item.lifeStage}
+                neonateColor={item.neonateColor}
+                locality={item.locality}
+                classification={item.classification}
+                ancestry={item.ancestry}
+                localityAncestry={item.localityAncestry}
+                phenotypeScore={item.phenotypeScore}
+                spriteSeed={item.spriteSeed}
+                compact
+              />
+              <div className="mt-3 text-sm font-semibold text-white/78">{item.label}</div>
+              <div className="mt-1 text-[10px] leading-4 text-white/36">{item.detail}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] font-black uppercase tracking-[.1em]">
+                <span className="rounded-full border border-white/[.07] px-2 py-1 text-white/45">{item.classification}</span>
+                <span className={`rounded-full border px-2 py-1 ${item.neonateColor === "Red" ? "border-red-200/15 text-red-100/60" : "border-amber-100/15 text-amber-100/60"}`}>{item.neonateColor}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

@@ -98,6 +98,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Red: [
         variant("/hatchery/snakes/localities/manokwari/red-adult.webp", { maxPhenotypeScore: 84 }),
         variant("/hatchery/snakes/special/manokwari-red-adult-a-plus.webp", { minPhenotypeScore: 85 }),
+        variant("/hatchery/snakes/special/manokwari-red-adult-a-plus-02.webp", { minPhenotypeScore: 85 }),
       ],
       Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp")],
     },
@@ -118,7 +119,12 @@ const localitySprites: Record<string, StageSpriteSet> = {
       ],
     },
   },
-  Timika: {},
+  Timika: {
+    adult: {
+      Red: [variant("/hatchery/snakes/localities/timika/red-adult.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/timika/yellow-adult.webp")],
+    },
+  },
   Kofiau: {},
   Jayapura: {},
   Yapen: {},
@@ -150,6 +156,9 @@ const localitySprites: Record<string, StageSpriteSet> = {
     adultAny: [variant("/hatchery/snakes/localities/aru/adult-live-v2.webp")],
   },
   Merauke: {
+    juvenile: {
+      Yellow: [variant("/hatchery/snakes/localities/merauke/yellow-neonate.webp")],
+    },
     adultAny: [variant("/hatchery/snakes/localities/merauke/adult-live-v2.webp")],
   },
 };
@@ -385,6 +394,7 @@ export function chondroSpecificSpriteCandidatesFor(request: ChondroSpriteRequest
 export const CHONDRO_SPRITE_ASSET_PLAN = {
   special: {
     manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.webp",
+    manokwariRedAdultAPlus02: "/hatchery/snakes/special/manokwari-red-adult-a-plus-02.webp",
     sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp",
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.webp",
     designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.webp",
