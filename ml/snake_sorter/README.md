@@ -171,3 +171,46 @@ python publish_model.py \
 ```
 
 Model promotion to `active` remains a separate owner action in Arboreal Planet.
+
+
+## Preparing a frozen snapshot
+
+Do not train directly from the live reference library. Train from one immutable dataset snapshot.
+
+The training machine can download a snapshot and verify every reference file against the SHA-256 frozen into that snapshot:
+
+```bash
+python prepare_snapshot.py \
+  --snapshot-id <snapshot-uuid> \
+  --output datasets/<snapshot-uuid>
+```
+
+Required environment:
+
+```bash
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<publishable key>
+SUPABASE_ACCESS_TOKEN=<owner access token>
+```
+
+The command creates:
+
+```
+datasets/<snapshot>/
+  snapshot.json
+  manifest.csv
+  media/
+    <frozen storage paths...>
+```
+
+It validates:
+
+- snapshot media count
+- distinct animal count
+- frozen storage path for every image
+- frozen content SHA-256 for every image
+- downloaded file SHA-256
+
+If a partial dataset already exists, use `--overwrite` to resume and re-verify it. Files whose hashes already match are not downloaded again.
+
+This is intentionally based on the owner's normal authenticated session. The training workflow does not require a Supabase service-role key.
