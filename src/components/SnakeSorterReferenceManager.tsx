@@ -162,6 +162,8 @@ export function SnakeSorterReferenceManager({
           <div><div className="section-kicker">Reference library</div><h2 className="mt-2 text-2xl font-semibold">Animals & review queue</h2></div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={saving} onClick={() => void assignSplits()} className={mini}>Auto-assign splits</button>
+            <a href="/api/snake-sorter/export?format=csv" className={mini}>Export CSV</a>
+            <a href="/api/snake-sorter/export?format=json" className={mini}>Export JSON</a>
             <div className="rounded-full border border-white/[.07] px-3 py-2 text-[10px] font-bold text-white/30">{rows.length} shown</div>
           </div>
         </div>
