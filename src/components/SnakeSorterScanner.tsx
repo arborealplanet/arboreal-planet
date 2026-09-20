@@ -468,7 +468,10 @@ export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: ()
     setPromotionSaving(true);
     setPromotionMessage("");
     const form = new FormData(event.currentTarget);
-    images.slice(0, 12).forEach((asset) => form.append("images", asset.file, asset.file.name));
+    images.slice(0, 12).forEach((asset) => {
+      form.append("images", asset.file, asset.file.name);
+      form.append("image_view", asset.viewType);
+    });
 
     const response = await fetch("/api/snake-sorter/references", {
       method: "POST",
