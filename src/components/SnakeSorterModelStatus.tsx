@@ -62,6 +62,18 @@ function metricValue(metrics: Record<string, unknown> | null, key: string) {
   return typeof raw === "number" ? raw : null;
 }
 
+function objectValue(record: Record<string, unknown> | null, key: string) {
+  const value = record?.[key];
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function textValue(record: Record<string, unknown> | null, key: string) {
+  const value = record?.[key];
+  return typeof value === "string" ? value : null;
+}
+
 export function SnakeSorterModelStatus() {
   const [models, setModels] = useState<ModelVersion[]>([]);
   const [snapshots, setSnapshots] = useState<DatasetSnapshot[]>([]);
@@ -198,11 +210,22 @@ export function SnakeSorterModelStatus() {
           {models.slice(0,8).map((model) => {
             const accuracy = metricValue(model.metrics, "accuracy");
             const macroF1 = metricValue(model.metrics, "macro_f1");
+            const individualLevel = objectValue(model.metrics, "individual_level");
+            const notes = objectValue(model.metrics, "notes");
+            const heldOutAnimals = metricValue(individualLevel, "animals");
+            const calibrationEce = metricValue(model.calibration, "expected_calibration_error");
+            const individualEvaluationReady =
+              heldOutAnimals != null &&
+              heldOutAnimals > 0 &&
+              textValue(notes, "primary_metric_unit") === "held-out individual animal";
+            const individualCalibrationReady =
+              textValue(model.calibration, "calibration_unit") === "held-out individual animal";
             const deployMissing = [
               !model.artifact_storage_path || !model.artifact_sha256 ? "artifact" : null,
               !model.dataset_snapshot_id || !model.training_manifest_hash ? "dataset snapshot" : null,
               accuracy == null || macroF1 == null ? "held-out metrics" : null,
-              metricValue(model.calibration, "temperature") == null || metricValue(model.calibration, "expected_calibration_error") == null ? "calibration" : null,
+              !individualEvaluationReady ? "held-out individual evaluation" : null,
+              metricValue(model.calibration, "temperature") == null || calibrationEce == null || !individualCalibrationReady ? "individual-level calibration" : null,
             ].filter((item): item is string => Boolean(item));
             const deployable = deployMissing.length === 0;
             return <div key={model.id} className="rounded-2xl border border-white/[.06] bg-black/[.07] p-4">
@@ -213,11 +236,13 @@ export function SnakeSorterModelStatus() {
                 </div>
                 <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${statusClass[model.status]}`}>{model.status}</span>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div><div className="text-[8px] uppercase text-white/18">Animals</div><div className="mt-1 text-xs text-white/45">{model.training_animal_count ?? "—"}</div></div>
-                <div><div className="text-[8px] uppercase text-white/18">Images</div><div className="mt-1 text-xs text-white/45">{model.training_media_count ?? "—"}</div></div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div><div className="text-[8px] uppercase text-white/18">Train animals</div><div className="mt-1 text-xs text-white/45">{model.training_animal_count ?? "—"}</div></div>
+                <div><div className="text-[8px] uppercase text-white/18">Train images</div><div className="mt-1 text-xs text-white/45">{model.training_media_count ?? "—"}</div></div>
+                <div><div className="text-[8px] uppercase text-white/18">Held-out animals</div><div className="mt-1 text-xs text-white/45">{heldOutAnimals ?? "—"}</div></div>
                 <div><div className="text-[8px] uppercase text-white/18">Accuracy</div><div className="mt-1 text-xs text-white/45">{accuracy == null ? "—" : `${Math.round(accuracy * 1000) / 10}%`}</div></div>
                 <div><div className="text-[8px] uppercase text-white/18">Macro F1</div><div className="mt-1 text-xs text-white/45">{macroF1 == null ? "—" : `${Math.round(macroF1 * 1000) / 10}%`}</div></div>
+                <div><div className="text-[8px] uppercase text-white/18">Calibration ECE</div><div className="mt-1 text-xs text-white/45">{calibrationEce == null ? "—" : `${Math.round(calibrationEce * 1000) / 10}%`}</div></div>
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-xl border border-white/[.05] bg-black/[.06] px-3 py-2">
