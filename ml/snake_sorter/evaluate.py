@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import torch
@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--output")
     parser.add_argument("--calibration-output")
+    parser.add_argument("--error-review-output")
     return parser.parse_args()
 
 
@@ -39,7 +40,11 @@ def metadata_collate(processor):
     def collate(items):
         batch = base(items)
         batch["animal_id"] = [item["animal_id"] for item in items]
+        batch["media_id"] = [item["media_id"] for item in items]
+        batch["path"] = [item["path"] for item in items]
         batch["view_type"] = [item["view_type"] for item in items]
+        batch["stage_name"] = [item["stage_name"] for item in items]
+        batch["color_name"] = [item["color_name"] for item in items]
         return batch
 
     return collate
@@ -52,7 +57,11 @@ def collect(model, loader, device):
     stages: list[int] = []
     colors: list[int] = []
     animal_ids: list[str] = []
+    media_ids: list[str] = []
+    paths: list[str] = []
     views: list[str] = []
+    stage_names: list[str] = []
+    color_names: list[str] = []
 
     for batch in loader:
         out = model(batch["pixel_values"].to(device))
@@ -61,9 +70,24 @@ def collect(model, loader, device):
         stages.extend(batch["stage"].tolist())
         colors.extend(batch["color"].tolist())
         animal_ids.extend(batch["animal_id"])
+        media_ids.extend(batch["media_id"])
+        paths.extend(batch["path"])
         views.extend(batch["view_type"])
+        stage_names.extend(batch["stage_name"])
+        color_names.extend(batch["color_name"])
 
-    return torch.cat(logits), truth, stages, colors, animal_ids, views
+    return (
+        torch.cat(logits),
+        truth,
+        stages,
+        colors,
+        animal_ids,
+        media_ids,
+        paths,
+        views,
+        stage_names,
+        color_names,
+    )
 
 
 def aggregate_logits_by_animal(
@@ -156,6 +180,119 @@ def build_loader(manifest, media_root, split, processor, batch_size):
     )
 
 
+def build_error_review(
+    truth: list[int],
+    image_pred: list[int],
+    image_probabilities: torch.Tensor,
+    animal_ids: list[str],
+    media_ids: list[str],
+    paths: list[str],
+    views: list[str],
+    stage_names: list[str],
+    color_names: list[str],
+    ordered_animal_ids: list[str],
+    animal_truth: list[int],
+    animal_pred: list[int],
+    animal_probabilities: torch.Tensor,
+) -> dict:
+    images_by_animal: dict[str, list[dict]] = defaultdict(list)
+    for index, animal_id in enumerate(animal_ids):
+        probs = image_probabilities[index]
+        ordered = torch.argsort(probs, descending=True).tolist()
+        predicted = int(image_pred[index])
+        confidence = float(probs[predicted].item())
+        runner_up = ordered[1] if len(ordered) > 1 else predicted
+        images_by_animal[animal_id].append({
+            "media_id": media_ids[index] or None,
+            "path": paths[index],
+            "view_type": views[index],
+            "life_stage": stage_names[index],
+            "neonate_color": color_names[index],
+            "true_taxon": TAXA[truth[index]],
+            "predicted_taxon": TAXA[predicted],
+            "correct": predicted == truth[index],
+            "confidence": confidence,
+            "runner_up_taxon": TAXA[runner_up],
+            "runner_up_probability": float(probs[runner_up].item()),
+            "margin": confidence - float(probs[runner_up].item()),
+            "scores": {
+                taxon: float(probs[i].item()) for i, taxon in enumerate(TAXA)
+            },
+        })
+
+    individuals = []
+    for index, animal_id in enumerate(ordered_animal_ids):
+        probs = animal_probabilities[index]
+        ordered = torch.argsort(probs, descending=True).tolist()
+        predicted = int(animal_pred[index])
+        runner_up = ordered[1] if len(ordered) > 1 else predicted
+        confidence = float(probs[predicted].item())
+        true_index = int(animal_truth[index])
+        images = images_by_animal.get(animal_id, [])
+        individuals.append({
+            "animal_id": animal_id,
+            "true_taxon": TAXA[true_index],
+            "predicted_taxon": TAXA[predicted],
+            "correct": predicted == true_index,
+            "confidence": confidence,
+            "runner_up_taxon": TAXA[runner_up],
+            "runner_up_probability": float(probs[runner_up].item()),
+            "margin": confidence - float(probs[runner_up].item()),
+            "scores": {
+                taxon: float(probs[i].item()) for i, taxon in enumerate(TAXA)
+            },
+            "images": sorted(
+                images,
+                key=lambda row: (
+                    row["correct"],
+                    row["margin"],
+                    -row["confidence"],
+                ),
+            ),
+        })
+
+    individuals.sort(
+        key=lambda row: (
+            row["correct"],
+            row["margin"],
+            -row["confidence"],
+        )
+    )
+
+    hardest_images = sorted(
+        [image for rows in images_by_animal.values() for image in rows],
+        key=lambda row: (
+            row["correct"],
+            row["margin"],
+            -row["confidence"],
+        ),
+    )
+
+    confusion_pairs: Counter[tuple[str, str]] = Counter()
+    for row in individuals:
+        if not row["correct"]:
+            confusion_pairs[(row["true_taxon"], row["predicted_taxon"])] += 1
+
+    return {
+        "summary": {
+            "held_out_animals": len(individuals),
+            "held_out_images": len(hardest_images),
+            "misclassified_animals": sum(not row["correct"] for row in individuals),
+            "misclassified_images": sum(not row["correct"] for row in hardest_images),
+        },
+        "confusion_pairs": [
+            {
+                "true_taxon": true_taxon,
+                "predicted_taxon": predicted_taxon,
+                "animals": count,
+            }
+            for (true_taxon, predicted_taxon), count in confusion_pairs.most_common()
+        ],
+        "individuals": individuals,
+        "hardest_images": hardest_images[:100],
+    }
+
+
 def main():
     args = parse_args()
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
@@ -185,6 +322,10 @@ def main():
         _,
         val_animals,
         _,
+        _,
+        _,
+        _,
+        _,
     ) = collect(model, val_loader, device)
     val_animal_logits, val_animal_truth, _ = aggregate_logits_by_animal(
         val_logits, val_truth, val_animals
@@ -203,7 +344,11 @@ def main():
         stages,
         colors,
         test_animals,
+        media_ids,
+        paths,
         views,
+        stage_names,
+        color_names,
     ) = collect(model, test_loader, device)
 
     calibrated_image_probs = (test_logits / temperature).softmax(-1)
@@ -214,6 +359,22 @@ def main():
     )
     animal_probabilities = (test_animal_logits / temperature).softmax(-1)
     animal_pred = animal_probabilities.argmax(1).tolist()
+
+    error_review = build_error_review(
+        truth=truth,
+        image_pred=image_pred,
+        image_probabilities=calibrated_image_probs,
+        animal_ids=test_animals,
+        media_ids=media_ids,
+        paths=paths,
+        views=views,
+        stage_names=stage_names,
+        color_names=color_names,
+        ordered_animal_ids=ordered_animal_ids,
+        animal_truth=test_animal_truth,
+        animal_pred=animal_pred,
+        animal_probabilities=animal_probabilities,
+    )
 
     individual = classification_metrics(test_animal_truth, animal_pred)
     image_level = classification_metrics(truth, image_pred)
@@ -276,6 +437,13 @@ def main():
                 },
                 indent=2,
             ),
+            encoding="utf-8",
+        )
+    if args.error_review_output:
+        error_path = Path(args.error_review_output)
+        error_path.parent.mkdir(parents=True, exist_ok=True)
+        error_path.write_text(
+            json.dumps(error_review, indent=2),
             encoding="utf-8",
         )
     print(rendered)
