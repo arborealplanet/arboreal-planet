@@ -844,6 +844,11 @@ export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: ()
                     <option value="true">Candidate for training</option><option value="false">Reference only / hold out</option>
                   </select>
                 </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Challenge / OOD role
+                  <select name="challenge_eligible" defaultValue="false" className={`${field} mt-2`}>
+                    <option value="false">Not a challenge example</option><option value="true">Use for rejection / difficult-case evaluation</option>
+                  </select>
+                </label>
                 <label className="sm:col-span-2 text-[9px] font-black uppercase tracking-[.08em] text-white/28">Notes
                   <textarea name="notes" className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="Why the label is trusted, lineage/provenance notes, anything unusual…" />
                 </label>
