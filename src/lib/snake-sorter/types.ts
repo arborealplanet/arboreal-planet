@@ -47,6 +47,12 @@ export type SnakeSorterAnalysisResult = {
     score: number;
     notes: string[];
   };
+  uncertainty: {
+    topTwoMargin: number;
+    entropy?: number;
+    outOfDistributionScore?: number;
+    rejectionReason?: "low_confidence" | "low_margin" | "out_of_distribution" | "poor_evidence" | "rule_conflict" | null;
+  };
   flags: string[];
   modelVersion: string;
 };
