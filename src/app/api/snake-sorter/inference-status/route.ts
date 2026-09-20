@@ -52,6 +52,8 @@ export async function GET() {
       device: typeof data.device === "string" ? data.device : null,
       references: typeof data.references === "number" ? data.references : 0,
       embeddingDimension: typeof data.embeddingDimension === "number" ? data.embeddingDimension : null,
+      rejectionPolicySource: typeof data.rejectionPolicySource === "string" ? data.rejectionPolicySource : "fallback",
+      rejectionPolicyValidated: data.rejectionPolicyValidated === true,
     });
   } catch (error) {
     return NextResponse.json({
