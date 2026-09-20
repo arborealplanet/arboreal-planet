@@ -106,7 +106,7 @@ export function SnakeSorterWorkspace() {
         images: rows.reduce((sum, animal) => sum + (mediaCount.get(animal.id) ?? 0), 0),
       };
     });
-  }, [animals, media, mediaCount]);
+  }, [animals, mediaCount]);
 
 
   const diagnostics = useMemo(() => {
@@ -133,6 +133,42 @@ export function SnakeSorterWorkspace() {
     const train = approved.filter((animal) => animal.dataset_split === "train").length;
     const validation = approved.filter((animal) => animal.dataset_split === "validation").length;
     const test = approved.filter((animal) => animal.dataset_split === "test").length;
+
+    const eligibleApproved = approved.filter((animal) =>
+      animal.training_eligible && animal.rights_status !== "unknown"
+    );
+    const eligibleIds = new Set(eligibleApproved.map((animal) => animal.id));
+    const eligibleWithAcceptedMedia = new Set(
+      acceptedMedia.filter((item) => eligibleIds.has(item.animal_id)).map((item) => item.animal_id)
+    );
+    const approvedTrainingNoAcceptedMedia = eligibleApproved.filter((animal) => !eligibleWithAcceptedMedia.has(animal.id)).length;
+    const approvedTrainingRightsUnknown = approved.filter((animal) => animal.training_eligible && (!animal.rights_status || animal.rights_status === "unknown")).length;
+
+    const targetTaxa = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"] as const;
+    const taxonSplitCoverage = targetTaxa.map((taxon) => {
+      const rows = eligibleApproved.filter((animal) => animal.taxon === taxon);
+      return {
+        taxon,
+        train: rows.filter((animal) => animal.dataset_split === "train").length,
+        validation: rows.filter((animal) => animal.dataset_split === "validation").length,
+        test: rows.filter((animal) => animal.dataset_split === "test").length,
+      };
+    });
+
+    const readinessBlockers: string[] = [];
+    if (!eligibleApproved.length) readinessBlockers.push("No approved, rights-reviewed training animals yet.");
+    if (approvedUnassigned.some((animal) => animal.training_eligible)) readinessBlockers.push("Approved training animals still need dataset splits.");
+    if (approvedTrainingRightsUnknown) readinessBlockers.push(`${approvedTrainingRightsUnknown} approved training animal(s) still have unknown rights status.`);
+    if (approvedTrainingNoAcceptedMedia) readinessBlockers.push(`${approvedTrainingNoAcceptedMedia} approved training animal(s) have no accepted image.`);
+    for (const row of taxonSplitCoverage) {
+      if (!row.train) readinessBlockers.push(`${row.taxon} has no train individual.`);
+      if (!row.validation) readinessBlockers.push(`${row.taxon} has no validation individual.`);
+      if (!row.test) readinessBlockers.push(`${row.taxon} has no test individual.`);
+    }
+
+    const readinessWarnings: string[] = [];
+    if (approvedMissingCoreViews) readinessWarnings.push(`${approvedMissingCoreViews} approved animal(s) are missing one or more core photographic views.`);
+    const structurallyReady = readinessBlockers.length === 0;
 
     const youngStages = new Set(["hatchling", "neonate", "juvenile"]);
     const youngTargets = [
@@ -178,9 +214,15 @@ export function SnakeSorterWorkspace() {
       train,
       validation,
       test,
+      approvedTrainingNoAcceptedMedia,
+      approvedTrainingRightsUnknown,
+      taxonSplitCoverage,
+      readinessBlockers,
+      readinessWarnings,
+      structurallyReady,
       collectionTargets,
     };
-  }, [animals, mediaCount]);
+  }, [animals, media, mediaCount]);
 
   async function addReference(formData: FormData) {
     setSaving(true);
@@ -403,6 +445,29 @@ export function SnakeSorterWorkspace() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               {[["Approved",diagnostics.approved],["Pending review",diagnostics.pending],["No images",diagnostics.noImages],["Approved / unassigned",diagnostics.approvedUnassigned],["Missing core views",diagnostics.approvedMissingCoreViews],["Accepted approved images",diagnostics.acceptedApprovedImages],["Held images",diagnostics.heldImages],["Rejected images",diagnostics.rejectedImages]].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.07] p-3"><div className="text-lg font-semibold text-white/60">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/22">{name}</div></div>)}
             </div>
+            <div className={`mt-4 rounded-2xl border p-4 ${diagnostics.structurallyReady ? "border-emerald-300/12 bg-emerald-300/[.025]" : "border-amber-300/12 bg-amber-300/[.025]"}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Training readiness</div>
+                  <div className="mt-1 text-sm font-semibold text-white/55">{diagnostics.structurallyReady ? "Structurally ready for an experimental training run" : "Dataset structure still has blockers"}</div>
+                </div>
+                <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${diagnostics.structurallyReady ? "border-emerald-300/15 text-emerald-100/60" : "border-amber-300/15 text-amber-100/55"}`}>{diagnostics.structurallyReady ? "Ready to experiment" : "Blocked"}</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {diagnostics.taxonSplitCoverage.map((row) => (
+                  <div key={row.taxon} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 rounded-xl border border-white/[.045] bg-black/[.05] px-3 py-2">
+                    <span className="truncate text-[10px] text-white/36">{row.taxon}</span>
+                    <span className={`text-[9px] ${row.train ? "text-emerald-100/50" : "text-rose-100/45"}`}>T {row.train}</span>
+                    <span className={`text-[9px] ${row.validation ? "text-emerald-100/50" : "text-rose-100/45"}`}>V {row.validation}</span>
+                    <span className={`text-[9px] ${row.test ? "text-emerald-100/50" : "text-rose-100/45"}`}>X {row.test}</span>
+                  </div>
+                ))}
+              </div>
+              {diagnostics.readinessBlockers.length > 0 && <div className="mt-3 space-y-1">{diagnostics.readinessBlockers.slice(0,8).map((item) => <div key={item} className="text-[9px] leading-4 text-amber-50/38">• {item}</div>)}</div>}
+              {diagnostics.readinessWarnings.length > 0 && <div className="mt-3 border-t border-white/[.05] pt-3">{diagnostics.readinessWarnings.map((item) => <div key={item} className="text-[9px] leading-4 text-white/24">• {item}</div>)}</div>}
+              <p className="mt-3 text-[9px] leading-4 text-white/18">Passing these checks means the split structure is valid enough to run an experiment. It does not mean the dataset is large or diverse enough for a production model.</p>
+            </div>
+
             <div className="mt-4 rounded-2xl border border-white/[.055] bg-black/[.07] p-4">
               <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Approved split balance</div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><div className="text-lg font-semibold text-white/58">{diagnostics.train}</div><div className="text-[8px] uppercase text-white/20">Train</div></div><div><div className="text-lg font-semibold text-white/58">{diagnostics.validation}</div><div className="text-[8px] uppercase text-white/20">Validation</div></div><div><div className="text-lg font-semibold text-white/58">{diagnostics.test}</div><div className="text-[8px] uppercase text-white/20">Test</div></div></div>
