@@ -41,6 +41,28 @@ const variant = (
   options: Omit<SpriteVariant, "path"> = {},
 ): SpriteVariant => ({ path, ...options });
 
+const spritePathFallbacks: Record<string, string[]> = {
+  "/hatchery/snakes/localities/wamena/red-neonate-live.webp": [
+    "/hatchery/snakes/localities/wamena/red-neonate-fixed.webp",
+    "/hatchery/snakes/localities/wamena/red-neonate-v3.webp",
+  ],
+  "/hatchery/snakes/localities/wamena/red-adult-live-v2.webp": [
+    "/hatchery/snakes/localities/wamena/red-adult.webp",
+  ],
+  "/hatchery/snakes/localities/wamena/yellow-adult-live-v2.webp": [
+    "/hatchery/snakes/localities/wamena/yellow-adult.webp",
+  ],
+  "/hatchery/snakes/localities/aru/adult-live-v2.webp": [
+    "/hatchery/snakes/localities/aru/adult.webp",
+  ],
+  "/hatchery/snakes/localities/merauke/adult-live-v2.webp": [
+    "/hatchery/snakes/localities/merauke/adult.webp",
+  ],
+  "/hatchery/snakes/localities/biak/red-neonate-live-v2.webp": [
+    "/hatchery/snakes/localities/biak/red-neonate.webp",
+  ],
+};
+
 const localitySprites: Record<string, StageSpriteSet> = {
   Lereh: {
     juvenile: {
@@ -340,6 +362,13 @@ export function designerSpriteFor(request: ChondroSpriteRequest) {
 
 export function chondroSpecificSpriteFor(request: ChondroSpriteRequest) {
   return designerSpriteFor(request) ?? hybridSpriteFor(request) ?? localitySpriteFor(request);
+}
+
+export function chondroSpecificSpriteCandidatesFor(request: ChondroSpriteRequest) {
+  const primary = chondroSpecificSpriteFor(request);
+  if (!primary) return [];
+  return [primary, ...(spritePathFallbacks[primary] ?? [])]
+    .filter((path, index, paths) => paths.indexOf(path) === index);
 }
 
 export const CHONDRO_SPRITE_ASSET_PLAN = {
