@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
+import { runSnakeSorterEngine } from "@/lib/snake-sorter/engine";
+import type { PreparedEvidence, SnakeSorterColor, SnakeSorterLifeStage } from "@/lib/snake-sorter/types";
 
 export const runtime = "nodejs";
 
@@ -42,14 +44,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid analysis settings." }, { status: 400 });
   }
 
+  const prepared: PreparedEvidence[] = await Promise.all(evidence.map(async (file) => ({
+    name: file.name,
+    mimeType: file.type,
+    bytes: new Uint8Array(await file.arrayBuffer()),
+  })));
+
   // Intentionally no database or Storage write here.
-  // Scan media is transient evidence only. When the vision service is connected,
-  // this handler will forward normalized frames in-memory and return the result.
+  // Scan media is transient evidence only and is passed to the engine in memory.
+  const engineResponse = await runSnakeSorterEngine({
+    evidence: prepared,
+    hints: {
+      lifeStage: lifeStageHint as SnakeSorterLifeStage | "auto",
+      color: colorHint as SnakeSorterColor | "auto",
+      localityMode: String(form.get("locality_mode") ?? "true") === "true",
+      nearestNeighbors: String(form.get("nearest_neighbors") ?? "true") === "true",
+      conservativeMode: String(form.get("conservative_mode") ?? "true") === "true",
+    },
+  });
+
+  if (engineResponse.status === "ready") {
+    return NextResponse.json({ result: engineResponse.result });
+  }
+
   return NextResponse.json({
     error: "model_not_connected",
-    message: `Snake Sorter prepared ${evidence.length} evidence frame(s) successfully. The capture and preprocessing pipeline is working; the trained vision model is the remaining analysis engine to connect.`,
+    message: engineResponse.message,
     ready: {
-      evidence_frames: evidence.length,
+      evidence_frames: engineResponse.preparedFrames,
       life_stage_hint: lifeStageHint,
       color_hint: colorHint,
       frame_sampling: frameSampling,
