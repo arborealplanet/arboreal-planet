@@ -380,6 +380,11 @@ export function SnakeSorterWorkspace() {
               <input name="animal_code" className={`${field} mt-2`} placeholder="Optional individual identifier" />
             </label>
 
+            <label className={label}>Related / split group
+              <input name="split_group" className={`${field} mt-2`} placeholder="Optional clutch / sibling / line group" />
+              <span className="mt-2 block text-[10px] normal-case tracking-normal text-white/22">Animals in the same group stay together in train / validation / test.</span>
+            </label>
+
             <label className={label}>Source name
               <input name="source_name" className={`${field} mt-2`} placeholder="Breeder, publication, collection…" />
             </label>
