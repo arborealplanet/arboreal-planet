@@ -16,6 +16,7 @@ type InferenceStatus = {
   configured: boolean;
   online: boolean;
   modelVersion?: string | null;
+  modelRegistryId?: string | null;
   device?: string | null;
   references?: number;
   message?: string;
@@ -185,8 +186,10 @@ export function SnakeSorterModelStatus() {
   const servingMismatch = Boolean(
     activeModel &&
     inferenceStatus.online &&
-    inferenceStatus.modelVersion &&
-    inferenceStatus.modelVersion !== activeModel.version
+    (
+      (inferenceStatus.modelRegistryId && inferenceStatus.modelRegistryId !== activeModel.id) ||
+      (inferenceStatus.modelVersion && inferenceStatus.modelVersion !== activeModel.version)
+    )
   );
   const servingWithoutRegistryModel = Boolean(!activeModel && inferenceStatus.online && inferenceStatus.modelVersion);
 
@@ -211,12 +214,12 @@ export function SnakeSorterModelStatus() {
           <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${inferenceStatus.online ? "border-emerald-300/15 text-emerald-100/60" : inferenceStatus.configured ? "border-amber-300/15 text-amber-100/55" : "border-white/[.07] text-white/28"}`}>{inferenceStatus.online ? "Ready" : "Unavailable"}</span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Service model</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.modelVersion || "—"}</div></div>
+          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Service model</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.modelVersion || "—"}</div><div className="mt-1 truncate font-mono text-[8px] text-white/18">{inferenceStatus.modelRegistryId || "No registry ID"}</div></div>
           <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Device</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.device || "—"}</div></div>
           <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Reference vectors</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.references ?? 0}</div></div>
         </div>
         {inferenceStatus.message && <div className="mt-3 text-[10px] leading-5 text-white/24">{inferenceStatus.message}</div>}
-        {servingMismatch && <div className="mt-3 rounded-xl border border-amber-300/12 bg-amber-300/[.035] px-3 py-2 text-[10px] leading-5 text-amber-50/50">Registry / serving mismatch: active registry model is {activeModel?.version}, while the inference service reports {inferenceStatus.modelVersion}. Do not treat scans as production-current until the service is redeployed.</div>}
+        {servingMismatch && <div className="mt-3 rounded-xl border border-amber-300/12 bg-amber-300/[.035] px-3 py-2 text-[10px] leading-5 text-amber-50/50">Registry / serving mismatch: active registry model is {activeModel?.version} ({activeModel?.id.slice(0,8)}…), while the inference service reports {inferenceStatus.modelVersion || "unknown version"} ({inferenceStatus.modelRegistryId ? `${inferenceStatus.modelRegistryId.slice(0,8)}…` : "no registry ID"}). Do not treat scans as production-current until the service is redeployed.</div>}
         {servingWithoutRegistryModel && <div className="mt-3 rounded-xl border border-amber-300/12 bg-amber-300/[.035] px-3 py-2 text-[10px] leading-5 text-amber-50/50">The inference service is serving model {inferenceStatus.modelVersion}, but no model is marked active in the registry.</div>}
         {activeModel && inferenceStatus.online && !servingMismatch && inferenceStatus.modelVersion === activeModel.version && <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2 text-[10px] leading-5 text-emerald-50/45">Registry and serving model are synchronized at {activeModel.version}.</div>}
       </div>
