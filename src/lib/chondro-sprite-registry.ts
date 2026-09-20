@@ -84,22 +84,22 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Biak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-adult.png")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-adult.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-adult.webp")],
     },
   },
   Numfor: {
     // Temporary fallback requested by the owner while dedicated Numfor art is produced.
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-adult.png")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
     },
   },
   Aru: {
