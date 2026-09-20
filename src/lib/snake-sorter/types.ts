@@ -37,6 +37,9 @@ export type ReferenceNeighbor = {
   mediaId?: string;
   taxon: SnakeSorterTaxon;
   locality?: string | null;
+  lifeStage?: SnakeSorterLifeStage | null;
+  neonateColor?: SnakeSorterColor | null;
+  viewType?: SnakeSorterViewType | "unknown" | null;
   similarity: number;
 };
 
@@ -62,4 +65,5 @@ export type SnakeSorterAnalysisResult = {
   };
   flags: string[];
   modelVersion: string;
+  modelRegistryId?: string | null;
 };
