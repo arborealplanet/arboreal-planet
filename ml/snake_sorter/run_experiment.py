@@ -55,6 +55,7 @@ def main():
     train_dir = output / "training"
     metrics_path = output / "test-metrics.json"
     calibration_path = output / "calibration.json"
+    error_review_path = output / "error-review.json"
     embeddings_path = output / "reference-embeddings-train.jsonl"
     audit_path = output / "dataset-audit.json"
     experiment_path = output / "experiment.json"
@@ -124,6 +125,7 @@ def main():
         "--batch-size", str(args.batch_size),
         "--output", str(metrics_path),
         "--calibration-output", str(calibration_path),
+        "--error-review-output", str(error_review_path),
     ])
 
     run([
@@ -145,6 +147,7 @@ def main():
         "dataset_audit": json.loads(audit_path.read_text(encoding="utf-8")),
         "metrics": metrics,
         "calibration": calibration,
+        "error_review": json.loads(error_review_path.read_text(encoding="utf-8")),
         "reference_embeddings": str(embeddings_path),
     })
     experiment_path.write_text(json.dumps(experiment, indent=2), encoding="utf-8")
@@ -156,6 +159,7 @@ def main():
         "dataset_audit": str(audit_path),
         "metrics": str(metrics_path),
         "calibration": str(calibration_path),
+        "error_review": str(error_review_path),
         "reference_embeddings": str(embeddings_path),
     }, indent=2))
 
