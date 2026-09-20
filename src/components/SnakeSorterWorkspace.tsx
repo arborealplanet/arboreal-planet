@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
+import { SnakeSorterReferenceManager } from "@/components/SnakeSorterReferenceManager";
 
 type ReferenceAnimal = {
   id: string;
@@ -14,6 +15,11 @@ type ReferenceAnimal = {
   purity_status: string;
   source_type: string;
   source_name: string | null;
+  source_url?: string | null;
+  notes?: string | null;
+  review_status?: string;
+  review_notes?: string | null;
+  dataset_split?: string;
   training_eligible: boolean;
   created_at: string;
 };
@@ -249,20 +255,8 @@ export function SnakeSorterWorkspace() {
         </aside>
       </div>
 
-      <div className="mt-6 panel rounded-[28px] p-5 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><div className="section-kicker">Reference library</div><h2 className="mt-2 text-2xl font-semibold">Collected animals</h2></div>
-          <button onClick={() => void load()} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/40 hover:text-white/65">Refresh</button>
-        </div>
-        {loading ? <div className="py-12 text-center text-sm text-white/28">Loading Snake Sorter references…</div> :
-          animals.length === 0 ? <div className="py-12 text-center text-sm text-white/28">No reference animals yet.</div> :
-          <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className="text-[9px] font-black uppercase tracking-[.1em] text-white/25"><tr><th className="pb-3 pr-5">Taxon</th><th className="pb-3 pr-5">Locality</th><th className="pb-3 pr-5">Stage</th><th className="pb-3 pr-5">Color</th><th className="pb-3 pr-5">Confidence</th><th className="pb-3 pr-5">Images</th><th className="pb-3">Training</th></tr></thead>
-              <tbody>{animals.map((animal) => <tr key={animal.id} className="border-t border-white/[.05] text-white/48"><td className="py-4 pr-5 font-semibold text-white/68">{animal.taxon}<div className="mt-1 text-[10px] font-normal text-white/23">{animal.animal_code || animal.source_name || animal.source_type}</div></td><td className="py-4 pr-5">{animal.locality || "—"}</td><td className="py-4 pr-5 capitalize">{animal.life_stage}</td><td className="py-4 pr-5 capitalize">{animal.neonate_color.replace("_", " ")}</td><td className="py-4 pr-5 capitalize">{animal.label_confidence}</td><td className="py-4 pr-5">{mediaCount.get(animal.id) ?? 0}</td><td className="py-4">{animal.training_eligible ? <span className="text-emerald-200/60">Eligible</span> : <span className="text-amber-100/50">Hold</span>}</td></tr>)}</tbody>
-            </table>
-          </div>
-        }
+      <div className="mt-6">
+        <SnakeSorterReferenceManager animals={animals} media={media} onRefresh={load} />
       </div>
     </section>
   );
