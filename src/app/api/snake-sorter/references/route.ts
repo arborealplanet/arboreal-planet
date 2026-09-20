@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const storageUrl = `${SUPABASE_AUTH_URL.replace(".supabase.co", ".supabase.co")}/storage/v1`;
@@ -118,10 +119,23 @@ export async function POST(request: NextRequest) {
   const files = form.getAll("images").filter((item): item is File => item instanceof File && item.size > 0).slice(0, 12);
   const uploaded: Array<{ id?: string; name: string }> = [];
   const failed: string[] = [];
+  const duplicates: string[] = [];
 
   for (const file of files) {
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) {
       failed.push(file.name);
+      continue;
+    }
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const duplicateResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?content_sha256=eq.${sha256}&select=id&limit=1`, {
+      headers: restHeaders(identity.token),
+      cache: "no-store",
+    });
+    const duplicateRows = duplicateResponse.ok ? await duplicateResponse.json() as Array<{ id: string }> : [];
+    if (duplicateRows.length) {
+      duplicates.push(file.name);
       continue;
     }
 
@@ -134,7 +148,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": file.type,
         "x-upsert": "false",
       },
-      body: await file.arrayBuffer(),
+      body: bytes,
       cache: "no-store",
     });
 
@@ -152,13 +166,22 @@ export async function POST(request: NextRequest) {
         storage_path: path,
         original_name: file.name.slice(0, 255),
         mime_type: file.type,
+        content_sha256: sha256,
+        file_size_bytes: file.size,
       }),
       cache: "no-store",
     });
 
     if (mediaResponse.ok) uploaded.push({ name: file.name });
-    else failed.push(file.name);
+    else {
+      await fetch(`${storageUrl}/object/snake-sorter-reference/${path}`, {
+        method: "DELETE",
+        headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}` },
+        cache: "no-store",
+      }).catch(() => undefined);
+      failed.push(file.name);
+    }
   }
 
-  return NextResponse.json({ ok: true, animalId: animal.id, uploaded: uploaded.length, failed }, { status: 201 });
+  return NextResponse.json({ ok: true, animalId: animal.id, uploaded: uploaded.length, duplicates, failed }, { status: 201 });
 }
