@@ -44,8 +44,8 @@ const variant = (
 const localitySprites: Record<string, StageSpriteSet> = {
   Lereh: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/lereh/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/localities/lereh/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.webp")],
     },
     adult: {
       Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-adult.webp")],
