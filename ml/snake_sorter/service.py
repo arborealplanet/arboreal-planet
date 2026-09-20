@@ -83,23 +83,29 @@ class ReferenceIndex:
         if query.shape[1] != self.matrix.shape[1]:
             return []
         similarity = torch.mm(query, self.matrix.T).squeeze(0)
-        count = min(limit, len(self.records))
-        values, indices = torch.topk(similarity, k=count)
+        search_count = min(max(limit * 6, limit), len(self.records))
+        values, indices = torch.topk(similarity, k=search_count)
         out: list[dict[str, Any]] = []
+        seen_animals: set[str] = set()
         for value, index in zip(values.tolist(), indices.tolist()):
             row = self.records[index]
             taxon = row.get("taxon")
-            if taxon not in TAXA:
+            animal_id = str(row.get("animal_id") or "")
+            if taxon not in TAXA or not animal_id or animal_id in seen_animals:
                 continue
+            seen_animals.add(animal_id)
             out.append({
-                "animalId": str(row.get("animal_id") or ""),
+                "animalId": animal_id,
                 "mediaId": str(row.get("media_id") or "") or None,
                 "taxon": taxon,
                 "locality": row.get("locality"),
                 "lifeStage": row.get("life_stage"),
+                "neonateColor": row.get("neonate_color"),
                 "viewType": row.get("view_type"),
                 "similarity": float(value),
             })
+            if len(out) >= limit:
+                break
         return out
 
 
@@ -131,6 +137,10 @@ class Runtime:
             "SNAKE_SORTER_MODEL_VERSION",
             Path(checkpoint_path).stem,
         )
+        self.model_registry_id = os.environ.get(
+            "SNAKE_SORTER_MODEL_REGISTRY_ID",
+            "",
+        ).strip() or None
         self.references = ReferenceIndex(os.environ.get("SNAKE_SORTER_REFERENCE_EMBEDDINGS"))
 
 
@@ -159,6 +169,7 @@ def health(authorization: str | None = Header(default=None)) -> dict[str, Any]:
     return {
         "ok": runtime is not None,
         "modelVersion": runtime.model_version if runtime else None,
+        "modelRegistryId": runtime.model_registry_id if runtime else None,
         "device": str(runtime.device) if runtime else None,
         "references": len(runtime.references.records) if runtime else 0,
     }
@@ -312,5 +323,6 @@ async def analyze(
             },
             "flags": flags,
             "modelVersion": runtime.model_version,
+            "modelRegistryId": runtime.model_registry_id,
         }
     }
