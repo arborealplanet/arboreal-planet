@@ -25,6 +25,7 @@ def parse_args():
     parser.add_argument("--weight-decay", type=float, default=0.02)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--near-duplicate-distance", type=int, default=5)
     parser.add_argument("--unfreeze-backbone", action="store_true")
     return parser.parse_args()
 
@@ -55,6 +56,7 @@ def main():
     metrics_path = output / "test-metrics.json"
     calibration_path = output / "calibration.json"
     embeddings_path = output / "reference-embeddings-train.jsonl"
+    audit_path = output / "dataset-audit.json"
     experiment_path = output / "experiment.json"
 
     snapshot = json.loads(snapshot_metadata.read_text(encoding="utf-8"))
@@ -69,6 +71,11 @@ def main():
         "weight_decay": args.weight_decay,
         "seed": args.seed,
         "unfreeze_backbone": args.unfreeze_backbone,
+        "dataset_audit": {
+            "near_duplicate_distance": args.near_duplicate_distance,
+            "cross_split_near_duplicates_are_fatal": True,
+            "quality_findings_are_warnings": True,
+        },
         "evaluation_policy": {
             "validation": "unseen individuals, predicted stage",
             "test": "untouched unseen individuals, predicted stage",
@@ -76,6 +83,14 @@ def main():
         },
     }
     experiment_path.write_text(json.dumps(experiment, indent=2), encoding="utf-8")
+
+    run([
+        sys.executable,
+        str(root / "audit_snapshot.py"),
+        "--dataset", str(dataset),
+        "--output", str(audit_path),
+        "--near-duplicate-distance", str(args.near_duplicate_distance),
+    ])
 
     train_command = [
         sys.executable,
@@ -127,6 +142,7 @@ def main():
     experiment.update({
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "checkpoint": str(checkpoint),
+        "dataset_audit": json.loads(audit_path.read_text(encoding="utf-8")),
         "metrics": metrics,
         "calibration": calibration,
         "reference_embeddings": str(embeddings_path),
@@ -137,6 +153,7 @@ def main():
         "ok": True,
         "output": str(output),
         "checkpoint": str(checkpoint),
+        "dataset_audit": str(audit_path),
         "metrics": str(metrics_path),
         "calibration": str(calibration_path),
         "reference_embeddings": str(embeddings_path),
