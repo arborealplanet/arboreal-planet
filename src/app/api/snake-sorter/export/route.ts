@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       approximate_age_days: item.approximate_age_days,
       label_confidence: animal.label_confidence,
       purity_status: animal.purity_status,
+      split_group: animal.split_group,
       dataset_split: animal.dataset_split,
       source_type: animal.source_type,
       source_name: animal.source_name,
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const columns = ["animal_id","animal_code","media_id","storage_path","original_name","mime_type","view_type","is_primary","quality_status","taxon","locality","life_stage","life_stage_override","neonate_color","neonate_color_override","capture_date","approximate_age_days","label_confidence","purity_status","dataset_split","source_type","source_name","review_notes","rights_status","rights_notes"];
+  const columns = ["animal_id","animal_code","media_id","storage_path","original_name","mime_type","view_type","is_primary","quality_status","taxon","locality","life_stage","life_stage_override","neonate_color","neonate_color_override","capture_date","approximate_age_days","label_confidence","purity_status","split_group","dataset_split","source_type","source_name","review_notes","rights_status","rights_notes"];
   const body = [columns.join(","), ...rows.map((row) => columns.map((column) => csv(row[column as keyof typeof row])).join(","))].join("\n");
   return new NextResponse(body, {
     headers: {
