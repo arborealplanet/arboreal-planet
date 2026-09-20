@@ -97,7 +97,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Biak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate-live.webp")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
       Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
     },
     adult: {
