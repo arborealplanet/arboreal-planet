@@ -18,6 +18,8 @@ export type SnakeReferenceAnimal = {
   review_status?: string;
   review_notes?: string | null;
   dataset_split?: string;
+  rights_status?: string;
+  rights_notes?: string | null;
   training_eligible: boolean;
   created_at: string;
 };
@@ -296,6 +298,10 @@ export function SnakeSorterReferenceManager({
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Review status<select name="review_status" defaultValue={detail.animal.review_status ?? "pending"} className={`${field} mt-2`}><option value="pending">Pending review</option><option value="approved">Approved</option><option value="hold">Hold / questionable</option><option value="rejected">Rejected</option></select></label>
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Dataset split<select name="dataset_split" defaultValue={detail.animal.dataset_split ?? "unassigned"} className={`${field} mt-2`}><option value="unassigned">Unassigned</option><option value="train">Train</option><option value="validation">Validation</option><option value="test">Test</option></select></label>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights / use status<select name="rights_status" defaultValue={detail.animal.rights_status ?? "unknown"} className={`${field} mt-2`}><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown / not reviewed</option></select></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights notes<input name="rights_notes" defaultValue={detail.animal.rights_notes ?? ""} className={`${field} mt-2 normal-case tracking-normal`} /></label>
               </div>
               <label className="mt-3 flex items-center gap-3 rounded-xl border border-white/[.05] p-3 text-xs text-white/40"><input name="training_eligible" value="true" type="checkbox" defaultChecked={detail.animal.training_eligible} className="h-4 w-4 accent-emerald-300" />Candidate for future model training/validation</label>
               <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Review notes<textarea name="review_notes" defaultValue={detail.animal.review_notes ?? ""} className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="Why approved, held or rejected; label concerns; provenance issues…" /></label>
