@@ -59,7 +59,7 @@ def validate(model, loader, device):
         taxon = batch["taxon"].to(device)
         stage = batch["stage"].to(device)
         color = batch["color"].to(device)
-        out = model(pixel_values, stage_targets=stage)
+        out = model(pixel_values)
         loss = (
             ce(out["taxon_logits"], taxon)
             + 0.25 * ce(out["stage_logits"], stage)
