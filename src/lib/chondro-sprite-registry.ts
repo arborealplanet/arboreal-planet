@@ -49,18 +49,11 @@ const spritePathFallbacks: Record<string, string[]> = {
   "/hatchery/snakes/localities/wamena/red-adult-live-v2.webp": [
     "/hatchery/snakes/localities/wamena/red-adult.webp",
   ],
-  "/hatchery/snakes/localities/wamena/yellow-adult-live-v2.webp": [
-    "/hatchery/snakes/localities/wamena/yellow-adult.webp",
-  ],
   "/hatchery/snakes/localities/aru/adult-live-v2.webp": [
     "/hatchery/snakes/localities/aru/adult.webp",
   ],
   "/hatchery/snakes/localities/merauke/adult-live-v2.webp": [
     "/hatchery/snakes/localities/merauke/adult.webp",
-  ],
-  "/hatchery/snakes/localities/biak/red-neonate-live-v2.webp": [
-    "/hatchery/snakes/localities/biak/red-neonate-live.webp",
-    "/hatchery/snakes/localities/biak/red-neonate.webp",
   ],
 };
 
@@ -81,7 +74,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
     },
     adult: {
       Red: [variant("/hatchery/snakes/localities/wamena/red-adult-live-v2.webp")],
-      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-adult-live-v2.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-adult-source-v5.webp")],
     },
   },
   Cyclops: {
@@ -130,22 +123,22 @@ const localitySprites: Record<string, StageSpriteSet> = {
   Yapen: {},
   Biak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate-live-v2.webp")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate-source-v5.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate-source-v5.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-adult.webp")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-adult-source-v5.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-adult-source-v5.webp")],
     },
   },
   Numfor: {
     // Temporary fallback requested by the owner while dedicated Numfor art is produced.
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-neonate.webp")],
-      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate.webp")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-neonate-source-v5.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/biak/yellow-neonate-source-v5.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/biak/red-adult.webp")],
+      Red: [variant("/hatchery/snakes/localities/biak/red-adult-source-v5.webp")],
       Yellow: [variant("/hatchery/snakes/localities/numfor/yellow-adult.webp")],
     },
   },
@@ -166,12 +159,12 @@ const localitySprites: Record<string, StageSpriteSet> = {
 const specificHybridSprites: Record<string, StageSpriteSet> = {
   "aru-wamena": {
     juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.webp")],
+      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-02.webp")],
     },
   },
   "merauke-wamena": {
     juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-01.webp")],
+      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-02.webp")],
     },
   },
 };
