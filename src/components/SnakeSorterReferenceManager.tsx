@@ -34,6 +34,10 @@ export type SnakeReferenceMedia = {
   view_type?: string;
   quality_status?: string;
   is_primary?: boolean;
+  life_stage_override?: string | null;
+  neonate_color_override?: string | null;
+  capture_date?: string | null;
+  approximate_age_days?: number | null;
 };
 
 type Detail = { animal: SnakeReferenceAnimal; media: SnakeReferenceMedia[] };
@@ -142,12 +146,16 @@ export function SnakeSorterReferenceManager({
   }
 
 
-  async function updateMedia(item: SnakeReferenceMedia, patch: Partial<Pick<SnakeReferenceMedia, "view_type" | "quality_status" | "is_primary">>) {
+  async function updateMedia(item: SnakeReferenceMedia, patch: Partial<Pick<SnakeReferenceMedia, "view_type" | "quality_status" | "is_primary" | "life_stage_override" | "neonate_color_override" | "capture_date" | "approximate_age_days">>) {
     if (!detail) return;
     const payload = {
       view_type: patch.view_type ?? item.view_type ?? "unknown",
       quality_status: patch.quality_status ?? item.quality_status ?? "accepted",
       is_primary: patch.is_primary ?? item.is_primary ?? false,
+      life_stage_override: patch.life_stage_override ?? item.life_stage_override ?? "",
+      neonate_color_override: patch.neonate_color_override ?? item.neonate_color_override ?? "",
+      capture_date: patch.capture_date ?? item.capture_date ?? "",
+      approximate_age_days: patch.approximate_age_days ?? item.approximate_age_days ?? "",
     };
     const response = await fetch(`/api/snake-sorter/media/${item.id}`, {
       method: "PATCH",
@@ -207,7 +215,7 @@ export function SnakeSorterReferenceManager({
             <option>Morelia azurea azurea</option><option>Morelia azurea pulcher</option><option>Morelia azurea utaraensis</option><option>Morelia viridis</option><option>Unknown / review</option>
           </select>
           <select value={stage} onChange={(e) => setStage(e.target.value)} className={field}>
-            <option value="all">All stages</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option>
+            <option value="all">All stages</option><option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option>
           </select>
           <select value={color} onChange={(e) => setColor(e.target.value)} className={field}>
             <option value="all">All colors</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option><option value="unknown">Unknown</option>
@@ -272,6 +280,16 @@ export function SnakeSorterReferenceManager({
                   <select value={item.quality_status ?? "accepted"} onChange={(e) => void updateMedia(item,{quality_status:e.target.value})} className="w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
                     <option value="accepted">Image accepted</option><option value="hold">Hold image</option><option value="rejected">Reject image</option>
                   </select>
+                  <select value={item.life_stage_override ?? ""} onChange={(e) => void updateMedia(item,{life_stage_override:e.target.value})} className="w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
+                    <option value="">Use animal stage</option><option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option>
+                  </select>
+                  <select value={item.neonate_color_override ?? ""} onChange={(e) => void updateMedia(item,{neonate_color_override:e.target.value})} className="w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
+                    <option value="">Use animal color</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option><option value="unknown">Unknown</option>
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="date" value={item.capture_date ?? ""} onChange={(e) => void updateMedia(item,{capture_date:e.target.value})} className="rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none" />
+                    <input type="number" min="0" placeholder="Age days" value={item.approximate_age_days ?? ""} onChange={(e) => void updateMedia(item,{approximate_age_days:e.target.value ? Number(e.target.value) : null})} className="rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none" />
+                  </div>
                   <label className="flex items-center gap-2 text-[9px] text-white/28"><input type="checkbox" checked={Boolean(item.is_primary)} onChange={(e) => void updateMedia(item,{is_primary:e.target.checked})} className="h-3.5 w-3.5 accent-emerald-300" />Primary representative image</label>
                 </div>
               </div>)}
