@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
   const sourceName = text(form.get("source_name"), 160);
   const sourceUrl = text(form.get("source_url"), 1000);
   const animalCode = text(form.get("animal_code"), 100);
+  const splitGroup = text(form.get("split_group"), 160);
   const notes = text(form.get("notes"), 4000);
   const trainingEligible = text(form.get("training_eligible"), 10) !== "false";
   const rightsStatus = text(form.get("rights_status"), 40) || "unknown";
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({
       created_by: identity.user.id,
       animal_code: animalCode || null,
+      split_group: splitGroup || null,
       taxon,
       locality: locality || null,
       life_stage: lifeStage,
