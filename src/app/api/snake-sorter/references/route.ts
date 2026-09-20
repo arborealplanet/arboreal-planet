@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
-const storageUrl = `${SUPABASE_AUTH_URL.replace(".supabase.co", ".supabase.co")}/storage/v1`;
+const storageUrl = `${SUPABASE_AUTH_URL}/storage/v1`;
 const restHeaders = (token: string) => ({
   apikey: SUPABASE_AUTH_KEY,
   Authorization: `Bearer ${token}`,
