@@ -152,6 +152,7 @@ export function SnakeSorterModelStatus() {
   }, []);
 
   async function activate(model: ModelVersion) {
+    if (model.status === "retired" && !window.confirm(`Rollback to ${model.name} ${model.version}? The currently active model will be retired.`)) return;
     setActivating(model.id);
     setMessage("");
     const response = await fetch("/api/snake-sorter/models", {
@@ -161,7 +162,7 @@ export function SnakeSorterModelStatus() {
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessage(`${model.name} ${model.version} is now active.`);
+      setMessage(model.status === "retired" ? `Rolled back to ${model.name} ${model.version}.` : `${model.name} ${model.version} is now active.`);
       await load();
     } else setMessage(data.detail ? `${data.error ?? "Could not activate model."} · ${String(data.detail).slice(0,220)}` : (data.error ?? "Could not activate model."));
     setActivating("");
@@ -365,6 +366,15 @@ export function SnakeSorterModelStatus() {
                     <button type="button" disabled={Boolean(activating) || !deployable} onClick={() => void activate(model)} className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-3 py-2 text-[10px] font-black text-amber-100/60 disabled:opacity-35">{activating === model.id ? "Activating…" : "Promote candidate to active"}</button>
                   </div>
                   {!deployable && <div className="mt-2 text-[9px] leading-4 text-white/24">Missing: {deployMissing.join(", ")}.</div>}
+                </div>
+              )}
+              {model.status === "retired" && (
+                <div className="mt-3 rounded-xl border border-sky-300/10 bg-sky-300/[.025] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div><div className="text-[9px] font-black uppercase tracking-[.08em] text-sky-100/45">Rollback target</div><div className="mt-1 text-[9px] leading-4 text-white/22">Reactivation runs the same artifact, snapshot, calibration, embedding and challenge-provenance checks as a new candidate.</div></div>
+                    <button type="button" disabled={Boolean(activating) || !deployable} onClick={() => void activate(model)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[10px] font-black text-sky-100/60 disabled:opacity-35">{activating === model.id ? "Rolling back…" : "Rollback to this model"}</button>
+                  </div>
+                  {!deployable && <div className="mt-2 text-[9px] leading-4 text-white/24">Rollback blocked: {deployMissing.join(", ")}.</div>}
                 </div>
               )}
             </div>;
