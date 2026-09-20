@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const notes = clean(body.notes, 2000);
 
   const [animalsResponse, mediaResponse] = await Promise.all([
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&select=*&order=id.asc`, {
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)&select=*&order=id.asc`, {
       headers: h(identity.token),
       cache: "no-store",
     }),
