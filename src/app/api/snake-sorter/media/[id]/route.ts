@@ -45,9 +45,16 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const viewType = String(body.view_type ?? "");
   const qualityStatus = String(body.quality_status ?? "");
   const isPrimary = Boolean(body.is_primary);
+  const lifeStageOverride = String(body.life_stage_override ?? "");
+  const neonateColorOverride = String(body.neonate_color_override ?? "");
+  const captureDate = String(body.capture_date ?? "").trim();
+  const approximateAgeDaysRaw = body.approximate_age_days;
+  const approximateAgeDays = approximateAgeDaysRaw === "" || approximateAgeDaysRaw == null ? null : Number(approximateAgeDaysRaw);
   const allowedViews = new Set(["unknown","full_body","head","dorsal","left_lateral","right_lateral","tail","other"]);
   const allowedQuality = new Set(["accepted","hold","rejected"]);
-  if (!allowedViews.has(viewType) || !allowedQuality.has(qualityStatus)) {
+  const allowedStages = new Set(["","hatchling","neonate","juvenile","subadult","adult","unknown"]);
+  const allowedColors = new Set(["","red","yellow","not_applicable","unknown"]);
+  if (!allowedViews.has(viewType) || !allowedQuality.has(qualityStatus) || !allowedStages.has(lifeStageOverride) || !allowedColors.has(neonateColorOverride) || (approximateAgeDays != null && (!Number.isInteger(approximateAgeDays) || approximateAgeDays < 0))) {
     return NextResponse.json({ error: "Invalid media review metadata" }, { status: 400 });
   }
 
@@ -71,7 +78,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { ...authHeaders(identity.token), "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify({ view_type: viewType, quality_status: qualityStatus, is_primary: isPrimary }),
+    body: JSON.stringify({ view_type: viewType, quality_status: qualityStatus, is_primary: isPrimary, life_stage_override: lifeStageOverride || null, neonate_color_override: neonateColorOverride || null, capture_date: captureDate || null, approximate_age_days: approximateAgeDays }),
     cache: "no-store",
   });
   if (!response.ok) return NextResponse.json({ error: "Could not update image review metadata" }, { status: 400 });
