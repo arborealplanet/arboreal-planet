@@ -44,6 +44,46 @@ def hamming(a: int, b: int) -> int:
     return (a ^ b).bit_count()
 
 
+class BKTree:
+    def __init__(self) -> None:
+        self.root: tuple[int, dict[int, object], list[dict]] | None = None
+
+    def add(self, value: int, record: dict) -> None:
+        if self.root is None:
+            self.root = (value, {}, [record])
+            return
+
+        node = self.root
+        while True:
+            node_value, children, records = node
+            distance = hamming(value, node_value)
+            if distance == 0:
+                records.append(record)
+                return
+            child = children.get(distance)
+            if child is None:
+                children[distance] = (value, {}, [record])
+                return
+            node = child  # type: ignore[assignment]
+
+    def search(self, value: int, radius: int) -> list[tuple[int, dict]]:
+        if self.root is None:
+            return []
+        matches: list[tuple[int, dict]] = []
+        stack = [self.root]
+        while stack:
+            node_value, children, records = stack.pop()
+            distance = hamming(value, node_value)
+            if distance <= radius:
+                matches.extend((distance, record) for record in records)
+            low = distance - radius
+            high = distance + radius
+            for edge, child in children.items():
+                if low <= edge <= high:
+                    stack.append(child)  # type: ignore[arg-type]
+        return matches
+
+
 def sharpness_score(image: Image.Image) -> float:
     gray = np.asarray(image.convert("L").resize((256, 256)), dtype=np.float32)
     gx = np.abs(np.diff(gray, axis=1)).mean()
@@ -122,14 +162,14 @@ def main():
         })
 
     # Cross-animal near duplicates are especially dangerous when they cross
-    # train/validation/test, because they can create hidden leakage even when
-    # the owner records use different animal IDs.
-    for i, left in enumerate(image_records):
-        for right in image_records[i + 1:]:
+    # train/validation/test. Use a BK-tree over the 64-bit dHash space instead
+    # of an O(n^2) all-pairs scan so this remains practical as the library grows.
+    tree = BKTree()
+    for right in image_records:
+        for distance, left in tree.search(
+            right["dhash"], args.near_duplicate_distance
+        ):
             if left["animal_id"] == right["animal_id"]:
-                continue
-            distance = hamming(left["dhash"], right["dhash"])
-            if distance > args.near_duplicate_distance:
                 continue
             issue = {
                 "type": "possible_cross_animal_near_duplicate",
@@ -152,6 +192,7 @@ def main():
                 })
             else:
                 warnings.append(issue)
+        tree.add(right["dhash"], right)
 
     images_per_animal = [len(items) for items in animal_rows.values()]
     median_images = statistics.median(images_per_animal)
