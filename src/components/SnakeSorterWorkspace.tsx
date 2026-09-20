@@ -135,9 +135,21 @@ export function SnakeSorterWorkspace() {
     const validation = approved.filter((animal) => animal.dataset_split === "validation").length;
     const test = approved.filter((animal) => animal.dataset_split === "test").length;
 
-    const eligibleApproved = approved.filter((animal) =>
-      animal.training_eligible && animal.rights_status !== "unknown"
-    );
+    const cleanTaxa = new Set([
+      "Morelia azurea azurea",
+      "Morelia azurea pulcher",
+      "Morelia azurea utaraensis",
+      "Morelia viridis",
+    ]);
+    const isCleanSupervision = (animal: ReferenceAnimal) =>
+      animal.training_eligible &&
+      cleanTaxa.has(animal.taxon) &&
+      ["confirmed","strong"].includes(animal.label_confidence) &&
+      ["known_pure","believed_pure"].includes(animal.purity_status) &&
+      ["owned_by_owner","permission_granted","private_reference_only"].includes(animal.rights_status ?? "unknown");
+
+    const eligibleApproved = approved.filter(isCleanSupervision);
+    const trainingEligibleButNotClean = approved.filter((animal) => animal.training_eligible && !isCleanSupervision(animal)).length;
     const eligibleIds = new Set(eligibleApproved.map((animal) => animal.id));
     const eligibleWithAcceptedMedia = new Set(
       acceptedMedia.filter((item) => eligibleIds.has(item.animal_id)).map((item) => item.animal_id)
@@ -164,7 +176,7 @@ export function SnakeSorterWorkspace() {
 
     const readinessBlockers: string[] = [];
     if (!eligibleApproved.length) readinessBlockers.push("No approved, rights-reviewed training animals yet.");
-    if (approvedUnassigned.some((animal) => animal.training_eligible)) readinessBlockers.push("Approved training animals still need dataset splits.");
+    if (eligibleApproved.some((animal) => !animal.dataset_split || animal.dataset_split === "unassigned")) readinessBlockers.push("Clean approved training animals still need dataset splits.");
     if (approvedTrainingRightsUnknown) readinessBlockers.push(`${approvedTrainingRightsUnknown} approved training animal(s) still have unknown rights status.`);
     if (approvedTrainingNoAcceptedMedia) readinessBlockers.push(`${approvedTrainingNoAcceptedMedia} approved training animal(s) have no accepted image.`);
     for (const row of taxonSplitCoverage) {
@@ -174,6 +186,7 @@ export function SnakeSorterWorkspace() {
     }
 
     const readinessWarnings: string[] = [];
+    if (trainingEligibleButNotClean) readinessWarnings.push(`${trainingEligibleButNotClean} approved reference animal(s) are marked training-eligible but excluded from clean four-class supervision because of taxon, confidence, ancestry, or rights metadata.`);
     if (approvedMissingCoreViews) readinessWarnings.push(`${approvedMissingCoreViews} approved animal(s) are missing one or more core photographic views.`);
     const structurallyReady = readinessBlockers.length === 0;
 
@@ -223,6 +236,7 @@ export function SnakeSorterWorkspace() {
       test,
       approvedTrainingNoAcceptedMedia,
       approvedTrainingRightsUnknown,
+      trainingEligibleButNotClean,
       taxonSplitCoverage,
       readinessBlockers,
       readinessWarnings,
