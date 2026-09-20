@@ -36,6 +36,32 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   });
 }
 
+
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const identity = await ownerIdentity();
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { id } = await context.params;
+  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const viewType = String(body.view_type ?? "");
+  const qualityStatus = String(body.quality_status ?? "");
+  const isPrimary = Boolean(body.is_primary);
+  const allowedViews = new Set(["unknown","full_body","head","dorsal","left_lateral","right_lateral","tail","other"]);
+  const allowedQuality = new Set(["accepted","hold","rejected"]);
+  if (!allowedViews.has(viewType) || !allowedQuality.has(qualityStatus)) {
+    return NextResponse.json({ error: "Invalid media review metadata" }, { status: 400 });
+  }
+
+  const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(identity.token), "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify({ view_type: viewType, quality_status: qualityStatus, is_primary: isPrimary }),
+    cache: "no-store",
+  });
+  if (!response.ok) return NextResponse.json({ error: "Could not update image review metadata" }, { status: 400 });
+  const rows = await response.json();
+  return NextResponse.json({ ok: true, media: rows[0] ?? null });
+}
+
 export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const identity = await ownerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
