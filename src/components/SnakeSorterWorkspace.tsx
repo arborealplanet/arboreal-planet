@@ -46,19 +46,16 @@ const label = "block text-[10px] font-black uppercase tracking-[.12em] text-whit
 export function SnakeSorterWorkspace() {
   const [animals, setAnimals] = useState<ReferenceAnimal[]>([]);
   const [media, setMedia] = useState<ReferenceMedia[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   async function load() {
-    setLoading(true);
     const response = await fetch("/api/snake-sorter/references", { cache: "no-store" });
     if (response.ok) {
       const data = await response.json();
       setAnimals(data.animals ?? []);
       setMedia(data.media ?? []);
     }
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -71,9 +68,7 @@ export function SnakeSorterWorkspace() {
         setAnimals(data.animals ?? []);
         setMedia(data.media ?? []);
       })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      .finally(() => undefined);
     return () => { active = false; };
   }, []);
 
@@ -111,7 +106,7 @@ export function SnakeSorterWorkspace() {
         images: rows.reduce((sum, animal) => sum + (mediaCount.get(animal.id) ?? 0), 0),
       };
     });
-  }, [animals, mediaCount]);
+  }, [animals, media, mediaCount]);
 
 
   const diagnostics = useMemo(() => {
