@@ -12,6 +12,15 @@ type DatasetSnapshot = {
   created_at: string;
 };
 
+type InferenceStatus = {
+  configured: boolean;
+  online: boolean;
+  modelVersion?: string | null;
+  device?: string | null;
+  references?: number;
+  message?: string;
+};
+
 type ModelVersion = {
   id: string;
   name: string;
@@ -58,18 +67,22 @@ export function SnakeSorterModelStatus() {
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState("");
   const [message, setMessage] = useState("");
+  const [inferenceStatus, setInferenceStatus] = useState<InferenceStatus>({ configured: false, online: false });
 
   async function load() {
-    const [modelsResponse, snapshotsResponse] = await Promise.all([
+    const [modelsResponse, snapshotsResponse, inferenceResponse] = await Promise.all([
       fetch("/api/snake-sorter/models", { cache: "no-store" }),
       fetch("/api/snake-sorter/snapshots", { cache: "no-store" }),
+      fetch("/api/snake-sorter/inference-status", { cache: "no-store" }),
     ]);
-    const [modelsData, snapshotsData] = await Promise.all([
+    const [modelsData, snapshotsData, inferenceData] = await Promise.all([
       modelsResponse.json().catch(() => ({})),
       snapshotsResponse.json().catch(() => ({})),
+      inferenceResponse.json().catch(() => ({})),
     ]);
     if (modelsResponse.ok) setModels(modelsData.models ?? []);
     if (snapshotsResponse.ok) setSnapshots(snapshotsData.snapshots ?? []);
+    if (inferenceResponse.ok) setInferenceStatus(inferenceData as InferenceStatus);
     setLoading(false);
   }
 
@@ -78,15 +91,18 @@ export function SnakeSorterModelStatus() {
     void Promise.all([
       fetch("/api/snake-sorter/models", { cache: "no-store" }),
       fetch("/api/snake-sorter/snapshots", { cache: "no-store" }),
+      fetch("/api/snake-sorter/inference-status", { cache: "no-store" }),
     ])
-      .then(async ([modelsResponse, snapshotsResponse]) => {
-        const [modelsData, snapshotsData] = await Promise.all([
+      .then(async ([modelsResponse, snapshotsResponse, inferenceResponse]) => {
+        const [modelsData, snapshotsData, inferenceData] = await Promise.all([
           modelsResponse.json().catch(() => ({})),
           snapshotsResponse.json().catch(() => ({})),
+          inferenceResponse.json().catch(() => ({})),
         ]);
         if (!active) return;
         if (modelsResponse.ok) setModels(modelsData.models ?? []);
         if (snapshotsResponse.ok) setSnapshots(snapshotsData.snapshots ?? []);
+        if (inferenceResponse.ok) setInferenceStatus(inferenceData as InferenceStatus);
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -140,6 +156,22 @@ export function SnakeSorterModelStatus() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/30">Model releases are versioned. A candidate must be explicitly promoted before it can replace the active classifier.</p>
         </div>
         <span className={`rounded-full border px-3 py-2 text-[9px] font-black uppercase tracking-[.1em] ${activeModel ? statusClass.active : statusClass.draft}`}>{activeModel ? "Active model" : "No active model"}</span>
+      </div>
+
+      <div className={`mt-5 rounded-2xl border p-4 ${inferenceStatus.online ? "border-emerald-300/12 bg-emerald-300/[.025]" : inferenceStatus.configured ? "border-amber-300/12 bg-amber-300/[.025]" : "border-white/[.06] bg-black/[.06]"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Inference service</div>
+            <div className="mt-1 text-sm font-semibold text-white/55">{inferenceStatus.online ? "Online" : inferenceStatus.configured ? "Configured · offline" : "Not configured"}</div>
+          </div>
+          <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${inferenceStatus.online ? "border-emerald-300/15 text-emerald-100/60" : inferenceStatus.configured ? "border-amber-300/15 text-amber-100/55" : "border-white/[.07] text-white/28"}`}>{inferenceStatus.online ? "Ready" : "Unavailable"}</span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Service model</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.modelVersion || "—"}</div></div>
+          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Device</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.device || "—"}</div></div>
+          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Reference vectors</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.references ?? 0}</div></div>
+        </div>
+        {inferenceStatus.message && <div className="mt-3 text-[10px] leading-5 text-white/24">{inferenceStatus.message}</div>}
       </div>
 
       {loading ? <div className="mt-5 text-xs text-white/25">Loading model registry…</div> :
