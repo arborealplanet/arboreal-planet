@@ -167,6 +167,18 @@ class Runtime:
                     "Registry-bound inference requires a non-empty reference index"
                 )
 
+        policy_path = os.environ.get("SNAKE_SORTER_REJECTION_POLICY")
+        if policy_path:
+            candidate = Path(policy_path)
+        else:
+            candidate = Path(checkpoint_path).resolve().parent / "rejection-policy.json"
+
+        self.rejection_policy: dict[str, Any] | None = None
+        if candidate.exists():
+            loaded = json.loads(candidate.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                self.rejection_policy = loaded
+
 
 app = FastAPI(title="Snake Sorter Inference", version="1")
 runtime: Runtime | None = None
@@ -200,6 +212,16 @@ def health(authorization: str | None = Header(default=None)) -> dict[str, Any]:
             int(runtime.references.matrix.shape[1])
             if runtime and runtime.references.matrix.ndim == 2 and runtime.references.matrix.numel()
             else None
+        ),
+        "rejectionPolicySource": (
+            runtime.rejection_policy.get("source")
+            if runtime and runtime.rejection_policy
+            else "fallback"
+        ),
+        "rejectionPolicyValidated": bool(
+            runtime
+            and runtime.rejection_policy
+            and runtime.rejection_policy.get("validated")
         ),
     }
 
@@ -304,6 +326,11 @@ async def analyze(
         evidence_quality=evidence_score,
         ood_score=ood_score,
         conservative=bool(hints.get("conservativeMode", True)),
+        policy=(
+            runtime.rejection_policy
+            if bool(hints.get("conservativeMode", True))
+            else None
+        ),
     )
     result_taxon = "Unknown / review" if reason else top_taxon
 
