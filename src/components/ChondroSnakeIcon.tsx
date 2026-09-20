@@ -42,7 +42,7 @@ export function ChondroSnakeIcon({
   });
   const isSubadult = lifeStage === "Subadult";
   const versionedCandidates = rawCandidates.map(
-    (src) => `${src}?v=2026-09-20-visible-recovery-v2`,
+    (src) => `${src}?v=2026-09-20-visible-recovery-v3`,
   );
   const versionedSrc = versionedCandidates[0] ?? null;
 
@@ -73,11 +73,30 @@ export function ChondroSnakeIcon({
       context.drawImage(image, 0, 0, width, height);
       const pixels = context.getImageData(0, 0, width, height).data;
       let visiblePixels = 0;
+      let meaningfulPixels = 0;
       const totalPixels = width * height;
-      for (let index = 3; index < pixels.length; index += 4) {
-        if (pixels[index] > 12) visiblePixels += 1;
+
+      for (let index = 0; index < pixels.length; index += 4) {
+        const red = pixels[index];
+        const green = pixels[index + 1];
+        const blue = pixels[index + 2];
+        const alpha = pixels[index + 3];
+
+        if (alpha <= 12) continue;
+        visiblePixels += 1;
+
+        // Some recently uploaded Keeper WebPs decode successfully but contain
+        // only an opaque/near-black canvas. Count a pixel as meaningful when
+        // it carries enough visible color/light to plausibly belong to sprite
+        // artwork instead of an empty black payload.
+        const brightest = Math.max(red, green, blue);
+        const darkest = Math.min(red, green, blue);
+        if (brightest > 18 || brightest - darkest > 10) meaningfulPixels += 1;
       }
-      if (visiblePixels / totalPixels < 0.005) advanceSprite(image);
+
+      const visibleRatio = visiblePixels / totalPixels;
+      const meaningfulRatio = meaningfulPixels / totalPixels;
+      if (visibleRatio < 0.005 || meaningfulRatio < 0.005) advanceSprite(image);
     } catch {
       // Same-origin Keeper sprites should be readable. If a browser blocks
       // canvas inspection, keep the successfully-loaded image rather than
