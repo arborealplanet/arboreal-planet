@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument("--metrics-json")
     parser.add_argument("--calibration-json")
     parser.add_argument("--reference-embeddings")
+    parser.add_argument("--error-review-json")
     parser.add_argument("--rules-version", default="rules-v1")
     parser.add_argument("--notes", default="")
     parser.add_argument("--status", choices=["evaluating", "candidate"], default="candidate")
@@ -77,6 +78,7 @@ def build_bundle(
     metrics_path: str | None,
     calibration_path: str | None,
     embeddings_path: str | None,
+    error_review_path: str | None,
     metadata: dict,
 ) -> Path:
     temp = Path(tempfile.mkdtemp(prefix="snake-sorter-model-"))
@@ -93,6 +95,8 @@ def build_bundle(
             archive.add(calibration_path, arcname="calibration.json")
         if embeddings_path:
             archive.add(embeddings_path, arcname="reference-embeddings.jsonl")
+        if error_review_path:
+            archive.add(error_review_path, arcname="error-review.json")
     return bundle
 
 
@@ -146,6 +150,7 @@ def main():
         args.metrics_json,
         args.calibration_json,
         args.reference_embeddings,
+        args.error_review_json,
         release_metadata,
     )
     artifact_hash = sha256_file(bundle)
@@ -204,6 +209,7 @@ def main():
         "inference_config": {
             "temperature": calibration.get("temperature", 1.0),
             "reference_embeddings_in_bundle": bool(args.reference_embeddings),
+            "error_review_in_bundle": bool(args.error_review_json),
         },
     }
 
