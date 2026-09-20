@@ -118,7 +118,9 @@ export function SnakeSorterReferenceManager({
     const response = await fetch(`/api/snake-sorter/references/${detail.animal.id}`, { method: "POST", body: formData });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessage(`Added ${data.uploaded ?? 0} image(s).`);
+      const duplicates = Array.isArray(data.duplicates) && data.duplicates.length ? ` ${data.duplicates.length} exact duplicate(s) skipped.` : "";
+      const failed = Array.isArray(data.failed) && data.failed.length ? ` ${data.failed.length} failed.` : "";
+      setMessage(`Added ${data.uploaded ?? 0} image(s).${duplicates}${failed}`);
       await Promise.all([openAnimal(detail.animal.id), onRefresh()]);
     } else setMessage(data.error ?? "Could not add images.");
     setSaving(false);
