@@ -174,6 +174,12 @@ function GtpPortrait({ animal }: { animal: GtpAnimal }) {
         name={animal.name ?? "Unnamed Green Tree Python"}
         lifeStage={animal.lifeStage as never}
         neonateColor={animal.neonateColor}
+        locality={animal.locality}
+        classification={animal.classification as never}
+        ancestry={animal.ancestry as never}
+        localityAncestry={animal.localityAncestry}
+        phenotypeScore={animal.phenotypeScore}
+        spriteSeed={animal.id}
         traits={{
           highBlack: Number(animal.highBlack ?? 0),
           highWhite: Number(animal.highWhite ?? 0),
