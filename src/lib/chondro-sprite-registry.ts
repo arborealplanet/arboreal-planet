@@ -67,7 +67,10 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/manokwari/red-adult.webp")],
+      Red: [
+        variant("/hatchery/snakes/localities/manokwari/red-adult.webp", { maxPhenotypeScore: 84 }),
+        variant("/hatchery/snakes/special/manokwari-red-adult-a-plus.webp", { minPhenotypeScore: 85 }),
+      ],
       Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp")],
     },
   },
@@ -165,12 +168,20 @@ function hashString(value: string) {
 function eligibleVariants(variants: SpriteVariant[] | undefined, phenotypeScore?: number) {
   if (!variants?.length) return [];
   const score = Number.isFinite(phenotypeScore) ? Number(phenotypeScore) : null;
-  const filtered = variants.filter((item) => {
-    if (score !== null && typeof item.minPhenotypeScore === "number" && score < item.minPhenotypeScore) return false;
-    if (score !== null && typeof item.maxPhenotypeScore === "number" && score > item.maxPhenotypeScore) return false;
+  if (score === null) {
+    const core = variants.filter(
+      (item) =>
+        typeof item.minPhenotypeScore !== "number" &&
+        typeof item.maxPhenotypeScore !== "number",
+    );
+    return core.length ? core : [];
+  }
+
+  return variants.filter((item) => {
+    if (typeof item.minPhenotypeScore === "number" && score < item.minPhenotypeScore) return false;
+    if (typeof item.maxPhenotypeScore === "number" && score > item.maxPhenotypeScore) return false;
     return true;
   });
-  return filtered.length ? filtered : variants;
 }
 
 function pickVariant(
@@ -285,7 +296,7 @@ export function chondroSpecificSpriteFor(request: ChondroSpriteRequest) {
 
 export const CHONDRO_SPRITE_ASSET_PLAN = {
   special: {
-    manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.png",
+    manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.webp",
     sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.png",
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.png",
     designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.png",
