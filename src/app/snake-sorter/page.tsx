@@ -51,6 +51,26 @@ export default async function SnakeSorterPage() {
               <span className="text-emerald-300/35">•</span>
               <span>Reference Lab</span>
             </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <a href="#snake-sorter-scanner" className="rounded-2xl bg-emerald-200 px-5 py-3 text-xs font-black text-[#06100c] transition hover:bg-emerald-100">Start a scan</a>
+              <a href="#snake-sorter-reference" className="rounded-2xl border border-white/[.09] bg-white/[.035] px-5 py-3 text-xs font-black text-white/58 transition hover:border-white/[.15] hover:bg-white/[.06]">Reference library</a>
+              <a href="#snake-sorter-models" className="rounded-2xl border border-white/[.09] bg-white/[.035] px-5 py-3 text-xs font-black text-white/58 transition hover:border-white/[.15] hover:bg-white/[.06]">Model control</a>
+            </div>
+
+            <div className="mt-6 grid w-full max-w-3xl grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ["Access", "Owner locked"],
+                ["Scans", "Non-persistent"],
+                ["Dataset", "Curated only"],
+                ["Model", "Version controlled"],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/[.055] bg-black/[.08] px-3 py-3">
+                  <div className="text-[8px] font-black uppercase tracking-[.12em] text-white/20">{label}</div>
+                  <div className="mt-1 text-[10px] font-semibold text-white/48">{value}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
