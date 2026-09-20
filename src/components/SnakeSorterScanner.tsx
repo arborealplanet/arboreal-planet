@@ -188,6 +188,8 @@ export function SnakeSorterScanner() {
   const [stageHint, setStageHint] = useState("auto");
   const [colorHint, setColorHint] = useState("auto");
   const [localityMode, setLocalityMode] = useState(true);
+  const [provenanceHint, setProvenanceHint] = useState("");
+  const [useProvenancePrior, setUseProvenancePrior] = useState(false);
   const [nearestNeighbors, setNearestNeighbors] = useState(true);
   const [conservativeMode, setConservativeMode] = useState(true);
   const [frameSampling, setFrameSampling] = useState("balanced");
@@ -392,6 +394,8 @@ export function SnakeSorterScanner() {
       form.set("life_stage_hint", stageHint);
       form.set("color_hint", colorHint);
       form.set("locality_mode", String(localityMode));
+      form.set("provenance_hint", provenanceHint.trim());
+      form.set("use_provenance_prior", String(useProvenancePrior));
       form.set("nearest_neighbors", String(nearestNeighbors));
       form.set("conservative_mode", String(conservativeMode));
       form.set("frame_sampling", scanMode === "quick" ? "keyframes" : frameSampling);
@@ -569,6 +573,13 @@ export function SnakeSorterScanner() {
                 <select value={frameSampling} onChange={(e) => { setFrameSampling(e.target.value); invalidateAnalysis(); }} className={`${field} mt-2`}>
                   <option value="balanced">Balanced · representative frames</option><option value="dense">Dense · more frames</option><option value="keyframes">Key frames only</option>
                 </select>
+              </label>
+              <label className="block text-[10px] font-black uppercase tracking-[.1em] text-white/28">Known provenance / locality
+                <input value={provenanceHint} onChange={(e) => { setProvenanceHint(e.target.value); invalidateAnalysis(); }} className={`${field} mt-2`} placeholder="Optional: Jayapura, Wamena, Cyclops…" />
+              </label>
+              <label className="flex cursor-pointer gap-3 rounded-2xl border border-white/[.055] bg-black/[.08] p-3">
+                <input type="checkbox" checked={useProvenancePrior} onChange={(e) => { setUseProvenancePrior(e.target.checked); invalidateAnalysis(); }} className="mt-0.5 h-4 w-4 accent-sky-300" />
+                <span><span className="block text-xs font-semibold text-white/55">Use provenance as weak prior</span><span className="mt-1 block text-[10px] leading-4 text-white/23">Tie-breaker only. Never overrides stronger visual evidence.</span></span>
               </label>
             </div>
 
