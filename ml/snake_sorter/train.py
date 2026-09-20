@@ -59,7 +59,7 @@ def validate(model, loader, device):
         taxon = batch["taxon"].to(device)
         stage = batch["stage"].to(device)
         color = batch["color"].to(device)
-        out = model(pixel_values)
+        out = model(pixel_values, stage_targets=stage)
         loss = (
             ce(out["taxon_logits"], taxon)
             + 0.25 * ce(out["stage_logits"], stage)
@@ -145,7 +145,7 @@ def main():
                 dtype=torch.bfloat16 if device.type == "cuda" else torch.float32,
                 enabled=device.type == "cuda",
             ):
-                out = model(pixel_values)
+                out = model(pixel_values, stage_targets=stage)
                 taxon_loss = ce(out["taxon_logits"], taxon)
                 stage_loss = ce(out["stage_logits"], stage)
                 color_loss = ce(out["color_logits"], color)

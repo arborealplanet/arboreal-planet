@@ -18,6 +18,7 @@ TAXA = [
 
 STAGES = ["hatchling", "neonate", "juvenile", "subadult", "adult", "unknown"]
 COLORS = ["red", "yellow", "not_applicable", "unknown"]
+VIEWS = ["auto", "unknown", "full_body", "head", "dorsal", "left_lateral", "right_lateral", "tail", "other"]
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,13 @@ LABELS = LabelMaps(
     stage={name: i for i, name in enumerate(STAGES)},
     color={name: i for i, name in enumerate(COLORS)},
 )
+
+
+def clean_override(value, fallback: str) -> str:
+    if value is None or pd.isna(value):
+        return fallback
+    text = str(value).strip()
+    return text if text and text.lower() != "nan" else fallback
 
 
 class SnakeSorterDataset(Dataset):
@@ -55,14 +63,7 @@ class SnakeSorterDataset(Dataset):
         if missing:
             raise ValueError(f"Manifest missing columns: {sorted(missing)}")
 
-        frame = frame.loc[frame["dataset_split"].astype(str) == split].copy()
-        frame = frame.loc[frame["taxon"].isin(TAXA)].copy()
-        if frame.empty:
-            raise ValueError(f"No usable rows for split={split!r}")
-
-        # The split is already assigned per animal in Arboreal Planet.
-        # Assert that the manifest has not leaked an individual across splits.
-        all_frame = pd.read_csv(manifest, usecols=["animal_id", "dataset_split"])
+        all_frame = frame[["animal_id", "dataset_split"]].copy()
         per_animal = all_frame.groupby("animal_id")["dataset_split"].nunique()
         leaked = per_animal[per_animal > 1]
         if len(leaked):
@@ -70,6 +71,11 @@ class SnakeSorterDataset(Dataset):
                 f"Individual split leakage detected for {len(leaked)} animals. "
                 "Fix the manifest before training."
             )
+
+        frame = frame.loc[frame["dataset_split"].astype(str) == split].copy()
+        frame = frame.loc[frame["taxon"].isin(TAXA)].copy()
+        if frame.empty:
+            raise ValueError(f"No usable rows for split={split!r}")
 
         self.frame = frame.reset_index(drop=True)
         self.media_root = Path(media_root)
@@ -90,12 +96,16 @@ class SnakeSorterDataset(Dataset):
         if self.image_transform is not None:
             image = self.image_transform(image)
 
-        stage = str(row.get("life_stage_override") or row["life_stage"])
-        color = str(row.get("neonate_color_override") or row["neonate_color"])
+        stage = clean_override(row.get("life_stage_override"), str(row["life_stage"]))
+        color = clean_override(row.get("neonate_color_override"), str(row["neonate_color"]))
+        view = clean_override(row.get("view_type"), "unknown")
+
         if stage not in LABELS.stage:
             stage = "unknown"
         if color not in LABELS.color:
             color = "unknown"
+        if view not in VIEWS:
+            view = "unknown"
 
         return {
             "image": image,
@@ -103,6 +113,7 @@ class SnakeSorterDataset(Dataset):
             "stage": LABELS.stage[stage],
             "color": LABELS.color[color],
             "animal_id": str(row["animal_id"]),
-            "view_type": str(row.get("view_type", "unknown")),
+            "media_id": str(row.get("media_id", "")),
+            "view_type": view,
             "path": str(path),
         }

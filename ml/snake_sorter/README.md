@@ -107,3 +107,14 @@ Later dataset:
 4. compare against the previous active model before promotion
 
 Do not promote a model because of one overall accuracy number. Macro F1, per-class recall, stage-specific performance, confusion matrices, rejection behavior, and owner-confirmed scan errors all matter.
+
+
+## Calibration, rejection and retrieval
+
+After training, `evaluate.py` fits a temperature scalar using validation individuals only and reports calibration error on the untouched test individuals.
+
+`inference.py` contains the shared multi-view aggregation and conservative rejection policy. It weights labeled head/dorsal/lateral evidence more strongly than weak/unknown views, aggregates normalized embeddings, and exposes low-confidence / low-margin / poor-evidence / out-of-distribution rejection reasons.
+
+Use `export_embeddings.py` to create JSONL reference embeddings for a model version. These records are intended for the versioned `snake_sorter_reference_embeddings` table and nearest-reference search in Arboreal Planet.
+
+The out-of-distribution threshold is intentionally a placeholder until we have a real validation population. It must be calibrated from held-out known snakes plus deliberately unrelated / mixed / low-quality examples before production use.

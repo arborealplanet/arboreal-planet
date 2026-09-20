@@ -27,9 +27,16 @@ class SnakeSorterModel(nn.Module):
             nn.Dropout(0.15),
             nn.Linear(embedding_dim, embedding_dim),
         )
-        self.taxon_head = nn.Linear(embedding_dim, len(TAXA))
+
         self.stage_head = nn.Linear(embedding_dim, len(STAGES))
         self.color_head = nn.Linear(embedding_dim, len(COLORS))
+
+        # Each developmental stage gets a taxon expert. At inference the experts
+        # are mixed by the model's stage probabilities, so adult appearance does
+        # not receive exactly the same decision boundary as a hatchling.
+        self.taxon_experts = nn.ModuleList([
+            nn.Linear(embedding_dim, len(TAXA)) for _ in STAGES
+        ])
 
         if freeze_backbone:
             for parameter in self.encoder.parameters():
@@ -42,12 +49,39 @@ class SnakeSorterModel(nn.Module):
             return pooled
         return output.last_hidden_state[:, 0]
 
-    def forward(self, pixel_values: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(
+        self,
+        pixel_values: torch.Tensor,
+        stage_targets: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         pooled = self.pooled_features(pixel_values)
         embedding = F.normalize(self.projection(pooled), dim=-1)
+
+        stage_logits = self.stage_head(embedding)
+        color_logits = self.color_head(embedding)
+
+        expert_logits = torch.stack(
+            [head(embedding) for head in self.taxon_experts],
+            dim=1,
+        )
+
+        if self.training and stage_targets is not None:
+            stage_weights = F.one_hot(
+                stage_targets,
+                num_classes=len(STAGES),
+            ).to(expert_logits.dtype)
+        else:
+            stage_weights = F.softmax(stage_logits, dim=-1)
+
+        taxon_logits = torch.sum(
+            expert_logits * stage_weights.unsqueeze(-1),
+            dim=1,
+        )
+
         return {
             "embedding": embedding,
-            "taxon_logits": self.taxon_head(embedding),
-            "stage_logits": self.stage_head(embedding),
-            "color_logits": self.color_head(embedding),
+            "taxon_logits": taxon_logits,
+            "taxon_expert_logits": expert_logits,
+            "stage_logits": stage_logits,
+            "color_logits": color_logits,
         }
