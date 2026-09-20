@@ -11,6 +11,11 @@ type Snake = {
   subspecies: string;
   classification: string;
   generation: number;
+  lifeStage?: string;
+  neonateColor?: "Red" | "Yellow";
+  ancestry?: Record<string, number>;
+  localityAncestry?: Record<string, number>;
+  phenotypeScore?: number;
   highBlack: number;
   highWhite: number;
   blueStripe: number;
@@ -134,7 +139,7 @@ function ClutchDetail({ record, sales, favoriteSet }: { record: ClutchRecord; sa
 
       <div>
         <div className="mb-3 flex items-center justify-between gap-3"><div className="section-kicker">Offspring</div><div className="text-[10px] text-white/36">{offspring.length} total</div></div>
-        {offspring.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{offspring.map((baby) => <div key={baby.id} className="rounded-2xl border border-white/[.065] bg-white/[.02] p-3"><div className="flex items-start gap-3"><ChondroSnakeIcon subspecies={baby.subspecies as never} name={baby.name} traits={{ highBlack: baby.highBlack, highWhite: baby.highWhite, blueStripe: baby.blueStripe, yellowRetention: baby.yellowRetention, blotches: baby.blotches }} compact /><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-white/72">{holdbacks.has(baby.id) ? "★ " : ""}{baby.name}</div><div className="mt-1 text-[9px] text-white/34">{baby.locality} · Gen {baby.generation}</div><div className="mt-2 text-[9px] leading-4 text-white/42">HB {baby.highBlack}% · HW {baby.highWhite}% · Blue {baby.blueStripe}% · Yellow {baby.yellowRetention}%</div></div></div></div>)}</div> : <div className="rounded-2xl border border-white/[.06] p-8 text-center text-sm text-white/34">No offspring were recorded for this clutch.</div>}
+        {offspring.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{offspring.map((baby) => <div key={baby.id} className="rounded-2xl border border-white/[.065] bg-white/[.02] p-3"><div className="flex items-start gap-3"><ChondroSnakeIcon subspecies={baby.subspecies as never} name={baby.name} traits={{ highBlack: baby.highBlack, highWhite: baby.highWhite, blueStripe: baby.blueStripe, yellowRetention: baby.yellowRetention, blotches: baby.blotches }} lifeStage={(baby.lifeStage ?? "Neonate") as never} neonateColor={baby.neonateColor} locality={baby.locality} classification={baby.classification as never} ancestry={baby.ancestry as never} localityAncestry={baby.localityAncestry} phenotypeScore={baby.phenotypeScore} spriteSeed={baby.id} compact /><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-white/72">{holdbacks.has(baby.id) ? "★ " : ""}{baby.name}</div><div className="mt-1 text-[9px] text-white/34">{baby.locality} · Gen {baby.generation}</div><div className="mt-2 text-[9px] leading-4 text-white/42">HB {baby.highBlack}% · HW {baby.highWhite}% · Blue {baby.blueStripe}% · Yellow {baby.yellowRetention}%</div></div></div></div>)}</div> : <div className="rounded-2xl border border-white/[.06] p-8 text-center text-sm text-white/34">No offspring were recorded for this clutch.</div>}
       </div>
     </div>
   );
