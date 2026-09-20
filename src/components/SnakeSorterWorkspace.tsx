@@ -77,10 +77,14 @@ export function SnakeSorterWorkspace() {
   }, []);
 
   const stats = useMemo(() => {
-    const red = animals.filter((a) => a.neonate_color === "red").length;
-    const yellow = animals.filter((a) => a.neonate_color === "yellow").length;
+    const youngStages = new Set(["hatchling", "neonate", "juvenile"]);
+    const redYoung = animals.filter((a) => youngStages.has(a.life_stage) && a.neonate_color === "red").length;
+    const yellowYoung = animals.filter((a) => youngStages.has(a.life_stage) && a.neonate_color === "yellow").length;
+    const hatchlings = animals.filter((a) => a.life_stage === "hatchling").length;
+    const neonates = animals.filter((a) => a.life_stage === "neonate").length;
+    const adults = animals.filter((a) => a.life_stage === "adult").length;
     const eligible = animals.filter((a) => a.training_eligible).length;
-    return { animals: animals.length, images: media.length, red, yellow, eligible };
+    return { animals: animals.length, images: media.length, redYoung, yellowYoung, hatchlings, neonates, adults, eligible };
   }, [animals, media]);
 
   const mediaCount = useMemo(() => {
@@ -97,8 +101,12 @@ export function SnakeSorterWorkspace() {
       return {
         taxon,
         total: rows.length,
-        red: rows.filter((animal) => animal.neonate_color === "red").length,
-        yellow: rows.filter((animal) => animal.neonate_color === "yellow").length,
+        hatchlings: rows.filter((animal) => animal.life_stage === "hatchling").length,
+        neonates: rows.filter((animal) => animal.life_stage === "neonate").length,
+        juveniles: rows.filter((animal) => animal.life_stage === "juvenile").length,
+        adults: rows.filter((animal) => animal.life_stage === "adult").length,
+        redYoung: rows.filter((animal) => ["hatchling","neonate","juvenile"].includes(animal.life_stage) && animal.neonate_color === "red").length,
+        yellowYoung: rows.filter((animal) => ["hatchling","neonate","juvenile"].includes(animal.life_stage) && animal.neonate_color === "yellow").length,
         images: rows.reduce((sum, animal) => sum + (mediaCount.get(animal.id) ?? 0), 0),
       };
     });
@@ -130,21 +138,37 @@ export function SnakeSorterWorkspace() {
     const validation = approved.filter((animal) => animal.dataset_split === "validation").length;
     const test = approved.filter((animal) => animal.dataset_split === "test").length;
 
-    const targets = [
-      ["M. a. azurea · red neonate", "Morelia azurea azurea", "red"],
-      ["M. a. azurea · yellow neonate", "Morelia azurea azurea", "yellow"],
-      ["M. a. pulcher · red neonate", "Morelia azurea pulcher", "red"],
-      ["M. a. pulcher · yellow neonate", "Morelia azurea pulcher", "yellow"],
-      ["M. a. utaraensis · red neonate", "Morelia azurea utaraensis", "red"],
-      ["M. a. utaraensis · yellow neonate", "Morelia azurea utaraensis", "yellow"],
-      ["M. viridis · yellow neonate", "Morelia viridis", "yellow"],
+    const youngStages = new Set(["hatchling", "neonate", "juvenile"]);
+    const youngTargets = [
+      ["M. a. azurea · red young", "Morelia azurea azurea", "red"],
+      ["M. a. azurea · yellow young", "Morelia azurea azurea", "yellow"],
+      ["M. a. pulcher · red young", "Morelia azurea pulcher", "red"],
+      ["M. a. pulcher · yellow young", "Morelia azurea pulcher", "yellow"],
+      ["M. a. utaraensis · red young", "Morelia azurea utaraensis", "red"],
+      ["M. a. utaraensis · yellow young", "Morelia azurea utaraensis", "yellow"],
+      ["M. viridis · yellow young", "Morelia viridis", "yellow"],
     ] as const;
 
-    const collectionTargets = targets.map(([label, taxon, color]) => {
-      const count = animals.filter((animal) => animal.taxon === taxon && animal.life_stage === "neonate" && animal.neonate_color === color).length;
-      const priority = count < 10 ? "High" : count < 25 ? "Medium" : "Lower";
-      return { label, count, priority };
-    }).sort((a, b) => a.count - b.count);
+    const adultTargets = [
+      ["M. a. azurea · adults", "Morelia azurea azurea"],
+      ["M. a. pulcher · adults", "Morelia azurea pulcher"],
+      ["M. a. utaraensis · adults", "Morelia azurea utaraensis"],
+      ["M. viridis · adults", "Morelia viridis"],
+    ] as const;
+
+    const collectionTargets = [
+      ...youngTargets.map(([label, taxon, color]) => ({
+        label,
+        count: animals.filter((animal) => animal.taxon === taxon && youngStages.has(animal.life_stage) && animal.neonate_color === color).length,
+      })),
+      ...adultTargets.map(([label, taxon]) => ({
+        label,
+        count: animals.filter((animal) => animal.taxon === taxon && animal.life_stage === "adult").length,
+      })),
+    ].map((target) => ({
+      ...target,
+      priority: target.count < 10 ? "High" : target.count < 25 ? "Medium" : "Lower",
+    })).sort((a, b) => a.count - b.count);
 
     return {
       approved: approved.length,
@@ -184,8 +208,11 @@ export function SnakeSorterWorkspace() {
         {[
           ["Reference animals", stats.animals],
           ["Reference images", stats.images],
-          ["Red neonates", stats.red],
-          ["Yellow neonates", stats.yellow],
+          ["Hatchlings", stats.hatchlings],
+          ["Neonates", stats.neonates],
+          ["Adults", stats.adults],
+          ["Red young", stats.redYoung],
+          ["Yellow young", stats.yellowYoung],
           ["Training eligible", stats.eligible],
         ].map(([name, value]) => (
           <div key={String(name)} className="panel rounded-2xl p-4">
@@ -306,7 +333,7 @@ export function SnakeSorterWorkspace() {
                 <div key={row.taxon} className="rounded-2xl border border-white/[.06] bg-black/[.08] p-4">
                   <div className="text-sm font-semibold text-white/62">{row.taxon}</div>
                   <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-                    {[["Animals",row.total],["Images",row.images],["Red",row.red],["Yellow",row.yellow]].map(([name,value]) => <div key={String(name)}><div className="text-lg font-semibold text-white/58">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/20">{name}</div></div>)}
+                    {[["Animals",row.total],["Images",row.images],["Hatch",row.hatchlings],["Neo",row.neonates],["Juv",row.juveniles],["Adult",row.adults],["Red young",row.redYoung],["Yellow young",row.yellowYoung]].map(([name,value]) => <div key={String(name)}><div className="text-lg font-semibold text-white/58">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.08em] text-white/20">{name}</div></div>)}
                   </div>
                 </div>
               ))}
