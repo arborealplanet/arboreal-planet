@@ -74,6 +74,28 @@ function textValue(record: Record<string, unknown> | null, key: string) {
   return typeof value === "string" ? value : null;
 }
 
+function weakestSubgroup(metrics: Record<string, unknown> | null, key: string) {
+  const group = objectValue(metrics, key);
+  if (!group) return null;
+  let weakest: { label: string; macroF1: number; images: number | null } | null = null;
+  for (const [label, raw] of Object.entries(group)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const record = raw as Record<string, unknown>;
+    const macroF1 = typeof record.macro_f1 === "number" ? record.macro_f1 : null;
+    const images = typeof record.images === "number" ? record.images : null;
+    if (macroF1 == null) continue;
+    if (!weakest || macroF1 < weakest.macroF1) weakest = { label, macroF1, images };
+  }
+  return weakest;
+}
+
+const EVAL_TAXA = [
+  "Morelia azurea azurea",
+  "Morelia azurea pulcher",
+  "Morelia azurea utaraensis",
+  "Morelia viridis",
+] as const;
+
 export function SnakeSorterModelStatus() {
   const [models, setModels] = useState<ModelVersion[]>([]);
   const [snapshots, setSnapshots] = useState<DatasetSnapshot[]>([]);
@@ -220,6 +242,10 @@ export function SnakeSorterModelStatus() {
               textValue(notes, "primary_metric_unit") === "held-out individual animal";
             const individualCalibrationReady =
               textValue(model.calibration, "calibration_unit") === "held-out individual animal";
+            const weakestStage = weakestSubgroup(model.metrics, "by_stage");
+            const weakestColor = weakestSubgroup(model.metrics, "by_color");
+            const weakestView = weakestSubgroup(model.metrics, "by_view");
+            const classificationReport = objectValue(model.metrics, "classification_report");
             const deployMissing = [
               !model.artifact_storage_path || !model.artifact_sha256 ? "artifact" : null,
               !model.dataset_snapshot_id || !model.training_manifest_hash ? "dataset snapshot" : null,
@@ -258,6 +284,29 @@ export function SnakeSorterModelStatus() {
                   <div className="mt-1 text-[10px] text-white/34">{model.rules_version || "—"}</div>
                 </div>
               </div>
+              {(accuracy != null || macroF1 != null) && (
+                <details className="mt-3 rounded-xl border border-white/[.05] bg-black/[.05] p-3">
+                  <summary className="cursor-pointer text-[9px] font-black uppercase tracking-[.09em] text-white/30">Held-out evaluation details</summary>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {EVAL_TAXA.map((taxon) => {
+                      const row = classificationReport && objectValue(classificationReport, taxon);
+                      const f1 = row ? metricValue(row, "f1-score") : null;
+                      const support = row ? metricValue(row, "support") : null;
+                      return <div key={taxon} className="rounded-xl border border-white/[.045] bg-black/[.05] px-3 py-2"><div className="truncate text-[9px] text-white/28">{taxon}</div><div className="mt-1 flex items-center justify-between gap-3 text-[10px]"><span className="font-semibold text-white/48">F1 {f1 == null ? "—" : `${Math.round(f1 * 1000) / 10}%`}</span><span className="text-white/20">{support == null ? "—" : `${support} animal(s)`}</span></div></div>;
+                    })}
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    {[
+                      ["Weakest stage", weakestStage],
+                      ["Weakest color", weakestColor],
+                      ["Weakest view", weakestView],
+                    ].map(([label, raw]) => {
+                      const item = raw as { label: string; macroF1: number; images: number | null } | null;
+                      return <div key={String(label)} className="rounded-xl border border-white/[.045] bg-black/[.05] px-3 py-2"><div className="text-[8px] uppercase tracking-[.08em] text-white/18">{String(label)}</div><div className="mt-1 text-[10px] font-semibold text-white/42">{item ? item.label.replaceAll("_", " ") : "—"}</div><div className="mt-1 text-[9px] text-white/20">{item ? `${Math.round(item.macroF1 * 1000) / 10}% macro F1${item.images == null ? "" : ` · ${item.images} image(s)`}` : "No subgroup data"}</div></div>;
+                    })}
+                  </div>
+                </details>
+              )}
               {model.notes && <div className="mt-3 text-[10px] leading-5 text-white/24">{model.notes}</div>}
               {model.status === "candidate" && (
                 <div className="mt-3 rounded-xl border border-white/[.05] bg-black/[.05] p-3">
