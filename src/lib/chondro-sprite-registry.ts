@@ -53,7 +53,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Wamena: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate-clean.webp")],
+      Red: [variant("/hatchery/snakes/localities/wamena/red-neonate.webp")],
       Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
@@ -84,6 +84,11 @@ const localitySprites: Record<string, StageSpriteSet> = {
     juvenile: {
       Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-neonate.webp")],
     },
+    adult: {
+      Yellow: [
+        variant("/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp", { minPhenotypeScore: 85 }),
+      ],
+    },
   },
   Biak: {
     juvenile: {
@@ -107,10 +112,13 @@ const localitySprites: Record<string, StageSpriteSet> = {
     },
   },
   Aru: {
-    adultAny: [variant("/hatchery/snakes/localities/aru/adult.png")],
+    juvenile: {
+      Yellow: [variant("/hatchery/snakes/localities/aru/yellow-neonate.webp")],
+    },
+    adultAny: [variant("/hatchery/snakes/localities/aru/adult.webp")],
   },
   Merauke: {
-    adultAny: [variant("/hatchery/snakes/localities/merauke/adult.png")],
+    adultAny: [variant("/hatchery/snakes/localities/merauke/adult.webp")],
   },
 };
 
@@ -130,8 +138,8 @@ const specificHybridSprites: Record<string, StageSpriteSet> = {
 const hybridSprites: Record<string, StageSpriteSet> = {
   "pulcher-utaraensis": {
     juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/red-neonate.png")],
-      Yellow: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/yellow-neonate.png")],
+      Red: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/yellow-neonate.webp")],
     },
   },
 };
@@ -142,11 +150,11 @@ const hybridSprites: Record<string, StageSpriteSet> = {
 const designerSprites: StageSpriteSet = {
   juvenile: {
     Red: [
-      variant("/hatchery/snakes/special/designer/red-neonate-01.png"),
+      variant("/hatchery/snakes/special/designer/red-neonate-01.webp"),
     ],
   },
   adultAny: [
-    variant("/hatchery/snakes/special/designer/adult-01.png"),
+    variant("/hatchery/snakes/special/designer/adult-01.webp"),
   ],
 };
 
@@ -298,9 +306,9 @@ export function chondroSpecificSpriteFor(request: ChondroSpriteRequest) {
 export const CHONDRO_SPRITE_ASSET_PLAN = {
   special: {
     manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.webp",
-    sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.png",
-    designerAdult01: "/hatchery/snakes/special/designer/adult-01.png",
-    designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.png",
+    sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp",
+    designerAdult01: "/hatchery/snakes/special/designer/adult-01.webp",
+    designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.webp",
   },
   pending: {},
 } as const;
