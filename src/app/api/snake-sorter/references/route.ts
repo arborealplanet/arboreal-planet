@@ -33,7 +33,7 @@ export async function GET() {
 
   const [animalsResponse, mediaResponse] = await Promise.all([
     fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?select=*&order=created_at.desc`, { headers, cache: "no-store" }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?select=id,animal_id,original_name,mime_type,created_at&order=created_at.asc`, { headers, cache: "no-store" }),
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?select=id,animal_id,original_name,mime_type,view_type,quality_status,is_primary,file_size_bytes,created_at&order=created_at.asc`, { headers, cache: "no-store" }),
   ]);
 
   if (!animalsResponse.ok || !mediaResponse.ok) {
