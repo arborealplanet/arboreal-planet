@@ -134,6 +134,20 @@ export function SnakeSorterReferenceManager({
     setSaving(false);
   }
 
+
+  async function assignSplits() {
+    setSaving(true);
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/splits", { method: "POST" });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setMessage(`Dataset splits assigned. ${data.changed ?? 0} record(s) changed.`);
+      await onRefresh();
+      if (detail) await openAnimal(detail.animal.id);
+    } else setMessage(data.error ?? "Could not assign dataset splits.");
+    setSaving(false);
+  }
+
   const statusClass = (value: string) => {
     if (value === "approved") return "border-emerald-300/15 bg-emerald-300/[.05] text-emerald-100/65";
     if (value === "hold") return "border-amber-300/15 bg-amber-300/[.05] text-amber-100/65";
@@ -146,7 +160,10 @@ export function SnakeSorterReferenceManager({
       <section className="panel rounded-[28px] p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div><div className="section-kicker">Reference library</div><h2 className="mt-2 text-2xl font-semibold">Animals & review queue</h2></div>
-          <div className="rounded-full border border-white/[.07] px-3 py-2 text-[10px] font-bold text-white/30">{rows.length} shown</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" disabled={saving} onClick={() => void assignSplits()} className={mini}>Auto-assign splits</button>
+            <div className="rounded-full border border-white/[.07] px-3 py-2 text-[10px] font-bold text-white/30">{rows.length} shown</div>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
