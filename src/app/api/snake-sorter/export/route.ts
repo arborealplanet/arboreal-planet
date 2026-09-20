@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const [animalsResponse, mediaResponse] = await Promise.all([
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&select=*&order=taxon.asc,locality.asc,created_at.asc`, { headers: headers(identity.token), cache: "no-store" }),
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&select=*&order=taxon.asc,locality.asc,created_at.asc`, { headers: headers(identity.token), cache: "no-store" }),
     fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,storage_path,original_name,mime_type,view_type,is_primary,quality_status,created_at&order=created_at.asc`, { headers: headers(identity.token), cache: "no-store" }),
   ]);
   if (!animalsResponse.ok || !mediaResponse.ok) return NextResponse.json({ error: "Dataset export unavailable" }, { status: 502 });
@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
       source_type: animal.source_type,
       source_name: animal.source_name,
       review_notes: animal.review_notes,
+      rights_status: animal.rights_status,
+      rights_notes: animal.rights_notes,
     }];
   });
 
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const columns = ["animal_id","animal_code","media_id","storage_path","original_name","mime_type","view_type","is_primary","quality_status","taxon","locality","life_stage","neonate_color","label_confidence","purity_status","dataset_split","source_type","source_name","review_notes"];
+  const columns = ["animal_id","animal_code","media_id","storage_path","original_name","mime_type","view_type","is_primary","quality_status","taxon","locality","life_stage","neonate_color","label_confidence","purity_status","dataset_split","source_type","source_name","review_notes","rights_status","rights_notes"];
   const body = [columns.join(","), ...rows.map((row) => columns.map((column) => csv(row[column as keyof typeof row])).join(","))].join("\n");
   return new NextResponse(body, {
     headers: {
