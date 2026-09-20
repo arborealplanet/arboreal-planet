@@ -6,7 +6,7 @@ import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
 
 type Sex = "Male" | "Female";
-type Locality = "Biak" | "Numfor" | "Manokwari" | "Arfak" | "Sorong" | "Timika" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Aru" | "Merauke";
+type Locality = "Biak" | "Numfor" | "Manokwari" | "Arfak" | "Sorong" | "Timika" | "Kofiau" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Yapen" | "Aru" | "Merauke";
 type Subspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
 type LifeStage = "Hatchling" | "Neonate" | "Subadult" | "Adult";
 type ConservationRow = { subspecies: Subspecies; import_multiplier: number; phenotype_bonus: number; stewardship_score: number; contribution_count: number };
@@ -60,8 +60,8 @@ const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }>
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
   "Morelia azurea azurea": ["Biak", "Numfor"],
-  "Morelia azurea pulcher": ["Manokwari", "Arfak", "Sorong", "Timika"],
-  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena"],
+  "Morelia azurea pulcher": ["Manokwari", "Arfak", "Sorong", "Timika", "Kofiau"],
+  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],
   "Morelia viridis": ["Aru", "Merauke"],
 };
 
@@ -119,7 +119,12 @@ function makeRandomOffer(seed: number, index: number, random: () => number, effe
   const localities = localitiesBySubspecies[subspecies];
   const locality = localities[Math.floor(random() * localities.length)];
   const sex: Sex = random() < 0.5 ? "Male" : "Female";
-  const neonateColor: "Red" | "Yellow" = subspecies === "Morelia viridis" ? "Yellow" : random() < 0.4 ? "Red" : "Yellow";
+  const neonateColor: "Red" | "Yellow" =
+    subspecies === "Morelia viridis" || locality === "Kofiau"
+      ? "Yellow"
+      : random() < 0.4
+        ? "Red"
+        : "Yellow";
   const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
   const lifeStage = stages[Math.floor(random() * stages.length)];
   const geneticsTested = random() < 0.22;
