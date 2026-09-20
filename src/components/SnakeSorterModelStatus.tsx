@@ -285,6 +285,7 @@ export function SnakeSorterModelStatus() {
               accuracy == null || macroF1 == null ? "held-out metrics" : null,
               !individualEvaluationReady ? "held-out individual evaluation" : null,
               metricValue(model.calibration, "temperature") == null || calibrationEce == null || !individualCalibrationReady ? "individual-level calibration" : null,
+              rejectionSource === "challenge_calibrated" && !model.challenge_snapshot_id ? "challenge snapshot provenance" : null,
             ].filter((item): item is string => Boolean(item));
             const deployable = deployMissing.length === 0;
             return <div key={model.id} className="rounded-2xl border border-white/[.06] bg-black/[.07] p-4">
