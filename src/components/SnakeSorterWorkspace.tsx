@@ -222,12 +222,12 @@ export function SnakeSorterWorkspace() {
         ))}
       </div>
 
-      <div className="mt-6"><SnakeSorterScanner /></div>
+      <div id="snake-sorter-scanner" className="mt-6 scroll-mt-6"><SnakeSorterScanner /></div>
 
-      <div className="mt-6"><SnakeSorterModelStatus /></div>
+      <div id="snake-sorter-models" className="mt-6 scroll-mt-6"><SnakeSorterModelStatus /></div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
-        <div className="panel rounded-[28px] p-5 sm:p-6">
+        <div id="snake-sorter-reference" className="panel scroll-mt-6 rounded-[28px] p-5 sm:p-6">
           <div className="section-kicker">Reference intake</div>
           <h2 className="mt-3 text-2xl font-semibold">Add a known animal</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/38">These are deliberate reference records. Nothing from the scan workspace is automatically promoted into this library.</p>
