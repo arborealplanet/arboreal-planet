@@ -222,7 +222,7 @@ export function SnakeSorterWorkspace() {
 
             <label className={label}>Life stage
               <select name="life_stage" className={`${field} mt-2`} defaultValue="neonate">
-                <option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option>
+                <option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option>
               </select>
             </label>
 
