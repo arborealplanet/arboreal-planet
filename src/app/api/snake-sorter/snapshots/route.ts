@@ -67,6 +67,34 @@ export async function POST(request: NextRequest) {
     }, { status: 409 });
   }
 
+  const relatedGroups = new Map<string, { taxa: Set<string>; splits: Set<string>; animals: string[] }>();
+  for (const animal of animals) {
+    const group = String(animal.split_group ?? "").trim();
+    if (!group) continue;
+    const entry = relatedGroups.get(group) ?? { taxa: new Set<string>(), splits: new Set<string>(), animals: [] };
+    entry.taxa.add(String(animal.taxon));
+    entry.splits.add(String(animal.dataset_split));
+    entry.animals.push(String(animal.id));
+    relatedGroups.set(group, entry);
+  }
+
+  const crossTaxonGroup = [...relatedGroups.entries()].find(([, entry]) => entry.taxa.size > 1);
+  if (crossTaxonGroup) {
+    return NextResponse.json({
+      error: "A related / split group is reused across multiple taxa. Give unrelated taxon groups different names before snapshotting.",
+      split_group: crossTaxonGroup[0],
+    }, { status: 409 });
+  }
+
+  const leakingGroup = [...relatedGroups.entries()].find(([, entry]) => entry.splits.size > 1);
+  if (leakingGroup) {
+    return NextResponse.json({
+      error: "A related / split group spans multiple dataset splits. Re-run auto-assign or correct the split before snapshotting.",
+      split_group: leakingGroup[0],
+      animals: leakingGroup[1].animals.length,
+    }, { status: 409 });
+  }
+
   const animalMap = new Map(animals.map((animal) => [String(animal.id), animal]));
   const rows = media.flatMap((item) => {
     const animal = animalMap.get(String(item.animal_id));
@@ -88,6 +116,7 @@ export async function POST(request: NextRequest) {
       approximate_age_days: item.approximate_age_days == null ? null : Number(item.approximate_age_days),
       label_confidence: String(animal.label_confidence),
       purity_status: String(animal.purity_status),
+      split_group: animal.split_group ? String(animal.split_group) : null,
       dataset_split: String(animal.dataset_split),
       view_type: String(item.view_type ?? "unknown"),
       is_primary: Boolean(item.is_primary),
