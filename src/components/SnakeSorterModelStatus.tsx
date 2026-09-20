@@ -19,6 +19,7 @@ type InferenceStatus = {
   modelRegistryId?: string | null;
   device?: string | null;
   references?: number;
+  embeddingDimension?: number | null;
   message?: string;
 };
 
@@ -193,6 +194,20 @@ export function SnakeSorterModelStatus() {
     )
   );
   const servingWithoutRegistryModel = Boolean(!activeModel && inferenceStatus.online && inferenceStatus.modelVersion);
+  const servingReferenceMismatch = Boolean(
+    activeModel &&
+    inferenceStatus.online &&
+    activeModel.reference_embedding_count != null &&
+    inferenceStatus.references != null &&
+    activeModel.reference_embedding_count !== inferenceStatus.references
+  );
+  const servingEmbeddingDimensionMismatch = Boolean(
+    activeModel &&
+    inferenceStatus.online &&
+    activeModel.embedding_dimension != null &&
+    inferenceStatus.embeddingDimension != null &&
+    activeModel.embedding_dimension !== inferenceStatus.embeddingDimension
+  );
 
 
   return (
@@ -217,12 +232,14 @@ export function SnakeSorterModelStatus() {
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Service model</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.modelVersion || "—"}</div><div className="mt-1 truncate font-mono text-[8px] text-white/18">{inferenceStatus.modelRegistryId || "No registry ID"}</div></div>
           <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Device</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.device || "—"}</div></div>
-          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Reference vectors</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.references ?? 0}</div></div>
+          <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Reference vectors</div><div className="mt-1 text-[10px] text-white/36">{inferenceStatus.references ?? 0}</div><div className="mt-1 text-[8px] text-white/18">{inferenceStatus.embeddingDimension ? `${inferenceStatus.embeddingDimension} dimensions` : "dimension unavailable"}</div></div>
         </div>
         {inferenceStatus.message && <div className="mt-3 text-[10px] leading-5 text-white/24">{inferenceStatus.message}</div>}
         {servingMismatch && <div className="mt-3 rounded-xl border border-amber-300/12 bg-amber-300/[.035] px-3 py-2 text-[10px] leading-5 text-amber-50/50">Registry / serving mismatch: active registry model is {activeModel?.version} ({activeModel?.id.slice(0,8)}…), while the inference service reports {inferenceStatus.modelVersion || "unknown version"} ({inferenceStatus.modelRegistryId ? `${inferenceStatus.modelRegistryId.slice(0,8)}…` : "no registry ID"}). Do not treat scans as production-current until the service is redeployed.</div>}
         {servingWithoutRegistryModel && <div className="mt-3 rounded-xl border border-amber-300/12 bg-amber-300/[.035] px-3 py-2 text-[10px] leading-5 text-amber-50/50">The inference service is serving model {inferenceStatus.modelVersion}, but no model is marked active in the registry.</div>}
-        {activeModel && inferenceStatus.online && !servingMismatch && inferenceStatus.modelVersion === activeModel.version && <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2 text-[10px] leading-5 text-emerald-50/45">Registry and serving model are synchronized at {activeModel.version}.</div>}
+        {servingReferenceMismatch && <div className="mt-3 rounded-xl border border-amber-300/12 bg-amber-300/[.035] px-3 py-2 text-[10px] leading-5 text-amber-50/50">Reference-index mismatch: registry expects {activeModel?.reference_embedding_count ?? 0} vectors but the service has {inferenceStatus.references ?? 0} loaded.</div>}
+        {servingEmbeddingDimensionMismatch && <div className="mt-3 rounded-xl border border-rose-300/12 bg-rose-300/[.035] px-3 py-2 text-[10px] leading-5 text-rose-50/50">Embedding-dimension mismatch: registry expects {activeModel?.embedding_dimension ?? "—"} but the service reports {inferenceStatus.embeddingDimension ?? "—"}.</div>}
+        {activeModel && inferenceStatus.online && !servingMismatch && !servingReferenceMismatch && !servingEmbeddingDimensionMismatch && inferenceStatus.modelVersion === activeModel.version && <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2 text-[10px] leading-5 text-emerald-50/45">Registry, serving model and reference index are synchronized at {activeModel.version}.</div>}
       </div>
 
       {loading ? <div className="mt-5 text-xs text-white/25">Loading model registry…</div> :
