@@ -8,6 +8,10 @@ const assets = [
     sourceDir: "src/lib/keeper-sprite-assets/manokwari-yellow-adult",
     output: "public/hatchery/snakes/localities/manokwari/yellow-adult.webp",
   },
+  {
+    sourceDir: "src/lib/keeper-sprite-assets/wamena-red-neonate-clean",
+    output: "public/hatchery/snakes/localities/wamena/red-neonate-clean.webp",
+  },
 ];
 
 for (const asset of assets) {
