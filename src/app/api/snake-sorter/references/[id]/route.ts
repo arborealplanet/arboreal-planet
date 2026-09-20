@@ -82,6 +82,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     review_notes: clean(body.review_notes, 4000) || null,
     dataset_split: datasetSplit,
     training_eligible: Boolean(body.training_eligible),
+    challenge_eligible: Boolean(body.challenge_eligible),
     rights_status: rightsStatus,
     rights_notes: clean(body.rights_notes, 2000) || null,
     updated_at: new Date().toISOString(),
