@@ -25,7 +25,7 @@ export async function GET() {
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const response = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_dataset_snapshots?select=*&order=created_at.desc&limit=20`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_dataset_snapshots?finalized=eq.true&select=*&order=created_at.desc&limit=20`,
     { headers: h(identity.token), cache: "no-store" }
   );
   if (!response.ok) return NextResponse.json({ error: "Snapshot registry unavailable" }, { status: 502 });
@@ -180,11 +180,42 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const finalizeResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_dataset_snapshots?id=eq.${encodeURIComponent(snapshot.id)}`,
+    {
+      method: "PATCH",
+      headers: {
+        ...h(identity.token),
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({ finalized: true }),
+      cache: "no-store",
+    }
+  );
+
+  if (!finalizeResponse.ok) {
+    const detail = await finalizeResponse.text();
+    await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_dataset_snapshots?id=eq.${encodeURIComponent(snapshot.id)}`,
+      {
+        method: "DELETE",
+        headers: h(identity.token),
+        cache: "no-store",
+      }
+    ).catch(() => undefined);
+    return NextResponse.json({
+      error: "Snapshot rows were created but finalization failed.",
+      detail: detail.slice(0, 500),
+    }, { status: 500 });
+  }
+
   return NextResponse.json({
     ok: true,
     snapshot_id: snapshot.id,
     manifest_sha256: manifestSha256,
     animal_count: animalIdsWithMedia.size,
     media_count: rows.length,
+    finalized: true,
   }, { status: 201 });
 }
