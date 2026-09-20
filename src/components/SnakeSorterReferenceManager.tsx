@@ -29,6 +29,9 @@ export type SnakeReferenceMedia = {
   mime_type: string | null;
   created_at: string;
   url?: string;
+  view_type?: string;
+  quality_status?: string;
+  is_primary?: boolean;
 };
 
 type Detail = { animal: SnakeReferenceAnimal; media: SnakeReferenceMedia[] };
@@ -135,6 +138,31 @@ export function SnakeSorterReferenceManager({
   }
 
 
+  async function updateMedia(item: SnakeReferenceMedia, patch: Partial<Pick<SnakeReferenceMedia, "view_type" | "quality_status" | "is_primary">>) {
+    if (!detail) return;
+    const payload = {
+      view_type: patch.view_type ?? item.view_type ?? "unknown",
+      quality_status: patch.quality_status ?? item.quality_status ?? "accepted",
+      is_primary: patch.is_primary ?? item.is_primary ?? false,
+    };
+    const response = await fetch(`/api/snake-sorter/media/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(data.error ?? "Could not update image metadata.");
+      return;
+    }
+    setDetail((current) => current ? {
+      ...current,
+      media: current.media.map((mediaItem) => mediaItem.id === item.id ? { ...mediaItem, ...payload } : mediaItem),
+    } : current);
+    setMessage("Image metadata updated.");
+  }
+
+
   async function assignSplits() {
     setSaving(true);
     setMessage("");
@@ -228,8 +256,20 @@ export function SnakeSorterReferenceManager({
             <div className="flex items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.12em] text-white/28">Reference photos</div><div className="mt-1 text-[10px] text-white/20">{detail.media.length} image(s) attached to this individual</div></div></div>
             {detail.media.length ? <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {detail.media.map((item) => <div key={item.id} className="overflow-hidden rounded-2xl border border-white/[.06] bg-black/15">
-                <div className="aspect-square bg-black/25"><img src={item.url} alt="" className="h-full w-full object-contain" /></div>
-                <div className="flex items-center gap-2 p-2"><div className="min-w-0 flex-1 truncate text-[9px] text-white/28">{item.original_name || "reference image"}</div><button disabled={saving} type="button" onClick={() => void removeMedia(item.id)} className="rounded-lg px-2 py-1 text-[9px] font-bold text-rose-200/45 hover:bg-rose-300/[.05] hover:text-rose-200">Remove</button></div>
+                <div className="relative aspect-square bg-black/25">
+                  <img src={item.url} alt="" className="h-full w-full object-contain" />
+                  {item.is_primary && <span className="absolute left-2 top-2 rounded-full border border-emerald-300/15 bg-black/65 px-2 py-1 text-[8px] font-black uppercase tracking-[.08em] text-emerald-100/70">Primary</span>}
+                </div>
+                <div className="space-y-2 p-2">
+                  <div className="flex items-center gap-2"><div className="min-w-0 flex-1 truncate text-[9px] text-white/28">{item.original_name || "reference image"}</div><button disabled={saving} type="button" onClick={() => void removeMedia(item.id)} className="rounded-lg px-2 py-1 text-[9px] font-bold text-rose-200/45 hover:bg-rose-300/[.05] hover:text-rose-200">Remove</button></div>
+                  <select value={item.view_type ?? "unknown"} onChange={(e) => void updateMedia(item,{view_type:e.target.value})} className="w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
+                    <option value="unknown">View: unknown</option><option value="full_body">Full body</option><option value="head">Head</option><option value="dorsal">Dorsal</option><option value="left_lateral">Left lateral</option><option value="right_lateral">Right lateral</option><option value="tail">Tail</option><option value="other">Other</option>
+                  </select>
+                  <select value={item.quality_status ?? "accepted"} onChange={(e) => void updateMedia(item,{quality_status:e.target.value})} className="w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
+                    <option value="accepted">Image accepted</option><option value="hold">Hold image</option><option value="rejected">Reject image</option>
+                  </select>
+                  <label className="flex items-center gap-2 text-[9px] text-white/28"><input type="checkbox" checked={Boolean(item.is_primary)} onChange={(e) => void updateMedia(item,{is_primary:e.target.checked})} className="h-3.5 w-3.5 accent-emerald-300" />Primary representative image</label>
+                </div>
               </div>)}
             </div> : <div className="mt-3 rounded-2xl border border-dashed border-white/[.08] p-8 text-center text-xs text-white/22">No images attached yet.</div>}
 
