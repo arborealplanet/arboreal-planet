@@ -41,21 +41,23 @@ export function ChondroSnakeIcon({
     variantSeed: spriteSeed ?? name,
   });
   const isSubadult = lifeStage === "Subadult";
-  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-wamena-red-clean-source` : null;
+  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-restored-sprite-assets` : null;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
-      <img
-        key={versionedSrc ?? "missing-sprite"}
-        src={versionedSrc ?? ""}
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-          const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
-          if (fallback) fallback.style.display = "grid";
-        }}
-        alt={`${name} illustrated virtual game portrait`}
-        className={`h-full w-full object-contain p-1 sm:p-2 ${isSubadult ? "scale-[0.86]" : ""} ${versionedSrc ? "" : "hidden"}`}
-      />
+      {versionedSrc ? (
+        <img
+          key={versionedSrc}
+          src={versionedSrc}
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+            const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+            if (fallback) fallback.style.display = "grid";
+          }}
+          alt={`${name} illustrated virtual game portrait`}
+          className={`h-full w-full object-contain p-1 sm:p-2 ${isSubadult ? "scale-[0.86]" : ""}`}
+        />
+      ) : null}
       <div
         className="absolute inset-0 place-items-center p-6 text-center"
         style={{ display: versionedSrc ? "none" : "grid" }}
