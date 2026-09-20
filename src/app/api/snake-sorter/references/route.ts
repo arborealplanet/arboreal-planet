@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
   const splitGroup = text(form.get("split_group"), 160);
   const notes = text(form.get("notes"), 4000);
   const trainingEligible = text(form.get("training_eligible"), 10) !== "false";
+  const challengeEligible = text(form.get("challenge_eligible"), 10) === "true";
   const rightsStatus = text(form.get("rights_status"), 40) || "unknown";
   const rightsNotes = text(form.get("rights_notes"), 2000);
 
@@ -103,6 +104,7 @@ export async function POST(request: NextRequest) {
       source_url: sourceUrl || null,
       notes: notes || null,
       training_eligible: trainingEligible,
+      challenge_eligible: challengeEligible,
       rights_status: rightsStatus,
       rights_notes: rightsNotes || null,
     }),
