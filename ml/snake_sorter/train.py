@@ -30,8 +30,25 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--weight-decay", type=float, default=0.02)
+    parser.add_argument("--seed", type=int, default=1337)
+    parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--unfreeze-backbone", action="store_true")
     return parser.parse_args()
+
+
+def taxon_weights_by_individual(dataset: SnakeSorterDataset) -> torch.Tensor:
+    animals = dataset.frame[["animal_id", "taxon"]].drop_duplicates()
+    counts = animals["taxon"].value_counts()
+    total = float(len(animals))
+    weights = []
+    for taxon in TAXA:
+        count = float(counts.get(taxon, 0))
+        weights.append(0.0 if count <= 0 else total / (len(TAXA) * count))
+    tensor = torch.tensor(weights, dtype=torch.float32)
+    positive = tensor[tensor > 0]
+    if len(positive):
+        tensor = tensor / positive.mean()
+    return tensor
 
 
 def build_collate(processor):
@@ -81,6 +98,10 @@ def main():
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
 
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     processor = AutoImageProcessor.from_pretrained(args.encoder)
     collate = build_collate(processor)
@@ -91,7 +112,7 @@ def main():
         train_data,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
         collate_fn=collate,
     )
@@ -99,7 +120,7 @@ def main():
         val_data,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=4,
+        num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
         collate_fn=collate,
     )
@@ -115,7 +136,8 @@ def main():
         lr=args.lr,
         weight_decay=args.weight_decay,
     )
-    ce = nn.CrossEntropyLoss()
+    taxon_ce = nn.CrossEntropyLoss(weight=taxon_weights_by_individual(train_data).to(device))
+    auxiliary_ce = nn.CrossEntropyLoss()
     scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
     best_f1 = -1.0
 
@@ -126,6 +148,8 @@ def main():
         "stages": STAGES,
         "colors": COLORS,
         "freeze_backbone": not args.unfreeze_backbone,
+        "seed": args.seed,
+        "taxon_weighting": "inverse distinct-animal frequency",
     }
     (output / "config.json").write_text(json.dumps(config, indent=2))
 
@@ -146,9 +170,9 @@ def main():
                 enabled=device.type == "cuda",
             ):
                 out = model(pixel_values, stage_targets=stage)
-                taxon_loss = ce(out["taxon_logits"], taxon)
-                stage_loss = ce(out["stage_logits"], stage)
-                color_loss = ce(out["color_logits"], color)
+                taxon_loss = taxon_ce(out["taxon_logits"], taxon)
+                stage_loss = auxiliary_ce(out["stage_logits"], stage)
+                color_loss = auxiliary_ce(out["color_logits"], color)
                 loss = taxon_loss + 0.25 * stage_loss + 0.20 * color_loss
 
             scaler.scale(loss).backward()
