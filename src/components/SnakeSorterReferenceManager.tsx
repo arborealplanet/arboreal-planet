@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 export type SnakeReferenceAnimal = {
   id: string;
   animal_code: string | null;
+  split_group?: string | null;
   taxon: string;
   locality: string | null;
   life_stage: string;
@@ -99,7 +100,7 @@ export function SnakeSorterReferenceManager({
         if (!needsAttention) return false;
       }
       if (!normalized) return true;
-      return [animal.animal_code, animal.taxon, animal.locality, animal.source_name, animal.source_type]
+      return [animal.animal_code, animal.split_group, animal.taxon, animal.locality, animal.source_name, animal.source_type]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalized));
     });
@@ -275,7 +276,7 @@ export function SnakeSorterReferenceManager({
                   <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${statusClass(reviewValue)}`}>{reviewValue}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-[9px] uppercase tracking-[.06em] text-white/25">
-                  <span>{animal.locality || "No locality"}</span><span>•</span><span>{animal.life_stage}</span><span>•</span><span>{animal.neonate_color.replace("_"," ")}</span><span>•</span><span>{mediaCount.get(animal.id) ?? 0} images</span><span>•</span><span>{animal.dataset_split ?? "unassigned"}</span>
+                  <span>{animal.locality || "No locality"}</span><span>•</span><span>{animal.life_stage}</span><span>•</span><span>{animal.neonate_color.replace("_"," ")}</span><span>•</span><span>{mediaCount.get(animal.id) ?? 0} images</span><span>•</span><span>{animal.dataset_split ?? "unassigned"}</span>{animal.split_group && <><span>•</span><span>group {animal.split_group}</span></>}
                 </div>
               </button>;
             })
@@ -337,6 +338,7 @@ export function SnakeSorterReferenceManager({
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Taxon<select name="taxon" defaultValue={detail.animal.taxon} className={`${field} mt-2`}><option>Morelia azurea azurea</option><option>Morelia azurea pulcher</option><option>Morelia azurea utaraensis</option><option>Morelia viridis</option><option>Unknown / review</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Locality<input name="locality" defaultValue={detail.animal.locality ?? ""} className={`${field} mt-2`} /></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Animal code<input name="animal_code" defaultValue={detail.animal.animal_code ?? ""} className={`${field} mt-2`} /></label>
+            <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Related / split group<input name="split_group" defaultValue={detail.animal.split_group ?? ""} className={`${field} mt-2`} placeholder="Optional clutch / sibling / line group" /></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Life stage<select name="life_stage" defaultValue={detail.animal.life_stage} className={`${field} mt-2`}><option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Neonate color<select name="neonate_color" defaultValue={detail.animal.neonate_color} className={`${field} mt-2`}><option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option><option value="unknown">Unknown</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Label confidence<select name="label_confidence" defaultValue={detail.animal.label_confidence} className={`${field} mt-2`}><option value="confirmed">Confirmed</option><option value="strong">Strong</option><option value="provisional">Provisional</option><option value="uncertain">Uncertain</option></select></label>
