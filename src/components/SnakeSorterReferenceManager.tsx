@@ -60,6 +60,11 @@ export function SnakeSorterReferenceManager({
   const [color, setColor] = useState("all");
   const [review, setReview] = useState("all");
   const [split, setSplit] = useState("all");
+  const [confidence, setConfidence] = useState("all");
+  const [purity, setPurity] = useState("all");
+  const [rights, setRights] = useState("all");
+  const [training, setTraining] = useState("all");
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -79,12 +84,26 @@ export function SnakeSorterReferenceManager({
       if (color !== "all" && animal.neonate_color !== color) return false;
       if (review !== "all" && (animal.review_status ?? "pending") !== review) return false;
       if (split !== "all" && (animal.dataset_split ?? "unassigned") !== split) return false;
+      if (confidence !== "all" && animal.label_confidence !== confidence) return false;
+      if (purity !== "all" && animal.purity_status !== purity) return false;
+      if (rights !== "all" && (animal.rights_status ?? "unknown") !== rights) return false;
+      if (training === "eligible" && !animal.training_eligible) return false;
+      if (training === "excluded" && animal.training_eligible) return false;
+      if (attentionOnly) {
+        const needsAttention =
+          (animal.review_status ?? "pending") !== "approved" ||
+          ["provisional","uncertain"].includes(animal.label_confidence) ||
+          ["possible_mixed","hybrid","unknown"].includes(animal.purity_status) ||
+          !animal.rights_status || animal.rights_status === "unknown" ||
+          (animal.training_eligible && (!animal.dataset_split || animal.dataset_split === "unassigned"));
+        if (!needsAttention) return false;
+      }
       if (!normalized) return true;
       return [animal.animal_code, animal.taxon, animal.locality, animal.source_name, animal.source_type]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalized));
     });
-  }, [animals, query, taxon, stage, color, review, split]);
+  }, [animals, query, taxon, stage, color, review, split, confidence, purity, rights, training, attentionOnly]);
 
   async function openAnimal(id: string) {
     setDetailLoading(true);
@@ -226,7 +245,20 @@ export function SnakeSorterReferenceManager({
           <select value={split} onChange={(e) => setSplit(e.target.value)} className={field}>
             <option value="all">All dataset splits</option><option value="unassigned">Unassigned</option><option value="train">Train</option><option value="validation">Validation</option><option value="test">Test</option>
           </select>
-          <button type="button" onClick={() => { setQuery(""); setTaxon("all"); setStage("all"); setColor("all"); setReview("all"); setSplit("all"); }} className={mini}>Reset filters</button>
+          <select value={confidence} onChange={(e) => setConfidence(e.target.value)} className={field}>
+            <option value="all">All label confidence</option><option value="confirmed">Confirmed</option><option value="strong">Strong</option><option value="provisional">Provisional</option><option value="uncertain">Uncertain</option>
+          </select>
+          <select value={purity} onChange={(e) => setPurity(e.target.value)} className={field}>
+            <option value="all">All ancestry states</option><option value="known_pure">Known pure</option><option value="believed_pure">Believed pure</option><option value="possible_mixed">Possible mixed</option><option value="hybrid">Hybrid</option><option value="unknown">Unknown</option>
+          </select>
+          <select value={rights} onChange={(e) => setRights(e.target.value)} className={field}>
+            <option value="all">All rights states</option><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown rights</option>
+          </select>
+          <select value={training} onChange={(e) => setTraining(e.target.value)} className={field}>
+            <option value="all">All training states</option><option value="eligible">Training eligible</option><option value="excluded">Reference only / excluded</option>
+          </select>
+          <button type="button" onClick={() => setAttentionOnly((value) => !value)} className={`${mini} ${attentionOnly ? "border-amber-300/20 bg-amber-300/[.05] text-amber-100/65" : ""}`}>{attentionOnly ? "Showing needs attention" : "Needs attention"}</button>
+          <button type="button" onClick={() => { setQuery(""); setTaxon("all"); setStage("all"); setColor("all"); setReview("all"); setSplit("all"); setConfidence("all"); setPurity("all"); setRights("all"); setTraining("all"); setAttentionOnly(false); }} className={mini}>Reset filters</button>
         </div>
 
         <div className="mt-5 max-h-[760px] space-y-2 overflow-y-auto pr-1">
@@ -305,7 +337,7 @@ export function SnakeSorterReferenceManager({
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Taxon<select name="taxon" defaultValue={detail.animal.taxon} className={`${field} mt-2`}><option>Morelia azurea azurea</option><option>Morelia azurea pulcher</option><option>Morelia azurea utaraensis</option><option>Morelia viridis</option><option>Unknown / review</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Locality<input name="locality" defaultValue={detail.animal.locality ?? ""} className={`${field} mt-2`} /></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Animal code<input name="animal_code" defaultValue={detail.animal.animal_code ?? ""} className={`${field} mt-2`} /></label>
-            <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Life stage<select name="life_stage" defaultValue={detail.animal.life_stage} className={`${field} mt-2`}><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option></select></label>
+            <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Life stage<select name="life_stage" defaultValue={detail.animal.life_stage} className={`${field} mt-2`}><option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Neonate color<select name="neonate_color" defaultValue={detail.animal.neonate_color} className={`${field} mt-2`}><option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option><option value="unknown">Unknown</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Label confidence<select name="label_confidence" defaultValue={detail.animal.label_confidence} className={`${field} mt-2`}><option value="confirmed">Confirmed</option><option value="strong">Strong</option><option value="provisional">Provisional</option><option value="uncertain">Uncertain</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Purity<select name="purity_status" defaultValue={detail.animal.purity_status} className={`${field} mt-2`}><option value="known_pure">Known pure</option><option value="believed_pure">Believed pure</option><option value="possible_mixed">Possible mixed</option><option value="hybrid">Hybrid</option><option value="unknown">Unknown</option></select></label>
