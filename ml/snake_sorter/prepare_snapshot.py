@@ -175,7 +175,7 @@ def main():
     snapshot = fetch_one(
         supabase_url,
         "snake_sorter_dataset_snapshots",
-        {"id": f"eq.{args.snapshot_id}"},
+        {"id": f"eq.{args.snapshot_id}", "finalized": "eq.true"},
         api_key,
         access_token,
     )
