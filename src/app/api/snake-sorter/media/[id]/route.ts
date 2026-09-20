@@ -51,6 +51,23 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ error: "Invalid media review metadata" }, { status: 400 });
   }
 
+  if (isPrimary) {
+    const currentResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?id=eq.${encodeURIComponent(id)}&select=animal_id`, {
+      headers: authHeaders(identity.token),
+      cache: "no-store",
+    });
+    const currentRows = currentResponse.ok ? await currentResponse.json() as Array<{ animal_id: string }> : [];
+    const animalId = currentRows[0]?.animal_id;
+    if (animalId) {
+      await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?animal_id=eq.${encodeURIComponent(animalId)}&id=neq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(identity.token), "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ is_primary: false }),
+        cache: "no-store",
+      });
+    }
+  }
+
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { ...authHeaders(identity.token), "Content-Type": "application/json", Prefer: "return=representation" },
