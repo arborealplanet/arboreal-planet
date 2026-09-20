@@ -21,10 +21,12 @@ type Locality =
   | "Arfak"
   | "Sorong"
   | "Timika"
+  | "Kofiau"
   | "Cyclops"
   | "Jayapura"
   | "Lereh"
   | "Wamena"
+  | "Yapen"
   | "Aru"
   | "Merauke";
 type SnakeLocality = Locality | "Mixed Locality" | "Designer";
@@ -141,10 +143,12 @@ const localitySubspecies: Record<Locality, Subspecies> = {
   Arfak: "Morelia azurea pulcher",
   Sorong: "Morelia azurea pulcher",
   Timika: "Morelia azurea pulcher",
+  Kofiau: "Morelia azurea pulcher",
   Cyclops: "Morelia azurea utaraensis",
   Jayapura: "Morelia azurea utaraensis",
   Lereh: "Morelia azurea utaraensis",
   Wamena: "Morelia azurea utaraensis",
+  Yapen: "Morelia azurea utaraensis",
   Aru: "Morelia viridis",
   Merauke: "Morelia viridis",
 };
