@@ -23,6 +23,11 @@ def parse_args():
     parser.add_argument("--snapshot-id", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--expected-purpose",
+        choices=["classifier", "challenge"],
+        default="classifier",
+    )
     return parser.parse_args()
 
 
@@ -176,7 +181,11 @@ def main():
     snapshot = fetch_one(
         supabase_url,
         "snake_sorter_dataset_snapshots",
-        {"id": f"eq.{args.snapshot_id}", "finalized": "eq.true"},
+        {
+            "id": f"eq.{args.snapshot_id}",
+            "finalized": "eq.true",
+            "purpose": f"eq.{args.expected_purpose}",
+        },
         api_key,
         access_token,
     )
@@ -260,6 +269,7 @@ def main():
             {
                 "ok": True,
                 "snapshot_id": args.snapshot_id,
+        "expected_purpose": args.expected_purpose,
                 "manifest_sha256": snapshot["manifest_sha256"],
                 "animals": len(distinct_animals),
                 "media": len(items),
