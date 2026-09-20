@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       headers: h(identity.token),
       cache: "no-store",
     }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,content_sha256,view_type,is_primary,life_stage_override,neonate_color_override,capture_date,approximate_age_days,metadata:notes&order=id.asc`, {
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,storage_path,original_name,mime_type,content_sha256,view_type,is_primary,life_stage_override,neonate_color_override,capture_date,approximate_age_days,metadata:notes&order=id.asc`, {
       headers: h(identity.token),
       cache: "no-store",
     }),
@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
     return [{
       media_id: String(item.id),
       animal_id: String(animal.id),
+      storage_path: item.storage_path ? String(item.storage_path) : null,
+      original_name: item.original_name ? String(item.original_name) : null,
+      mime_type: item.mime_type ? String(item.mime_type) : null,
       content_sha256: item.content_sha256 ? String(item.content_sha256) : null,
       taxon: String(animal.taxon),
       locality: animal.locality ? String(animal.locality) : null,
@@ -101,6 +104,14 @@ export async function POST(request: NextRequest) {
   });
 
   if (!rows.length) return NextResponse.json({ error: "No accepted reference images are ready for a snapshot." }, { status: 409 });
+
+  const incompleteObjects = rows.filter((row) => !row.storage_path || !row.content_sha256);
+  if (incompleteObjects.length) {
+    return NextResponse.json({
+      error: "Every snapshot image needs a frozen storage path and SHA-256 before snapshotting.",
+      incomplete_media: incompleteObjects.length,
+    }, { status: 409 });
+  }
 
   const animalIdsWithMedia = new Set(rows.map((row) => row.animal_id));
   const animalsWithoutAcceptedMedia = animals.filter((animal) => !animalIdsWithMedia.has(String(animal.id)));
