@@ -222,10 +222,23 @@ def rejection_decision(row: dict, policy: dict) -> bool:
     )
 
 
-def group_rate(rows: list[dict], predicate) -> float | None:
+def independent_group_count(rows: list[dict]) -> int:
+    return len({row["group_key"] for row in rows})
+
+
+def group_balanced_rate(rows: list[dict], predicate) -> float | None:
     if not rows:
         return None
-    return sum(1 for row in rows if predicate(row)) / len(rows)
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        grouped[row["group_key"]].append(row)
+
+    group_scores = []
+    for members in grouped.values():
+        group_scores.append(
+            sum(1 for row in members if predicate(row)) / len(members)
+        )
+    return sum(group_scores) / len(group_scores)
 
 
 def harmonic(a: float, b: float) -> float:
@@ -245,8 +258,10 @@ def tune_policy(calibration_rows: list[dict]) -> tuple[dict, dict]:
     ]
 
     counts = {
-        "classify": len(classify),
-        "reject": len(reject),
+        "classify_animals": len(classify),
+        "reject_animals": len(reject),
+        "classify_groups": independent_group_count(classify),
+        "reject_groups": independent_group_count(reject),
     }
     if not classify or not reject:
         return {
@@ -275,14 +290,14 @@ def tune_policy(calibration_rows: list[dict]) -> tuple[dict, dict]:
                         "evidence_quality_floor"
                     ],
                 }
-                classify_success = group_rate(
+                classify_success = group_balanced_rate(
                     classify,
                     lambda row: (
                         not rejection_decision(row, policy)
                         and row["correct"]
                     ),
                 ) or 0.0
-                reject_success = group_rate(
+                reject_success = group_balanced_rate(
                     reject,
                     lambda row: rejection_decision(row, policy),
                 ) or 0.0
@@ -309,8 +324,8 @@ def tune_policy(calibration_rows: list[dict]) -> tuple[dict, dict]:
         **best_metrics["policy"],
         "source": "challenge_calibrated",
         "validated": (
-            len(classify) >= 8
-            and len(reject) >= 3
+            independent_group_count(classify) >= 8
+            and independent_group_count(reject) >= 3
         ),
     }
     return policy, {
@@ -326,25 +341,28 @@ def summarize(rows: list[dict], policy: dict) -> dict:
 
     return {
         "counts": {
-            "classify": len(classify),
-            "reject": len(reject),
-            "review": len(review),
+            "classify_animals": len(classify),
+            "reject_animals": len(reject),
+            "review_animals": len(review),
+            "classify_groups": independent_group_count(classify),
+            "reject_groups": independent_group_count(reject),
+            "review_groups": independent_group_count(review),
         },
-        "classify_success_rate": group_rate(
+        "classify_success_rate": group_balanced_rate(
             classify,
             lambda row: (
                 not rejection_decision(row, policy)
                 and row["correct"]
             ),
         ),
-        "classify_accept_rate": group_rate(
+        "classify_accept_rate": group_balanced_rate(
             classify,
             lambda row: not rejection_decision(row, policy),
         ),
         "classify_correct_if_accepted": (
             None
             if not [row for row in classify if not rejection_decision(row, policy)]
-            else group_rate(
+            else group_balanced_rate(
                 [
                     row
                     for row in classify
@@ -353,15 +371,15 @@ def summarize(rows: list[dict], policy: dict) -> dict:
                 lambda row: row["correct"],
             )
         ),
-        "reject_success_rate": group_rate(
+        "reject_success_rate": group_balanced_rate(
             reject,
             lambda row: rejection_decision(row, policy),
         ),
-        "false_accept_rate": group_rate(
+        "false_accept_rate": group_balanced_rate(
             reject,
             lambda row: not rejection_decision(row, policy),
         ),
-        "review_rejection_rate": group_rate(
+        "review_rejection_rate": group_balanced_rate(
             review,
             lambda row: rejection_decision(row, policy),
         ),
@@ -372,6 +390,19 @@ def main():
     args = parse_args()
     classifier_root = Path(args.classifier_dataset).resolve()
     challenge_root = Path(args.challenge_dataset).resolve()
+
+    classifier_manifest = pd.read_csv(classifier_root / "manifest.csv")
+    challenge_manifest = pd.read_csv(challenge_root / "manifest.csv")
+    classifier_animals = set(classifier_manifest["animal_id"].astype(str))
+    challenge_animals = set(challenge_manifest["animal_id"].astype(str))
+    overlapping_animals = sorted(classifier_animals & challenge_animals)
+    if overlapping_animals:
+        raise RuntimeError(
+            "Classifier and challenge snapshots must be animal-disjoint. "
+            f"Found {len(overlapping_animals)} overlapping animal(s); "
+            "remove dual-role animals from one frozen snapshot before rejection evaluation."
+        )
+
     checkpoint = torch.load(
         args.checkpoint,
         map_location="cpu",
@@ -471,14 +502,22 @@ def main():
     policy, tuning = tune_policy(calibration_rows)
     policy["calibration_counts"] = tuning.get("counts", {})
     policy["test_counts"] = {
-        "classify": sum(
+        "classify_animals": sum(
             row["expected_behavior"] == "classify"
             for row in test_rows
         ),
-        "reject": sum(
+        "reject_animals": sum(
             row["expected_behavior"] == "reject"
             for row in test_rows
         ),
+        "classify_groups": independent_group_count([
+            row for row in test_rows
+            if row["expected_behavior"] == "classify"
+        ]),
+        "reject_groups": independent_group_count([
+            row for row in test_rows
+            if row["expected_behavior"] == "reject"
+        ]),
     }
 
     result = {
@@ -506,7 +545,8 @@ def main():
             "classifier_test_role": "untouched rejection evaluation",
             "challenge_partitioning": "deterministic by related group within expectation",
             "review_examples_tune_thresholds": False,
-            "policy_validated_rule": ">=8 classify and >=3 reject calibration animals",
+            "policy_validated_rule": ">=8 independent classify groups and >=3 independent reject calibration groups",
+            "rate_weighting": "each related group contributes equal weight",
         },
     }
 
