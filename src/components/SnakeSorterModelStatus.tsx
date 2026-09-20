@@ -9,6 +9,7 @@ type DatasetSnapshot = {
   animal_count: number;
   media_count: number;
   notes: string | null;
+  purpose?: "classifier" | "challenge";
   created_at: string;
 };
 
@@ -163,17 +164,17 @@ export function SnakeSorterModelStatus() {
     setActivating("");
   }
 
-  async function createSnapshot() {
-    setActivating("snapshot");
+  async function createSnapshot(purpose: "classifier" | "challenge") {
+    setActivating(`snapshot-${purpose}`);
     setMessage("");
     const response = await fetch("/api/snake-sorter/snapshots", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: snapshotName }),
+      body: JSON.stringify({ name: snapshotName, purpose }),
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessage(`Frozen dataset snapshot created: ${data.animal_count} animals / ${data.media_count} images.`);
+      setMessage(`Frozen ${purpose} snapshot created: ${data.animal_count} animals / ${data.media_count} images.`);
       setSnapshotName("");
       await load();
     } else {
@@ -352,15 +353,16 @@ export function SnakeSorterModelStatus() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.12em] text-white/26">Training snapshots</div>
-            <p className="mt-2 text-xs leading-5 text-white/22">Freeze the currently approved dataset before training so the exact labels, splits and image set can be reproduced later.</p>
+            <p className="mt-2 text-xs leading-5 text-white/22">Freeze classifier and challenge datasets separately so the exact labels and media can be reproduced later. Classifier snapshots feed training; challenge snapshots test rejection and difficult cases only.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input value={snapshotName} onChange={(e) => setSnapshotName(e.target.value)} placeholder="Optional snapshot name" className="rounded-xl border border-white/[.07] bg-black/10 px-3 py-2 text-[10px] text-white/55 outline-none placeholder:text-white/18" />
-            <button type="button" disabled={Boolean(activating)} onClick={() => void createSnapshot()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[10px] font-black text-emerald-100/60 disabled:opacity-40">{activating === "snapshot" ? "Freezing…" : "Create training snapshot"}</button>
+            <button type="button" disabled={Boolean(activating)} onClick={() => void createSnapshot("classifier")} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[10px] font-black text-emerald-100/60 disabled:opacity-40">{activating === "snapshot-classifier" ? "Freezing…" : "Create classifier snapshot"}</button>
+            <button type="button" disabled={Boolean(activating)} onClick={() => void createSnapshot("challenge")} className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-3 py-2 text-[10px] font-black text-amber-100/60 disabled:opacity-40">{activating === "snapshot-challenge" ? "Freezing…" : "Create challenge snapshot"}</button>
           </div>
         </div>
         {snapshots.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/[.07] p-4 text-[10px] text-white/22">No immutable dataset snapshots yet.</div> :
-          <div className="mt-4 space-y-2">{snapshots.slice(0,6).map((snapshot) => <div key={snapshot.id} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xs font-semibold text-white/48">{snapshot.name}</div><div className="mt-1 text-[9px] text-white/20">{snapshot.animal_count} animals · {snapshot.media_count} images</div></div><div className="text-right"><div className="font-mono text-[8px] text-white/20">{snapshot.manifest_sha256.slice(0,12)}…</div><div className="mt-1 text-[8px] text-white/18">{new Date(snapshot.created_at).toLocaleDateString()}</div></div></div></div>)}</div>
+          <div className="mt-4 space-y-2">{snapshots.slice(0,6).map((snapshot) => <div key={snapshot.id} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><div className="text-xs font-semibold text-white/48">{snapshot.name}</div><span className={`rounded-full border px-2 py-0.5 text-[7px] font-black uppercase tracking-[.08em] ${snapshot.purpose === "challenge" ? "border-amber-300/12 text-amber-100/45" : "border-emerald-300/12 text-emerald-100/45"}`}>{snapshot.purpose || "classifier"}</span></div><div className="mt-1 text-[9px] text-white/20">{snapshot.animal_count} animals · {snapshot.media_count} images</div></div><div className="text-right"><div className="font-mono text-[8px] text-white/20">{snapshot.manifest_sha256.slice(0,12)}…</div><div className="mt-1 text-[8px] text-white/18">{new Date(snapshot.created_at).toLocaleDateString()}</div></div></div></div>)}</div>
         }
       </div>
 
