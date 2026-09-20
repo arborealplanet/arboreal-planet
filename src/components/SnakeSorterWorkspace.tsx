@@ -192,6 +192,46 @@ export function SnakeSorterWorkspace() {
     if (approvedMissingCoreViews) readinessWarnings.push(`${approvedMissingCoreViews} approved animal(s) are missing one or more core photographic views.`);
     const structurallyReady = readinessBlockers.length === 0;
 
+    const challengeApproved = approved.filter((animal) =>
+      Boolean(animal.challenge_eligible) &&
+      ["owned_by_owner","permission_granted","private_reference_only"].includes(animal.rights_status ?? "unknown")
+    );
+    const challengeIds = new Set(challengeApproved.map((animal) => animal.id));
+    const challengeWithAcceptedMedia = new Set(
+      acceptedMedia.filter((item) => challengeIds.has(item.animal_id)).map((item) => item.animal_id)
+    );
+    const challengeWithoutAcceptedMedia = challengeApproved.filter((animal) => !challengeWithAcceptedMedia.has(animal.id)).length;
+
+    const challengeGroupKey = (animal: ReferenceAnimal) => animal.split_group?.trim() || animal.id;
+    const challengeGroupsByExpectation = (expectation: "reject" | "classify" | "review") => new Set(
+      challengeApproved
+        .filter((animal) => (animal.challenge_expectation ?? "review") === expectation)
+        .map(challengeGroupKey)
+    ).size;
+
+    const challengeRejectGroups = challengeGroupsByExpectation("reject");
+    const challengeClassifyGroups = challengeGroupsByExpectation("classify");
+    const challengeReviewGroups = challengeGroupsByExpectation("review");
+    const challengeIndependentGroups = new Set(challengeApproved.map(challengeGroupKey)).size;
+
+    const validationIndependentGroups = new Set(
+      eligibleApproved
+        .filter((animal) => animal.dataset_split === "validation")
+        .map(independentGroupKey)
+    ).size;
+
+    const likelyRejectCalibrationGroups = Math.floor(challengeRejectGroups / 2);
+    const challengePolicyMinimumLikelyMet =
+      validationIndependentGroups >= 8 &&
+      likelyRejectCalibrationGroups >= 3;
+
+    const challengeWarnings: string[] = [];
+    if (!challengeApproved.length) challengeWarnings.push("No approved, rights-reviewed challenge examples yet.");
+    if (challengeWithoutAcceptedMedia) challengeWarnings.push(`${challengeWithoutAcceptedMedia} challenge animal(s) have no accepted image.`);
+    if (challengeRejectGroups < 6) challengeWarnings.push("Collect roughly 6+ independent Reject groups so the deterministic half-split can provide about 3 calibration reject groups.");
+    if (validationIndependentGroups < 8) challengeWarnings.push("The rejection evaluator also needs at least 8 independent clean validation animals across the classifier dataset for its validation minimum.");
+    if (!challengeClassifyGroups) challengeWarnings.push("Add some trusted hard cases marked Classify so difficult-but-valid animals are represented in challenge diagnostics.");
+
     const youngStages = new Set(["hatchling", "neonate", "juvenile"]);
     const youngTargets = [
       ["M. a. azurea · red young", "Morelia azurea azurea", "red"],
@@ -243,6 +283,14 @@ export function SnakeSorterWorkspace() {
       readinessBlockers,
       readinessWarnings,
       structurallyReady,
+      challengeIndependentGroups,
+      challengeRejectGroups,
+      challengeClassifyGroups,
+      challengeReviewGroups,
+      challengeWithoutAcceptedMedia,
+      validationIndependentGroups,
+      challengePolicyMinimumLikelyMet,
+      challengeWarnings,
       collectionTargets,
     };
   }, [animals, media, mediaCount]);
@@ -508,6 +556,27 @@ export function SnakeSorterWorkspace() {
               {diagnostics.readinessBlockers.length > 0 && <div className="mt-3 space-y-1">{diagnostics.readinessBlockers.slice(0,8).map((item) => <div key={item} className="text-[9px] leading-4 text-amber-50/38">• {item}</div>)}</div>}
               {diagnostics.readinessWarnings.length > 0 && <div className="mt-3 border-t border-white/[.05] pt-3">{diagnostics.readinessWarnings.map((item) => <div key={item} className="text-[9px] leading-4 text-white/24">• {item}</div>)}</div>}
               <p className="mt-3 text-[9px] leading-4 text-white/18">Passing these checks means the split structure is valid enough to run an experiment. It does not mean the dataset is large or diverse enough for a production model.</p>
+            </div>
+
+            <div className={`mt-4 rounded-2xl border p-4 ${diagnostics.challengePolicyMinimumLikelyMet ? "border-emerald-300/12 bg-emerald-300/[.025]" : "border-amber-300/12 bg-amber-300/[.025]"}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Challenge / OOD readiness</div>
+                  <div className="mt-1 text-sm font-semibold text-white/55">{diagnostics.challengePolicyMinimumLikelyMet ? "Minimum structure likely sufficient to validate a rejection-policy run" : "Keep collecting difficult independent examples"}</div>
+                </div>
+                <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${diagnostics.challengePolicyMinimumLikelyMet ? "border-emerald-300/15 text-emerald-100/60" : "border-amber-300/15 text-amber-100/55"}`}>{diagnostics.challengePolicyMinimumLikelyMet ? "Threshold minimum likely met" : "Building challenge set"}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {[
+                  ["Independent groups", diagnostics.challengeIndependentGroups],
+                  ["Reject", diagnostics.challengeRejectGroups],
+                  ["Classify hard cases", diagnostics.challengeClassifyGroups],
+                  ["Review only", diagnostics.challengeReviewGroups],
+                  ["Clean validation groups", diagnostics.validationIndependentGroups],
+                ].map(([name,value]) => <div key={String(name)} className="rounded-xl border border-white/[.045] bg-black/[.05] px-3 py-2"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
+              </div>
+              {diagnostics.challengeWarnings.length > 0 && <div className="mt-3 space-y-1">{diagnostics.challengeWarnings.map((item) => <div key={item} className="text-[9px] leading-4 text-amber-50/38">• {item}</div>)}</div>}
+              <p className="mt-3 text-[9px] leading-4 text-white/18">These are engineering minimums for running the rejection-policy validator, not a claim that the resulting policy is production-quality. More independent mixed, ambiguous and trusted-hard animals remain valuable.</p>
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/[.055] bg-black/[.07] p-4">
