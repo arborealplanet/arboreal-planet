@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SNAKE_SORTER_TAXA, type SnakeSorterAnalysisResult } from "@/lib/snake-sorter/types";
 
+type ScanView = "auto" | "full_body" | "head" | "dorsal" | "left_lateral" | "right_lateral" | "tail" | "other";
+type ScanMode = "quick" | "deep";
+
 type ScanAsset = {
   id: string;
   file: File;
   kind: "image" | "video";
   source: "upload" | "camera" | "recording";
   previewUrl: string;
+  viewType: ScanView;
 };
 
 type AnalysisStatus = "idle" | "preparing" | "running" | "ready" | "error";
@@ -72,6 +76,64 @@ async function normalizeImage(file: File, index: number) {
   }
 }
 
+type LiveQuality = {
+  score: number;
+  label: string;
+  notes: string[];
+};
+
+function assessCanvasQuality(canvas: HTMLCanvasElement): LiveQuality {
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return { score: 0, label: "Unavailable", notes: ["Camera quality check unavailable"] };
+  const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+  const gray = new Float32Array(canvas.width * canvas.height);
+  let sum = 0;
+  let sumSq = 0;
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    const value = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    gray[p] = value;
+    sum += value;
+    sumSq += value * value;
+  }
+  const count = gray.length || 1;
+  const mean = sum / count;
+  const variance = Math.max(0, sumSq / count - mean * mean);
+  const contrast = Math.sqrt(variance);
+  let edges = 0;
+  let edgeCount = 0;
+  for (let y = 1; y < canvas.height - 1; y += 2) {
+    for (let x = 1; x < canvas.width - 1; x += 2) {
+      const p = y * canvas.width + x;
+      const lap = Math.abs(4 * gray[p] - gray[p - 1] - gray[p + 1] - gray[p - canvas.width] - gray[p + canvas.width]);
+      edges += lap;
+      edgeCount++;
+    }
+  }
+  const sharpness = edgeCount ? edges / edgeCount : 0;
+  const brightnessScore = mean < 45 ? mean / 45 : mean > 225 ? Math.max(0, (255 - mean) / 30) : 1;
+  const contrastScore = Math.min(1, contrast / 45);
+  const sharpnessScore = Math.min(1, sharpness / 28);
+  const score = Math.max(0, Math.min(1, brightnessScore * 0.35 + contrastScore * 0.25 + sharpnessScore * 0.4));
+  const notes: string[] = [];
+  if (mean < 45) notes.push("Add more light");
+  if (mean > 225) notes.push("Reduce glare / overexposure");
+  if (contrast < 22) notes.push("Increase subject/background separation");
+  if (sharpness < 13) notes.push("Hold steady or refocus");
+  if (!notes.length) notes.push("Image quality looks good");
+  return { score, label: score >= 0.72 ? "Good capture" : score >= 0.48 ? "Usable" : "Improve capture", notes };
+}
+
+function assessVideoFrame(video: HTMLVideoElement): LiveQuality | null {
+  if (!video.videoWidth || !video.videoHeight) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = Math.max(90, Math.round(160 * video.videoHeight / video.videoWidth));
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return assessCanvasQuality(canvas);
+}
+
 async function sampleVideo(file: File, mode: string, sourceIndex: number) {
   const requested = mode === "dense" ? 8 : mode === "keyframes" ? 3 : 5;
   const url = URL.createObjectURL(file);
@@ -118,6 +180,8 @@ export function SnakeSorterScanner() {
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
   const [analysisMessage, setAnalysisMessage] = useState("");
   const [analysisResult, setAnalysisResult] = useState<SnakeSorterAnalysisResult | null>(null);
+  const [scanMode, setScanMode] = useState<ScanMode>("deep");
+  const [liveQuality, setLiveQuality] = useState<LiveQuality | null>(null);
   const [stageHint, setStageHint] = useState("auto");
   const [colorHint, setColorHint] = useState("auto");
   const [localityMode, setLocalityMode] = useState(true);
@@ -140,6 +204,20 @@ export function SnakeSorterScanner() {
       assetsRef.current.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
     };
   }, []);
+
+  useEffect(() => {
+    if (!cameraOpen) {
+      setLiveQuality(null);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      const video = videoRef.current;
+      if (!video) return;
+      const quality = assessVideoFrame(video);
+      if (quality) setLiveQuality(quality);
+    }, 900);
+    return () => window.clearInterval(timer);
+  }, [cameraOpen]);
 
   const totals = useMemo(() => ({
     images: assets.filter((a) => a.kind === "image").length,
@@ -164,6 +242,7 @@ export function SnakeSorterScanner() {
         kind: file.type.startsWith("video/") ? "video" : "image",
         source,
         previewUrl: URL.createObjectURL(file),
+        viewType: "auto",
       }));
     setAssets((current) => [...current, ...accepted]);
     setAnalysisStatus("idle");
@@ -186,6 +265,11 @@ export function SnakeSorterScanner() {
     setAnalysisStatus("idle");
     setAnalysisMessage("");
     setAnalysisResult(null);
+  }
+
+  function updateAssetView(id: string, viewType: ScanView) {
+    setAssets((current) => current.map((asset) => asset.id === id ? { ...asset, viewType } : asset));
+    invalidateAnalysis();
   }
 
   async function openCamera() {
@@ -272,21 +356,26 @@ export function SnakeSorterScanner() {
     setAnalysisMessage("Extracting and normalizing evidence frames in your browser…");
 
     try {
-      const evidence: File[] = [];
-      for (let i = 0; i < assets.length && evidence.length < 24; i++) {
+      const maxEvidence = scanMode === "quick" ? 6 : 24;
+      const evidence: Array<{ file: File; viewType: ScanView }> = [];
+      for (let i = 0; i < assets.length && evidence.length < maxEvidence; i++) {
         const asset = assets[i];
         if (asset.kind === "image") {
-          evidence.push(await normalizeImage(asset.file, evidence.length));
+          evidence.push({ file: await normalizeImage(asset.file, evidence.length), viewType: asset.viewType });
         } else {
-          const frames = await sampleVideo(asset.file, frameSampling, i);
-          evidence.push(...frames.slice(0, Math.max(0, 24 - evidence.length)));
+          const samplingMode = scanMode === "quick" ? "keyframes" : frameSampling;
+          const frames = await sampleVideo(asset.file, samplingMode, i);
+          evidence.push(...frames.slice(0, Math.max(0, maxEvidence - evidence.length)).map((file) => ({ file, viewType: asset.viewType })));
         }
       }
 
       if (!evidence.length) throw new Error("No usable analysis frames could be prepared.");
 
       const form = new FormData();
-      evidence.forEach((file) => form.append("evidence", file, file.name));
+      evidence.forEach(({ file, viewType }) => {
+        form.append("evidence", file, file.name);
+        form.append("evidence_view", viewType);
+      });
       form.set("source_assets", String(assets.length));
       form.set("source_images", String(totals.images));
       form.set("source_videos", String(totals.videos));
@@ -295,7 +384,8 @@ export function SnakeSorterScanner() {
       form.set("locality_mode", String(localityMode));
       form.set("nearest_neighbors", String(nearestNeighbors));
       form.set("conservative_mode", String(conservativeMode));
-      form.set("frame_sampling", frameSampling);
+      form.set("frame_sampling", scanMode === "quick" ? "keyframes" : frameSampling);
+      form.set("scan_mode", scanMode);
 
       setAnalysisStatus("running");
       setAnalysisMessage(`Prepared ${evidence.length} evidence frame(s). Running the private analysis pipeline…`);
@@ -357,6 +447,7 @@ export function SnakeSorterScanner() {
             <div className="relative aspect-video bg-black">
               <video ref={videoRef} muted playsInline className="h-full w-full object-contain" />
               {recording && <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/65 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-rose-200"><span className="h-2 w-2 animate-pulse rounded-full bg-rose-400" /> Recording</div>}
+              {liveQuality && <div className="absolute right-4 top-4 max-w-[220px] rounded-2xl border border-white/10 bg-black/70 px-3 py-2 backdrop-blur"><div className="flex items-center justify-between gap-3"><span className="text-[9px] font-black uppercase tracking-[.1em] text-white/55">{liveQuality.label}</span><span className="text-[10px] font-semibold text-white/45">{Math.round(liveQuality.score*100)}%</span></div><div className="mt-1 text-[9px] leading-4 text-white/30">{liveQuality.notes[0]}</div></div>}
               <div className="pointer-events-none absolute inset-6 rounded-[24px] border border-white/10">
                 <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-200/20" />
               </div>
@@ -402,6 +493,9 @@ export function SnakeSorterScanner() {
                   <div className="p-3">
                     <div className="truncate text-[11px] font-semibold text-white/55">{asset.file.name}</div>
                     <div className="mt-1 flex justify-between text-[9px] uppercase tracking-[.08em] text-white/22"><span>{asset.source}</span><span>{asset.kind} · {humanBytes(asset.file.size)}</span></div>
+                    <select value={asset.viewType} onChange={(e) => updateAssetView(asset.id, e.target.value as ScanView)} className="mt-2 w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
+                      <option value="auto">View: auto-detect</option><option value="full_body">Full body</option><option value="head">Head</option><option value="dorsal">Dorsal</option><option value="left_lateral">Left lateral</option><option value="right_lateral">Right lateral</option><option value="tail">Tail</option><option value="other">Other</option>
+                    </select>
                   </div>
                 </div>
               ))}
@@ -422,10 +516,15 @@ export function SnakeSorterScanner() {
             <h3 className="mt-2 text-xl font-semibold">Tell the model what you know</h3>
             <p className="mt-2 text-xs leading-5 text-white/28">Hints narrow the comparison pool; leave them on Auto when you want the model to infer them.</p>
 
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => { setScanMode("quick"); invalidateAnalysis(); }} className={`rounded-2xl border p-3 text-left transition ${scanMode==="quick"?"border-sky-300/20 bg-sky-300/[.06]":"border-white/[.06] bg-black/[.06]"}`}><div className="text-xs font-black text-white/58">Quick Scan</div><div className="mt-1 text-[9px] leading-4 text-white/23">Fast pass · up to 6 evidence frames</div></button>
+              <button type="button" onClick={() => { setScanMode("deep"); invalidateAnalysis(); }} className={`rounded-2xl border p-3 text-left transition ${scanMode==="deep"?"border-emerald-300/20 bg-emerald-300/[.06]":"border-white/[.06] bg-black/[.06]"}`}><div className="text-xs font-black text-white/58">Deep Scan</div><div className="mt-1 text-[9px] leading-4 text-white/23">Maximum evidence · similarity + locality</div></button>
+            </div>
+
             <div className="mt-5 space-y-4">
               <label className="block text-[10px] font-black uppercase tracking-[.1em] text-white/28">Life stage
                 <select value={stageHint} onChange={(e) => { setStageHint(e.target.value); invalidateAnalysis(); }} className={`${field} mt-2`}>
-                  <option value="auto">Auto-detect</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option>
+                  <option value="auto">Auto-detect</option><option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option>
                 </select>
               </label>
               <label className="block text-[10px] font-black uppercase tracking-[.1em] text-white/28">Neonate color
@@ -454,7 +553,7 @@ export function SnakeSorterScanner() {
             </div>
 
             <button type="button" disabled={!assets.length || analysisStatus === "running" || analysisStatus === "preparing"} onClick={() => void runAnalysis()} className="mt-5 w-full rounded-2xl bg-sky-200 px-5 py-4 text-sm font-black text-[#06100c] transition hover:bg-sky-100 disabled:opacity-35">
-              {analysisStatus === "running" || analysisStatus === "preparing" ? "Analyzing…" : "Run Snake Sorter identification"}
+              {analysisStatus === "running" || analysisStatus === "preparing" ? "Analyzing…" : `Run ${scanMode === "deep" ? "Deep" : "Quick"} identification`}
             </button>
             {analysisMessage && <div className={`mt-3 rounded-2xl border p-3 text-xs leading-5 ${analysisStatus === "error" ? "border-amber-300/12 bg-amber-300/[.035] text-amber-100/55" : "border-sky-300/12 bg-sky-300/[.035] text-sky-100/55"}`}>{analysisMessage}</div>}
           </div>
