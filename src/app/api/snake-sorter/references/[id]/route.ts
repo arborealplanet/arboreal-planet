@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const h = authHeaders(identity.token);
   const [animalResponse, mediaResponse] = await Promise.all([
     fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?id=eq.${encodeURIComponent(id)}&select=*`, { headers: h, cache: "no-store" }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?animal_id=eq.${encodeURIComponent(id)}&select=id,animal_id,original_name,mime_type,notes,created_at&order=created_at.asc`, { headers: h, cache: "no-store" }),
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?animal_id=eq.${encodeURIComponent(id)}&select=id,animal_id,original_name,mime_type,notes,view_type,quality_status,is_primary,created_at&order=created_at.asc`, { headers: h, cache: "no-store" }),
   ]);
   if (!animalResponse.ok || !mediaResponse.ok) return NextResponse.json({ error: "Reference record unavailable" }, { status: 502 });
   const animals = await animalResponse.json() as Array<Record<string, unknown>>;
