@@ -151,6 +151,7 @@ def manifest_row(item: dict) -> dict:
         "approximate_age_days": item.get("approximate_age_days"),
         "label_confidence": item["label_confidence"],
         "purity_status": item["purity_status"],
+        "challenge_expectation": item.get("challenge_expectation"),
         "split_group": item.get("split_group"),
         "dataset_split": item["dataset_split"],
         "view_type": item["view_type"],
