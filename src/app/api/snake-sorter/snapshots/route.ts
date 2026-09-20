@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       headers: h(identity.token),
       cache: "no-store",
     }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,content_sha256,view_type,is_primary,metadata:notes&order=id.asc`, {
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,content_sha256,view_type,is_primary,life_stage_override,neonate_color_override,capture_date,approximate_age_days,metadata:notes&order=id.asc`, {
       headers: h(identity.token),
       cache: "no-store",
     }),
@@ -78,7 +78,11 @@ export async function POST(request: NextRequest) {
       taxon: String(animal.taxon),
       locality: animal.locality ? String(animal.locality) : null,
       life_stage: String(animal.life_stage),
+      life_stage_override: item.life_stage_override ? String(item.life_stage_override) : null,
       neonate_color: String(animal.neonate_color),
+      neonate_color_override: item.neonate_color_override ? String(item.neonate_color_override) : null,
+      capture_date: item.capture_date ? String(item.capture_date) : null,
+      approximate_age_days: item.approximate_age_days == null ? null : Number(item.approximate_age_days),
       label_confidence: String(animal.label_confidence),
       purity_status: String(animal.purity_status),
       dataset_split: String(animal.dataset_split),
