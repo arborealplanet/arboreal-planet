@@ -27,6 +27,8 @@ def parse_args():
     parser.add_argument("--media-root", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--output")
+    parser.add_argument("--calibration-output")
     return parser.parse_args()
 
 
@@ -122,7 +124,19 @@ def main():
         "by_stage": subgroup_metrics(truth, pred, stages, STAGES),
         "by_color": subgroup_metrics(truth, pred, colors, COLORS),
     }
-    print(json.dumps(metrics, indent=2))
+    rendered = json.dumps(metrics, indent=2)
+    if args.output:
+        output_path = __import__("pathlib").Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(rendered, encoding="utf-8")
+    if args.calibration_output:
+        calibration_path = __import__("pathlib").Path(args.calibration_output)
+        calibration_path.parent.mkdir(parents=True, exist_ok=True)
+        calibration_path.write_text(json.dumps({
+            "temperature": temperature,
+            "expected_calibration_error": metrics["expected_calibration_error"],
+        }, indent=2), encoding="utf-8")
+    print(rendered)
 
 
 if __name__ == "__main__":
