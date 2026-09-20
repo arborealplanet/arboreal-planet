@@ -117,6 +117,10 @@ const localitySprites: Record<string, StageSpriteSet> = {
       ],
     },
   },
+  Timika: {},
+  Kofiau: {},
+  Jayapura: {},
+  Yapen: {},
   Biak: {
     juvenile: {
       Red: [variant("/hatchery/snakes/localities/biak/red-neonate-live-v2.webp")],
