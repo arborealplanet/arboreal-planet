@@ -172,7 +172,7 @@ async function sampleVideo(file: File, mode: string, sourceIndex: number) {
   }
 }
 
-export function SnakeSorterScanner() {
+export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: () => void }) {
   const [assets, setAssets] = useState<ScanAsset[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -183,6 +183,9 @@ export function SnakeSorterScanner() {
   const [analysisRunId, setAnalysisRunId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [correctionTaxon, setCorrectionTaxon] = useState("Unknown / review");
+  const [promotionOpen, setPromotionOpen] = useState(false);
+  const [promotionSaving, setPromotionSaving] = useState(false);
+  const [promotionMessage, setPromotionMessage] = useState("");
   const [scanMode, setScanMode] = useState<ScanMode>("deep");
   const [liveQuality, setLiveQuality] = useState<LiveQuality | null>(null);
   const [stageHint, setStageHint] = useState("auto");
@@ -244,8 +247,8 @@ export function SnakeSorterScanner() {
     setAnalysisResult(null);
     setAnalysisRunId(null);
     setFeedbackMessage("");
-    setAnalysisRunId(null);
-    setFeedbackMessage("");
+    setPromotionOpen(false);
+    setPromotionMessage("");
     setAnalysisStatus("idle");
     setAnalysisMessage("");
   }
@@ -425,8 +428,6 @@ export function SnakeSorterScanner() {
         setAnalysisMessage("Analysis complete.");
       } else {
         setAnalysisResult(null);
-    setAnalysisRunId(null);
-    setFeedbackMessage("");
         setAnalysisStatus("error");
         setAnalysisMessage(data.message ?? data.error ?? "The analysis engine is not connected yet.");
       }
@@ -453,6 +454,36 @@ export function SnakeSorterScanner() {
     });
     const data = await response.json().catch(() => ({}));
     setFeedbackMessage(response.ok ? "Feedback saved for model review." : (data.error ?? "Could not save feedback."));
+  }
+
+
+  async function promoteScanToReference(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const images = assets.filter((asset) => asset.kind === "image");
+    if (!images.length) {
+      setPromotionMessage("Add or capture at least one still photo before promoting this scan.");
+      return;
+    }
+
+    setPromotionSaving(true);
+    setPromotionMessage("");
+    const form = new FormData(event.currentTarget);
+    images.slice(0, 12).forEach((asset) => form.append("images", asset.file, asset.file.name));
+
+    const response = await fetch("/api/snake-sorter/references", {
+      method: "POST",
+      body: form,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      const duplicates = Array.isArray(data.duplicates) && data.duplicates.length ? ` ${data.duplicates.length} exact duplicate(s) skipped.` : "";
+      const failed = Array.isArray(data.failed) && data.failed.length ? ` ${data.failed.length} image(s) failed.` : "";
+      setPromotionMessage(`Reference animal created with ${data.uploaded ?? 0} still image(s).${duplicates}${failed}`);
+      onReferenceAdded?.();
+    } else {
+      setPromotionMessage(data.error ?? "Could not add this scan to the reference library.");
+    }
+    setPromotionSaving(false);
   }
 
   return (
@@ -703,6 +734,80 @@ export function SnakeSorterScanner() {
 
               {analysisResult.flags.length > 0 && <div className="rounded-[24px] border border-amber-300/12 bg-amber-300/[.025] p-4"><div className="text-[9px] font-black uppercase tracking-[.1em] text-amber-100/45">Flags</div><div className="mt-3 space-y-2">{analysisResult.flags.map((flag) => <div key={flag} className="text-[10px] leading-5 text-amber-50/45">• {flag}</div>)}</div></div>}
             </div>
+          </div>
+        )}
+
+        {assets.some((asset) => asset.kind === "image") && (
+          <div className="mt-5 rounded-[24px] border border-emerald-300/10 bg-emerald-300/[.02] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-[.1em] text-emerald-100/45">Explicit reference promotion</div>
+                <div className="mt-1 max-w-2xl text-xs leading-5 text-white/30">Deliberately copy the staged still photos into the curated reference library. Video and sampled/live frames are never promoted by this action.</div>
+              </div>
+              <button type="button" onClick={() => { setPromotionOpen((value) => !value); setPromotionMessage(""); }} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[10px] font-black text-emerald-100/60">{promotionOpen ? "Close promotion" : "Add scan to reference library"}</button>
+            </div>
+
+            {promotionOpen && (
+              <form onSubmit={(event) => void promoteScanToReference(event)} className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Final taxon
+                  <select name="taxon" defaultValue={analysisResult?.taxon ?? "Unknown / review"} className={`${field} mt-2`}>
+                    {SNAKE_SORTER_TAXA.map((taxon) => <option key={taxon} value={taxon}>{taxon}</option>)}
+                    <option value="Unknown / review">Unknown / review</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Locality / provenance
+                  <input name="locality" defaultValue={analysisResult?.locality?.label ?? provenanceHint} className={`${field} mt-2`} placeholder="Optional" />
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Life stage
+                  <select name="life_stage" defaultValue={analysisResult?.lifeStage ?? (stageHint === "auto" ? "unknown" : stageHint)} className={`${field} mt-2`}>
+                    <option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option><option value="unknown">Unknown</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Young color phase
+                  <select name="neonate_color" defaultValue={analysisResult?.neonateColor ?? (colorHint === "auto" ? "unknown" : colorHint)} className={`${field} mt-2`}>
+                    <option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option><option value="unknown">Unknown</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Label confidence
+                  <select name="label_confidence" defaultValue="provisional" className={`${field} mt-2`}>
+                    <option value="confirmed">Confirmed</option><option value="strong">Strong</option><option value="provisional">Provisional</option><option value="uncertain">Uncertain</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Purity / ancestry
+                  <select name="purity_status" defaultValue="unknown" className={`${field} mt-2`}>
+                    <option value="known_pure">Known pure</option><option value="believed_pure">Believed pure</option><option value="possible_mixed">Possible mixed</option><option value="hybrid">Hybrid</option><option value="unknown">Unknown</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Animal ID / code
+                  <input name="animal_code" className={`${field} mt-2`} placeholder="Optional known individual ID" />
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Source
+                  <select name="source_type" defaultValue="personal" className={`${field} mt-2`}>
+                    <option value="personal">Personal</option><option value="breeder">Breeder</option><option value="listing">Listing</option><option value="publication">Publication</option><option value="other">Other</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Rights / use status
+                  <select name="rights_status" defaultValue="owned_by_owner" className={`${field} mt-2`}>
+                    <option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown / not reviewed</option>
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Training eligibility
+                  <select name="training_eligible" defaultValue="true" className={`${field} mt-2`}>
+                    <option value="true">Candidate for training</option><option value="false">Reference only / hold out</option>
+                  </select>
+                </label>
+                <label className="sm:col-span-2 text-[9px] font-black uppercase tracking-[.08em] text-white/28">Notes
+                  <textarea name="notes" className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="Why the label is trusted, lineage/provenance notes, anything unusual…" />
+                </label>
+                <input type="hidden" name="source_name" value="Snake Sorter explicit scan promotion" />
+                <input type="hidden" name="rights_notes" value="Explicitly promoted by owner from staged still scan media." />
+                <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[.055] bg-black/[.06] p-3">
+                  <div className="text-[10px] leading-5 text-white/28">{assets.filter((asset) => asset.kind === "image").length} staged still photo(s) will be copied. Remove any unwanted photo from the scan before submitting.</div>
+                  <button disabled={promotionSaving} type="submit" className="rounded-xl bg-emerald-200 px-4 py-2.5 text-[10px] font-black text-[#06100c] disabled:opacity-40">{promotionSaving ? "Adding…" : "Add to reference library"}</button>
+                </div>
+                {promotionMessage && <div className="sm:col-span-2 rounded-xl border border-white/[.06] bg-black/[.05] px-3 py-2 text-[10px] text-white/38">{promotionMessage}</div>}
+              </form>
+            )}
           </div>
         )}
 
