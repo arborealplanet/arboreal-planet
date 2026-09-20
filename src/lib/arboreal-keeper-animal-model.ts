@@ -55,6 +55,9 @@ export type LegacyGtpAnimalInput = {
   neonateColor?: "Red" | "Yellow";
   generation?: number;
   classification?: string;
+  ancestry?: Record<string, number>;
+  localityAncestry?: Record<string, number>;
+  phenotypeScore?: number;
   highBlack?: number;
   highWhite?: number;
   blueStripe?: number;
