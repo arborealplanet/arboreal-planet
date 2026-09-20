@@ -39,9 +39,17 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const requestedName = clean(body.name, 120);
   const notes = clean(body.notes, 2000);
+  const purpose = clean(body.purpose, 30) || "classifier";
+  if (!["classifier","challenge"].includes(purpose)) {
+    return NextResponse.json({ error: "Invalid snapshot purpose." }, { status: 400 });
+  }
+
+  const classifierFilter = "review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)";
+  const challengeFilter = "review_status=eq.approved&challenge_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)";
+  const animalFilter = purpose === "challenge" ? challengeFilter : classifierFilter;
 
   const [animalsResponse, mediaResponse] = await Promise.all([
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)&select=*&order=id.asc`, {
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?${animalFilter}&select=*&order=id.asc`, {
       headers: h(identity.token),
       cache: "no-store",
     }),
@@ -57,9 +65,15 @@ export async function POST(request: NextRequest) {
 
   const animals = await animalsResponse.json() as Array<Record<string, unknown>>;
   const media = await mediaResponse.json() as Array<Record<string, unknown>>;
-  if (!animals.length) return NextResponse.json({ error: "No approved training animals are ready for a snapshot." }, { status: 409 });
+  if (!animals.length) return NextResponse.json({
+    error: purpose === "challenge"
+      ? "No approved challenge/OOD animals are ready for a snapshot."
+      : "No approved training animals are ready for a snapshot."
+  }, { status: 409 });
 
-  const unassigned = animals.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned");
+  const unassigned = purpose === "classifier"
+    ? animals.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned")
+    : [];
   if (unassigned.length) {
     return NextResponse.json({
       error: "Assign train/validation/test splits before creating a snapshot.",
@@ -78,7 +92,9 @@ export async function POST(request: NextRequest) {
     relatedGroups.set(group, entry);
   }
 
-  const crossTaxonGroup = [...relatedGroups.entries()].find(([, entry]) => entry.taxa.size > 1);
+  const crossTaxonGroup = purpose === "classifier"
+    ? [...relatedGroups.entries()].find(([, entry]) => entry.taxa.size > 1)
+    : undefined;
   if (crossTaxonGroup) {
     return NextResponse.json({
       error: "A related / split group is reused across multiple taxa. Give unrelated taxon groups different names before snapshotting.",
@@ -86,7 +102,9 @@ export async function POST(request: NextRequest) {
     }, { status: 409 });
   }
 
-  const leakingGroup = [...relatedGroups.entries()].find(([, entry]) => entry.splits.size > 1);
+  const leakingGroup = purpose === "classifier"
+    ? [...relatedGroups.entries()].find(([, entry]) => entry.splits.size > 1)
+    : undefined;
   if (leakingGroup) {
     return NextResponse.json({
       error: "A related / split group spans multiple dataset splits. Re-run auto-assign or correct the split before snapshotting.",
@@ -117,7 +135,7 @@ export async function POST(request: NextRequest) {
       label_confidence: String(animal.label_confidence),
       purity_status: String(animal.purity_status),
       split_group: animal.split_group ? String(animal.split_group) : null,
-      dataset_split: String(animal.dataset_split),
+      dataset_split: purpose === "challenge" ? "challenge" : String(animal.dataset_split),
       view_type: String(item.view_type ?? "unknown"),
       is_primary: Boolean(item.is_primary),
       source_type: animal.source_type ? String(animal.source_type) : null,
@@ -153,7 +171,7 @@ export async function POST(request: NextRequest) {
 
   const canonical = JSON.stringify(rows);
   const manifestSha256 = createHash("sha256").update(canonical).digest("hex");
-  const name = requestedName || `Snake Sorter dataset ${new Date().toISOString().slice(0, 10)}`;
+  const name = requestedName || `Snake Sorter ${purpose} dataset ${new Date().toISOString().slice(0, 10)}`;
 
   const snapshotResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_dataset_snapshots`, {
     method: "POST",
@@ -164,6 +182,7 @@ export async function POST(request: NextRequest) {
     },
     body: JSON.stringify({
       name,
+      purpose,
       manifest_sha256: manifestSha256,
       animal_count: animalIdsWithMedia.size,
       media_count: rows.length,
@@ -246,5 +265,6 @@ export async function POST(request: NextRequest) {
     animal_count: animalIdsWithMedia.size,
     media_count: rows.length,
     finalized: true,
+    purpose,
   }, { status: 201 });
 }
