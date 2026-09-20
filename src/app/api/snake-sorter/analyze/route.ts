@@ -26,6 +26,7 @@ const allowedModes = new Set(["quick","deep","live"]);
 const allowedViews = new Set(["auto","full_body","head","dorsal","left_lateral","right_lateral","tail","other"]);
 
 export async function POST(request: NextRequest) {
+  const requestStartedAt = Date.now();
   const identity = await ownerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
 
   // Intentionally no database or Storage write here.
   // Scan media is transient evidence only and is passed to the engine in memory.
+  const inferenceStartedAt = Date.now();
   const engineResponse = await runSnakeSorterEngine({
     evidence: prepared,
     hints: {
@@ -128,6 +130,10 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  const inferenceDurationMs = Date.now() - inferenceStartedAt;
+  const requestDurationMs = Date.now() - requestStartedAt;
+  const completedAt = new Date().toISOString();
+
   if (engineResponse.status === "ready") {
     const servingModelId = engineResponse.result.modelRegistryId ?? null;
     if (!activeModelId || !servingModelId || servingModelId !== activeModelId) {
@@ -140,7 +146,11 @@ export async function POST(request: NextRequest) {
             Prefer: "return=minimal",
           },
           body: JSON.stringify({
-            status: "failed",
+            status: "error",
+            error_code: "model_registry_mismatch",
+            request_duration_ms: requestDurationMs,
+            inference_duration_ms: inferenceDurationMs,
+            completed_at: completedAt,
             result_payload: {
               error: "model_registry_mismatch",
               active_model_id: activeModelId,
@@ -175,11 +185,34 @@ export async function POST(request: NextRequest) {
           result_confidence: engineResponse.result.confidence,
           result_payload: engineResponse.result,
           status: "completed",
+          error_code: null,
+          request_duration_ms: requestDurationMs,
+          inference_duration_ms: inferenceDurationMs,
+          completed_at: completedAt,
         }),
         cache: "no-store",
       }).catch(() => undefined);
     }
     return NextResponse.json({ result: engineResponse.result, analysis_run_id: analysisRunId });
+  }
+
+  if (analysisRunId) {
+    await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
+      method: "PATCH",
+      headers: {
+        ...restHeaders(identity.token),
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        status: "error",
+        error_code: "model_not_connected",
+        request_duration_ms: requestDurationMs,
+        inference_duration_ms: inferenceDurationMs,
+        completed_at: completedAt,
+      }),
+      cache: "no-store",
+    }).catch(() => undefined);
   }
 
   return NextResponse.json({
