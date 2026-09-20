@@ -59,6 +59,7 @@ const spritePathFallbacks: Record<string, string[]> = {
     "/hatchery/snakes/localities/merauke/adult.webp",
   ],
   "/hatchery/snakes/localities/biak/red-neonate-live-v2.webp": [
+    "/hatchery/snakes/localities/biak/red-neonate-live.webp",
     "/hatchery/snakes/localities/biak/red-neonate.webp",
   ],
 };
