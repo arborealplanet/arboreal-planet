@@ -121,6 +121,13 @@ export function SnakeSorterScanner() {
     size: assets.reduce((sum, a) => sum + a.file.size, 0),
   }), [assets]);
 
+
+  function invalidateAnalysis() {
+    setAnalysisResult(null);
+    setAnalysisStatus("idle");
+    setAnalysisMessage("");
+  }
+
   function addFiles(files: File[], source: ScanAsset["source"]) {
     const accepted = files
       .filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"))
@@ -144,6 +151,7 @@ export function SnakeSorterScanner() {
       if (target) URL.revokeObjectURL(target.previewUrl);
       return current.filter((asset) => asset.id !== id);
     });
+    invalidateAnalysis();
   }
 
   function clearAssets() {
@@ -390,17 +398,17 @@ export function SnakeSorterScanner() {
 
             <div className="mt-5 space-y-4">
               <label className="block text-[10px] font-black uppercase tracking-[.1em] text-white/28">Life stage
-                <select value={stageHint} onChange={(e) => setStageHint(e.target.value)} className={`${field} mt-2`}>
+                <select value={stageHint} onChange={(e) => { setStageHint(e.target.value); invalidateAnalysis(); }} className={`${field} mt-2`}>
                   <option value="auto">Auto-detect</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option>
                 </select>
               </label>
               <label className="block text-[10px] font-black uppercase tracking-[.1em] text-white/28">Neonate color
-                <select value={colorHint} onChange={(e) => setColorHint(e.target.value)} className={`${field} mt-2`}>
+                <select value={colorHint} onChange={(e) => { setColorHint(e.target.value); invalidateAnalysis(); }} className={`${field} mt-2`}>
                   <option value="auto">Auto-detect</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option>
                 </select>
               </label>
               <label className="block text-[10px] font-black uppercase tracking-[.1em] text-white/28">Video frame sampling
-                <select value={frameSampling} onChange={(e) => setFrameSampling(e.target.value)} className={`${field} mt-2`}>
+                <select value={frameSampling} onChange={(e) => { setFrameSampling(e.target.value); invalidateAnalysis(); }} className={`${field} mt-2`}>
                   <option value="balanced">Balanced · representative frames</option><option value="dense">Dense · more frames</option><option value="keyframes">Key frames only</option>
                 </select>
               </label>
@@ -413,7 +421,7 @@ export function SnakeSorterScanner() {
                 ["Conservative confidence", conservativeMode, setConservativeMode, "Prefer Unknown / Review instead of forcing a weak answer."],
               ].map(([name, checked, setter, description]) => (
                 <label key={String(name)} className="flex cursor-pointer gap-3 rounded-2xl border border-white/[.055] bg-black/[.08] p-3">
-                  <input type="checkbox" checked={Boolean(checked)} onChange={(e) => (setter as (value:boolean)=>void)(e.target.checked)} className="mt-0.5 h-4 w-4 accent-sky-300" />
+                  <input type="checkbox" checked={Boolean(checked)} onChange={(e) => { (setter as (value:boolean)=>void)(e.target.checked); invalidateAnalysis(); }} className="mt-0.5 h-4 w-4 accent-sky-300" />
                   <span><span className="block text-xs font-semibold text-white/55">{String(name)}</span><span className="mt-1 block text-[10px] leading-4 text-white/23">{String(description)}</span></span>
                 </label>
               ))}
