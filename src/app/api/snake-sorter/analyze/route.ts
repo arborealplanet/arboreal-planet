@@ -129,6 +129,39 @@ export async function POST(request: NextRequest) {
   });
 
   if (engineResponse.status === "ready") {
+    const servingModelId = engineResponse.result.modelRegistryId ?? null;
+    if (!activeModelId || !servingModelId || servingModelId !== activeModelId) {
+      if (analysisRunId) {
+        await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
+          method: "PATCH",
+          headers: {
+            ...restHeaders(identity.token),
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "failed",
+            result_payload: {
+              error: "model_registry_mismatch",
+              active_model_id: activeModelId,
+              serving_model_id: servingModelId,
+              serving_model_version: engineResponse.result.modelVersion,
+            },
+          }),
+          cache: "no-store",
+        }).catch(() => undefined);
+      }
+
+      return NextResponse.json({
+        error: "model_registry_mismatch",
+        message: "The inference service is not serving the model currently marked active in Snake Sorter.",
+        active_model_id: activeModelId,
+        serving_model_id: servingModelId,
+        serving_model_version: engineResponse.result.modelVersion,
+        analysis_run_id: analysisRunId,
+      }, { status: 503 });
+    }
+
     if (analysisRunId) {
       await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
         method: "PATCH",
