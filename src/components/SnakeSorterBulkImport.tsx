@@ -92,6 +92,17 @@ function normalizeHeader(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
+function suggestViewType(fileName: string) {
+  const name = fileName.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  if (/\b(head|face|portrait)\b/.test(name)) return "head";
+  if (/\b(dorsal|top|topdown|overhead)\b/.test(name)) return "dorsal";
+  if (/\b(left|lhs|leftside)\b/.test(name)) return "left_lateral";
+  if (/\b(right|rhs|rightside)\b/.test(name)) return "right_lateral";
+  if (/\b(tail|posterior|caudal)\b/.test(name)) return "tail";
+  if (/\b(full|whole|body|fullbody)\b/.test(name)) return "full_body";
+  return "unknown";
+}
+
 async function sha256File(file: File) {
   const bytes = await file.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -134,6 +145,7 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
     const errors: string[] = [];
     const warnings: string[] = [];
     const grouped = new Map<string, ImportAnimal>();
+    let inferredViews = 0;
 
     if (!rows.length) errors.push("Choose a manifest CSV.");
     if (!files.length) errors.push("Choose the reference images for this batch.");
@@ -179,7 +191,9 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
       const purity = row.purity_status?.trim() || "";
       const source = row.source_type?.trim() || "";
       const rights = row.rights_status?.trim() || "";
-      const viewType = row.view_type?.trim() || "unknown";
+      const explicitViewType = row.view_type?.trim() || "";
+      const viewType = explicitViewType || suggestViewType(fileName);
+      if (!explicitViewType && viewType !== "unknown") inferredViews++;
       const challengeExpectation = (row.challenge_expectation?.trim() || "review") as "reject" | "classify" | "review";
 
       if (!TAXA.has(taxon)) errors.push(`CSV line ${line}: invalid taxon "${taxon}".`);
@@ -249,6 +263,7 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
       warnings: [...new Set(warnings)],
       animals: [...grouped.values()],
       imageCount: [...grouped.values()].reduce((sum, animal) => sum + animal.images.length, 0),
+      inferredViews,
     };
   }, [rows, files]);
 
@@ -431,12 +446,13 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
         </label>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {[
           ["Manifest", manifestName || "—"],
           ["CSV rows", rows.length],
           ["Individuals", validation.animals.length],
           ["Referenced images", validation.imageCount],
+          ["Inferred views", validation.inferredViews],
         ].map(([name,value]) => (
           <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3">
             <div className="text-[8px] font-black uppercase tracking-[.08em] text-white/18">{name}</div>
@@ -482,8 +498,13 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
         {result && <span className="text-[10px] text-white/38">{result}</span>}
       </div>
 
-      <div className="mt-4 rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[9px] leading-4 text-white/20">
-        Before the first write, the browser hashes every referenced image and the server checks the batch against existing animal codes and image hashes. After a clean preflight, the import runs one individual at a time through the normal owner-only reference endpoint and stops on the first failure.
+      <div className="mt-4 grid gap-2 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[9px] leading-4 text-white/20">
+          Before the first write, the browser hashes every referenced image and the server checks the batch against existing animal codes and image hashes. After a clean preflight, the import runs one individual at a time through the normal owner-only reference endpoint and stops on the first failure.
+        </div>
+        <div className="rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[9px] leading-4 text-white/20">
+          View types: <span className="text-white/34">full_body, head, dorsal, left_lateral, right_lateral, tail, other, unknown</span>. Leave view_type blank to infer conservatively from the filename; ambiguous names remain unknown.
+        </div>
       </div>
     </section>
   );
