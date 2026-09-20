@@ -32,6 +32,8 @@ type ModelVersion = {
   labels: unknown;
   training_animal_count: number | null;
   training_media_count: number | null;
+  dataset_snapshot_id?: string | null;
+  training_manifest_hash?: string | null;
   metrics: Record<string, unknown> | null;
   calibration: Record<string, unknown> | null;
   notes: string | null;
@@ -120,7 +122,7 @@ export function SnakeSorterModelStatus() {
     if (response.ok) {
       setMessage(`${model.name} ${model.version} is now active.`);
       await load();
-    } else setMessage(data.error ?? "Could not activate model.");
+    } else setMessage(data.detail ? `${data.error ?? "Could not activate model."} · ${String(data.detail).slice(0,220)}` : (data.error ?? "Could not activate model."));
     setActivating("");
   }
 
@@ -185,6 +187,13 @@ export function SnakeSorterModelStatus() {
           {models.slice(0,8).map((model) => {
             const accuracy = metricValue(model.metrics, "accuracy");
             const macroF1 = metricValue(model.metrics, "macro_f1");
+            const deployMissing = [
+              !model.artifact_storage_path || !model.artifact_sha256 ? "artifact" : null,
+              !model.dataset_snapshot_id || !model.training_manifest_hash ? "dataset snapshot" : null,
+              accuracy == null || macroF1 == null ? "held-out metrics" : null,
+              metricValue(model.calibration, "temperature") == null || metricValue(model.calibration, "expected_calibration_error") == null ? "calibration" : null,
+            ].filter((item): item is string => Boolean(item));
+            const deployable = deployMissing.length === 0;
             return <div key={model.id} className="rounded-2xl border border-white/[.06] bg-black/[.07] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -214,7 +223,15 @@ export function SnakeSorterModelStatus() {
                 </div>
               </div>
               {model.notes && <div className="mt-3 text-[10px] leading-5 text-white/24">{model.notes}</div>}
-              {model.status === "candidate" && <button type="button" disabled={Boolean(activating)} onClick={() => void activate(model)} className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-3 py-2 text-[10px] font-black text-amber-100/60 disabled:opacity-40">{activating === model.id ? "Activating…" : "Promote candidate to active"}</button>}
+              {model.status === "candidate" && (
+                <div className="mt-3 rounded-xl border border-white/[.05] bg-black/[.05] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${deployable ? "border-emerald-300/15 bg-emerald-300/[.035] text-emerald-100/60" : "border-amber-300/15 bg-amber-300/[.035] text-amber-100/55"}`}>{deployable ? "Deployable" : "Not deployable"}</span>
+                    <button type="button" disabled={Boolean(activating) || !deployable} onClick={() => void activate(model)} className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-3 py-2 text-[10px] font-black text-amber-100/60 disabled:opacity-35">{activating === model.id ? "Activating…" : "Promote candidate to active"}</button>
+                  </div>
+                  {!deployable && <div className="mt-2 text-[9px] leading-4 text-white/24">Missing: {deployMissing.join(", ")}.</div>}
+                </div>
+              )}
             </div>;
           })}
         </div>
