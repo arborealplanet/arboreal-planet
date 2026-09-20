@@ -1,4 +1,4 @@
-import { chondroSpecificSpriteFor, type ChondroClassification, type ChondroLifeStage, type ChondroNeonateColor, type ChondroSubspecies } from "@/lib/chondro-sprite-registry";
+import { chondroSpecificSpriteCandidatesFor, type ChondroClassification, type ChondroLifeStage, type ChondroNeonateColor, type ChondroSubspecies } from "@/lib/chondro-sprite-registry";
 
 type TraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
 type PortraitTraits = Partial<Record<TraitKey, number>> & { blue?: number };
@@ -29,7 +29,7 @@ export function ChondroSnakeIcon({
   phenotypeScore?: number;
   spriteSeed?: string;
 }) {
-  const rawSrc = chondroSpecificSpriteFor({
+  const rawCandidates = chondroSpecificSpriteCandidatesFor({
     subspecies,
     locality,
     lifeStage,
@@ -41,7 +41,10 @@ export function ChondroSnakeIcon({
     variantSeed: spriteSeed ?? name,
   });
   const isSubadult = lifeStage === "Subadult";
-  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-runtime-repair-v2` : null;
+  const versionedCandidates = rawCandidates.map(
+    (src) => `${src}?v=2026-09-20-runtime-fallback-v1`,
+  );
+  const versionedSrc = versionedCandidates[0] ?? null;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
@@ -49,9 +52,19 @@ export function ChondroSnakeIcon({
         <img
           key={versionedSrc}
           src={versionedSrc}
+          data-sprite-index="0"
           onError={(event) => {
-            event.currentTarget.style.display = "none";
-            const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+            const image = event.currentTarget;
+            const currentIndex = Number(image.dataset.spriteIndex ?? "0");
+            const nextIndex = currentIndex + 1;
+            const nextSrc = versionedCandidates[nextIndex];
+            if (nextSrc) {
+              image.dataset.spriteIndex = String(nextIndex);
+              image.src = nextSrc;
+              return;
+            }
+            image.style.display = "none";
+            const fallback = image.nextElementSibling as HTMLElement | null;
             if (fallback) fallback.style.display = "grid";
           }}
           alt={`${name} illustrated virtual game portrait`}
