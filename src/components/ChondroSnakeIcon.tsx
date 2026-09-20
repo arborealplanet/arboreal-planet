@@ -41,7 +41,7 @@ export function ChondroSnakeIcon({
     variantSeed: spriteSeed ?? name,
   });
   const isSubadult = lifeStage === "Subadult";
-  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-restored-sprite-assets` : null;
+  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-ready-assets-v1` : null;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
