@@ -524,6 +524,15 @@ export function SnakeSorterScanner() {
                 {analysisResult.evidenceQuality.notes.length > 0 && <div className="mt-3 space-y-1">{analysisResult.evidenceQuality.notes.map((note) => <div key={note} className="text-[10px] leading-4 text-white/24">• {note}</div>)}</div>}
               </div>
 
+              <div className="rounded-[24px] border border-white/[.06] bg-black/[.06] p-4">
+                <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Uncertainty check</div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">Top-two margin</div><div className="mt-1 font-semibold text-white/48">{Math.round((analysisResult.uncertainty?.topTwoMargin ?? 0) * 100)}%</div></div>
+                  <div><div className="text-[8px] uppercase tracking-[.08em] text-white/18">OOD score</div><div className="mt-1 font-semibold text-white/48">{analysisResult.uncertainty?.outOfDistributionScore == null ? "—" : `${Math.round(analysisResult.uncertainty.outOfDistributionScore * 100)}%`}</div></div>
+                </div>
+                {analysisResult.uncertainty?.rejectionReason && <div className="mt-3 rounded-xl border border-amber-300/10 bg-amber-300/[.025] px-3 py-2 text-[10px] text-amber-50/45">Rejection reason: {analysisResult.uncertainty.rejectionReason.replaceAll("_"," ")}</div>}
+              </div>
+
               {analysisResult.nearestReferences.length > 0 && <div className="rounded-[24px] border border-white/[.06] bg-black/[.06] p-4"><div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Closest reference animals</div><div className="mt-3 space-y-2">{analysisResult.nearestReferences.slice(0,5).map((neighbor) => <div key={`${neighbor.animalId}-${neighbor.mediaId ?? "animal"}`} className="flex items-center justify-between gap-3 text-[10px]"><div><div className="font-semibold text-white/45">{neighbor.locality || neighbor.animalId}</div><div className="text-white/20">{neighbor.taxon}</div></div><span className="text-white/40">{Math.round(neighbor.similarity*100)}%</span></div>)}</div></div>}
 
               {analysisResult.flags.length > 0 && <div className="rounded-[24px] border border-amber-300/12 bg-amber-300/[.025] p-4"><div className="text-[9px] font-black uppercase tracking-[.1em] text-amber-100/45">Flags</div><div className="mt-3 space-y-2">{analysisResult.flags.map((flag) => <div key={flag} className="text-[10px] leading-5 text-amber-50/45">• {flag}</div>)}</div></div>}
