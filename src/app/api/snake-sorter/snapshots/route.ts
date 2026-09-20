@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       headers: h(identity.token),
       cache: "no-store",
     }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,content_sha256,taxon:animal_id,view_type,is_primary,metadata:notes&order=id.asc`, {
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,content_sha256,view_type,is_primary,metadata:notes&order=id.asc`, {
       headers: h(identity.token),
       cache: "no-store",
     }),
