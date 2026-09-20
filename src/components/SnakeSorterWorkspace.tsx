@@ -229,6 +229,65 @@ export function SnakeSorterWorkspace() {
 
       <div id="snake-sorter-models" className="mt-6 scroll-mt-6"><SnakeSorterModelStatus /></div>
 
+      <div id="snake-sorter-collection-protocol" className="mt-6 panel scroll-mt-6 rounded-[28px] p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="section-kicker">Reference collection protocol</div>
+            <h2 className="mt-2 text-2xl font-semibold">What to collect for each known snake</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/30">Consistency matters more than perfect studio photography. One individual record can follow the same snake from hatchling through adulthood.</p>
+          </div>
+          <span className="rounded-full border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[9px] font-black uppercase tracking-[.1em] text-emerald-100/60">Distinct animals first</span>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[24px] border border-white/[.06] bg-black/[.07] p-4">
+            <div className="text-[9px] font-black uppercase tracking-[.1em] text-sky-100/45">Minimum useful set</div>
+            <div className="mt-3 space-y-2">
+              {[
+                "One clear full-body image",
+                "One clear head image",
+                "One dorsal / top-down view",
+                "One lateral body view",
+                "Stage + red/yellow phase",
+                "Taxon/locality provenance",
+              ].map((item) => <div key={item} className="flex gap-2 text-[11px] leading-5 text-white/36"><span className="text-sky-200/45">✓</span><span>{item}</span></div>)}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-white/[.06] bg-black/[.07] p-4">
+            <div className="text-[9px] font-black uppercase tracking-[.1em] text-emerald-100/45">Preferred set</div>
+            <div className="mt-3 space-y-2">
+              {[
+                "Full body + head + dorsal",
+                "Left and right lateral views",
+                "Tail / posterior markings",
+                "Neutral-lighting image",
+                "Capture date or approximate age",
+                "Repeat images as the snake develops",
+              ].map((item) => <div key={item} className="flex gap-2 text-[11px] leading-5 text-white/36"><span className="text-emerald-200/45">✓</span><span>{item}</span></div>)}
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-amber-300/10 bg-amber-300/[.02] p-4">
+            <div className="text-[9px] font-black uppercase tracking-[.1em] text-amber-100/45">Collection priorities</div>
+            <div className="mt-3 space-y-2">
+              {[
+                "More unique individuals beats more repeats",
+                "Collect both red and yellow young animals",
+                "Keep adults — they help the shared encoder",
+                "Keep difficult look-alike examples",
+                "Link multiple ages to the same known animal",
+                "Avoid using uncertain ancestry as clean ground truth",
+              ].map((item) => <div key={item} className="flex gap-2 text-[11px] leading-5 text-white/36"><span className="text-amber-200/40">•</span><span>{item}</span></div>)}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/[.055] bg-black/[.06] px-4 py-3 text-[10px] leading-5 text-white/25">
+          Do not discard unusual animals. If provenance is questionable, add them as provisional / possible mixed / hold rather than forcing them into a clean training class. Those difficult examples are valuable for later rejection and mislabel detection.
+        </div>
+      </div>
+
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <div id="snake-sorter-reference" className="panel scroll-mt-6 rounded-[28px] p-5 sm:p-6">
           <div className="section-kicker">Reference intake</div>
