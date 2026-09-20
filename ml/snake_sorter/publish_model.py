@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import tarfile
 import tempfile
@@ -65,6 +66,118 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def load_reference_embeddings(path: str | None) -> list[dict]:
+    if not path:
+        return []
+
+    rows: list[dict] = []
+    seen_media: set[str] = set()
+
+    with Path(path).open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            media_id = str(row.get("media_id") or "").strip()
+            vector = row.get("embedding")
+
+            if not media_id:
+                raise RuntimeError(
+                    f"Reference embedding line {line_number} is missing media_id"
+                )
+            if media_id in seen_media:
+                raise RuntimeError(
+                    f"Duplicate media_id in reference embeddings: {media_id}"
+                )
+            if not isinstance(vector, list) or len(vector) != 256:
+                raise RuntimeError(
+                    f"Reference embedding {media_id} must contain exactly 256 values"
+                )
+
+            values = [float(value) for value in vector]
+            if not all(math.isfinite(value) for value in values):
+                raise RuntimeError(
+                    f"Reference embedding {media_id} contains non-finite values"
+                )
+
+            norm = math.sqrt(sum(value * value for value in values))
+            if not 0.98 <= norm <= 1.02:
+                raise RuntimeError(
+                    f"Reference embedding {media_id} is not normalized (L2={norm:.5f})"
+                )
+
+            seen_media.add(media_id)
+            rows.append({"media_id": media_id, "embedding": values})
+
+    return rows
+
+
+def set_model_failed(
+    supabase_url: str,
+    publishable_key: str,
+    access_token: str,
+    model_id: str,
+    detail: str,
+) -> None:
+    requests.patch(
+        f"{supabase_url}/rest/v1/snake_sorter_model_versions",
+        params={"id": f"eq.{model_id}"},
+        headers={
+            **api_headers(publishable_key, access_token, content_type=True),
+            "Prefer": "return=minimal",
+        },
+        data=json.dumps({
+            "status": "failed",
+            "notes": detail[:1800],
+        }),
+        timeout=30,
+    )
+
+
+def ingest_reference_embeddings(
+    supabase_url: str,
+    publishable_key: str,
+    access_token: str,
+    model_id: str,
+    rows: list[dict],
+) -> int:
+    if not rows:
+        return 0
+
+    endpoint = f"{supabase_url}/rest/v1/snake_sorter_reference_embeddings"
+    inserted = 0
+    for offset in range(0, len(rows), 100):
+        batch = [
+            {
+                "media_id": row["media_id"],
+                "model_version_id": model_id,
+                "embedding": row["embedding"],
+            }
+            for row in rows[offset:offset + 100]
+        ]
+        response = requests.post(
+            endpoint,
+            headers={
+                **api_headers(
+                    publishable_key,
+                    access_token,
+                    content_type=True,
+                ),
+                "Prefer": "return=minimal",
+            },
+            data=json.dumps(batch),
+            timeout=90,
+        )
+        if not response.ok:
+            raise RuntimeError(
+                "Reference embedding insert failed: "
+                + response.text[:1000]
+            )
+        inserted += len(batch)
+
+    return inserted
+
+
 def storage_hostname(supabase_url: str) -> str:
     parsed = urlparse(supabase_url)
     project = parsed.hostname.split(".")[0] if parsed.hostname else ""
@@ -109,6 +222,15 @@ def main():
     checkpoint_path = Path(args.checkpoint)
     checkpoint = __import__("torch").load(checkpoint_path, map_location="cpu", weights_only=False)
     config = checkpoint["config"]
+    if int(config.get("embedding_dim", 0)) != 256:
+        raise RuntimeError(
+            "Published Snake Sorter models must use 256-dimensional embeddings"
+        )
+    reference_rows = load_reference_embeddings(args.reference_embeddings)
+    if args.status == "candidate" and not reference_rows:
+        raise RuntimeError(
+            "Candidate models require train-reference embeddings"
+        )
 
     user_response = requests.get(
         f"{supabase_url}/auth/v1/user",
@@ -206,6 +328,7 @@ def main():
         "artifact_size_bytes": bundle.stat().st_size,
         "artifact_format": "tar.gz",
         "rules_version": args.rules_version,
+        "reference_embedding_count": 0,
         "inference_config": {
             "temperature": calibration.get("temperature", 1.0),
             "reference_embeddings_in_bundle": bool(args.reference_embeddings),
@@ -229,6 +352,48 @@ def main():
         )
 
     registered = registry_response.json()[0]
+    model_id = registered["id"]
+
+    try:
+        inserted_embeddings = ingest_reference_embeddings(
+            supabase_url,
+            publishable_key,
+            access_token,
+            model_id,
+            reference_rows,
+        )
+        update_response = requests.patch(
+            f"{supabase_url}/rest/v1/snake_sorter_model_versions",
+            params={"id": f"eq.{model_id}"},
+            headers={
+                **api_headers(
+                    publishable_key,
+                    access_token,
+                    content_type=True,
+                ),
+                "Prefer": "return=representation",
+            },
+            data=json.dumps({
+                "reference_embedding_count": inserted_embeddings,
+            }),
+            timeout=30,
+        )
+        if not update_response.ok:
+            raise RuntimeError(
+                "Could not record reference embedding count: "
+                + update_response.text[:1000]
+            )
+        registered = update_response.json()[0]
+    except Exception as exc:
+        set_model_failed(
+            supabase_url,
+            publishable_key,
+            access_token,
+            model_id,
+            f"Model release failed during reference embedding ingestion: {exc}",
+        )
+        raise
+
     print(json.dumps({
         "ok": True,
         "model_id": registered["id"],
@@ -237,6 +402,7 @@ def main():
         "artifact_sha256": artifact_hash,
         "artifact_size_bytes": bundle.stat().st_size,
         "dataset_snapshot_id": args.snapshot_id,
+        "reference_embedding_count": registered.get("reference_embedding_count", 0),
     }, indent=2))
 
 
