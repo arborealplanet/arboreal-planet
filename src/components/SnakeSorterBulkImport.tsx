@@ -172,13 +172,13 @@ export function SnakeSorterBulkImport({ onImported }: { onImported: () => Promis
       if (referencedFiles.has(fileName)) errors.push(`CSV line ${line}: "${fileName}" is referenced more than once.`);
       referencedFiles.add(fileName);
 
-      const taxon = row.taxon?.trim();
-      const lifeStage = row.life_stage?.trim();
-      const color = row.neonate_color?.trim();
-      const confidence = row.label_confidence?.trim();
-      const purity = row.purity_status?.trim();
-      const source = row.source_type?.trim();
-      const rights = row.rights_status?.trim();
+      const taxon = row.taxon?.trim() || "";
+      const lifeStage = row.life_stage?.trim() || "";
+      const color = row.neonate_color?.trim() || "";
+      const confidence = row.label_confidence?.trim() || "";
+      const purity = row.purity_status?.trim() || "";
+      const source = row.source_type?.trim() || "";
+      const rights = row.rights_status?.trim() || "";
       const viewType = row.view_type?.trim() || "unknown";
       const challengeExpectation = (row.challenge_expectation?.trim() || "review") as "reject" | "classify" | "review";
 
