@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
 import { SnakeSorterReferenceManager } from "@/components/SnakeSorterReferenceManager";
+import { SnakeSorterModelStatus } from "@/components/SnakeSorterModelStatus";
 
 type ReferenceAnimal = {
   id: string;
@@ -195,6 +196,8 @@ export function SnakeSorterWorkspace() {
       </div>
 
       <div className="mt-6"><SnakeSorterScanner /></div>
+
+      <div className="mt-6"><SnakeSorterModelStatus /></div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <div className="panel rounded-[28px] p-5 sm:p-6">
