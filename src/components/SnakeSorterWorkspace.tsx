@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
 
 type ReferenceAnimal = {
   id: string;
@@ -34,7 +35,6 @@ export function SnakeSorterWorkspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [scanFiles, setScanFiles] = useState<File[]>([]);
 
   async function load() {
     setLoading(true);
@@ -178,36 +178,7 @@ export function SnakeSorterWorkspace() {
           </form>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-[28px] border border-sky-300/12 bg-sky-300/[.025] p-5 sm:p-6">
-            <div className="text-[10px] font-black uppercase tracking-[.14em] text-sky-100/55">Analysis lab</div>
-            <h2 className="mt-3 text-2xl font-semibold">Scan workspace</h2>
-            <p className="mt-2 text-sm leading-6 text-white/38">Choose images here to stage a future identification run. They stay in your browser right now and are not added to the reference database.</p>
-            <label className="mt-5 block">
-              <span className={label}>Scan media</span>
-              <input type="file" accept="image/*" multiple onChange={(event) => setScanFiles(Array.from(event.target.files ?? []))} className={`${field} mt-2 file:mr-3 file:rounded-xl file:border-0 file:bg-sky-200 file:px-3 file:py-2 file:text-xs file:font-black file:text-[#06100c]`} />
-            </label>
-            <div className="mt-4 rounded-2xl border border-white/[.06] bg-black/10 p-4">
-              <div className="text-xs font-semibold text-white/58">{scanFiles.length ? `${scanFiles.length} scan image(s) staged` : "No scan media staged"}</div>
-              <div className="mt-2 text-[10px] leading-5 text-white/25">Classifier connection pending. No staged scan media is uploaded or retained by Snake Sorter in this version.</div>
-            </div>
-            <button disabled className="mt-4 w-full rounded-xl border border-sky-200/12 bg-sky-200/[.035] px-5 py-3 text-xs font-black text-sky-100/35">Run identification · model not connected yet</button>
-          </div>
-
-          <div className="panel rounded-[28px] p-5 sm:p-6">
-            <div className="section-kicker">Build status</div>
-            <div className="mt-4 space-y-3 text-sm">
-              {[
-                ["Owner-only access", "Live"],
-                ["Reference animal database", "Live"],
-                ["Private reference image storage", "Live"],
-                ["Scan/reference separation", "Live"],
-                ["Image classifier", "Pending dataset"],
-                ["Video / live camera", "Later phase"],
-              ].map(([name, status]) => <div key={name} className="flex items-center justify-between gap-4 border-b border-white/[.05] pb-3 last:border-0 last:pb-0"><span className="text-white/48">{name}</span><span className={status === "Live" ? "text-emerald-200/65" : "text-white/28"}>{status}</span></div>)}
-            </div>
-          </div>
-        </div>
+        <SnakeSorterScanner />
       </div>
 
       <div className="mt-6 panel rounded-[28px] p-5 sm:p-6">
