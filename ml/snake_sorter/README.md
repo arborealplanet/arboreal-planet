@@ -141,3 +141,33 @@ Arboreal Planet server environment:
 - `SNAKE_SORTER_INFERENCE_TOKEN`
 
 Scan frames are sent server-to-server for the request and are not written to disk by this service.
+
+
+## Publishing a trained model
+
+Large model files should not be uploaded through Vercel. `publish_model.py` packages the checkpoint, evaluation/calibration JSON, and optional reference embeddings into a `tar.gz`, computes its SHA-256, uploads it directly to the private `snake-sorter-models` bucket with Supabase resumable TUS upload, and inserts the corresponding model-registry row.
+
+The publisher uses the owner's normal authenticated session token so Storage RLS remains enforced. Do not use a service-role key.
+
+Required environment on the training machine:
+
+```bash
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<publishable key>
+SUPABASE_ACCESS_TOKEN=<owner access token>
+```
+
+Example:
+
+```bash
+python publish_model.py \
+  --checkpoint runs/snake-sorter-v1/best.pt \
+  --version v1.0.0 \
+  --snapshot-id <immutable-snapshot-uuid> \
+  --metrics-json runs/snake-sorter-v1/test-metrics.json \
+  --calibration-json runs/snake-sorter-v1/calibration.json \
+  --reference-embeddings runs/snake-sorter-v1/reference-embeddings.jsonl \
+  --status candidate
+```
+
+Model promotion to `active` remains a separate owner action in Arboreal Planet.
