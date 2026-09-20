@@ -227,6 +227,18 @@ export function SnakeSorterScanner() {
     size: assets.reduce((sum, a) => sum + a.file.size, 0),
   }), [assets]);
 
+  const viewCoverage = useMemo(() => {
+    const views = new Set(assets.map((asset) => asset.viewType));
+    return {
+      fullBody: views.has("full_body"),
+      head: views.has("head"),
+      dorsal: views.has("dorsal"),
+      lateral: views.has("left_lateral") || views.has("right_lateral"),
+      tail: views.has("tail"),
+      labeled: assets.filter((asset) => asset.viewType !== "auto").length,
+    };
+  }, [assets]);
+
 
   function invalidateAnalysis() {
     setAnalysisResult(null);
@@ -540,10 +552,21 @@ export function SnakeSorterScanner() {
           )}
 
           <div className="mt-6 rounded-[24px] border border-white/[.06] bg-black/[.08] p-4">
-            <div className="text-[10px] font-black uppercase tracking-[.12em] text-white/28">Capture guide</div>
-            <div className="mt-3 grid gap-2 text-xs text-white/38 sm:grid-cols-2">
-              {["Entire snake / overall proportions", "Clear head and facial markings", "Dorsal pattern from above", "Lateral pattern from both sides", "Tail and posterior markings", "Neutral lighting when possible"].map((item) => <div key={item} className="flex gap-2"><span className="text-emerald-200/45">✓</span><span>{item}</span></div>)}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-[10px] font-black uppercase tracking-[.12em] text-white/28">Deep-scan view coverage</div>
+              <div className="text-[9px] text-white/20">{viewCoverage.labeled} manually labeled view(s)</div>
             </div>
+            <div className="mt-3 grid gap-2 text-xs text-white/38 sm:grid-cols-2">
+              {[
+                ["Entire snake / overall proportions", viewCoverage.fullBody],
+                ["Clear head and facial markings", viewCoverage.head],
+                ["Dorsal pattern from above", viewCoverage.dorsal],
+                ["Lateral pattern", viewCoverage.lateral],
+                ["Tail and posterior markings", viewCoverage.tail],
+              ].map(([item, covered]) => <div key={String(item)} className="flex gap-2"><span className={covered ? "text-emerald-200/65" : "text-amber-200/35"}>{covered ? "✓" : "○"}</span><span className={covered ? "text-white/46" : "text-white/28"}>{String(item)}</span></div>)}
+              <div className="flex gap-2"><span className="text-sky-200/40">•</span><span>Neutral lighting when possible</span></div>
+            </div>
+            {scanMode === "deep" && !(viewCoverage.fullBody && viewCoverage.head && viewCoverage.dorsal && viewCoverage.lateral) && <div className="mt-3 rounded-xl border border-amber-300/10 bg-amber-300/[.025] px-3 py-2 text-[10px] leading-4 text-amber-50/38">Deep Scan can still run, but adding the missing core views should give the future model stronger evidence.</div>}
           </div>
         </section>
 
