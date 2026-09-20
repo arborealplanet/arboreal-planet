@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SNAKE_SORTER_TAXA, type SnakeSorterAnalysisResult } from "@/lib/snake-sorter/types";
 
 type ScanAsset = {
   id: string;
@@ -90,6 +91,7 @@ export function SnakeSorterScanner() {
   const [cameraError, setCameraError] = useState("");
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
   const [analysisMessage, setAnalysisMessage] = useState("");
+  const [analysisResult, setAnalysisResult] = useState<SnakeSorterAnalysisResult | null>(null);
   const [stageHint, setStageHint] = useState("auto");
   const [colorHint, setColorHint] = useState("auto");
   const [localityMode, setLocalityMode] = useState(true);
@@ -133,6 +135,7 @@ export function SnakeSorterScanner() {
     setAssets((current) => [...current, ...accepted]);
     setAnalysisStatus("idle");
     setAnalysisMessage("");
+    setAnalysisResult(null);
   }
 
   function removeAsset(id: string) {
@@ -148,6 +151,7 @@ export function SnakeSorterScanner() {
     setAssets([]);
     setAnalysisStatus("idle");
     setAnalysisMessage("");
+    setAnalysisResult(null);
   }
 
   async function openCamera() {
@@ -264,9 +268,11 @@ export function SnakeSorterScanner() {
       const response = await fetch("/api/snake-sorter/analyze", { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.result) {
+        setAnalysisResult(data.result as SnakeSorterAnalysisResult);
         setAnalysisStatus("ready");
         setAnalysisMessage("Analysis complete.");
       } else {
+        setAnalysisResult(null);
         setAnalysisStatus("error");
         setAnalysisMessage(data.message ?? data.error ?? "The analysis engine is not connected yet.");
       }
@@ -437,6 +443,60 @@ export function SnakeSorterScanner() {
           </div>
         </aside>
       </div>
+
+      <section className="panel rounded-[28px] p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="section-kicker">Identification result</div>
+            <h3 className="mt-2 text-2xl font-semibold">Snake Sorter decision</h3>
+          </div>
+          <span className={`rounded-full border px-3 py-2 text-[9px] font-black uppercase tracking-[.1em] ${analysisResult ? "border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/60" : "border-white/[.07] bg-white/[.02] text-white/25"}`}>
+            {analysisResult ? "Result ready" : "Awaiting model result"}
+          </span>
+        </div>
+
+        {!analysisResult ? (
+          <div className="mt-5 rounded-[24px] border border-dashed border-white/[.08] bg-black/[.06] p-8 text-center">
+            <div className="text-sm font-semibold text-white/34">No classification result yet</div>
+            <div className="mt-2 text-xs leading-5 text-white/20">The capture/preprocessing pipeline is active. This panel will populate automatically when the production vision model is connected.</div>
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
+            <div className="rounded-[24px] border border-emerald-300/12 bg-emerald-300/[.025] p-5">
+              <div className="text-[9px] font-black uppercase tracking-[.12em] text-white/25">Most consistent with</div>
+              <div className="mt-3 text-2xl font-semibold text-white/80">{analysisResult.taxon}</div>
+              <div className="mt-2 text-4xl font-semibold tracking-[-.04em] text-emerald-200/75">{Math.round(analysisResult.confidence * 100)}%</div>
+              <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-2xl border border-white/[.055] bg-black/[.08] p-3"><div className="text-[8px] uppercase tracking-[.08em] text-white/20">Life stage</div><div className="mt-1 capitalize text-white/55">{analysisResult.lifeStage}</div></div>
+                <div className="rounded-2xl border border-white/[.055] bg-black/[.08] p-3"><div className="text-[8px] uppercase tracking-[.08em] text-white/20">Color</div><div className="mt-1 capitalize text-white/55">{analysisResult.neonateColor.replace("_"," ")}</div></div>
+              </div>
+              {analysisResult.locality && <div className="mt-3 rounded-2xl border border-white/[.055] bg-black/[.08] p-3"><div className="text-[8px] uppercase tracking-[.08em] text-white/20">Locality estimate</div><div className="mt-1 text-sm font-semibold text-white/55">{analysisResult.locality.label}</div><div className="mt-1 text-[10px] text-white/24">{Math.round(analysisResult.locality.confidence*100)}% confidence</div></div>}
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-[24px] border border-white/[.06] bg-black/[.06] p-4">
+                <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Taxon score spread</div>
+                <div className="mt-3 space-y-3">
+                  {SNAKE_SORTER_TAXA.map((taxon) => {
+                    const score = analysisResult.scores[taxon] ?? 0;
+                    return <div key={taxon}><div className="flex justify-between gap-3 text-[10px]"><span className="text-white/40">{taxon}</span><span className="font-semibold text-white/55">{Math.round(score*100)}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/[.05]"><div className="h-full rounded-full bg-emerald-200/45" style={{width:`${Math.max(0,Math.min(100,score*100))}%`}} /></div></div>;
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-white/[.06] bg-black/[.06] p-4">
+                <div className="flex items-center justify-between gap-3"><div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Evidence quality</div><div className="text-sm font-semibold text-white/55">{Math.round(analysisResult.evidenceQuality.score*100)}%</div></div>
+                <div className="mt-2 text-[10px] text-white/25">{analysisResult.evidenceQuality.usableFrames} usable of {analysisResult.evidenceQuality.requestedFrames} prepared frames</div>
+                {analysisResult.evidenceQuality.notes.length > 0 && <div className="mt-3 space-y-1">{analysisResult.evidenceQuality.notes.map((note) => <div key={note} className="text-[10px] leading-4 text-white/24">• {note}</div>)}</div>}
+              </div>
+
+              {analysisResult.nearestReferences.length > 0 && <div className="rounded-[24px] border border-white/[.06] bg-black/[.06] p-4"><div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Closest reference animals</div><div className="mt-3 space-y-2">{analysisResult.nearestReferences.slice(0,5).map((neighbor) => <div key={`${neighbor.animalId}-${neighbor.mediaId ?? "animal"}`} className="flex items-center justify-between gap-3 text-[10px]"><div><div className="font-semibold text-white/45">{neighbor.locality || neighbor.animalId}</div><div className="text-white/20">{neighbor.taxon}</div></div><span className="text-white/40">{Math.round(neighbor.similarity*100)}%</span></div>)}</div></div>}
+
+              {analysisResult.flags.length > 0 && <div className="rounded-[24px] border border-amber-300/12 bg-amber-300/[.025] p-4"><div className="text-[9px] font-black uppercase tracking-[.1em] text-amber-100/45">Flags</div><div className="mt-3 space-y-2">{analysisResult.flags.map((flag) => <div key={flag} className="text-[10px] leading-5 text-amber-50/45">• {flag}</div>)}</div></div>}
+            </div>
+          </div>
+        )}
+      </section>
 
       <section className="panel rounded-[28px] p-5 sm:p-6">
         <div className="section-kicker">Identification pipeline</div>
