@@ -196,6 +196,8 @@ export function SnakeSorterWorkspace() {
       Boolean(animal.challenge_eligible) &&
       ["owned_by_owner","permission_granted","private_reference_only"].includes(animal.rights_status ?? "unknown")
     );
+    const dualRoleAnimals = challengeApproved.filter((animal) => isCleanSupervision(animal));
+
     const challengeIds = new Set(challengeApproved.map((animal) => animal.id));
     const challengeWithAcceptedMedia = new Set(
       acceptedMedia.filter((item) => challengeIds.has(item.animal_id)).map((item) => item.animal_id)
@@ -227,6 +229,7 @@ export function SnakeSorterWorkspace() {
 
     const challengeWarnings: string[] = [];
     if (!challengeApproved.length) challengeWarnings.push("No approved, rights-reviewed challenge examples yet.");
+    if (dualRoleAnimals.length) challengeWarnings.push(`${dualRoleAnimals.length} animal(s) are eligible for both clean classifier supervision and challenge/OOD use. Do not pair frozen classifier and challenge snapshots that contain the same individual.`);
     if (challengeWithoutAcceptedMedia) challengeWarnings.push(`${challengeWithoutAcceptedMedia} challenge animal(s) have no accepted image.`);
     if (challengeRejectGroups < 6) challengeWarnings.push("Collect roughly 6+ independent Reject groups so the deterministic half-split can provide about 3 calibration reject groups.");
     if (validationIndependentGroups < 8) challengeWarnings.push("The rejection evaluator also needs at least 8 independent clean validation animals across the classifier dataset for its validation minimum.");
@@ -288,6 +291,7 @@ export function SnakeSorterWorkspace() {
       challengeClassifyGroups,
       challengeReviewGroups,
       challengeWithoutAcceptedMedia,
+      dualRoleAnimals: dualRoleAnimals.length,
       validationIndependentGroups,
       challengePolicyMinimumLikelyMet,
       challengeWarnings,
