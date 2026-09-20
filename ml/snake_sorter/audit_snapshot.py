@@ -217,6 +217,31 @@ def main():
                 "missing": missing,
             })
 
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        group = (row.get("split_group") or "").strip()
+        if group:
+            grouped[group].append(row)
+
+    for group, group_rows in grouped.items():
+        splits = {row["dataset_split"] for row in group_rows}
+        taxa = {row["taxon"] for row in group_rows}
+        animals = {row["animal_id"] for row in group_rows}
+        if len(splits) > 1:
+            critical.append({
+                "type": "related_group_cross_split_leakage",
+                "split_group": group,
+                "splits": sorted(splits),
+                "animals": sorted(animals),
+            })
+        if len(taxa) > 1:
+            critical.append({
+                "type": "related_group_cross_taxon_collision",
+                "split_group": group,
+                "taxa": sorted(taxa),
+                "animals": sorted(animals),
+            })
+
     split_counts = Counter(row["dataset_split"] for row in rows)
     taxon_animals: dict[str, set[str]] = defaultdict(set)
     for row in rows:
@@ -228,6 +253,7 @@ def main():
             "animals": len(animal_rows),
             "images": len(rows),
             "split_image_counts": dict(split_counts),
+            "related_split_groups": len(grouped),
             "distinct_animals_by_taxon": {
                 taxon: len(ids) for taxon, ids in sorted(taxon_animals.items())
             },
