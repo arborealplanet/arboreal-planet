@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   const rightsNotes = text(form.get("rights_notes"), 2000);
 
   const allowedTaxa = new Set(["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis", "Unknown / review"]);
-  const allowedStages = new Set(["neonate", "juvenile", "subadult", "adult", "unknown"]);
+  const allowedStages = new Set(["hatchling", "neonate", "juvenile", "subadult", "adult", "unknown"]);
   const allowedColors = new Set(["red", "yellow", "not_applicable", "unknown"]);
   const allowedConfidence = new Set(["confirmed", "strong", "provisional", "uncertain"]);
   const allowedPurity = new Set(["known_pure", "believed_pure", "possible_mixed", "hybrid", "unknown"]);
