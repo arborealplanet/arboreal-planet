@@ -76,6 +76,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     source_name: clean(body.source_name, 160) || null,
     source_url: clean(body.source_url, 1000) || null,
     animal_code: clean(body.animal_code, 100) || null,
+    split_group: clean(body.split_group, 160) || null,
     notes: clean(body.notes, 4000) || null,
     review_status: reviewStatus,
     review_notes: clean(body.review_notes, 4000) || null,
