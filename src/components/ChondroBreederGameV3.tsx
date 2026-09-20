@@ -288,6 +288,15 @@ function traitSummary(a: Snake) {
   return `HB ${a.highBlack}% · HW ${a.highWhite}% · Blue ${a.blueStripe}% · Yellow ${a.yellowRetention}% · Blotches ${a.blotches}%`;
 }
 
+function normalizeChondroNeonateColor(
+  subspecies: Subspecies,
+  locality: SnakeLocality,
+  requested: "Red" | "Yellow",
+) {
+  if (locality === "Kofiau") return "Yellow";
+  return normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, requested);
+}
+
 function makeSnake(
   id: string,
   name: string,
@@ -309,7 +318,7 @@ function makeSnake(
     source,
     subspecies,
     locality,
-    neonateColor: normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, neonateColor),
+    neonateColor: normalizeChondroNeonateColor(subspecies, locality, neonateColor),
     lifeStage,
     highBlack: clamp(traits.highBlack),
     highWhite: clamp(traits.highWhite),
@@ -532,7 +541,11 @@ function makeOffspring(
     subspecies,
     locality,
     neonateColor: pureSame
-      ? normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, pick(dam.neonateColor, sire.neonateColor))
+      ? normalizeChondroNeonateColor(
+          subspecies,
+          sameLocality ? dam.locality : "Mixed Locality",
+          pick(dam.neonateColor, sire.neonateColor),
+        )
       : pick(dam.neonateColor, sire.neonateColor),
     lifeStage: "Hatchling",
     highBlack: inheritedTraits.highBlack,
@@ -624,11 +637,9 @@ function normalizeSnake(raw: Snake): Snake {
     ...raw,
     subspecies,
     locality,
-    neonateColor: subspecies === "Morelia viridis" || locality === "Aru" || locality === "Merauke"
-      ? "Yellow"
-      : raw.classification === "Pure"
-        ? normalizeNeonateColorFor(CHONDRO_SPECIES_PROFILE, subspecies, raw.neonateColor)
-        : raw.neonateColor,
+    neonateColor: raw.classification === "Pure"
+      ? normalizeChondroNeonateColor(subspecies, locality, raw.neonateColor)
+      : raw.neonateColor,
     highBlack: Number(raw.highBlack ?? 0),
     highWhite: Number(raw.highWhite ?? 0),
     blueStripe: Number(raw.blueStripe ?? 0),
