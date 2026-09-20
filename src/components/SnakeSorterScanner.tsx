@@ -784,6 +784,9 @@ export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: ()
                 <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Animal ID / code
                   <input name="animal_code" className={`${field} mt-2`} placeholder="Optional known individual ID" />
                 </label>
+                <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Related / split group
+                  <input name="split_group" className={`${field} mt-2`} placeholder="Optional clutch / sibling / line group" />
+                </label>
                 <label className="text-[9px] font-black uppercase tracking-[.08em] text-white/28">Source
                   <select name="source_type" defaultValue="personal" className={`${field} mt-2`}>
                     <option value="personal">Personal</option><option value="breeder">Breeder</option><option value="listing">Listing</option><option value="publication">Publication</option><option value="other">Other</option>
