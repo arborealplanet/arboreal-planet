@@ -9,12 +9,6 @@ type DatasetSnapshot = {
   animal_count: number;
   media_count: number;
   notes: string | null;
-  artifact_storage_path?: string | null;
-  artifact_sha256?: string | null;
-  artifact_size_bytes?: number | null;
-  artifact_format?: string | null;
-  rules_version?: string | null;
-  inference_config?: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -32,6 +26,12 @@ type ModelVersion = {
   metrics: Record<string, unknown> | null;
   calibration: Record<string, unknown> | null;
   notes: string | null;
+  artifact_storage_path?: string | null;
+  artifact_sha256?: string | null;
+  artifact_size_bytes?: number | null;
+  artifact_format?: string | null;
+  rules_version?: string | null;
+  inference_config?: Record<string, unknown> | null;
   created_at: string;
   activated_at: string | null;
 };
