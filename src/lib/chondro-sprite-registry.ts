@@ -209,10 +209,11 @@ function eligibleVariants(variants: SpriteVariant[] | undefined, phenotypeScore?
   if (!variants?.length) return [];
   const score = Number.isFinite(phenotypeScore) ? Number(phenotypeScore) : null;
   if (score === null) {
+    // With no score, prefer the normal/default tier. A max-only bound is a
+    // valid default (for example the standard Manokwari red adult), while a
+    // min-bound variant is an upgraded phenotype that must be earned.
     const core = variants.filter(
-      (item) =>
-        typeof item.minPhenotypeScore !== "number" &&
-        typeof item.maxPhenotypeScore !== "number",
+      (item) => typeof item.minPhenotypeScore !== "number",
     );
     return core.length ? core : [];
   }
@@ -365,7 +366,12 @@ export function designerSpriteFor(request: ChondroSpriteRequest) {
 }
 
 export function chondroSpecificSpriteFor(request: ChondroSpriteRequest) {
-  return designerSpriteFor(request) ?? hybridSpriteFor(request) ?? localitySpriteFor(request);
+  // Keep Designer and Hybrid art in their own pools. If a dedicated sprite
+  // does not exist for the requested stage/color/cross, show Sprite pending
+  // instead of silently substituting a pure-locality animal.
+  if (request.classification === "Designer") return designerSpriteFor(request);
+  if (request.classification === "Hybrid") return hybridSpriteFor(request);
+  return localitySpriteFor(request);
 }
 
 export function chondroSpecificSpriteCandidatesFor(request: ChondroSpriteRequest) {
