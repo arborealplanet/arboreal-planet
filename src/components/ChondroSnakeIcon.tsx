@@ -42,7 +42,7 @@ export function ChondroSnakeIcon({
   });
   const isSubadult = lifeStage === "Subadult";
   const versionedCandidates = rawCandidates.map(
-    (src) => `${src}?v=2026-09-20-source-rebuild-v5`,
+    (src) => `${src}?v=2026-09-20-recovery-v6`,
   );
   const versionedSrc = versionedCandidates[0] ?? null;
 
