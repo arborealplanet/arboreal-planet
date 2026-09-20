@@ -271,7 +271,7 @@ export function SnakeSorterModelStatus() {
             const weakestColor = weakestSubgroup(model.metrics, "by_color");
             const weakestView = weakestSubgroup(model.metrics, "by_view");
             const classificationReport = objectValue(model.metrics, "classification_report");
-            const rejectionPolicy = objectValue(model.inference_config, "rejection_policy");
+            const rejectionPolicy = objectValue(model.inference_config ?? null, "rejection_policy");
             const rejectionSource = textValue(rejectionPolicy, "source") || "fallback";
             const rejectionValidated = rejectionPolicy?.validated === true;
             const deployMissing = [
