@@ -47,7 +47,21 @@ export function SnakeSorterWorkspace() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/snake-sorter/references", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!active) return;
+        setAnimals(data.animals ?? []);
+        setMedia(data.media ?? []);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const stats = useMemo(() => {
     const red = animals.filter((a) => a.neonate_color === "red").length;
