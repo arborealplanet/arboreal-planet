@@ -20,6 +20,8 @@ type ReferenceAnimal = {
   review_status?: string;
   review_notes?: string | null;
   dataset_split?: string;
+  rights_status?: string;
+  rights_notes?: string | null;
   training_eligible: boolean;
   created_at: string;
 };
@@ -230,6 +232,19 @@ export function SnakeSorterWorkspace() {
 
             <label className={label}>Source URL
               <input name="source_url" type="url" className={`${field} mt-2`} placeholder="Optional source link" />
+            </label>
+
+            <label className={label}>Rights / use status
+              <select name="rights_status" className={`${field} mt-2`} defaultValue="unknown">
+                <option value="owned_by_owner">Owned by me</option>
+                <option value="permission_granted">Permission granted</option>
+                <option value="private_reference_only">Private reference only</option>
+                <option value="unknown">Unknown / not reviewed</option>
+              </select>
+            </label>
+
+            <label className={label}>Rights notes
+              <input name="rights_notes" className={`${field} mt-2`} placeholder="Permission, source restrictions, attribution notes…" />
             </label>
 
             <label className={`${label} sm:col-span-2`}>Reference images
