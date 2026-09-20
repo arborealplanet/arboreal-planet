@@ -41,7 +41,7 @@ export function ChondroSnakeIcon({
     variantSeed: spriteSeed ?? name,
   });
   const isSubadult = lifeStage === "Subadult";
-  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-wamena-red-source-fix` : null;
+  const versionedSrc = rawSrc ? `${rawSrc}?v=2026-09-20-wamena-red-valid-webp` : null;
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${compact ? "h-40 sm:h-48" : "h-56 sm:h-72"}`}>
@@ -50,18 +50,21 @@ export function ChondroSnakeIcon({
         src={versionedSrc ?? ""}
         onError={(event) => {
           event.currentTarget.style.display = "none";
+          const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+          if (fallback) fallback.style.display = "grid";
         }}
         alt={`${name} illustrated virtual game portrait`}
         className={`h-full w-full object-contain p-1 sm:p-2 ${isSubadult ? "scale-[0.86]" : ""} ${versionedSrc ? "" : "hidden"}`}
       />
-      {!versionedSrc ? (
-        <div className="absolute inset-0 grid place-items-center p-6 text-center">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-100/55">Sprite pending</div>
-            <div className="mt-2 text-xs font-semibold text-white/45">{locality ?? classification ?? subspecies}</div>
-          </div>
+      <div
+        className="absolute inset-0 place-items-center p-6 text-center"
+        style={{ display: versionedSrc ? "none" : "grid" }}
+      >
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-100/55">Sprite pending</div>
+          <div className="mt-2 text-xs font-semibold text-white/45">{locality ?? classification ?? subspecies}</div>
         </div>
-      ) : null}
+      </div>
       <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
         Virtual
       </div>
