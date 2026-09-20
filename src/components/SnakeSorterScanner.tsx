@@ -100,13 +100,18 @@ export function SnakeSorterScanner() {
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const assetsRef = useRef<ScanAsset[]>([]);
+
+  useEffect(() => {
+    assetsRef.current = assets;
+  }, [assets]);
 
   useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((track) => track.stop());
-      assets.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
+      assetsRef.current.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
     };
-  }, [assets]);
+  }, []);
 
   const totals = useMemo(() => ({
     images: assets.filter((a) => a.kind === "image").length,
