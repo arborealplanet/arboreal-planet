@@ -154,7 +154,8 @@ def authorize(authorization: str | None) -> None:
 
 
 @app.get("/health")
-def health() -> dict[str, Any]:
+def health(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    authorize(authorization)
     return {
         "ok": runtime is not None,
         "modelVersion": runtime.model_version if runtime else None,
