@@ -25,7 +25,17 @@ export function SnakeSorterOperations() {
     if(response.ok) setData(payload as OperationsData);
     setLoading(false);
   }
-  useEffect(()=>{void load();},[]);
+  useEffect(()=>{
+    let cancelled = false;
+    void fetch("/api/snake-sorter/operations",{cache:"no-store"})
+      .then(async (response) => ({ ok: response.ok, payload: await response.json().catch(()=>({})) }))
+      .then(({ok,payload}) => {
+        if (cancelled) return;
+        if (ok) setData(payload as OperationsData);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  },[]);
   const summary=data.last_24h;
   return <section className="panel rounded-[28px] p-5 sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
