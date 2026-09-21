@@ -22,6 +22,13 @@ jobs:
         run: |
           python -m compileall -q ml/snake_sorter
           python -m py_compile scripts/snake_sorter_capture_worker.py
+          python -m py_compile scripts/snake_sorter_live_ref_probe.py
+
+      - name: Validate Snake Sorter browser helper
+        run: |
+          node --check tools/snake-sorter-browser-helper/popup.js
+          node --check tools/snake-sorter-browser-helper/background.js
+          node -e "JSON.parse(require('fs').readFileSync('tools/snake-sorter-browser-helper/manifest.json','utf8'))"
 
       - name: Test Snake Sorter policy rules
         run: python -m unittest discover -s ml/snake_sorter/tests -p "test_*.py" -v
