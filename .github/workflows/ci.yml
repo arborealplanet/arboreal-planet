@@ -19,7 +19,9 @@ jobs:
           python-version: "3.12"
 
       - name: Validate Snake Sorter Python
-        run: python -m compileall -q ml/snake_sorter
+        run: |
+          python -m compileall -q ml/snake_sorter
+          python -m py_compile scripts/snake_sorter_capture_worker.py
 
       - name: Test Snake Sorter policy rules
         run: python -m unittest discover -s ml/snake_sorter/tests -p "test_*.py" -v
