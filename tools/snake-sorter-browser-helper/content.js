@@ -1,3 +1,5 @@
+if (!globalThis.__snakeSorterContentBridgeLoaded) {
+  globalThis.__snakeSorterContentBridgeLoaded = true;
 
 const BLOCK_RE = /captcha|access denied|too many requests|verify you are human|challenge-platform|cloudflare/i;
 const BAD_RE = /favicon|logo|avatar|badge|icon|sprite|flag|placeholder|profile|seller|store-logo|brandmark|related|recommended/i;
@@ -268,3 +270,5 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: clickNext() });
   }
 });
+
+}
