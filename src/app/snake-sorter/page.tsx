@@ -57,8 +57,9 @@ export default async function SnakeSorterPage() {
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <a href="#snake-sorter-scanner" className="rounded-2xl bg-emerald-200 px-5 py-3 text-xs font-black text-[#06100c] transition hover:bg-emerald-100">Start a scan</a>
-              <a href="#snake-sorter-reference" className="rounded-2xl border border-white/[.09] bg-white/[.035] px-5 py-3 text-xs font-black text-white/58 transition hover:border-white/[.15] hover:bg-white/[.06]">Reference library</a>
-              <a href="#snake-sorter-models" className="rounded-2xl border border-white/[.09] bg-white/[.035] px-5 py-3 text-xs font-black text-white/58 transition hover:border-white/[.15] hover:bg-white/[.06]">Model control</a>
+              {isOwner && <a href="#snake-sorter-members" className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] px-5 py-3 text-xs font-black text-emerald-100/60 transition hover:border-emerald-300/25">Members</a>}
+              {isOwner && <a href="#snake-sorter-reference" className="rounded-2xl border border-white/[.09] bg-white/[.035] px-5 py-3 text-xs font-black text-white/58 transition hover:border-white/[.15] hover:bg-white/[.06]">Reference library</a>}
+              {isOwner && <a href="#snake-sorter-models" className="rounded-2xl border border-white/[.09] bg-white/[.035] px-5 py-3 text-xs font-black text-white/58 transition hover:border-white/[.15] hover:bg-white/[.06]">Model control</a>}
             </div>
 
             <div className="mt-6 grid w-full max-w-3xl grid-cols-2 gap-2 sm:grid-cols-4">
@@ -82,7 +83,7 @@ export default async function SnakeSorterPage() {
       ) : (
         <section className="mx-auto max-w-7xl space-y-6 px-5 pb-16 sm:px-6">
           <div id="snake-sorter-scanner" className="scroll-mt-6">
-            <SnakeSorterScanner canManageReferences={false} />
+            <SnakeSorterScanner canManageReferences={false} canViewReferenceMedia={false} />
           </div>
           <SnakeSorterScanHistory />
         </section>
