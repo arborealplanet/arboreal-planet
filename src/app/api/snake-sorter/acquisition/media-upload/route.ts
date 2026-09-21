@@ -55,12 +55,18 @@ export async function POST(request: NextRequest) {
   const sha = createHash("sha256").update(bytes).digest("hex");
 
   const duplicateResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=eq.${encodeURIComponent(candidateId)}&staged_content_sha256=eq.${sha}&select=id&limit=1`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?staged_content_sha256=eq.${sha}&select=id,candidate_id&limit=1`,
     { headers: h, cache: "no-store" },
   );
-  const duplicates = duplicateResponse.ok ? await duplicateResponse.json() as Array<{id:string}> : [];
+  const duplicates = duplicateResponse.ok ? await duplicateResponse.json() as Array<{id:string;candidate_id:string}> : [];
   if (duplicates.length) {
-    return NextResponse.json({ error: "That exact image is already attached to this candidate.", media_id: duplicates[0].id }, { status: 409 });
+    return NextResponse.json({
+      error: duplicates[0].candidate_id === candidateId
+        ? "That exact image is already attached to this candidate."
+        : "That exact image already belongs to another acquisition candidate and was not duplicated.",
+      media_id: duplicates[0].id,
+      existing_candidate_id: duplicates[0].candidate_id,
+    }, { status: 409 });
   }
 
   const orderResponse = await fetch(
