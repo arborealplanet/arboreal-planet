@@ -257,28 +257,6 @@ export function SnakeSorterAcquisitionQueue({
     }).catch(() => undefined);
   }
 
-  async function refreshMorphMarketLiveRefs(limit = 10) {
-    setBusy("mm-live-refs");
-    setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/harvest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ limit, mode: "backfill_existing", source: "morphmarket" }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setMessage(data.error ?? "Could not refresh MorphMarket live image references.");
-    } else {
-      const stats = data.morphmarket?.stats ?? {};
-      setMessage(
-        `Live-reference refresh complete: ${Number(stats.media_references ?? 0)} image reference(s) attached across ${Number(stats.backfill_candidates ?? 0)} candidate(s).` +
-        (stats.access_paused ? " MorphMarket returned an access-control signal, so the refresh stopped safely." : "")
-      );
-    }
-    await load();
-    setBusy("");
-  }
-
   async function queueFallbackBatch(limit = 5) {
     setBusy("queue-fallbacks");
     setMessage("");
@@ -444,33 +422,6 @@ export function SnakeSorterAcquisitionQueue({
     const data = await response.json().catch(() => ({}));
     if (!response.ok) setMessage(data.error ?? "Could not disarm collector.");
     else setMessage("Collector disarmed.");
-    await load();
-    setBusy("");
-  }
-
-  async function refreshCandidateLiveRefs(candidateId: string) {
-    setBusy(`live-ref-${candidateId}`);
-    setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/harvest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        limit: 1,
-        mode: "backfill_existing",
-        source: "morphmarket",
-        candidate_id: candidateId,
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setMessage(data.error ?? "Could not refresh this listing's live image references.");
-    } else {
-      const stats = data.morphmarket?.stats ?? {};
-      setMessage(
-        `Listing refresh complete: ${Number(stats.media_references ?? 0)} live image reference(s) found.` +
-        (stats.access_paused ? " MorphMarket returned an access-control signal, so no fallback action was attempted." : "")
-      );
-    }
     await load();
     setBusy("");
   }
@@ -675,7 +626,7 @@ export function SnakeSorterAcquisitionQueue({
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.02] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">MorphMarket backfill plan · no live collection</div>
+              <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">MorphMarket media plan · browser-assisted live refs</div>
               <div className="mt-1 text-[9px] leading-4 text-white/22">
                 {backfillPlan.morphmarket_candidates ?? 0} existing listing candidates · {backfillPlan.candidates_with_media ?? 0} with media · {backfillPlan.candidates_missing_media ?? 0} missing media.
               </div>
@@ -689,7 +640,7 @@ export function SnakeSorterAcquisitionQueue({
           </div>
           {(backfillPlan.suggested_priority?.length ?? 0) > 0 && (
             <div className="mt-3">
-              <div className="text-[8px] font-black uppercase tracking-[.08em] text-white/22">First candidates when eventually armed</div>
+              <div className="text-[8px] font-black uppercase tracking-[.08em] text-white/22">Priority candidates for browser-helper import / fallback</div>
               <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
                 {(backfillPlan.suggested_priority ?? []).slice(0, 8).map((item) => (
                   <div key={item.id} className="min-w-40 rounded-xl border border-white/[.05] bg-black/[.05] px-3 py-2">
@@ -734,14 +685,14 @@ export function SnakeSorterAcquisitionQueue({
 
       {canHarvest && (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            disabled={busy === "mm-live-refs"}
-            onClick={() => void refreshMorphMarketLiveRefs(10)}
-            className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
+          <a
+            href="https://github.com/arborealplanet/arboreal-planet/tree/main/tools/snake-sorter-browser-helper"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-center text-[9px] font-black text-violet-100/48"
           >
-            {busy === "mm-live-refs" ? "Refreshing live refs…" : "Refresh MM live refs"}
-          </button>
+            Browser helper source
+          </a>
           <button
             type="button"
             disabled={busy === "queue-fallbacks"}
@@ -751,7 +702,7 @@ export function SnakeSorterAcquisitionQueue({
             {busy === "queue-fallbacks" ? "Queueing fallbacks…" : "Queue capture fallbacks"}
           </button>
           <div className="rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[8px] leading-4 text-white/20">
-            Preferred order: live image reference → rendered gallery fallback → manual attachment.
+            Preferred order: browser helper live reference → rendered gallery fallback → manual attachment. Server-side MorphMarket requests are not used for live refs because the controlled probe returns HTTP 403.
           </div>
         </div>
       )}
@@ -942,14 +893,15 @@ export function SnakeSorterAcquisitionQueue({
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
                   {canHarvest && candidate.source_type === "morphmarket" && (
                     <>
-                      <button
-                        type="button"
-                        disabled={busy === `live-ref-${candidate.id}`}
-                        onClick={() => void refreshCandidateLiveRefs(candidate.id)}
-                        className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
+                      <a
+                        href={candidate.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48"
+                        title="Open the listing normally, then use the Snake Sorter Browser Helper to import its exposed gallery references."
                       >
-                        {busy === `live-ref-${candidate.id}` ? "Checking refs…" : "Refresh live refs"}
-                      </button>
+                        Open listing for helper
+                      </a>
                       <button
                         type="button"
                         disabled={
