@@ -1,0 +1,39 @@
+name: Package Snake Sorter Browser Helper
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/snake-sorter-browser-helper/**"
+      - ".github/workflows/package-snake-sorter-browser-helper.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build helper zip
+        run: |
+          mkdir -p public/downloads
+          rm -f public/downloads/snake-sorter-browser-helper.zip
+          cd tools/snake-sorter-browser-helper
+          zip -r ../../public/downloads/snake-sorter-browser-helper.zip .
+
+      - name: Commit packaged helper
+        shell: bash
+        run: |
+          if git diff --quiet -- public/downloads/snake-sorter-browser-helper.zip; then
+            echo "Helper package is already current."
+            exit 0
+          fi
+          git config user.name "arborealplanet-bot"
+          git config user.email "arborealplanet@gmail.com"
+          git add public/downloads/snake-sorter-browser-helper.zip
+          git commit -m "Package Snake Sorter browser helper"
+          git push origin HEAD:main
