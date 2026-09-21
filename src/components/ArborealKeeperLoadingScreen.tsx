@@ -14,7 +14,7 @@ export function ArborealKeeperLoadingScreen({
     >
       <video
         className="h-full w-full object-contain"
-        src="/branding/arboreal-keeper-loading.mp4?v=2026-09-21-exact-v3"
+        src="/branding/arboreal-keeper-loading.mp4?v=2026-09-21-exact-v4"
         autoPlay
         muted
         playsInline
