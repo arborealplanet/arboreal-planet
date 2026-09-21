@@ -88,6 +88,17 @@ type Balance = {
   capture_jobs?: { queued?: number; processing?: number; completed?: number; blocked?: number; failed?: number };
 };
 
+type BackfillPlan = {
+  live_collection_started?: boolean;
+  morphmarket_candidates?: number;
+  candidates_with_media?: number;
+  candidates_missing_media?: number;
+  eligible_for_future_backfill?: number;
+  excluded_from_backfill?: number;
+  candidates_with_preview_thumbnail?: number;
+  by_locality?: Array<{ locality: string; count: number }>;
+};
+
 type Stats = {
   total: number;
   pending: number;
@@ -133,6 +144,7 @@ export function SnakeSorterAcquisitionQueue({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0,media_total:0,animals_with_multiple_media:0 });
   const [balance, setBalance] = useState<Balance>({});
+  const [backfillPlan, setBackfillPlan] = useState<BackfillPlan>({});
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
   const [query, setQuery] = useState("");
@@ -157,6 +169,9 @@ export function SnakeSorterAcquisitionQueue({
     void fetch("/api/snake-sorter/acquisition/balance", { cache: "no-store" })
       .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
       .then(({ ok, data }) => { if (ok) setBalance(data ?? {}); });
+    void fetch("/api/snake-sorter/acquisition/backfill-plan", { cache: "no-store" })
+      .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
+      .then(({ ok, data }) => { if (ok) setBackfillPlan(data ?? {}); });
   }
 
   useEffect(() => {
@@ -175,6 +190,9 @@ export function SnakeSorterAcquisitionQueue({
         void fetch("/api/snake-sorter/acquisition/balance", { cache: "no-store" })
           .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
           .then(({ ok, data: balanceData }) => { if (ok) setBalance(balanceData ?? {}); });
+        void fetch("/api/snake-sorter/acquisition/backfill-plan", { cache: "no-store" })
+          .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
+          .then(({ ok, data: planData }) => { if (ok) setBackfillPlan(planData ?? {}); });
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -465,6 +483,25 @@ export function SnakeSorterAcquisitionQueue({
           ["Multi-image", stats.animals_with_multiple_media ?? 0],
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
+
+      {(backfillPlan.morphmarket_candidates ?? 0) > 0 && (
+        <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.02] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">MorphMarket backfill plan · no live collection</div>
+              <div className="mt-1 text-[9px] leading-4 text-white/22">
+                {backfillPlan.morphmarket_candidates ?? 0} existing listing candidates · {backfillPlan.candidates_with_media ?? 0} with media · {backfillPlan.candidates_missing_media ?? 0} missing media.
+              </div>
+            </div>
+            <div className="rounded-full border border-violet-300/10 px-2.5 py-1 text-[8px] font-black uppercase text-violet-100/45">
+              Collector disarmed
+            </div>
+          </div>
+          <div className="mt-2 text-[9px] text-white/24">
+            {backfillPlan.eligible_for_future_backfill ?? 0} candidate(s) are currently eligible for a future controlled media backfill; {backfillPlan.excluded_from_backfill ?? 0} are excluded by review state or filtering.
+          </div>
+        </div>
+      )}
 
       {(balance.by_locality?.length ?? 0) > 0 && (
         <div className="mt-4 rounded-2xl border border-white/[.05] bg-black/[.04] p-3">
