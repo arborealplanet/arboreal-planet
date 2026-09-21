@@ -9,21 +9,14 @@ async function ownerIdentity() {
   return identity;
 }
 
-export async function POST(request: NextRequest) {
-  const identity = await ownerIdentity();
-  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const body = await request.json().catch(() => ({})) as { limit?: unknown };
-  const rawLimit = Number(body.limit ?? 30);
-  const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? Math.trunc(rawLimit) : 30, 50));
-
+async function invokeHarvester(slug: string, token: string, limit: number) {
   const response = await fetch(
-    `${SUPABASE_AUTH_URL}/functions/v1/snake-sorter-harvest-open-sources`,
+    `${SUPABASE_AUTH_URL}/functions/v1/${slug}`,
     {
       method: "POST",
       headers: {
         apikey: SUPABASE_AUTH_KEY,
-        Authorization: `Bearer ${identity.token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
@@ -33,13 +26,34 @@ export async function POST(request: NextRequest) {
   );
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
+  return { ok: response.ok, status: response.status, data };
+}
+
+export async function POST(request: NextRequest) {
+  const identity = await ownerIdentity();
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const body = await request.json().catch(() => ({})) as { limit?: unknown };
+  const rawLimit = Number(body.limit ?? 40);
+  const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? Math.trunc(rawLimit) : 40, 50));
+
+  const [openSources, morphmarket] = await Promise.all([
+    invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit),
+    invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit),
+  ]);
+
+  if (!openSources.ok && !morphmarket.ok) {
     return NextResponse.json({
-      error: data.error ?? "Open-source harvest failed.",
-      detail: data.detail ?? null,
-      sources: data.harvest ?? null,
-    }, { status: response.status });
+      error: "Harvest failed.",
+      open_sources: openSources.data,
+      morphmarket: morphmarket.data,
+    }, { status: Math.max(openSources.status, morphmarket.status, 502) });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json({
+    ok: true,
+    open_sources: openSources.data,
+    morphmarket: morphmarket.data,
+    partial_failure: !openSources.ok || !morphmarket.ok,
+  });
 }
