@@ -112,13 +112,6 @@ type BackfillPlan = {
   }>;
 };
 
-type CollectorControl = {
-  is_armed?: boolean;
-  effective_armed?: boolean;
-  armed_until?: string | null;
-  note?: string | null;
-};
-
 type Stats = {
   total: number;
   pending: number;
@@ -165,8 +158,6 @@ export function SnakeSorterAcquisitionQueue({
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0,media_total:0,animals_with_multiple_media:0 });
   const [balance, setBalance] = useState<Balance>({});
   const [backfillPlan, setBackfillPlan] = useState<BackfillPlan>({});
-  const [collectorControl, setCollectorControl] = useState<CollectorControl>({});
-  const [armConfirmation, setArmConfirmation] = useState("");
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
   const [query, setQuery] = useState("");
@@ -195,9 +186,6 @@ export function SnakeSorterAcquisitionQueue({
     void fetch("/api/snake-sorter/acquisition/backfill-plan", { cache: "no-store" })
       .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
       .then(({ ok, data }) => { if (ok) setBackfillPlan(data ?? {}); });
-    void fetch("/api/snake-sorter/acquisition/collector-control", { cache: "no-store" })
-      .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
-      .then(({ ok, data }) => { if (ok) setCollectorControl(data ?? {}); });
   }
 
   useEffect(() => {
@@ -219,9 +207,6 @@ export function SnakeSorterAcquisitionQueue({
         void fetch("/api/snake-sorter/acquisition/backfill-plan", { cache: "no-store" })
           .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
           .then(({ ok, data: planData }) => { if (ok) setBackfillPlan(planData ?? {}); });
-        void fetch("/api/snake-sorter/acquisition/collector-control", { cache: "no-store" })
-          .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
-          .then(({ ok, data: controlData }) => { if (ok) setCollectorControl(controlData ?? {}); });
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,24 +240,6 @@ export function SnakeSorterAcquisitionQueue({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: mediaId, status: health }),
     }).catch(() => undefined);
-  }
-
-  async function queueFallbackBatch(limit = 5) {
-    setBusy("queue-fallbacks");
-    setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/capture-jobs/batch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ limit }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setMessage(data.error ?? "Could not queue fallback gallery captures.");
-    } else {
-      setMessage(`Queued ${Number(data.queued ?? 0)} fallback capture job(s). The live worker remains disarmed until explicitly armed.`);
-    }
-    await load();
-    setBusy("");
   }
 
   async function stageOpenMedia() {
@@ -382,62 +349,6 @@ export function SnakeSorterAcquisitionQueue({
     } else {
       setMessage(data.error ?? "Could not promote candidate.");
     }
-    setBusy("");
-  }
-
-  async function armCollector() {
-    setBusy("collector-arm");
-    setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/collector-control", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "arm",
-        confirmation: armConfirmation,
-        minutes: 15,
-        note: "Owner armed collector from Snake Sorter acquisition queue.",
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(data.error ?? "Could not arm collector.");
-    else {
-      setMessage("Collector armed for 15 minutes. It will still do nothing until the capture workflow is explicitly started.");
-      setArmConfirmation("");
-    }
-    await load();
-    setBusy("");
-  }
-
-  async function disarmCollector() {
-    setBusy("collector-disarm");
-    setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/collector-control", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "disarm",
-        note: "Owner manually disarmed collector from Snake Sorter acquisition queue.",
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(data.error ?? "Could not disarm collector.");
-    else setMessage("Collector disarmed.");
-    await load();
-    setBusy("");
-  }
-
-  async function queueCapture(candidateId: string) {
-    setBusy(`capture-${candidateId}`);
-    setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/capture-jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ candidate_id: candidateId }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(data.error ?? "Could not queue gallery capture.");
-    else setMessage(data.already_queued ? "Gallery capture is already queued." : "Gallery capture queued. It will remain idle until the capture worker is run.");
-    await load();
     setBusy("");
   }
 
@@ -574,53 +485,6 @@ export function SnakeSorterAcquisitionQueue({
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
 
-      {canHarvest && (
-        <div className="mt-4 rounded-2xl border border-rose-300/10 bg-rose-300/[.018] p-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-[9px] font-black uppercase tracking-[.08em] text-rose-100/48">Live collector control</div>
-              <div className="mt-1 text-[9px] leading-4 text-white/22">
-                Two keys are required: this app-side arm plus an explicitly armed GitHub capture workflow. Either one being off blocks live capture.
-              </div>
-            </div>
-            <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase ${collectorControl.effective_armed ? "border-amber-300/15 text-amber-100/60" : "border-emerald-300/12 text-emerald-100/50"}`}>
-              {collectorControl.effective_armed ? "Armed temporarily" : "Disarmed"}
-            </span>
-          </div>
-          {collectorControl.effective_armed ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <div className="text-[9px] text-amber-100/45">
-                Expires {collectorControl.armed_until ? new Date(collectorControl.armed_until).toLocaleTimeString() : "soon"}.
-              </div>
-              <button
-                type="button"
-                disabled={busy === "collector-disarm"}
-                onClick={() => void disarmCollector()}
-                className="rounded-lg border border-rose-300/12 px-3 py-1.5 text-[8px] font-black text-rose-100/55 disabled:opacity-35"
-              >
-                {busy === "collector-disarm" ? "Disarming…" : "Disarm now"}
-              </button>
-            </div>
-          ) : (
-            <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto]">
-              <input
-                value={armConfirmation}
-                onChange={(event) => setArmConfirmation(event.target.value)}
-                placeholder='Type "ARM SNAKE SORTER" only when ready for a controlled live test'
-                className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[9px] text-white/45 outline-none placeholder:text-white/16"
-              />
-              <button
-                type="button"
-                disabled={busy === "collector-arm" || armConfirmation !== "ARM SNAKE SORTER"}
-                onClick={() => void armCollector()}
-                className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/50 disabled:opacity-25"
-              >
-                {busy === "collector-arm" ? "Arming…" : "Arm for 15 min"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {(backfillPlan.morphmarket_candidates ?? 0) > 0 && (
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.02] p-3">
@@ -684,23 +548,15 @@ export function SnakeSorterAcquisitionQueue({
       )}
 
       {canHarvest && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <a
             href="/downloads/snake-sorter-browser-helper.zip"
             className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-center text-[9px] font-black text-violet-100/48"
           >
             Download browser helper
           </a>
-          <button
-            type="button"
-            disabled={busy === "queue-fallbacks"}
-            onClick={() => void queueFallbackBatch(5)}
-            className="rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48 disabled:opacity-35"
-          >
-            {busy === "queue-fallbacks" ? "Queueing fallbacks…" : "Queue capture fallbacks"}
-          </button>
           <div className="rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[8px] leading-4 text-white/20">
-            Preferred order: browser helper live reference → rendered gallery fallback → manual attachment. Server-side MorphMarket requests are not used for live refs because the controlled probe returns HTTP 403.
+            Preferred order: browser-helper live refs → browser-local gallery capture fallback → manual attachment. Server-side MorphMarket collection is disabled after the controlled HTTP 403 result.
           </div>
         </div>
       )}
@@ -709,15 +565,15 @@ export function SnakeSorterAcquisitionQueue({
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.018] p-3">
           <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">Owner browser helper</div>
           <div className="mt-1 text-[9px] leading-4 text-white/22">
-            MorphMarket returns HTTP 403 to our server-side probe, so live gallery references are imported from a listing you already opened normally in your browser. Download the helper, extract it, load that folder as an unpacked Chrome extension, then open a MorphMarket GTP listing and press the helper button. It sends only exposed image references into Snake Sorter; it does not download the images.
+            MorphMarket returns HTTP 403 to our server-side probe, so the helper works from a listing you already opened normally in your browser. Use "Send live refs" first. If those references will not render in Snake Sorter, use "Capture gallery fallback" to capture the displayed gallery locally in your browser and attach review-only images to the same candidate.
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <a href="/downloads/snake-sorter-browser-helper.zip" className="rounded-lg border border-violet-300/12 px-2.5 py-1.5 text-[8px] font-black text-violet-100/50">
               Download helper ZIP
             </a>
-            <a href="chrome://extensions/" className="rounded-lg border border-white/[.06] px-2.5 py-1.5 text-[8px] font-black text-white/35">
-              Chrome extensions page
-            </a>
+            <span className="rounded-lg border border-white/[.06] px-2.5 py-1.5 text-[8px] font-black text-white/35">
+              Then open chrome://extensions → Developer mode → Load unpacked
+            </span>
           </div>
         </div>
       )}
@@ -917,29 +773,7 @@ export function SnakeSorterAcquisitionQueue({
                       >
                         Open listing for helper
                       </a>
-                      <button
-                        type="button"
-                        disabled={
-                          busy === `capture-${candidate.id}` ||
-                          candidate.latest_capture_job?.status === "queued" ||
-                          candidate.latest_capture_job?.status === "processing" ||
-                          mediaFor(candidate).some((media) =>
-                            Boolean(media.staged_storage_path) ||
-                            (Boolean(media.source_media_url) && !["unavailable","blocked","expired"].includes(media.live_reference_status || "unknown"))
-                          )
-                        }
-                        onClick={() => void queueCapture(candidate.id)}
-                        className="rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48 disabled:opacity-35"
-                        title="Fallback capture is enabled only when no usable live or staged image exists."
-                      >
-                        {busy === `capture-${candidate.id}`
-                          ? "Queueing…"
-                          : candidate.latest_capture_job?.status === "queued"
-                            ? "Capture queued"
-                            : candidate.latest_capture_job?.status === "processing"
-                              ? "Capturing…"
-                              : "Queue capture fallback"}
-                      </button>
+
                     </>
                   )}
                   {canHarvest && (
