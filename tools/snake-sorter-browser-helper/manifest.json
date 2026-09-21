@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Snake Sorter Browser Helper",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Owner-only helper that reads the currently open MorphMarket GTP listing and sends exposed gallery image references to Snake Sorter.",
   "permissions": [
     "activeTab",
@@ -27,6 +27,15 @@
       ],
       "js": [
         "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://arboreal-planet.vercel.app/snake-sorter*"
+      ],
+      "js": [
+        "app-bridge.js"
       ],
       "run_at": "document_idle"
     }
