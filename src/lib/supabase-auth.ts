@@ -79,3 +79,25 @@ export async function fetchOwnProfile(token: string, userId: string) {
   const rows = await response.json() as Array<Record<string, unknown>>;
   return rows[0] ?? null;
 }
+
+
+export async function getSnakeSorterAccess(token: string, userId: string) {
+  const profile = await fetchOwnProfile(token, userId) as { role?: string } | null;
+  if (profile?.role === "owner") return { allowed: true, isOwner: true, accessLevel: "owner" as const };
+
+  const response = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_members?user_id=eq.${encodeURIComponent(userId)}&is_enabled=eq.true&select=access_level&limit=1`,
+    {
+      headers: {
+        apikey: SUPABASE_AUTH_KEY,
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) return { allowed: false, isOwner: false, accessLevel: null };
+  const rows = await response.json() as Array<{ access_level?: string }>;
+  if (!rows[0]) return { allowed: false, isOwner: false, accessLevel: null };
+  return { allowed: true, isOwner: false, accessLevel: rows[0].access_level ?? "scanner" };
+}
