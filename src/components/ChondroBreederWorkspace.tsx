@@ -38,10 +38,10 @@ type ViewMeta = {
 
 const views: Array<{ id: WorkspaceView } & ViewMeta> = [
   { id: "home", label: "Home", detail: "Breeder command center", icon: "⌂" },
-  { id: "breeding", label: "Breeding", navLabel: "Breed", detail: "Cycles, pairings and reproductive progress", icon: "◇" },
-  { id: "colony", label: "Colony", navLabel: "Snakes", detail: "Animals and breeder records", icon: "◎" },
-  { id: "clutches", label: "Clutches", navLabel: "Clutch", detail: "Eggs, hatchlings and clutch history", icon: "◉" },
-  { id: "market", label: "Repti-Shop", navLabel: "Shop", detail: "Enclosures and rotating animal listings", icon: "$" },
+  { id: "breeding", label: "Breed", navLabel: "Breed", detail: "Choose adult breeders and follow the reproductive cycle", icon: "◇" },
+  { id: "colony", label: "Animals", navLabel: "Animals", detail: "Raise, test and manage every animal", icon: "◎" },
+  { id: "clutches", label: "Offspring", navLabel: "Offspring", detail: "Eggs, hatchlings, holdbacks and clutch history", icon: "◉" },
+  { id: "market", label: "Store", navLabel: "Store", detail: "Buy enclosures and animals", icon: "$" },
   { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
   { id: "projects", label: "Projects", detail: "Lines, traits and breeding goals", icon: "◈" },
   { id: "conservation", label: "Conservation", detail: "Regional conservation program", icon: "⌁" },
@@ -206,11 +206,15 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
 
           <ChondroBreederHomeStatus onOpen={(next) => onOpen(next)} />
 
-          <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <QuickAction title="Breed a pair" detail="Select adult breeders and start a reproductive cycle." icon="◇" onClick={() => onOpen("breeding")} />
-            <QuickAction title="Manage colony" detail="Inspect, test, raise and organize your animals." icon="◎" onClick={() => onOpen("colony")} />
-            <QuickAction title="Review clutches" detail="Handle active offspring and clutch records." icon="◉" onClick={() => onOpen("clutches")} />
-            <QuickAction title="Buy chondros" detail="Open the snake store and player listings." icon="$" onClick={() => onOpen("market")} emphasized />
+          <section className="mt-4 rounded-[24px] border border-emerald-300/10 bg-emerald-300/[.025] p-4 sm:p-5">
+            <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/50">New player path</div>
+            <h3 className="mt-2 text-lg font-semibold text-white/82">Follow these four steps and the game makes sense.</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <QuickAction title="1. Store" detail="Buy an enclosure first, then choose your first animal." icon="1" onClick={() => onOpen("market")} emphasized />
+              <QuickAction title="2. Animals" detail="Tap an animal to raise, test, name, sell or manage it." icon="2" onClick={() => onOpen("colony")} />
+              <QuickAction title="3. Breed" detail="Once animals are adults, choose a male and female and start a cycle." icon="3" onClick={() => onOpen("breeding")} />
+              <QuickAction title="4. Offspring" detail="Manage eggs and hatchlings, choose holdbacks and review results." icon="4" onClick={() => onOpen("clutches")} />
+            </div>
           </section>
 
           <section className="mt-4 rounded-[24px] border border-white/[.06] bg-black/18 p-4 sm:p-6">
@@ -232,16 +236,17 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
 
 function CoreGameScreen({ view }: { view: CoreView }) {
   const config: Record<CoreView, { eyebrow: string; title: string; detail: string }> = {
-    breeding: { eyebrow: "Reproduction", title: "Breeding", detail: "Prepare breeders, choose the pair and follow the active reproductive cycle." },
-    colony: { eyebrow: "Collection", title: "Colony", detail: "Browse your snakes first. Open an animal for naming, testing, notes, sale, retirement and detailed records. Enclosure management follows below the collection." },
-    clutches: { eyebrow: "Offspring", title: "Clutches", detail: "See the active clutch first, make establishment and holdback decisions, then review completed breeding history below." },
-    market: { eyebrow: "Snake exchange", title: "Chondro Store", detail: "Browse rotating game inventory first, then shop breeder-to-breeder listings and manage your seller activity." },
+    breeding: { eyebrow: "Reproduction", title: "Breed", detail: "Choose adult breeders, start a pairing and follow reproductive progress." },
+    colony: { eyebrow: "Collection", title: "Animals", detail: "Tap any animal to raise its life stage, test it, rename it, add notes, sell it or manage its breeder record." },
+    clutches: { eyebrow: "Offspring", title: "Offspring", detail: "Manage active eggs and hatchlings, choose holdbacks and review completed clutch history." },
+    market: { eyebrow: "Repti-Shop", title: "Store", detail: "Buy an enclosure first, then purchase animals from rotating game inventory or other players." },
   };
   const active = config[view];
 
   return (
     <>
       <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />
+      <GameScreenGuide view={view} />
       {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
       {view === "clutches" ? <ChondroClutchStageArt /> : null}
@@ -268,6 +273,51 @@ function CoreGameScreen({ view }: { view: CoreView }) {
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}
       {view === "clutches" ? <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div></section> : null}
     </>
+  );
+}
+
+function GameScreenGuide({ view }: { view: CoreView }) {
+  const guides: Record<CoreView, Array<{ step: string; title: string; detail: string }>> = {
+    market: [
+      { step: "1", title: "Buy housing", detail: "You need an open enclosure before you can bring home an animal." },
+      { step: "2", title: "Buy an animal", detail: "Choose from the rotating store or player listings." },
+      { step: "3", title: "Go to Animals", detail: "Raise and manage your new animal from its record." },
+    ],
+    colony: [
+      { step: "1", title: "Tap an animal", detail: "Its full management drawer opens." },
+      { step: "2", title: "Raise or manage it", detail: "Life-stage growth, testing, notes, favorite and sale controls live there." },
+      { step: "3", title: "Breed adults", detail: "Adult animals become eligible on the Breed screen." },
+    ],
+    breeding: [
+      { step: "1", title: "Need adults?", detail: "Go to Animals and use Raise to advance younger snakes." },
+      { step: "2", title: "Choose the pair", detail: "Select an eligible adult female and male." },
+      { step: "3", title: "Start the cycle", detail: "Follow reproductive progress until a clutch is produced." },
+    ],
+    clutches: [
+      { step: "1", title: "Check the active clutch", detail: "Eggs and hatchlings appear here as the cycle progresses." },
+      { step: "2", title: "Choose holdbacks", detail: "Keep animals you want for future breeding projects." },
+      { step: "3", title: "Close the clutch", detail: "Finish decisions, list non-holdbacks and continue the program." },
+    ],
+  };
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+      <details className="rounded-[22px] border border-emerald-300/12 bg-emerald-300/[.025] p-4" open={view === "colony"}>
+        <summary className="cursor-pointer list-none text-sm font-semibold text-emerald-100/78">
+          How this screen works
+          <span className="ml-2 text-[10px] font-normal text-white/35">tap to show/hide</span>
+        </summary>
+        <div className="mt-4 grid gap-2 md:grid-cols-3">
+          {guides[view].map((item) => (
+            <div key={item.step} className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
+              <div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-200/50">Step {item.step}</div>
+              <div className="mt-1 text-sm font-semibold text-white/76">{item.title}</div>
+              <div className="mt-1 text-[11px] leading-5 text-white/40">{item.detail}</div>
+            </div>
+          ))}
+        </div>
+      </details>
+    </section>
   );
 }
 
