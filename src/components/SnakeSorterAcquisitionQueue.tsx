@@ -170,6 +170,9 @@ export function SnakeSorterAcquisitionQueue({
   const [rightsNoteById, setRightsNoteById] = useState<Record<string, string>>({});
   const [activeMediaIndex, setActiveMediaIndex] = useState<Record<string, number>>({});
   const [reportedMediaHealth, setReportedMediaHealth] = useState<Record<string, string>>({});
+  const [manualMmUrl, setManualMmUrl] = useState("");
+  const [manualMmTitle, setManualMmTitle] = useState("");
+  const [manualMmLocality, setManualMmLocality] = useState("");
 
   async function load() {
     const response = await fetch("/api/snake-sorter/acquisition", { cache: "no-store" });
@@ -249,6 +252,49 @@ export function SnakeSorterAcquisitionQueue({
     }
     return true;
   }), [candidates, source, status, locality, query]);
+
+  async function addManualMorphMarketListing(files: FileList | null) {
+    setBusy("manual-mm");
+    setMessage("");
+
+    const response = await fetch("/api/snake-sorter/acquisition/manual-listing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_url: manualMmUrl,
+        title: manualMmTitle,
+        locality: manualMmLocality,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.candidate?.id) {
+      setMessage(data.error ?? "Could not add MorphMarket listing.");
+      setBusy("");
+      return;
+    }
+
+    let uploaded = 0;
+    for (const file of Array.from(files ?? [])) {
+      const form = new FormData();
+      form.set("candidate_id", data.candidate.id);
+      form.set("file", file);
+      const upload = await fetch("/api/snake-sorter/acquisition/media-upload", {
+        method: "POST",
+        body: form,
+      });
+      if (upload.ok) uploaded += 1;
+    }
+
+    setMessage(
+      `${data.created ? "Added" : "Matched"} MorphMarket listing${uploaded ? ` and attached ${uploaded} image(s)` : ""}.`
+    );
+    setManualMmUrl("");
+    setManualMmTitle("");
+    setManualMmLocality("");
+    await load();
+    setBusy("");
+  }
 
   async function reportMediaHealth(mediaId: string, health: "available" | "unavailable") {
     const key = `${mediaId}:${health}`;
@@ -486,6 +532,52 @@ export function SnakeSorterAcquisitionQueue({
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
 
+
+      {canHarvest && (
+        <div className="mt-4 rounded-2xl border border-sky-300/10 bg-sky-300/[.018] p-3">
+          <div className="text-[9px] font-black uppercase tracking-[.08em] text-sky-100/45">No-install MorphMarket intake</div>
+          <div className="mt-1 text-[9px] leading-4 text-white/22">
+            Paste a listing URL and optionally attach several screenshots/photos at once. Snake Sorter will treat the listing as one animal and keep every attached image grouped under it.
+          </div>
+          <div className="mt-3 grid gap-2 lg:grid-cols-[1.4fr_.8fr_.7fr_auto]">
+            <input
+              value={manualMmUrl}
+              onChange={(event) => setManualMmUrl(event.target.value)}
+              placeholder="MorphMarket GTP listing URL"
+              className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[9px] text-white/45 outline-none placeholder:text-white/16"
+            />
+            <input
+              value={manualMmTitle}
+              onChange={(event) => setManualMmTitle(event.target.value)}
+              placeholder="Title (optional)"
+              className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[9px] text-white/45 outline-none placeholder:text-white/16"
+            />
+            <input
+              value={manualMmLocality}
+              onChange={(event) => setManualMmLocality(event.target.value)}
+              placeholder="Locality (optional)"
+              className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[9px] text-white/45 outline-none placeholder:text-white/16"
+            />
+            <label className="cursor-pointer rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-center text-[9px] font-black text-sky-100/48">
+              {busy === "manual-mm" ? "Adding…" : "Add listing + images"}
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                disabled={busy === "manual-mm" || !manualMmUrl.trim()}
+                onChange={(event) => {
+                  void addManualMorphMarketListing(event.currentTarget.files);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+          </div>
+          <div className="mt-2 text-[8px] leading-4 text-white/18">
+            No extension required. If you only want to create the candidate with no images yet, choose the button and cancel the file picker is not enough; attach at least one image now or use the existing manual image button on the candidate later.
+          </div>
+        </div>
+      )}
 
       {(backfillPlan.morphmarket_candidates ?? 0) > 0 && (
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.02] p-3">
