@@ -74,7 +74,15 @@ function statusClass(value: string) {
   return "border-white/[.07] text-white/30";
 }
 
-export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () => Promise<void> | void }) {
+export function SnakeSorterAcquisitionQueue({
+  onPromoted,
+  canHarvest = true,
+  canPromote = true,
+}: {
+  onPromoted?: () => Promise<void> | void;
+  canHarvest?: boolean;
+  canPromote?: boolean;
+}) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0 });
@@ -240,8 +248,8 @@ export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () =>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => void load()} className={button}>Refresh</button>
-          <button type="button" disabled={Boolean(busy)} onClick={() => void harvestOpenSources()} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === "harvest" ? "Harvesting…" : "Harvest open sources"}</button>
-          <button type="button" disabled={Boolean(busy)} onClick={() => void stageOpenMedia()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[9px] font-black text-emerald-100/60 disabled:opacity-35">{busy === "stage" ? "Staging all…" : "Stage all open-license media"}</button>
+          {canHarvest && <button type="button" disabled={Boolean(busy)} onClick={() => void harvestOpenSources()} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === "harvest" ? "Harvesting…" : "Harvest open sources"}</button>}
+          {canHarvest && <button type="button" disabled={Boolean(busy)} onClick={() => void stageOpenMedia()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[9px] font-black text-emerald-100/60 disabled:opacity-35">{busy === "stage" ? "Staging all…" : "Stage all open-license media"}</button>}
         </div>
       </div>
 
@@ -328,7 +336,7 @@ export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () =>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"rejected")} className="rounded-xl border border-rose-300/12 bg-rose-300/[.025] px-3 py-2 text-[9px] font-black text-rose-100/45 disabled:opacity-35">Reject</button>
                 </div>
-                {candidate.review_status === "approved" && candidate.rights_status === "open_license" && candidate.staged_storage_path && !candidate.promoted_reference_animal_id && (
+                {canPromote && candidate.review_status === "approved" && candidate.rights_status === "open_license" && candidate.staged_storage_path && !candidate.promoted_reference_animal_id && (
                   <form onSubmit={(event) => { event.preventDefault(); void promote(candidate, new FormData(event.currentTarget)); }} className="mt-4 rounded-2xl border border-sky-300/10 bg-sky-300/[.02] p-3">
                     <div className="text-[9px] font-black uppercase tracking-[.09em] text-sky-100/45">Promote to reference library</div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
