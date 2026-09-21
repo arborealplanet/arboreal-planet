@@ -46,15 +46,6 @@ const spritePathFallbacks: Record<string, string[]> = {
     "/hatchery/snakes/localities/wamena/red-neonate-fixed.webp",
     "/hatchery/snakes/localities/wamena/red-neonate-v3.webp",
   ],
-  "/hatchery/snakes/localities/wamena/red-adult-live-v2.webp": [
-    "/hatchery/snakes/localities/wamena/red-adult.webp",
-  ],
-  "/hatchery/snakes/localities/aru/adult-live-v2.webp": [
-    "/hatchery/snakes/localities/aru/adult.webp",
-  ],
-  "/hatchery/snakes/localities/merauke/adult-live-v2.webp": [
-    "/hatchery/snakes/localities/merauke/adult.webp",
-  ],
 };
 
 const localitySprites: Record<string, StageSpriteSet> = {
@@ -73,7 +64,6 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
-      Red: [variant("/hatchery/snakes/localities/wamena/red-adult-live-v2.webp")],
       Yellow: [variant("/hatchery/snakes/recovered-v6/wamena/yellow-adult.webp")],
     },
   },
@@ -152,22 +142,10 @@ const localitySprites: Record<string, StageSpriteSet> = {
     juvenile: {
       Yellow: [variant("/hatchery/snakes/localities/merauke/yellow-neonate.webp")],
     },
-    adultAny: [variant("/hatchery/snakes/localities/merauke/adult-live-v2.webp")],
   },
 };
 
-const specificHybridSprites: Record<string, StageSpriteSet> = {
-  "aru-wamena": {
-    juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-02.webp")],
-    },
-  },
-  "merauke-wamena": {
-    juvenile: {
-      Red: [variant("/hatchery/snakes/hybrids/wamena-viridis/red-neonate-02.webp")],
-    },
-  },
-};
+const specificHybridSprites: Record<string, StageSpriteSet> = {};
 
 const hybridSprites: Record<string, StageSpriteSet> = {
   "pulcher-utaraensis": {
@@ -182,11 +160,6 @@ const hybridSprites: Record<string, StageSpriteSet> = {
 // another variant here; existing animals keep a stable result because the
 // picker is seeded from the snake id.
 const designerSprites: StageSpriteSet = {
-  juvenile: {
-    Red: [
-      variant("/hatchery/snakes/special/designer/red-neonate-01.webp"),
-    ],
-  },
   adultAny: [
     variant("/hatchery/snakes/special/designer/adult-01.webp"),
   ],
@@ -429,7 +402,6 @@ export const CHONDRO_SPRITE_ASSET_PLAN = {
     manokwariRedAdultAPlus02: "/hatchery/snakes/recovered-v7/manokwari/red-adult-a-plus-02.webp",
     sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp",
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.webp",
-    designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.webp",
   },
   pending: {},
 } as const;
