@@ -287,6 +287,25 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
+  async function updateRights(candidateId: string, rightsReviewStatus: "unreviewed" | "cleared" | "permission_required" | "restricted", mediaRightsStatus: "open_license" | "permission_required" | "permission_granted" | "metadata_only" | "unknown") {
+    setBusy(`rights-${candidateId}`);
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/rights", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        candidate_id: candidateId,
+        rights_review_status: rightsReviewStatus,
+        media_rights_status: mediaRightsStatus,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setMessage(data.error ?? "Could not update rights review.");
+    else setMessage("Rights review updated.");
+    await load();
+    setBusy("");
+  }
+
   async function uploadCandidateMedia(candidateId: string, file: File) {
     setBusy(`upload-${candidateId}`);
     setMessage("");
@@ -320,6 +339,15 @@ export function SnakeSorterAcquisitionQueue({
 
   function mediaFor(candidate: Candidate) {
     return Array.isArray(candidate.media) ? candidate.media : [];
+  }
+
+  function promotableMediaCount(candidate: Candidate) {
+    return mediaFor(candidate).filter((media) =>
+      media.review_status === "accepted" &&
+      media.quality_status === "accepted" &&
+      Boolean(media.staged_storage_path) &&
+      ["open_license","permission_granted"].includes(media.rights_status)
+    ).length;
   }
 
   function selectedMedia(candidate: Candidate) {
@@ -556,6 +584,39 @@ export function SnakeSorterAcquisitionQueue({
                     </label>
                   )}
                 </div>
+                {canHarvest && candidate.review_status === "approved" && (
+                  <div className="mt-3 rounded-xl border border-amber-300/10 bg-amber-300/[.02] p-3">
+                    <div className="text-[8px] font-black uppercase tracking-[.08em] text-amber-100/45">Rights review</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={busy === `rights-${candidate.id}`}
+                        onClick={() => void updateRights(candidate.id, "cleared", candidate.rights_status === "open_license" ? "open_license" : "permission_granted")}
+                        className="rounded-lg border border-emerald-300/12 px-2.5 py-1.5 text-[8px] font-black text-emerald-100/50 disabled:opacity-35"
+                      >
+                        Mark rights cleared
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy === `rights-${candidate.id}`}
+                        onClick={() => void updateRights(candidate.id, "permission_required", "permission_required")}
+                        className="rounded-lg border border-amber-300/12 px-2.5 py-1.5 text-[8px] font-black text-amber-100/48 disabled:opacity-35"
+                      >
+                        Permission required
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy === `rights-${candidate.id}`}
+                        onClick={() => void updateRights(candidate.id, "restricted", "metadata_only")}
+                        className="rounded-lg border border-rose-300/12 px-2.5 py-1.5 text-[8px] font-black text-rose-100/45 disabled:opacity-35"
+                      >
+                        Review only
+                      </button>
+                    </div>
+                    <div className="mt-2 text-[8px] text-white/20">Current: {(candidate.rights_review_status || "unreviewed").replaceAll("_"," ")} · {promotableMediaCount(candidate)} image(s) currently eligible for promotion.</div>
+                  </div>
+                )}
+
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <select
                     value={rejectReasonById[candidate.id] ?? ""}
@@ -587,9 +648,15 @@ export function SnakeSorterAcquisitionQueue({
                     Reject with reason
                   </button>
                 </div>
-                {canPromote && candidate.review_status === "approved" && candidate.rights_status === "open_license" && candidate.staged_storage_path && !candidate.promoted_reference_animal_id && (
+                {canPromote && candidate.review_status === "approved" && !candidate.promoted_reference_animal_id && (
+                  (
+                    candidate.rights_status === "open_license" && candidate.staged_storage_path
+                  ) || (
+                    candidate.rights_review_status === "cleared" && promotableMediaCount(candidate) > 0
+                  )
+                ) && (
                   <form onSubmit={(event) => { event.preventDefault(); void promote(candidate, new FormData(event.currentTarget)); }} className="mt-4 rounded-2xl border border-sky-300/10 bg-sky-300/[.02] p-3">
-                    <div className="text-[9px] font-black uppercase tracking-[.09em] text-sky-100/45">Promote to reference library</div>
+                    <div className="text-[9px] font-black uppercase tracking-[.09em] text-sky-100/45">Promote one animal + approved images</div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Taxon
                         <select name="taxon" defaultValue="Unknown / review" className={`${select} mt-1 w-full`}>
@@ -650,7 +717,7 @@ export function SnakeSorterAcquisitionQueue({
       </div>
 
       <div className="mt-4 rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[9px] leading-4 text-white/20">
-        Candidate approval is not reference-library promotion. It means the source is worth using/reviewing further. Reference/training promotion remains a separate deliberate owner action.
+        One listing is treated as one animal. Its approved images stay grouped with that individual through reference promotion and dataset splitting. Biological approval, image review, and rights clearance remain separate deliberate steps.
       </div>
     </section>
   );
