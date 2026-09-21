@@ -38,6 +38,10 @@ type Profile = {
   source_type: string;
   target_locality: string | null;
   enabled: boolean;
+  region?: string | null;
+  availability?: string | null;
+  no_additional_traits?: boolean;
+  negative_keywords?: string[] | null;
 };
 
 type Stats = {
@@ -268,6 +272,15 @@ export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () =>
         </select>
         <span className="text-[9px] text-white/18">{profiles.filter((profile) => profile.enabled).length} acquisition profile(s) enabled</span>
       </div>
+
+      {profiles.some((profile) => profile.enabled && profile.source_type === "morphmarket") && (
+        <div className="mt-3 flex flex-wrap gap-2 text-[8px] font-black uppercase tracking-[.07em]">
+          <span className="rounded-full border border-sky-300/10 bg-sky-300/[.025] px-2.5 py-1 text-sky-100/45">MorphMarket · Region All</span>
+          <span className="rounded-full border border-sky-300/10 bg-sky-300/[.025] px-2.5 py-1 text-sky-100/45">Availability Any</span>
+          <span className="rounded-full border border-rose-300/10 bg-rose-300/[.025] px-2.5 py-1 text-rose-100/45">Designer excluded</span>
+          <span className="rounded-full border border-amber-300/10 bg-amber-300/[.025] px-2.5 py-1 text-amber-100/45">Single locality only</span>
+        </div>
+      )}
 
       {message && <div className="mt-4 rounded-xl border border-white/[.06] bg-black/[.05] px-3 py-2 text-[10px] leading-5 text-white/36">{message}</div>}
 
