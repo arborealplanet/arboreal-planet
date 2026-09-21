@@ -33,10 +33,11 @@ export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await request.json().catch(() => ({})) as { limit?: unknown; mode?: unknown };
+  const body = await request.json().catch(() => ({})) as { limit?: unknown; mode?: unknown; source?: unknown };
   const rawLimit = Number(body.limit ?? 40);
   const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? Math.trunc(rawLimit) : 40, 50));
   const mode = body.mode === "backfill_existing" ? "backfill_existing" : "discover";
+  const source = body.source === "open_sources" || body.source === "morphmarket" ? body.source : "both";
 
   if (mode === "backfill_existing") {
     const morphmarket = await invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit, mode);
@@ -54,10 +55,12 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const [openSources, morphmarket] = await Promise.all([
-    invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit),
-    invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit, "discover"),
-  ]);
+  const openSources = source === "morphmarket"
+    ? { ok: true, status: 200, data: { skipped: true } }
+    : await invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit);
+  const morphmarket = source === "open_sources"
+    ? { ok: true, status: 200, data: { skipped: true } }
+    : await invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit, "discover");
 
   if (!openSources.ok && !morphmarket.ok) {
     return NextResponse.json({
@@ -69,6 +72,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+    source,
     open_sources: openSources.data,
     morphmarket: morphmarket.data,
     partial_failure: !openSources.ok || !morphmarket.ok,
