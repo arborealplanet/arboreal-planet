@@ -448,6 +448,33 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
+  async function refreshCandidateLiveRefs(candidateId: string) {
+    setBusy(`live-ref-${candidateId}`);
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/harvest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        limit: 1,
+        mode: "backfill_existing",
+        source: "morphmarket",
+        candidate_id: candidateId,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(data.error ?? "Could not refresh this listing's live image references.");
+    } else {
+      const stats = data.morphmarket?.stats ?? {};
+      setMessage(
+        `Listing refresh complete: ${Number(stats.media_references ?? 0)} live image reference(s) found.` +
+        (stats.access_paused ? " MorphMarket returned an access-control signal, so no fallback action was attempted." : "")
+      );
+    }
+    await load();
+    setBusy("");
+  }
+
   async function queueCapture(candidateId: string) {
     setBusy(`capture-${candidateId}`);
     setMessage("");
@@ -914,24 +941,39 @@ export function SnakeSorterAcquisitionQueue({
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"approved")} className="rounded-xl border border-emerald-300/12 bg-emerald-300/[.025] px-3 py-2 text-[9px] font-black text-emerald-100/50 disabled:opacity-35">Approve candidate</button>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
                   {canHarvest && candidate.source_type === "morphmarket" && (
-                    <button
-                      type="button"
-                      disabled={
-                        busy === `capture-${candidate.id}` ||
-                        candidate.latest_capture_job?.status === "queued" ||
-                        candidate.latest_capture_job?.status === "processing"
-                      }
-                      onClick={() => void queueCapture(candidate.id)}
-                      className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
-                    >
-                      {busy === `capture-${candidate.id}`
-                        ? "Queueing…"
-                        : candidate.latest_capture_job?.status === "queued"
-                          ? "Capture queued"
-                          : candidate.latest_capture_job?.status === "processing"
-                            ? "Capturing…"
-                            : "Queue gallery capture"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        disabled={busy === `live-ref-${candidate.id}`}
+                        onClick={() => void refreshCandidateLiveRefs(candidate.id)}
+                        className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
+                      >
+                        {busy === `live-ref-${candidate.id}` ? "Checking refs…" : "Refresh live refs"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          busy === `capture-${candidate.id}` ||
+                          candidate.latest_capture_job?.status === "queued" ||
+                          candidate.latest_capture_job?.status === "processing" ||
+                          mediaFor(candidate).some((media) =>
+                            Boolean(media.staged_storage_path) ||
+                            (Boolean(media.source_media_url) && !["unavailable","blocked","expired"].includes(media.live_reference_status || "unknown"))
+                          )
+                        }
+                        onClick={() => void queueCapture(candidate.id)}
+                        className="rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48 disabled:opacity-35"
+                        title="Fallback capture is enabled only when no usable live or staged image exists."
+                      >
+                        {busy === `capture-${candidate.id}`
+                          ? "Queueing…"
+                          : candidate.latest_capture_job?.status === "queued"
+                            ? "Capture queued"
+                            : candidate.latest_capture_job?.status === "processing"
+                              ? "Capturing…"
+                              : "Queue capture fallback"}
+                      </button>
+                    </>
                   )}
                   {canHarvest && (
                     <label className="cursor-pointer rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48">
