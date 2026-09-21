@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { getSnakeSorterAccess, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 import { runSnakeSorterEngine } from "@/lib/snake-sorter/engine";
 import type { PreparedEvidence, SnakeSorterColor, SnakeSorterLifeStage, SnakeSorterScanMode, SnakeSorterViewType } from "@/lib/snake-sorter/types";
 
@@ -11,12 +11,12 @@ const restHeaders = (token: string) => ({
   Accept: "application/json",
 });
 
-async function ownerIdentity() {
+async function sorterIdentity() {
   const identity = await getServerIdentity();
   if (!identity) return null;
-  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
-  if (profile?.role !== "owner") return null;
-  return identity;
+  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
+  if (!access.allowed) return null;
+  return { ...identity, access };
 }
 
 const allowedStages = new Set(["auto", "hatchling", "neonate", "juvenile", "subadult", "adult"]);
@@ -27,7 +27,7 @@ const allowedViews = new Set(["auto","full_body","head","dorsal","left_lateral",
 
 export async function POST(request: NextRequest) {
   const requestStartedAt = Date.now();
-  const identity = await ownerIdentity();
+  const identity = await sorterIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const form = await request.formData().catch(() => null);
