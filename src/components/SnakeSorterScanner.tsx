@@ -172,7 +172,7 @@ async function sampleVideo(file: File, mode: string, sourceIndex: number) {
   }
 }
 
-export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: () => void }) {
+export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = true }: { onReferenceAdded?: () => void; canManageReferences?: boolean }) {
   const [assets, setAssets] = useState<ScanAsset[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -782,7 +782,7 @@ export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: ()
           </div>
         )}
 
-        {assets.some((asset) => asset.kind === "image") && (
+        {canManageReferences && assets.some((asset) => asset.kind === "image") && (
           <div className="mt-5 rounded-[24px] border border-emerald-300/10 bg-emerald-300/[.02] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -873,8 +873,8 @@ export function SnakeSorterScanner({ onReferenceAdded }: { onReferenceAdded?: ()
           <div className="mt-5 rounded-[24px] border border-white/[.06] bg-black/[.06] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">Owner verification</div>
-                <div className="mt-1 text-xs text-white/32">This records whether the model was right. It does not add scan media to the training library.</div>
+                <div className="text-[9px] font-black uppercase tracking-[.1em] text-white/24">{canManageReferences ? "Owner verification" : "Scan feedback"}</div>
+                <div className="mt-1 text-xs text-white/32">{canManageReferences ? "This records whether the model was right. It does not add scan media to the training library." : "Your feedback is saved with your scan for model review. It never promotes scan media into the training library."}</div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => void submitFeedback("confirmed")} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[10px] font-black text-emerald-100/60">Confirm result</button>
