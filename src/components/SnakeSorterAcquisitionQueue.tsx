@@ -343,7 +343,7 @@ export function SnakeSorterAcquisitionQueue({
         candidate_id: candidateId,
         rights_review_status: rightsReviewStatus,
         media_rights_status: mediaRightsStatus,
-        rights_note: rightsNoteById[candidateId] ?? "",
+        rights_note: rightsNoteById[candidateId] ?? candidates.find((candidate) => candidate.id === candidateId)?.rights_review_note ?? "",
       }),
     });
     const data = await response.json().catch(() => ({}));
