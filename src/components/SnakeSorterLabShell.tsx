@@ -101,6 +101,15 @@ export function SnakeSorterLabShell({
 
   const active = viewMeta[view];
 
+  async function lockSnakeSorter() {
+    await fetch("/api/snake-sorter/security", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "lock" }),
+    }).catch(() => undefined);
+    window.location.replace("/snake-sorter/unlock");
+  }
+
   function openView(next: View) {
     if (next === "candidates" && !canReview) return;
     if ((next === "references" || next === "more") && !isOwner) return;
@@ -128,6 +137,14 @@ export function SnakeSorterLabShell({
 
           <div className="ml-auto flex items-center gap-2">
             {canInstall && <SnakeSorterInstallButton />}
+            <button
+              type="button"
+              onClick={() => void lockSnakeSorter()}
+              className="rounded-full border border-white/[.08] bg-white/[.025] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-white/45 transition hover:border-white/[.14] hover:bg-white/[.045]"
+              title="Lock Snake Sorter"
+            >
+              Lock
+            </button>
             {canReview && candidateStats.pending > 0 && (
               <button
                 type="button"
