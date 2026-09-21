@@ -164,7 +164,6 @@ export function SnakeSorterAcquisitionQueue({
   const [locality, setLocality] = useState("all");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
-  const [previewById, setPreviewById] = useState<Record<string, { image_url?: string; description?: string; error?: string }>>({});
   const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
   const [rightsNoteById, setRightsNoteById] = useState<Record<string, string>>({});
   const [activeMediaIndex, setActiveMediaIndex] = useState<Record<string, number>>({});
@@ -434,24 +433,6 @@ export function SnakeSorterAcquisitionQueue({
     });
   }
 
-  async function loadPreview(candidate: Candidate) {
-    setBusy(`preview-${candidate.id}`);
-    setPreviewById((current) => ({ ...current, [candidate.id]: {} }));
-    const response = await fetch("/api/snake-sorter/acquisition/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source_url: candidate.source_url }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setPreviewById((current) => ({
-      ...current,
-      [candidate.id]: response.ok
-        ? { image_url: data.image_url, description: data.description }
-        : { error: data.error ?? "Preview unavailable." },
-    }));
-    setBusy("");
-  }
-
   const sources = [...new Set(candidates.map((candidate) => candidate.source_type))].sort();
   const localities = [...new Set(candidates.map((candidate) => candidate.provisional_locality || candidate.locality_raw).filter(Boolean) as string[])].sort();
 
@@ -696,23 +677,16 @@ export function SnakeSorterAcquisitionQueue({
                     className="h-full w-full object-cover"
                     onError={(event) => { event.currentTarget.style.display = "none"; }}
                   />
-                ) : previewById[candidate.id]?.image_url ? (
-                  <img src={previewById[candidate.id].image_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                 ) : (
                   <div className="grid h-full min-h-36 place-items-center px-3 text-center text-[9px] leading-4 text-white/16">
                     <div>
-                      <div>{candidate.source_type === "morphmarket" ? "No listing media collected yet" : candidate.rights_status === "open_license" ? "Open media not staged yet" : "No staged media"}</div>
-                      {candidate.source_type === "morphmarket" && (
-                        <button
-                          type="button"
-                          disabled={busy === `preview-${candidate.id}`}
-                          onClick={() => void loadPreview(candidate)}
-                          className="mt-2 rounded-lg border border-sky-300/12 bg-sky-300/[.03] px-2 py-1.5 text-[8px] font-black text-sky-100/50 disabled:opacity-35"
-                        >
-                          {busy === `preview-${candidate.id}` ? "Loading…" : "Load preview"}
-                        </button>
-                      )}
-                      {previewById[candidate.id]?.error && <div className="mt-2 text-[8px] leading-3 text-rose-100/35">{previewById[candidate.id].error}</div>}
+                      <div>
+                        {candidate.source_type === "morphmarket"
+                          ? "No media yet — open the listing and use the browser helper"
+                          : candidate.rights_status === "open_license"
+                            ? "Open media not staged yet"
+                            : "No staged media"}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -747,8 +721,6 @@ export function SnakeSorterAcquisitionQueue({
                   <div><div className="uppercase tracking-[.07em] text-white/16">Source / observer</div><div className="mt-0.5 truncate text-white/34">{candidate.seller_or_observer || candidate.photographer || "—"}</div></div>
                   <div><div className="uppercase tracking-[.07em] text-white/16">License</div><div className="mt-0.5 truncate text-white/34">{candidate.license || "—"}</div></div>
                 </div>
-
-                {previewById[candidate.id]?.description && <div className="mt-3 line-clamp-3 rounded-xl border border-sky-300/8 bg-sky-300/[.015] px-3 py-2 text-[9px] leading-4 text-white/28">{previewById[candidate.id].description}</div>}
                 {candidate.acquisition_error && <div className="mt-3 rounded-xl border border-rose-300/10 bg-rose-300/[.025] px-3 py-2 text-[9px] leading-4 text-rose-50/40">{candidate.acquisition_error}</div>}
                 {candidate.latest_capture_job?.last_error && (
                   <div className="mt-3 rounded-xl border border-violet-300/10 bg-violet-300/[.02] px-3 py-2 text-[9px] leading-4 text-violet-50/40">
