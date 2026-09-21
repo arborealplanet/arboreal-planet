@@ -9,7 +9,7 @@ async function ownerIdentity() {
   return identity;
 }
 
-async function invokeHarvester(slug: string, token: string, limit: number) {
+async function invokeHarvester(slug: string, token: string, limit: number, mode?: "discover" | "backfill_existing") {
   const response = await fetch(
     `${SUPABASE_AUTH_URL}/functions/v1/${slug}`,
     {
@@ -20,7 +20,7 @@ async function invokeHarvester(slug: string, token: string, limit: number) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ limit }),
+      body: JSON.stringify({ limit, ...(mode ? { mode } : {}) }),
       cache: "no-store",
     },
   );
@@ -33,13 +33,30 @@ export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await request.json().catch(() => ({})) as { limit?: unknown };
+  const body = await request.json().catch(() => ({})) as { limit?: unknown; mode?: unknown };
   const rawLimit = Number(body.limit ?? 40);
   const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? Math.trunc(rawLimit) : 40, 50));
+  const mode = body.mode === "backfill_existing" ? "backfill_existing" : "discover";
+
+  if (mode === "backfill_existing") {
+    const morphmarket = await invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit, mode);
+    if (!morphmarket.ok) {
+      return NextResponse.json({
+        error: "MorphMarket media backfill failed.",
+        morphmarket: morphmarket.data,
+      }, { status: Math.max(morphmarket.status, 502) });
+    }
+    return NextResponse.json({
+      ok: true,
+      mode,
+      morphmarket: morphmarket.data,
+      partial_failure: false,
+    });
+  }
 
   const [openSources, morphmarket] = await Promise.all([
     invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit),
-    invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit),
+    invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit, "discover"),
   ]);
 
   if (!openSources.ok && !morphmarket.ok) {
