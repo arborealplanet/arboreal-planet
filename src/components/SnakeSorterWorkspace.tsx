@@ -7,6 +7,7 @@ import { SnakeSorterModelStatus } from "@/components/SnakeSorterModelStatus";
 import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
 import { SnakeSorterBulkImport } from "@/components/SnakeSorterBulkImport";
 import { SnakeSorterOperations } from "@/components/SnakeSorterOperations";
+import { SnakeSorterAcquisitionQueue } from "@/components/SnakeSorterAcquisitionQueue";
 
 type ReferenceAnimal = {
   id: string;
@@ -352,7 +353,8 @@ export function SnakeSorterWorkspace() {
             ].map(([step,title,copy]) => <div key={step} className="rounded-2xl border border-white/[.055] bg-black/[.05] p-3"><div className="text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/38">Step {step}</div><div className="mt-1 text-xs font-semibold text-white/48">{title}</div><div className="mt-1 text-[9px] leading-4 text-white/20">{copy}</div></div>)}
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <a href="#snake-sorter-bulk-import" className="rounded-xl bg-emerald-300 px-4 py-2.5 text-[10px] font-black text-[#06100c]">Go to bulk import</a>
+            <a href="#snake-sorter-acquisition" className="rounded-xl bg-emerald-300 px-4 py-2.5 text-[10px] font-black text-[#06100c]">Review harvested candidates</a>
+            <a href="#snake-sorter-bulk-import" className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-4 py-2.5 text-[10px] font-black text-emerald-100/60">Go to bulk import</a>
             <a href="#snake-sorter-reference-library" className="rounded-xl border border-white/[.08] bg-white/[.025] px-4 py-2.5 text-[10px] font-black text-white/45">Go to review queue</a>
           </div>
         </div>
@@ -365,6 +367,8 @@ export function SnakeSorterWorkspace() {
       <div className="mt-6"><SnakeSorterScanHistory /></div>
 
       <div id="snake-sorter-models" className="mt-6 scroll-mt-6"><SnakeSorterModelStatus /></div>
+
+      <div id="snake-sorter-acquisition" className="mt-6 scroll-mt-6"><SnakeSorterAcquisitionQueue /></div>
 
       <div id="snake-sorter-bulk-import" className="mt-6 scroll-mt-6"><SnakeSorterBulkImport onImported={() => load()} /></div>
 
