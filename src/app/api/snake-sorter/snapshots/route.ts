@@ -71,6 +71,31 @@ export async function POST(request: NextRequest) {
       : "No approved training animals are ready for a snapshot."
   }, { status: 409 });
 
+  if (purpose === "classifier") {
+    const invalidTaxonomy = animals.find((animal) => {
+      const stage = String(animal.life_stage ?? "");
+      const color = String(animal.neonate_color ?? "");
+      const taxon = String(animal.taxon ?? "");
+      const locality = String(animal.locality ?? "").trim().toLowerCase();
+      const isNeonateStage = stage === "hatchling" || stage === "neonate";
+      return isNeonateStage && color === "red" && (
+        taxon === "Morelia viridis" ||
+        locality === "kofiau"
+      );
+    });
+
+    if (invalidTaxonomy) {
+      return NextResponse.json({
+        error: "Classifier snapshot blocked by a taxonomy consistency violation.",
+        animal_id: invalidTaxonomy.id,
+        taxon: invalidTaxonomy.taxon,
+        locality: invalidTaxonomy.locality,
+        life_stage: invalidTaxonomy.life_stage,
+        neonate_color: invalidTaxonomy.neonate_color,
+      }, { status: 409 });
+    }
+  }
+
   const unassigned = purpose === "classifier"
     ? animals.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned")
     : [];
