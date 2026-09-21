@@ -58,7 +58,7 @@ const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
   "Chondro Dojo Bin": { label: "Chondro Dojo 2 Stack", detail: "Two space-saving neonate enclosures sold as one stack. The stack uses one facility slot and provides two neonate spaces." },
-  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing required for subadult and adult Green Tree Pythons." },
+  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing required for adult Green Tree Pythons and older Emerald Tree Boas." },
 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
@@ -535,7 +535,7 @@ export function ChondroBreederExpandedShop() {
   const colony = save?.colony ?? [];
   const dojoCapacity = Math.max(0, Number(save?.enclosures?.["Chondro Dojo Bin"] ?? 0) || 0) * 2;
   const pvcCapacity = Math.max(0, Number(save?.enclosures?.["PVC Arboreal"] ?? 0) || 0);
-  const olderAnimals = colony.filter((animal) => animal.lifeStage === "Subadult" || animal.lifeStage === "Adult").length;
+  const olderAnimals = colony.filter((animal) => animal.lifeStage === "Adult").length;
   const juvenileAnimals = Math.max(0, colony.length - olderAnimals);
   const pvcAfterRequiredOlderHousing = Math.max(0, pvcCapacity - olderAnimals);
   const juvenilesInDojo = Math.min(juvenileAnimals, dojoCapacity);
@@ -545,7 +545,7 @@ export function ChondroBreederExpandedShop() {
   const openSlots = openDojoSlots + openPvcSlots;
 
   function housingAvailableFor(offer: Offer) {
-    if (offer.lifeStage === "Subadult" || offer.lifeStage === "Adult") return openPvcSlots > 0;
+    if (offer.lifeStage === "Adult") return openPvcSlots > 0;
     return openSlots > 0;
   }
 
@@ -656,7 +656,7 @@ export function ChondroBreederExpandedShop() {
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">Buy housing before you buy snakes.</h3>
-            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake and is required for subadults and adults. A Chondro Dojo 2 Stack uses one facility slot and provides two neonate spaces. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
+            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake and is required for adult Green Tree Pythons. A Chondro Dojo 2 Stack uses one facility slot and can house neonate or subadult Green Tree Pythons. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
           </div>
           <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
@@ -767,7 +767,7 @@ export function ChondroBreederExpandedShop() {
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
                   <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Subadult" || offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
+                    {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
                   </button>
                 </div>
               </article>
