@@ -65,6 +65,14 @@ type Profile = {
   negative_keywords?: string[] | null;
 };
 
+type Balance = {
+  by_locality?: Array<{ locality: string; candidate_count: number; approved_count: number; media_count: number }>;
+  by_stage?: Array<{ stage: string; candidate_count: number }>;
+  by_color?: Array<{ color: string; candidate_count: number }>;
+  media?: { total?: number; accepted?: number; staged?: number; rendered_capture?: number; manual_upload?: number };
+  capture_jobs?: { queued?: number; processing?: number; completed?: number; blocked?: number; failed?: number };
+};
+
 type Stats = {
   total: number;
   pending: number;
@@ -109,6 +117,7 @@ export function SnakeSorterAcquisitionQueue({
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0,media_total:0,animals_with_multiple_media:0 });
+  const [balance, setBalance] = useState<Balance>({});
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
   const [query, setQuery] = useState("");
@@ -129,6 +138,9 @@ export function SnakeSorterAcquisitionQueue({
     setCandidates(data.candidates ?? []);
     setProfiles(data.profiles ?? []);
     setStats(data.stats ?? stats);
+    void fetch("/api/snake-sorter/acquisition/balance", { cache: "no-store" })
+      .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
+      .then(({ ok, data }) => { if (ok) setBalance(data ?? {}); });
   }
 
   useEffect(() => {
@@ -144,6 +156,9 @@ export function SnakeSorterAcquisitionQueue({
         setCandidates(data.candidates ?? []);
         setProfiles(data.profiles ?? []);
         setStats(data.stats ?? stats);
+        void fetch("/api/snake-sorter/acquisition/balance", { cache: "no-store" })
+          .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
+          .then(({ ok, data: balanceData }) => { if (ok) setBalance(balanceData ?? {}); });
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -418,6 +433,32 @@ export function SnakeSorterAcquisitionQueue({
           ["Multi-image", stats.animals_with_multiple_media ?? 0],
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
+
+      {(balance.by_locality?.length ?? 0) > 0 && (
+        <div className="mt-4 rounded-2xl border border-white/[.05] bg-black/[.04] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[.08em] text-white/26">Dataset balance</div>
+              <div className="mt-1 text-[9px] text-white/18">Counts are animals first, images second. This helps prevent one heavily photographed animal from inflating the dataset.</div>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[8px] text-white/24">
+              <span>{balance.media?.total ?? 0} media refs</span>
+              <span>{balance.media?.staged ?? 0} staged</span>
+              <span>{balance.media?.accepted ?? 0} accepted</span>
+              <span>{balance.capture_jobs?.queued ?? 0} capture queued</span>
+              <span>{balance.capture_jobs?.blocked ?? 0} blocked</span>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {(balance.by_locality ?? []).slice(0, 14).map((item) => (
+              <div key={item.locality} className="min-w-28 rounded-xl border border-white/[.05] bg-black/[.05] px-3 py-2">
+                <div className="truncate text-[9px] font-semibold text-white/40">{item.locality}</div>
+                <div className="mt-1 text-[8px] text-white/22">{item.candidate_count} animals · {item.media_count} images</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto_auto_auto] sm:items-center">
         <input
