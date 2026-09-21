@@ -189,8 +189,9 @@ def upload_capture(candidate_id: str, job: Job, image_bytes: bytes, order: int) 
         "source_metadata": {
             "capture_job_id": job.id,
             "rendered_capture": True,
-            "worker_version": 2,
+            "worker_version": 3,
             "gallery_scoped": True,
+            "dominant_gallery_image_only": True,
         },
     }
     insert = rest(
@@ -404,7 +405,11 @@ async def likely_gallery_images(page: Page, root: ElementHandle | None) -> list[
             continue
 
     ranked.sort(key=lambda item: item[0], reverse=True)
-    return [handle for _, handle in ranked[:8]]
+
+    # Rendered capture intentionally takes only the dominant displayed gallery
+    # image for each gallery state. Thumbnail strips remain useful for
+    # navigation but are not captured as separate training candidates.
+    return [ranked[0][1]] if ranked else []
 
 
 def job_safe_absolute(base: str, src: str) -> str:
