@@ -21,6 +21,18 @@ export type SnakeReferenceAnimal = {
   dataset_split?: string;
   rights_status?: string;
   rights_notes?: string | null;
+  breeder_name?: string | null;
+  sire_name?: string | null;
+  dam_name?: string | null;
+  clutch_id?: string | null;
+  hatch_date?: string | null;
+  hatch_year?: number | null;
+  sex?: string | null;
+  origin_status?: string | null;
+  locality_evidence?: string | null;
+  provenance_confidence?: string | null;
+  provenance_claim?: string | null;
+  exclusion_reason?: string | null;
   training_eligible: boolean;
   challenge_eligible?: boolean;
   challenge_expectation?: "reject" | "classify" | "review";
@@ -355,6 +367,24 @@ export function SnakeSorterReferenceManager({
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Source type<select name="source_type" defaultValue={detail.animal.source_type} className={`${field} mt-2`}><option value="personal">Personal</option><option value="breeder">Breeder</option><option value="listing">Listing</option><option value="publication">Publication</option><option value="other">Other</option></select></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Source name<input name="source_name" defaultValue={detail.animal.source_name ?? ""} className={`${field} mt-2`} /></label>
             <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Source URL<input name="source_url" type="url" defaultValue={detail.animal.source_url ?? ""} className={`${field} mt-2`} /></label>
+
+            <div className="sm:col-span-2 mt-2 rounded-2xl border border-sky-300/10 bg-sky-300/[.02] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[.12em] text-sky-100/42">Provenance & lineage</div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Breeder<input name="breeder_name" defaultValue={detail.animal.breeder_name ?? ""} className={`${field} mt-2`} /></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Clutch ID<input name="clutch_id" defaultValue={detail.animal.clutch_id ?? ""} className={`${field} mt-2`} /></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Sire<input name="sire_name" defaultValue={detail.animal.sire_name ?? ""} className={`${field} mt-2`} /></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Dam<input name="dam_name" defaultValue={detail.animal.dam_name ?? ""} className={`${field} mt-2`} /></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Hatch date<input name="hatch_date" type="date" defaultValue={detail.animal.hatch_date ?? ""} className={`${field} mt-2`} /></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Hatch year<input name="hatch_year" type="number" min="1900" max="2100" defaultValue={detail.animal.hatch_year ?? ""} className={`${field} mt-2`} /></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Sex<select name="sex" defaultValue={detail.animal.sex ?? "unknown"} className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="male">Male</option><option value="female">Female</option></select></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Origin<select name="origin_status" defaultValue={detail.animal.origin_status ?? "unknown"} className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="captive_bred">Captive bred</option><option value="wild_caught">Wild caught</option><option value="import">Import</option></select></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Locality evidence<select name="locality_evidence" defaultValue={detail.animal.locality_evidence ?? "unknown"} className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="owner_known">Owner known</option><option value="breeder_documented">Breeder documented</option><option value="seller_listed">Seller listed</option><option value="import_claim">Import claim</option><option value="field_record">Field record</option><option value="publication">Publication</option><option value="museum_record">Museum record</option><option value="inferred">Inferred</option></select></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Provenance confidence<select name="provenance_confidence" defaultValue={detail.animal.provenance_confidence ?? "unknown"} className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="confirmed">Confirmed</option><option value="strong">Strong</option><option value="provisional">Provisional</option><option value="uncertain">Uncertain</option></select></label>
+              </div>
+              <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Original locality / breeder claim<textarea name="provenance_claim" defaultValue={detail.animal.provenance_claim ?? ""} className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="What the breeder, seller, field record or publication actually claimed…" /></label>
+              <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Exclusion reason<input name="exclusion_reason" defaultValue={detail.animal.exclusion_reason ?? ""} className={`${field} mt-2 normal-case tracking-normal`} placeholder="Optional: hybrid, uncertain lineage, edited photo, poor provenance…" /></label>
+            </div>
 
             <div className="sm:col-span-2 mt-2 rounded-2xl border border-amber-300/10 bg-amber-300/[.02] p-4">
               <div className="text-[9px] font-black uppercase tracking-[.12em] text-amber-100/42">Dataset governance</div>
