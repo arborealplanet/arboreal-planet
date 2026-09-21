@@ -88,8 +88,12 @@ export function SnakeSorterAcquisitionQueue({
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0 });
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
+  const [query, setQuery] = useState("");
+  const [locality, setLocality] = useState("all");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
+  const [previewById, setPreviewById] = useState<Record<string, { image_url?: string; description?: string; error?: string }>>({});
+  const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
 
   async function load() {
     const response = await fetch("/api/snake-sorter/acquisition", { cache: "no-store" });
@@ -124,8 +128,21 @@ export function SnakeSorterAcquisitionQueue({
   const filtered = useMemo(() => candidates.filter((candidate) => {
     if (source !== "all" && candidate.source_type !== source) return false;
     if (status !== "all" && candidate.review_status !== status) return false;
+    if (locality !== "all" && (candidate.provisional_locality || candidate.locality_raw || "") !== locality) return false;
+    const needle = query.trim().toLowerCase();
+    if (needle) {
+      const haystack = [
+        candidate.title,
+        candidate.source_key,
+        candidate.provisional_locality,
+        candidate.locality_raw,
+        candidate.seller_or_observer,
+        candidate.taxon_raw,
+      ].filter(Boolean).join(" ").toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
     return true;
-  }), [candidates, source, status]);
+  }), [candidates, source, status, locality, query]);
 
   async function stageOpenMedia() {
     setBusy("stage");
@@ -185,13 +202,13 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
-  async function review(id: string, reviewStatus: "approved" | "rejected" | "permission_required" | "pending") {
+  async function review(id: string, reviewStatus: "approved" | "rejected" | "permission_required" | "pending", exclusionReason?: string) {
     setBusy(id);
     setMessage("");
     const response = await fetch("/api/snake-sorter/acquisition", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, review_status: reviewStatus }),
+      body: JSON.stringify({ id, review_status: reviewStatus, exclusion_reason: exclusionReason || undefined }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) setMessage(data.error ?? "Could not update candidate.");
@@ -236,7 +253,26 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
+  async function loadPreview(candidate: Candidate) {
+    setBusy(`preview-${candidate.id}`);
+    setPreviewById((current) => ({ ...current, [candidate.id]: {} }));
+    const response = await fetch("/api/snake-sorter/acquisition/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_url: candidate.source_url }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setPreviewById((current) => ({
+      ...current,
+      [candidate.id]: response.ok
+        ? { image_url: data.image_url, description: data.description }
+        : { error: data.error ?? "Preview unavailable." },
+    }));
+    setBusy("");
+  }
+
   const sources = [...new Set(candidates.map((candidate) => candidate.source_type))].sort();
+  const localities = [...new Set(candidates.map((candidate) => candidate.provisional_locality || candidate.locality_raw).filter(Boolean) as string[])].sort();
 
   return (
     <section className="panel rounded-[28px] p-5 sm:p-6">
@@ -266,10 +302,20 @@ export function SnakeSorterAcquisitionQueue({
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto_auto_auto] sm:items-center">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search title, locality, seller, source ID…"
+          className="w-full rounded-xl border border-white/[.07] bg-black/15 px-3 py-2.5 text-[10px] text-white/55 outline-none placeholder:text-white/18 focus:border-emerald-300/20"
+        />
         <select value={source} onChange={(event) => setSource(event.target.value)} className={select}>
           <option value="all">All sources</option>
           {sources.map((value) => <option key={value} value={value}>{sourceLabel(value)}</option>)}
+        </select>
+        <select value={locality} onChange={(event) => setLocality(event.target.value)} className={select}>
+          <option value="all">All localities</option>
+          {localities.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
         <select value={status} onChange={(event) => setStatus(event.target.value)} className={select}>
           <option value="all">All review states</option>
@@ -278,7 +324,7 @@ export function SnakeSorterAcquisitionQueue({
           <option value="permission_required">Permission required</option>
           <option value="rejected">Rejected</option>
         </select>
-        <span className="text-[9px] text-white/18">{profiles.filter((profile) => profile.enabled).length} acquisition profile(s) enabled</span>
+        <span className="text-[9px] text-white/18">{filtered.length} shown · {profiles.filter((profile) => profile.enabled).length} profile(s)</span>
       </div>
 
       {profiles.some((profile) => profile.enabled && profile.source_type === "morphmarket") && (
@@ -300,8 +346,25 @@ export function SnakeSorterAcquisitionQueue({
               <div className="w-36 shrink-0 bg-black/20">
                 {candidate.staged_storage_path ? (
                   <img src={`/api/snake-sorter/acquisition/media/${encodeURIComponent(candidate.id)}`} alt="" loading="lazy" className="h-full w-full object-cover" />
+                ) : previewById[candidate.id]?.image_url ? (
+                  <img src={previewById[candidate.id].image_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="grid h-full min-h-36 place-items-center px-3 text-center text-[9px] leading-4 text-white/16">{candidate.source_type === "morphmarket" ? "Metadata only — listing image not copied" : candidate.rights_status === "open_license" ? "Open media not staged yet" : "No staged media"}</div>
+                  <div className="grid h-full min-h-36 place-items-center px-3 text-center text-[9px] leading-4 text-white/16">
+                    <div>
+                      <div>{candidate.source_type === "morphmarket" ? "Listing image not stored" : candidate.rights_status === "open_license" ? "Open media not staged yet" : "No staged media"}</div>
+                      {candidate.source_type === "morphmarket" && (
+                        <button
+                          type="button"
+                          disabled={busy === `preview-${candidate.id}`}
+                          onClick={() => void loadPreview(candidate)}
+                          className="mt-2 rounded-lg border border-sky-300/12 bg-sky-300/[.03] px-2 py-1.5 text-[8px] font-black text-sky-100/50 disabled:opacity-35"
+                        >
+                          {busy === `preview-${candidate.id}` ? "Loading…" : "Load preview"}
+                        </button>
+                      )}
+                      {previewById[candidate.id]?.error && <div className="mt-2 text-[8px] leading-3 text-rose-100/35">{previewById[candidate.id].error}</div>}
+                    </div>
+                  </div>
                 )}
               </div>
               <div className="min-w-0 flex-1 p-4">
@@ -327,6 +390,7 @@ export function SnakeSorterAcquisitionQueue({
                   <div><div className="uppercase tracking-[.07em] text-white/16">License</div><div className="mt-0.5 truncate text-white/34">{candidate.license || "—"}</div></div>
                 </div>
 
+                {previewById[candidate.id]?.description && <div className="mt-3 line-clamp-3 rounded-xl border border-sky-300/8 bg-sky-300/[.015] px-3 py-2 text-[9px] leading-4 text-white/28">{previewById[candidate.id].description}</div>}
                 {candidate.acquisition_error && <div className="mt-3 rounded-xl border border-rose-300/10 bg-rose-300/[.025] px-3 py-2 text-[9px] leading-4 text-rose-50/40">{candidate.acquisition_error}</div>}
                 {candidate.exclusion_reason && <div className="mt-3 text-[9px] leading-4 text-white/22">Excluded: {candidate.exclusion_reason}</div>}
 
@@ -334,7 +398,37 @@ export function SnakeSorterAcquisitionQueue({
                   <a href={candidate.source_url} target="_blank" rel="noreferrer" className={button}>Open source</a>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"approved")} className="rounded-xl border border-emerald-300/12 bg-emerald-300/[.025] px-3 py-2 text-[9px] font-black text-emerald-100/50 disabled:opacity-35">Approve candidate</button>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
-                  <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"rejected")} className="rounded-xl border border-rose-300/12 bg-rose-300/[.025] px-3 py-2 text-[9px] font-black text-rose-100/45 disabled:opacity-35">Reject</button>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={rejectReasonById[candidate.id] ?? ""}
+                    onChange={(event) => setRejectReasonById((current) => ({ ...current, [candidate.id]: event.target.value }))}
+                    className={select}
+                    aria-label="Rejection reason"
+                  >
+                    <option value="">Reject reason…</option>
+                    <option value="designer">Designer</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="mixed locality">Mixed locality</option>
+                    <option value="unknown locality">Unknown locality</option>
+                    <option value="conflicting lineage">Conflicting lineage</option>
+                    <option value="wrong life stage">Wrong life stage</option>
+                    <option value="wrong color phase">Wrong color phase</option>
+                    <option value="group listing">Group listing</option>
+                    <option value="not actual animal photo">Not actual animal photo</option>
+                    <option value="media unusable">Media unusable</option>
+                    <option value="duplicate animal">Duplicate animal</option>
+                    <option value="insufficient information">Insufficient information</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={busy === candidate.id || !(rejectReasonById[candidate.id] ?? "")}
+                    onClick={() => void review(candidate.id, "rejected", rejectReasonById[candidate.id])}
+                    className="rounded-xl border border-rose-300/12 bg-rose-300/[.025] px-3 py-2 text-[9px] font-black text-rose-100/45 disabled:opacity-25"
+                  >
+                    Reject with reason
+                  </button>
                 </div>
                 {canPromote && candidate.review_status === "approved" && candidate.rights_status === "open_license" && candidate.staged_storage_path && !candidate.promoted_reference_animal_id && (
                   <form onSubmit={(event) => { event.preventDefault(); void promote(candidate, new FormData(event.currentTarget)); }} className="mt-4 rounded-2xl border border-sky-300/10 bg-sky-300/[.02] p-3">
