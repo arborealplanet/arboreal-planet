@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SnakeReferenceAnimal, SnakeReferenceMedia } from "@/components/SnakeSorterReferenceManager";
 
 type Need = {
@@ -8,7 +8,18 @@ type Need = {
   bucket: "red neonate" | "yellow neonate" | "juvenile/subadult" | "adult";
   animals: number;
   images: number;
+  candidates: number;
   priority: number;
+};
+
+type AcquisitionCandidate = {
+  id: string;
+  provisional_locality?: string | null;
+  locality_raw?: string | null;
+  life_stage_hint?: string | null;
+  neonate_color_hint?: string | null;
+  review_status?: string | null;
+  exclusion_reason?: string | null;
 };
 
 const localityRules: Array<{
@@ -43,6 +54,19 @@ export function SnakeSorterDatasetDiagnostics({
   animals: SnakeReferenceAnimal[];
   media: SnakeReferenceMedia[];
 }) {
+  const [candidates, setCandidates] = useState<AcquisitionCandidate[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/snake-sorter/acquisition", { cache: "no-store" })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!cancelled && data) setCandidates(data.candidates ?? []);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
   const diagnostics = useMemo(() => {
     const mediaCount = new Map<string, number>();
     for (const item of media) {
@@ -59,16 +83,37 @@ export function SnakeSorterDatasetDiagnostics({
     );
 
     const needs: Need[] = [];
+    const usableCandidates = candidates.filter((candidate) =>
+      !candidate.exclusion_reason &&
+      ["pending", "approved", "permission_required"].includes(candidate.review_status ?? "pending")
+    );
 
     for (const rule of localityRules) {
       const local = approved.filter((animal) => canonical(animal.locality) === canonical(rule.locality));
+      const localCandidates = usableCandidates.filter((candidate) =>
+        canonical(candidate.provisional_locality || candidate.locality_raw) === canonical(rule.locality)
+      );
+
+      const candidateBucketCount = (bucket: Need["bucket"]) => localCandidates.filter((candidate) => {
+        const stage = candidate.life_stage_hint ?? "unknown";
+        const color = candidate.neonate_color_hint ?? "unknown";
+        if (bucket === "red neonate") return ["hatchling", "neonate"].includes(stage) && color === "red";
+        if (bucket === "yellow neonate") return ["hatchling", "neonate"].includes(stage) && color === "yellow";
+        if (bucket === "juvenile/subadult") return ["juvenile", "subadult"].includes(stage);
+        return stage === "adult";
+      }).length;
 
       const addNeed = (bucket: Need["bucket"], matches: SnakeReferenceAnimal[]) => {
         const count = matches.length;
         const images = matches.reduce((sum, animal) => sum + (mediaCount.get(animal.id) ?? 0), 0);
-        // Animals matter more than extra photos. Zero-coverage buckets rise to the top.
-        const priority = count === 0 ? 1000 : Math.max(0, 300 - count * 60) + Math.max(0, 80 - images * 10);
-        needs.push({ locality: rule.locality, bucket, animals: count, images, priority });
+        const candidateCount = candidateBucketCount(bucket);
+        // Missing reference coverage is highest priority. Existing candidates reduce the acquisition urgency
+        // because the gap may be solved by review rather than searching for a new animal.
+        const priority =
+          (count === 0 ? 1000 : Math.max(0, 300 - count * 60)) +
+          Math.max(0, 80 - images * 10) -
+          Math.min(250, candidateCount * 50);
+        needs.push({ locality: rule.locality, bucket, animals: count, images, candidates: candidateCount, priority });
       };
 
       if (rule.redNeonate) {
@@ -133,8 +178,9 @@ export function SnakeSorterDatasetDiagnostics({
       imageTotal,
       multiImageAnimals,
       unassignedTrainReady,
+      usableCandidateCount: usableCandidates.length,
     };
-  }, [animals, media]);
+  }, [animals, media, candidates]);
 
   const coverageBuckets = diagnostics.needs.length;
   const filledBuckets = diagnostics.needs.filter((item) => item.animals > 0).length;
@@ -143,11 +189,12 @@ export function SnakeSorterDatasetDiagnostics({
 
   return (
     <div className="space-y-4">
-      <section className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-2 lg:grid-cols-6">
         {[
           ["Approved animals", diagnostics.approved.length],
           ["Training-ready", diagnostics.trainReady.length],
           ["Reference images", diagnostics.imageTotal],
+          ["Usable candidates", diagnostics.usableCandidateCount],
           ["Coverage", `${coveragePercent}%`],
           ["Zero-coverage buckets", zeroBuckets],
         ].map(([label, value]) => (
@@ -163,7 +210,7 @@ export function SnakeSorterDatasetDiagnostics({
           <div>
             <div className="text-[9px] font-black uppercase tracking-[.12em] text-amber-100/45">Priority acquisition needs</div>
             <div className="mt-1 text-xs leading-5 text-white/28">
-              Animals are counted first; extra photos help but do not substitute for independent individuals.
+              Animals are counted first; extra photos help but do not substitute for independent individuals. Existing candidates are shown separately so we can review what we already have before hunting for more.
             </div>
           </div>
           <div className="rounded-full border border-white/[.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.08em] text-white/28">
@@ -189,7 +236,10 @@ export function SnakeSorterDatasetDiagnostics({
                       {empty ? "Missing" : `${need.animals} animal${need.animals === 1 ? "" : "s"}`}
                     </span>
                   </div>
-                  <div className="mt-2 text-[9px] text-white/22">{need.images} associated image(s)</div>
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-white/22">
+                    <span>{need.images} associated image(s)</span>
+                    <span>{need.candidates} candidate(s) in review pool</span>
+                  </div>
                 </div>
               );
             })}
