@@ -20,7 +20,7 @@ export async function GET() {
   };
 
   const candidatesResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&select=id,review_status,exclusion_reason,provisional_locality,locality_raw,thumbnail_url`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&select=id,source_key,title,review_status,exclusion_reason,provisional_locality,locality_raw,thumbnail_url,neonate_color_hint,life_stage_hint,discovered_at`,
     { headers: h, cache: "no-store" },
   );
   if (!candidatesResponse.ok) {
@@ -34,6 +34,11 @@ export async function GET() {
     provisional_locality: string | null;
     locality_raw: string | null;
     thumbnail_url: string | null;
+    source_key: string;
+    title: string | null;
+    neonate_color_hint: string | null;
+    life_stage_hint: string | null;
+    discovered_at: string;
   }>;
 
   const ids = candidates.map((candidate) => candidate.id);
@@ -59,6 +64,32 @@ export async function GET() {
     localityCounts.set(locality, (localityCounts.get(locality) ?? 0) + 1);
   }
 
+  const priorityScore = (candidate: (typeof eligible)[number]) => {
+    const locality = candidate.provisional_locality || candidate.locality_raw || "Unknown";
+    const rarity = localityCounts.get(locality) ?? eligible.length;
+    let score = 0;
+    if (candidate.review_status === "approved") score += 1000;
+    if (candidate.neonate_color_hint === "red") score += 300;
+    if (candidate.life_stage_hint === "hatchling" || candidate.life_stage_hint === "neonate") score += 180;
+    if (locality !== "Unknown") score += 120;
+    score += Math.max(0, 100 - rarity);
+    return score;
+  };
+
+  const suggestedPriority = [...eligible]
+    .sort((a, b) => priorityScore(b) - priorityScore(a) || a.discovered_at.localeCompare(b.discovered_at))
+    .slice(0, 12)
+    .map((candidate) => ({
+      id: candidate.id,
+      source_key: candidate.source_key,
+      title: candidate.title,
+      locality: candidate.provisional_locality || candidate.locality_raw || "Unknown",
+      neonate_color_hint: candidate.neonate_color_hint,
+      life_stage_hint: candidate.life_stage_hint,
+      review_status: candidate.review_status,
+      priority_score: priorityScore(candidate),
+    }));
+
   return NextResponse.json({
     ok: true,
     live_collection_started: false,
@@ -68,6 +99,7 @@ export async function GET() {
     eligible_for_future_backfill: eligible.length,
     excluded_from_backfill: missing.length - eligible.length,
     candidates_with_preview_thumbnail: candidates.filter((candidate) => Boolean(candidate.thumbnail_url)).length,
+    suggested_priority: suggestedPriority,
     by_locality: [...localityCounts.entries()]
       .map(([locality, count]) => ({ locality, count }))
       .sort((a, b) => b.count - a.count || a.locality.localeCompare(b.locality)),
