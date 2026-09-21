@@ -118,19 +118,41 @@ export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () =>
   async function stageOpenMedia() {
     setBusy("stage");
     setMessage("");
-    const response = await fetch("/api/snake-sorter/acquisition/stage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ limit: 12 }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok) {
-      setMessage(`Open-license staging: ${data.staged ?? 0} staged, ${data.duplicates ?? 0} duplicates, ${data.errors ?? 0} errors.`);
+    let staged = 0;
+    let duplicates = 0;
+    let errors = 0;
+    let batches = 0;
+
+    try {
+      while (batches < 10) {
+        const response = await fetch("/api/snake-sorter/acquisition/stage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 20 }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setMessage(data.error ?? "Could not stage open-license media.");
+          return;
+        }
+
+        const batchStaged = Number(data.staged ?? 0);
+        const batchDuplicates = Number(data.duplicates ?? 0);
+        const batchErrors = Number(data.errors ?? 0);
+        staged += batchStaged;
+        duplicates += batchDuplicates;
+        errors += batchErrors;
+        batches += 1;
+
+        if (batchStaged + batchDuplicates === 0) break;
+        if (batchStaged + batchDuplicates + batchErrors < 20) break;
+      }
+
+      setMessage(`Open-license staging complete: ${staged} staged, ${duplicates} duplicates, ${errors} errors across ${batches} batch(es).`);
       await load();
-    } else {
-      setMessage(data.error ?? "Could not stage open-license media.");
+    } finally {
+      setBusy("");
     }
-    setBusy("");
   }
 
   async function harvestOpenSources() {
@@ -215,7 +237,7 @@ export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () =>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => void load()} className={button}>Refresh</button>
           <button type="button" disabled={Boolean(busy)} onClick={() => void harvestOpenSources()} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === "harvest" ? "Harvesting…" : "Harvest open sources"}</button>
-          <button type="button" disabled={Boolean(busy)} onClick={() => void stageOpenMedia()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[9px] font-black text-emerald-100/60 disabled:opacity-35">{busy === "stage" ? "Staging…" : "Stage open-license media"}</button>
+          <button type="button" disabled={Boolean(busy)} onClick={() => void stageOpenMedia()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[9px] font-black text-emerald-100/60 disabled:opacity-35">{busy === "stage" ? "Staging all…" : "Stage all open-license media"}</button>
         </div>
       </div>
 
