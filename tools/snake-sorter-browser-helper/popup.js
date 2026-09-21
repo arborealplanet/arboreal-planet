@@ -79,17 +79,19 @@ button.addEventListener("click", async () => {
 
     if (!result?.source_url) throw new Error("Could not read this listing.");
 
-    const response = await fetch("https://arboreal-planet.vercel.app/api/snake-sorter/acquisition/browser-import", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(result),
+    show(`Found ${result.image_urls.length} exposed image reference(s). Sending to Snake Sorter…`);
+
+    const data = await chrome.runtime.sendMessage({
+      type: "IMPORT_LISTING_TO_SNAKE_SORTER",
+      payload: result,
     });
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Snake Sorter rejected the import.");
+    if (!data?.ok) throw new Error(data?.error || "Snake Sorter rejected the import.");
 
-    show(`Attached ${data.attached ?? 0} live reference(s) to ${data.title || "the listing"}.`);
+    show(
+      `Attached ${data.attached ?? 0} live reference(s) to ${data.title || "the listing"}.\n\n` +
+      "The Snake Sorter tab has been opened so you can review them."
+    );
   } catch (error) {
     show(error instanceof Error ? error.message : "Import failed.");
   } finally {
