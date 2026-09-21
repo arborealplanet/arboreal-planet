@@ -6,7 +6,7 @@ export function GET() {
     name: "Snake Sorter",
     short_name: "Snake Sorter",
     description: "Private Green Tree Python visual identification and reference laboratory.",
-    start_url: "/snake-sorter",
+    start_url: "/snake-sorter?app=snake-sorter",
     scope: "/snake-sorter",
     display: "standalone",
     background_color: "#020705",
