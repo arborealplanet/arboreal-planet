@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { getSnakeSorterAccess, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const h = (token: string) => ({
   apikey: SUPABASE_AUTH_KEY,
@@ -7,12 +7,12 @@ const h = (token: string) => ({
   Accept: "application/json",
 });
 
-async function ownerIdentity() {
+async function sorterIdentity() {
   const identity = await getServerIdentity();
   if (!identity) return null;
-  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
-  if (profile?.role !== "owner") return null;
-  return identity;
+  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
+  if (!access.allowed) return null;
+  return { ...identity, access };
 }
 
 const taxa = new Set(["Morelia azurea azurea","Morelia azurea pulcher","Morelia azurea utaraensis","Morelia viridis","Unknown / review"]);
@@ -25,7 +25,7 @@ function clean(value: unknown, max = 2000) {
 }
 
 export async function POST(request: NextRequest) {
-  const identity = await ownerIdentity();
+  const identity = await sorterIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
@@ -74,19 +74,21 @@ export async function POST(request: NextRequest) {
 
   if (!response.ok) return NextResponse.json({ error: "Could not save scan feedback" }, { status: 400 });
 
-  await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
-    method: "PATCH",
-    headers: {
-      ...h(identity.token),
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      confirmed_by_owner: feedbackType === "confirmed" ? true : feedbackType === "corrected" ? false : null,
-      owner_feedback_notes: notes || null,
-    }),
-    cache: "no-store",
-  }).catch(() => undefined);
+  if (identity.access.isOwner) {
+    await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
+      method: "PATCH",
+      headers: {
+        ...h(identity.token),
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        confirmed_by_owner: feedbackType === "confirmed" ? true : feedbackType === "corrected" ? false : null,
+        owner_feedback_notes: notes || null,
+      }),
+      cache: "no-store",
+    }).catch(() => undefined);
+  }
 
   const rows = await response.json();
   return NextResponse.json({ ok: true, feedback: rows[0] ?? null });
