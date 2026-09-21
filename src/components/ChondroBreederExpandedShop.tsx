@@ -389,13 +389,14 @@ function makeStarterSave(): GameSave {
 }
 
 async function persistStandaloneShopSave(save: GameSave, authenticated: boolean) {
-  window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(save));
+  const persisted = { ...save, updatedAt: Date.now() };
+  window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(persisted));
   window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
   if (!authenticated) return;
   const response = await fetch("/api/hatchery/chondro-breeder/save", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(save),
+    body: JSON.stringify(persisted),
   });
   if (!response.ok) throw new Error("save failed");
 }
@@ -541,7 +542,6 @@ export function ChondroBreederExpandedShop() {
         ...save.enclosures,
         [type]: Number(save.enclosures?.[type] ?? 0) + 1,
       },
-      updatedAt: Date.now(),
     };
     setBusy(`enclosure:${type}`);
     setStatus(`Buying ${type}…`);
@@ -567,7 +567,7 @@ export function ChondroBreederExpandedShop() {
       purchasedStoreIds: [...(save.purchasedStoreIds ?? []), offer.id],
     };
     try {
-      await persistStandaloneShopSave({ ...next, updatedAt: Date.now() }, authenticated);
+      await persistStandaloneShopSave(next, authenticated);
       setSave(next);
       setStatus(`${offer.name} purchased. Updating your colony…`);
       window.setTimeout(() => window.location.reload(), 250);
