@@ -147,7 +147,11 @@ export function SnakeSorterReferenceManager({
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessage("Reference animal saved.");
+      setMessage(
+        data.training_downgraded
+          ? "Reference animal saved. Training eligibility was withheld because the record does not yet pass the quality gate."
+          : "Reference animal saved."
+      );
       await Promise.all([openAnimal(detail.animal.id), onRefresh()]);
     } else setMessage(data.error ?? "Could not save reference animal.");
     setSaving(false);
@@ -271,7 +275,7 @@ export function SnakeSorterReferenceManager({
             <option value="all">All ancestry states</option><option value="known_pure">Known pure</option><option value="believed_pure">Believed pure</option><option value="possible_mixed">Possible mixed</option><option value="hybrid">Hybrid</option><option value="unknown">Unknown</option>
           </select>
           <select value={rights} onChange={(e) => setRights(e.target.value)} className={field}>
-            <option value="all">All rights states</option><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown rights</option>
+            <option value="all">All rights states</option><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="open_license">Open license</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown rights</option>
           </select>
           <select value={training} onChange={(e) => setTraining(e.target.value)} className={field}>
             <option value="all">All training states</option><option value="eligible">Training eligible</option><option value="excluded">Reference only / excluded</option>
@@ -393,10 +397,10 @@ export function SnakeSorterReferenceManager({
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Dataset split<select name="dataset_split" defaultValue={detail.animal.dataset_split ?? "unassigned"} className={`${field} mt-2`}><option value="unassigned">Unassigned</option><option value="train">Train</option><option value="validation">Validation</option><option value="test">Test</option></select></label>
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights / use status<select name="rights_status" defaultValue={detail.animal.rights_status ?? "unknown"} className={`${field} mt-2`}><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown / not reviewed</option></select></label>
+                <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights / use status<select name="rights_status" defaultValue={detail.animal.rights_status ?? "unknown"} className={`${field} mt-2`}><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="open_license">Open license</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown / not reviewed</option></select></label>
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights notes<input name="rights_notes" defaultValue={detail.animal.rights_notes ?? ""} className={`${field} mt-2 normal-case tracking-normal`} /></label>
               </div>
-              <label className="mt-3 flex items-center gap-3 rounded-xl border border-white/[.05] p-3 text-xs text-white/40"><input name="training_eligible" value="true" type="checkbox" defaultChecked={detail.animal.training_eligible} className="h-4 w-4 accent-emerald-300" />Candidate for future model training/validation</label>
+              <label className="mt-3 flex items-start gap-3 rounded-xl border border-white/[.05] p-3 text-xs text-white/40"><input name="training_eligible" value="true" type="checkbox" defaultChecked={detail.animal.training_eligible} className="mt-0.5 h-4 w-4 accent-emerald-300" /><span><span className="block">Candidate for future model training/validation</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Requires approved review, cleared rights, strong/confirmed labels, a locality, known/believed-pure ancestry, and non-challenge status.</span></span></label>
               <label className="mt-3 flex items-start gap-3 rounded-xl border border-amber-300/10 bg-amber-300/[.02] p-3 text-xs text-white/40"><input name="challenge_eligible" value="true" type="checkbox" defaultChecked={Boolean(detail.animal.challenge_eligible)} className="mt-0.5 h-4 w-4 accent-amber-300" /><span><span className="block text-amber-50/55">Challenge / OOD example</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Held out of clean classifier supervision; useful for rejection and difficult-case evaluation.</span></span></label>
               <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Challenge expectation<select name="challenge_expectation" defaultValue={detail.animal.challenge_expectation ?? "review"} className={`${field} mt-2`}><option value="reject">Reject / Unknown</option><option value="classify">Classify trusted hard case</option><option value="review">Review only / diagnostic</option></select></label>
               <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Review notes<textarea name="review_notes" defaultValue={detail.animal.review_notes ?? ""} className={`${field} mt-2 min-h-20 resize-y normal-case tracking-normal`} placeholder="Why approved, held or rejected; label concerns; provenance issues…" /></label>
