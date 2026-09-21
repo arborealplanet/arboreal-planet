@@ -45,14 +45,26 @@ export async function GET() {
   let mediaRows: Array<{ candidate_id: string }> = [];
   if (ids.length) {
     const response = await fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=in.(${ids.map(encodeURIComponent).join(",")})&select=candidate_id`,
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=in.(${ids.map(encodeURIComponent).join(",")})&select=candidate_id,source_media_url,staged_storage_path,live_reference_status`,
       { headers: h, cache: "no-store" },
     );
     if (response.ok) mediaRows = await response.json() as Array<{ candidate_id: string }>;
   }
 
-  const withMedia = new Set(mediaRows.map((row) => row.candidate_id));
-  const missing = candidates.filter((candidate) => !withMedia.has(candidate.id));
+  const usableMedia = new Set<string>();
+  for (const row of mediaRows as Array<{
+    candidate_id: string;
+    source_media_url?: string | null;
+    staged_storage_path?: string | null;
+    live_reference_status?: string | null;
+  }>) {
+    const staged = Boolean(row.staged_storage_path);
+    const liveUsable =
+      Boolean(row.source_media_url) &&
+      !["unavailable","blocked","expired"].includes(String(row.live_reference_status ?? "unknown"));
+    if (staged || liveUsable) usableMedia.add(row.candidate_id);
+  }
+  const missing = candidates.filter((candidate) => !usableMedia.has(candidate.id));
   const eligible = missing.filter((candidate) =>
     !candidate.exclusion_reason &&
     ["pending","approved"].includes(candidate.review_status),
