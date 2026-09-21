@@ -20,9 +20,14 @@ export async function PATCH(request: NextRequest) {
   const candidateId = String(body.candidate_id ?? "").trim();
   const rightsReviewStatus = String(body.rights_review_status ?? "").trim();
   const mediaRightsStatus = String(body.media_rights_status ?? "").trim();
+  const rightsNote = String(body.rights_note ?? "").trim().slice(0, 2000);
 
   if (!candidateId || !reviewStatuses.has(rightsReviewStatus) || !mediaRights.has(mediaRightsStatus)) {
     return NextResponse.json({ error: "Invalid rights review update." }, { status: 400 });
+  }
+
+  if (mediaRightsStatus === "permission_granted" && rightsNote.length < 8) {
+    return NextResponse.json({ error: "Add a short note describing the permission or rights basis before clearing these images." }, { status: 400 });
   }
 
   const h = {
@@ -39,6 +44,7 @@ export async function PATCH(request: NextRequest) {
       headers: { ...h, Prefer: "return=minimal" },
       body: JSON.stringify({
         rights_review_status: rightsReviewStatus,
+        rights_review_note: rightsNote || null,
         acquisition_stage: rightsReviewStatus === "cleared" ? "rights_cleared" : "biologically_approved",
       }),
       cache: "no-store",
