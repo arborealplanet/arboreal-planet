@@ -499,6 +499,24 @@ export function SnakeSorterWorkspace() {
               <input name="source_url" type="url" className={`${field} mt-2`} placeholder="Optional source link" />
             </label>
 
+            <div className="sm:col-span-2 rounded-2xl border border-sky-300/10 bg-sky-300/[.02] p-4">
+              <div className="text-[9px] font-black uppercase tracking-[.12em] text-sky-100/42">Provenance & lineage</div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className={label}>Breeder<input name="breeder_name" className={`${field} mt-2`} placeholder="Optional breeder name" /></label>
+                <label className={label}>Clutch ID<input name="clutch_id" className={`${field} mt-2`} placeholder="Optional clutch / sibling ID" /></label>
+                <label className={label}>Sire<input name="sire_name" className={`${field} mt-2`} placeholder="Optional sire identifier" /></label>
+                <label className={label}>Dam<input name="dam_name" className={`${field} mt-2`} placeholder="Optional dam identifier" /></label>
+                <label className={label}>Hatch date<input name="hatch_date" type="date" className={`${field} mt-2`} /></label>
+                <label className={label}>Hatch year<input name="hatch_year" type="number" min="1900" max="2100" className={`${field} mt-2`} placeholder="YYYY" /></label>
+                <label className={label}>Sex<select name="sex" defaultValue="unknown" className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="male">Male</option><option value="female">Female</option></select></label>
+                <label className={label}>Origin<select name="origin_status" defaultValue="unknown" className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="captive_bred">Captive bred</option><option value="wild_caught">Wild caught</option><option value="import">Import</option></select></label>
+                <label className={label}>Locality evidence<select name="locality_evidence" defaultValue="unknown" className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="owner_known">Owner known</option><option value="breeder_documented">Breeder documented</option><option value="seller_listed">Seller listed</option><option value="import_claim">Import claim</option><option value="field_record">Field record</option><option value="publication">Publication</option><option value="museum_record">Museum record</option><option value="inferred">Inferred</option></select></label>
+                <label className={label}>Provenance confidence<select name="provenance_confidence" defaultValue="unknown" className={`${field} mt-2`}><option value="unknown">Unknown</option><option value="confirmed">Confirmed</option><option value="strong">Strong</option><option value="provisional">Provisional</option><option value="uncertain">Uncertain</option></select></label>
+              </div>
+              <label className={`${label} mt-3`}>Original locality / breeder claim<textarea name="provenance_claim" className={`${field} mt-2 min-h-20 resize-y leading-6`} placeholder="Record exactly what the breeder, seller, field record, or publication claimed." /></label>
+              <label className={`${label} mt-3`}>Exclusion reason<input name="exclusion_reason" className={`${field} mt-2`} placeholder="Optional: hybrid, uncertain lineage, edited photo, poor provenance…" /></label>
+            </div>
+
             <label className={label}>Rights / use status
               <select name="rights_status" className={`${field} mt-2`} defaultValue="unknown">
                 <option value="owned_by_owner">Owned by me</option>
@@ -514,7 +532,7 @@ export function SnakeSorterWorkspace() {
 
             <label className={`${label} sm:col-span-2`}>Reference images
               <input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple className={`${field} mt-2 file:mr-3 file:rounded-xl file:border-0 file:bg-emerald-300 file:px-3 file:py-2 file:text-xs file:font-black file:text-[#06100c]`} />
-              <span className="mt-2 block text-[10px] normal-case tracking-normal text-white/22">Up to 12 JPG, PNG or WebP images per intake; 15 MB each.</span>
+              <span className="mt-2 block text-[10px] normal-case tracking-normal text-white/22">One clear image is enough to add an animal. Add more views later when available. Up to 12 JPG, PNG or WebP images per intake; 15 MB each.</span>
             </label>
 
             <label className={`${label} sm:col-span-2`}>Notes
