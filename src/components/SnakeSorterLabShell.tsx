@@ -60,6 +60,7 @@ export function SnakeSorterLabShell({
   accessLevel: AccessLevel;
 }) {
   const canReview = isOwner || accessLevel === "reviewer";
+  const canInstall = isOwner || accessLevel === "reviewer" || accessLevel === "scanner";
   const [view, setView] = useState<View>("home");
   const [animals, setAnimals] = useState<SnakeReferenceAnimal[]>([]);
   const [media, setMedia] = useState<SnakeReferenceMedia[]>([]);
@@ -126,7 +127,7 @@ export function SnakeSorterLabShell({
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <SnakeSorterInstallButton />
+            {canInstall && <SnakeSorterInstallButton />}
             {canReview && candidateStats.pending > 0 && (
               <button
                 type="button"
