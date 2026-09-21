@@ -534,6 +534,74 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int, i
             await browser.close()
 
 
+async def self_test() -> int:
+    html = """
+    <!doctype html>
+    <html>
+      <head>
+        <meta property="og:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700'%3E%3Crect width='900' height='700' fill='green'/%3E%3C/svg%3E">
+      </head>
+      <body style="margin:0;background:#111">
+        <main>
+          <section id="listing-gallery" style="width:900px;height:760px;position:relative">
+            <img id="main-image"
+              alt="Green tree python listing photo"
+              style="display:block;width:900px;height:700px;object-fit:cover"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700'%3E%3Crect width='900' height='700' fill='green'/%3E%3C/svg%3E">
+            <button aria-label="Next image" onclick="document.getElementById('main-image').src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22700%22%3E%3Crect width=%22900%22 height=%22700%22 fill=%22blue%22/%3E%3C/svg%3E'">Next</button>
+          </section>
+          <section id="related">
+            <img alt="Related listing" style="display:block;width:700px;height:600px"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='600'%3E%3Crect width='700' height='600' fill='red'/%3E%3C/svg%3E">
+          </section>
+        </main>
+      </body>
+    </html>
+    """
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True, args=["--disable-dev-shm-usage", "--no-sandbox"])
+        context = await browser.new_context(viewport={"width": 1200, "height": 1000})
+        page = await context.new_page()
+        try:
+            await page.set_content(html, wait_until="load")
+            root = await gallery_root(page)
+            if root is None:
+                raise RuntimeError("Self-test failed: gallery root not detected.")
+
+            seen: set[str] = set()
+            first = await capture_unique_gallery_images(page, root, seen)
+            if len(first) != 1:
+                raise RuntimeError(f"Self-test failed: expected one dominant first image, got {len(first)}.")
+
+            clicked = await click_next_gallery(page, root)
+            if not clicked:
+                raise RuntimeError("Self-test failed: gallery next control was not clicked.")
+
+            second = await capture_unique_gallery_images(page, root, seen)
+            if len(second) != 1:
+                raise RuntimeError(f"Self-test failed: expected one new second image, got {len(second)}.")
+
+            if hashlib.sha256(first[0]).hexdigest() == hashlib.sha256(second[0]).hexdigest():
+                raise RuntimeError("Self-test failed: gallery state did not change.")
+
+            related = page.locator("#related img")
+            related_box = await related.bounding_box()
+            if not related_box:
+                raise RuntimeError("Self-test failed: related listing fixture missing.")
+
+            print(json.dumps({
+                "ok": True,
+                "gallery_scoped": True,
+                "dominant_image_only": True,
+                "gallery_states_verified": 2,
+            }))
+            return 0
+        finally:
+            await context.close()
+            await browser.close()
+
+
 async def run(limit: int, headless: bool = True) -> int:
     require_env()
     recovered = recover_stale_jobs()
@@ -580,7 +648,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=1)
     parser.add_argument("--headed", action="store_true")
+    parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
+    if args.self_test:
+        return asyncio.run(self_test())
     return asyncio.run(run(max(1, min(args.limit, 5)), headless=not args.headed))
 
 
