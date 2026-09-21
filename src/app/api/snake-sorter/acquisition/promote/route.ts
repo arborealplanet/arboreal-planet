@@ -28,6 +28,20 @@ function safeFileName(name: string) {
   return cleaned || "candidate-image";
 }
 
+type AcquisitionMedia = {
+  id: string;
+  staged_storage_path: string | null;
+  staged_content_sha256: string | null;
+  staged_mime_type: string | null;
+  staged_bytes: number | null;
+  view_type: string | null;
+  review_status: string;
+  quality_status: string;
+  rights_status: string;
+  media_order: number;
+  source_media_url: string | null;
+};
+
 export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -40,7 +54,7 @@ export async function POST(request: NextRequest) {
   const neonateColor = clean(body.neonate_color, 30);
   const labelConfidence = clean(body.label_confidence, 30);
   const purityStatus = clean(body.purity_status, 30);
-  const viewType = clean(body.view_type, 30) || "unknown";
+  const fallbackViewType = clean(body.view_type, 30) || "unknown";
   const animalCode = clean(body.animal_code, 100);
   const splitGroup = clean(body.split_group, 160);
   const trainingEligible = body.training_eligible === true;
@@ -55,7 +69,7 @@ export async function POST(request: NextRequest) {
   const allowedViews = new Set(["unknown","full_body","head","dorsal","left_lateral","right_lateral","tail","other"]);
   const allowedChallenge = new Set(["reject","classify","review"]);
 
-  if (!candidateId || !allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedViews.has(viewType) || !allowedChallenge.has(challengeExpectation)) {
+  if (!candidateId || !allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedViews.has(fallbackViewType) || !allowedChallenge.has(challengeExpectation)) {
     return NextResponse.json({ error: "Invalid promotion metadata." }, { status: 400 });
   }
 
@@ -71,39 +85,85 @@ export async function POST(request: NextRequest) {
   if (!candidate) return NextResponse.json({ error: "Candidate not found." }, { status: 404 });
 
   if (candidate.review_status !== "approved") {
-    return NextResponse.json({ error: "Approve the candidate before promotion." }, { status: 409 });
-  }
-  if (candidate.rights_status !== "open_license") {
-    return NextResponse.json({ error: "Only staged open-license candidates can use automatic promotion." }, { status: 409 });
+    return NextResponse.json({ error: "Approve the animal candidate before promotion." }, { status: 409 });
   }
   if (candidate.promoted_reference_animal_id) {
     return NextResponse.json({ error: "Candidate has already been promoted.", animal_id: candidate.promoted_reference_animal_id }, { status: 409 });
   }
 
-  const stagedPath = String(candidate.staged_storage_path ?? "");
-  const sha256 = String(candidate.staged_content_sha256 ?? "");
-  const mime = String(candidate.staged_mime_type ?? "");
-  const stagedBytes = Number(candidate.staged_bytes ?? 0);
-
-  if (!stagedPath || !/^[a-f0-9]{64}$/.test(sha256) || !["image/jpeg","image/png","image/webp"].includes(mime)) {
-    return NextResponse.json({ error: "Stage the open-license media before promotion." }, { status: 409 });
-  }
-  if (!Number.isFinite(stagedBytes) || stagedBytes <= 0 || stagedBytes > 15 * 1024 * 1024) {
-    return NextResponse.json({ error: "Staged media must be 15 MB or smaller before reference promotion." }, { status: 413 });
-  }
-
-  const duplicateResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?content_sha256=eq.${encodeURIComponent(sha256)}&select=id,animal_id&limit=1`,
+  const mediaResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=eq.${encodeURIComponent(candidateId)}&select=*&order=media_order.asc`,
     { headers: h, cache: "no-store" },
   );
-  const duplicateRows = duplicateResponse.ok
-    ? await duplicateResponse.json() as Array<{ id: string; animal_id: string }>
-    : [];
-  if (duplicateRows.length) {
+  const childMedia = mediaResponse.ok ? await mediaResponse.json() as AcquisitionMedia[] : [];
+
+  let promotableMedia = childMedia.filter((media) =>
+    media.review_status === "accepted" &&
+    media.quality_status === "accepted" &&
+    Boolean(media.staged_storage_path) &&
+    ["open_license","permission_granted"].includes(media.rights_status)
+  );
+
+  if (!promotableMedia.length) {
+    const stagedPath = String(candidate.staged_storage_path ?? "");
+    const sha256 = String(candidate.staged_content_sha256 ?? "");
+    const mime = String(candidate.staged_mime_type ?? "");
+    const stagedBytes = Number(candidate.staged_bytes ?? 0);
+    if (
+      candidate.rights_status === "open_license" &&
+      stagedPath &&
+      /^[a-f0-9]{64}$/.test(sha256) &&
+      ["image/jpeg","image/png","image/webp"].includes(mime) &&
+      Number.isFinite(stagedBytes) &&
+      stagedBytes > 0 &&
+      stagedBytes <= 15 * 1024 * 1024
+    ) {
+      promotableMedia = [{
+        id: "legacy",
+        staged_storage_path: stagedPath,
+        staged_content_sha256: sha256,
+        staged_mime_type: mime,
+        staged_bytes: stagedBytes,
+        view_type: fallbackViewType,
+        review_status: "accepted",
+        quality_status: "accepted",
+        rights_status: "open_license",
+        media_order: 0,
+        source_media_url: String(candidate.media_url ?? candidate.thumbnail_url ?? "") || null,
+      }];
+    }
+  }
+
+  if (!promotableMedia.length) {
     return NextResponse.json({
-      error: "This exact image already exists in the reference library.",
-      existing_animal_id: duplicateRows[0].animal_id,
+      error: "No approved, staged images with cleared rights are ready for reference promotion.",
     }, { status: 409 });
+  }
+
+  for (const media of promotableMedia) {
+    const sha = String(media.staged_content_sha256 ?? "");
+    const mime = String(media.staged_mime_type ?? "");
+    const bytes = Number(media.staged_bytes ?? 0);
+    if (!media.staged_storage_path || !/^[a-f0-9]{64}$/.test(sha) || !["image/jpeg","image/png","image/webp"].includes(mime) || !Number.isFinite(bytes) || bytes <= 0 || bytes > 15 * 1024 * 1024) {
+      return NextResponse.json({ error: "One or more approved candidate images are not valid staged media." }, { status: 409 });
+    }
+  }
+
+  const hashes = promotableMedia.map((media) => media.staged_content_sha256).filter(Boolean) as string[];
+  if (hashes.length) {
+    const duplicateResponse = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?content_sha256=in.(${hashes.map(encodeURIComponent).join(",")})&select=id,animal_id,content_sha256`,
+      { headers: h, cache: "no-store" },
+    );
+    const duplicateRows = duplicateResponse.ok
+      ? await duplicateResponse.json() as Array<{ id: string; animal_id: string; content_sha256: string }>
+      : [];
+    if (duplicateRows.length) {
+      return NextResponse.json({
+        error: "At least one selected image already exists in the reference library.",
+        existing_animal_id: duplicateRows[0].animal_id,
+      }, { status: 409 });
+    }
   }
 
   const license = clean(candidate.license, 300);
@@ -111,10 +171,12 @@ export async function POST(request: NextRequest) {
   const sourceUrl = clean(candidate.source_url, 1000);
   const sourceName = clean(candidate.photographer || candidate.seller_or_observer || candidate.source_type, 160);
   const title = clean(candidate.title, 255);
+  const sourceType = candidate.source_type === "morphmarket" ? "listing" : "other";
   const rightsNotes = [
-    license ? `Open license: ${license}` : "Open-license acquisition candidate",
+    license ? `License: ${license}` : "",
     attribution ? `Attribution: ${attribution}` : "",
     sourceUrl ? `Source: ${sourceUrl}` : "",
+    `Promoted image count: ${promotableMedia.length}`,
   ].filter(Boolean).join("\n");
 
   const animalResponse = await fetch(
@@ -136,7 +198,7 @@ export async function POST(request: NextRequest) {
         neonate_color: neonateColor,
         label_confidence: labelConfidence,
         purity_status: purityStatus,
-        source_type: "other",
+        source_type: sourceType,
         source_name: sourceName || null,
         source_url: sourceUrl || null,
         notes: title ? `Promoted from acquisition candidate: ${title}` : "Promoted from acquisition candidate.",
@@ -159,65 +221,78 @@ export async function POST(request: NextRequest) {
   const animalId = animalRows[0]?.id;
   if (!animalId) return NextResponse.json({ error: "Reference animal was not returned." }, { status: 500 });
 
-  let referencePath = "";
+  const createdReferencePaths: string[] = [];
   try {
-    const stagedObject = await fetch(
-      `${SUPABASE_AUTH_URL}/storage/v1/object/authenticated/snake-sorter-acquisition/${storagePath(stagedPath)}`,
-      {
-        headers: {
-          apikey: SUPABASE_AUTH_KEY,
-          Authorization: `Bearer ${identity.token}`,
-        },
-        cache: "no-store",
-      },
-    );
+    let promotedCount = 0;
 
-    if (!stagedObject.ok) throw new Error("Could not read staged acquisition media.");
-    const bytes = Buffer.from(await stagedObject.arrayBuffer());
-    if (bytes.length !== stagedBytes) throw new Error("Staged media size changed before promotion.");
+    for (const [index, media] of promotableMedia.entries()) {
+      const stagedPath = media.staged_storage_path!;
+      const mime = media.staged_mime_type!;
+      const sha256 = media.staged_content_sha256!;
+      const stagedBytes = Number(media.staged_bytes);
 
-    referencePath = `${animalId}/${crypto.randomUUID()}-${safeFileName(title || stagedPath.split("/").pop() || "candidate-image")}`;
-    const upload = await fetch(
-      `${SUPABASE_AUTH_URL}/storage/v1/object/snake-sorter-reference/${referencePath}`,
-      {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_AUTH_KEY,
-          Authorization: `Bearer ${identity.token}`,
-          "Content-Type": mime,
-          "x-upsert": "false",
+      const stagedObject = await fetch(
+        `${SUPABASE_AUTH_URL}/storage/v1/object/authenticated/snake-sorter-acquisition/${storagePath(stagedPath)}`,
+        {
+          headers: {
+            apikey: SUPABASE_AUTH_KEY,
+            Authorization: `Bearer ${identity.token}`,
+          },
+          cache: "no-store",
         },
-        body: bytes,
-        cache: "no-store",
-      },
-    );
-    if (!upload.ok) throw new Error("Could not copy staged media into the reference bucket.");
+      );
+      if (!stagedObject.ok) throw new Error("Could not read an approved acquisition image.");
 
-    const mediaResponse = await fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media`,
-      {
-        method: "POST",
-        headers: {
-          ...h,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
+      const bytes = Buffer.from(await stagedObject.arrayBuffer());
+      if (bytes.length !== stagedBytes) throw new Error("An acquisition image changed before promotion.");
+
+      const sourceNameForFile = stagedPath.split("/").pop() || `candidate-image-${index + 1}`;
+      const referencePath = `${animalId}/${String(index).padStart(2,"0")}-${crypto.randomUUID()}-${safeFileName(sourceNameForFile)}`;
+      const upload = await fetch(
+        `${SUPABASE_AUTH_URL}/storage/v1/object/snake-sorter-reference/${referencePath}`,
+        {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_AUTH_KEY,
+            Authorization: `Bearer ${identity.token}`,
+            "Content-Type": mime,
+            "x-upsert": "false",
+          },
+          body: bytes,
+          cache: "no-store",
         },
-        body: JSON.stringify({
-          animal_id: animalId,
-          created_by: identity.user.id,
-          storage_path: referencePath,
-          original_name: title || "acquisition-candidate-image",
-          mime_type: mime,
-          content_sha256: sha256,
-          file_size_bytes: stagedBytes,
-          view_type: viewType,
-          quality_status: "accepted",
-          is_primary: true,
-        }),
-        cache: "no-store",
-      },
-    );
-    if (!mediaResponse.ok) throw new Error("Could not create reference-media record.");
+      );
+      if (!upload.ok) throw new Error("Could not copy an approved image into the reference bucket.");
+      createdReferencePaths.push(referencePath);
+
+      const referenceMediaResponse = await fetch(
+        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media`,
+        {
+          method: "POST",
+          headers: {
+            ...h,
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify({
+            animal_id: animalId,
+            created_by: identity.user.id,
+            storage_path: referencePath,
+            original_name: sourceNameForFile,
+            mime_type: mime,
+            content_sha256: sha256,
+            file_size_bytes: stagedBytes,
+            view_type: allowedViews.has(media.view_type || "") ? media.view_type : fallbackViewType,
+            quality_status: "accepted",
+            is_primary: index === 0,
+            notes: media.source_media_url ? `Acquisition source image: ${media.source_media_url}` : null,
+          }),
+          cache: "no-store",
+        },
+      );
+      if (!referenceMediaResponse.ok) throw new Error("Could not create a reference-media record.");
+      promotedCount += 1;
+    }
 
     const candidateUpdate = await fetch(
       `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(candidateId)}`,
@@ -231,15 +306,16 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           promoted_reference_animal_id: animalId,
           promoted_at: new Date().toISOString(),
+          acquisition_stage: "reference_promoted",
         }),
         cache: "no-store",
       },
     );
     if (!candidateUpdate.ok) throw new Error("Reference was created but candidate promotion tracking failed.");
 
-    return NextResponse.json({ ok: true, animal_id: animalId }, { status: 201 });
+    return NextResponse.json({ ok: true, animal_id: animalId, promoted_media: promotedCount }, { status: 201 });
   } catch (error) {
-    if (referencePath) {
+    for (const referencePath of createdReferencePaths) {
       await fetch(
         `${SUPABASE_AUTH_URL}/storage/v1/object/snake-sorter-reference/${storagePath(referencePath)}`,
         {
@@ -249,6 +325,7 @@ export async function POST(request: NextRequest) {
         },
       ).catch(() => undefined);
     }
+
     await fetch(
       `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?id=eq.${encodeURIComponent(animalId)}`,
       { method: "DELETE", headers: { ...h, Prefer: "return=minimal" }, cache: "no-store" },
