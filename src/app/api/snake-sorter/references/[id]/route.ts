@@ -29,6 +29,10 @@ const reviews = new Set(["pending","approved","hold","rejected"]);
 const splits = new Set(["unassigned","train","validation","test"]);
 const rights = new Set(["owned_by_owner","permission_granted","private_reference_only","unknown"]);
 const challengeExpectations = new Set(["reject","classify","review"]);
+const sexes = new Set(["male","female","unknown"]);
+const origins = new Set(["captive_bred","wild_caught","import","unknown"]);
+const localityEvidenceValues = new Set(["owner_known","breeder_documented","seller_listed","import_claim","field_record","publication","museum_record","inferred","unknown"]);
+const provenanceConfidenceValues = new Set(["confirmed","strong","provisional","uncertain","unknown"]);
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const identity = await ownerIdentity();
@@ -62,8 +66,14 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const datasetSplit = clean(body.dataset_split, 30);
   const rightsStatus = clean(body.rights_status, 40) || "unknown";
   const challengeExpectation = clean(body.challenge_expectation, 20) || "review";
+  const sex = clean(body.sex, 20) || "unknown";
+  const originStatus = clean(body.origin_status, 30) || "unknown";
+  const localityEvidence = clean(body.locality_evidence, 40) || "unknown";
+  const provenanceConfidence = clean(body.provenance_confidence, 30) || "unknown";
+  const hatchDate = clean(body.hatch_date, 20);
+  const hatchYearRaw = clean(body.hatch_year, 4);
 
-  if (!taxa.has(taxon) || !stages.has(lifeStage) || !colors.has(neonateColor) || !confidences.has(labelConfidence) || !purities.has(purityStatus) || !sources.has(sourceType) || !reviews.has(reviewStatus) || !splits.has(datasetSplit) || !rights.has(rightsStatus) || !challengeExpectations.has(challengeExpectation)) {
+  if (!taxa.has(taxon) || !stages.has(lifeStage) || !colors.has(neonateColor) || !confidences.has(labelConfidence) || !purities.has(purityStatus) || !sources.has(sourceType) || !reviews.has(reviewStatus) || !splits.has(datasetSplit) || !rights.has(rightsStatus) || !challengeExpectations.has(challengeExpectation) || !sexes.has(sex) || !origins.has(originStatus) || !localityEvidenceValues.has(localityEvidence) || !provenanceConfidenceValues.has(provenanceConfidence)) {
     return NextResponse.json({ error: "Invalid reference metadata" }, { status: 400 });
   }
 
@@ -88,6 +98,18 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     challenge_expectation: challengeExpectation,
     rights_status: rightsStatus,
     rights_notes: clean(body.rights_notes, 2000) || null,
+    breeder_name: clean(body.breeder_name, 200) || null,
+    sire_name: clean(body.sire_name, 200) || null,
+    dam_name: clean(body.dam_name, 200) || null,
+    clutch_id: clean(body.clutch_id, 160) || null,
+    hatch_date: /^\d{4}-\d{2}-\d{2}$/.test(hatchDate) ? hatchDate : null,
+    hatch_year: /^\d{4}$/.test(hatchYearRaw) ? Number(hatchYearRaw) : null,
+    sex,
+    origin_status: originStatus,
+    locality_evidence: localityEvidence,
+    provenance_confidence: provenanceConfidence,
+    provenance_claim: clean(body.provenance_claim, 4000) || null,
+    exclusion_reason: clean(body.exclusion_reason, 2000) || null,
     updated_at: new Date().toISOString(),
   };
 
