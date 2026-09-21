@@ -360,6 +360,8 @@ export function SnakeSorterWorkspace() {
         </div>
       )}
 
+      <div id="snake-sorter-acquisition" className="mt-6 scroll-mt-6"><SnakeSorterAcquisitionQueue /></div>
+
       <div id="snake-sorter-scanner" className="mt-6 scroll-mt-6"><SnakeSorterScanner onReferenceAdded={() => void load()} /></div>
 
       <div className="mt-6"><SnakeSorterOperations /></div>
@@ -367,8 +369,6 @@ export function SnakeSorterWorkspace() {
       <div className="mt-6"><SnakeSorterScanHistory /></div>
 
       <div id="snake-sorter-models" className="mt-6 scroll-mt-6"><SnakeSorterModelStatus /></div>
-
-      <div id="snake-sorter-acquisition" className="mt-6 scroll-mt-6"><SnakeSorterAcquisitionQueue /></div>
 
       <div id="snake-sorter-bulk-import" className="mt-6 scroll-mt-6"><SnakeSorterBulkImport onImported={() => load()} /></div>
 
