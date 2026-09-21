@@ -27,8 +27,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       throw new Error("Browser helper payload is incomplete.");
     }
 
-    const tab = await chrome.tabs.create({ url: APP_URL, active: true });
-    if (!tab.id) throw new Error("Could not open Snake Sorter.");
+    const existingTabs = await chrome.tabs.query({ url: "https://arboreal-planet.vercel.app/snake-sorter*" });
+    let tab = existingTabs[0];
+
+    if (tab?.id) {
+      await chrome.tabs.update(tab.id, { active: true, url: APP_URL });
+    } else {
+      tab = await chrome.tabs.create({ url: APP_URL, active: true });
+    }
+
+    if (!tab?.id) throw new Error("Could not open Snake Sorter.");
 
     await waitForTabComplete(tab.id);
 
