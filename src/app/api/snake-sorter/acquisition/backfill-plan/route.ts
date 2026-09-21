@@ -20,7 +20,7 @@ export async function GET() {
   };
 
   const candidatesResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&select=id,source_key,title,review_status,exclusion_reason,provisional_locality,locality_raw,thumbnail_url,neonate_color_hint,life_stage_hint,discovered_at`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&select=id,source_key,source_url,title,review_status,exclusion_reason,provisional_locality,locality_raw,thumbnail_url,neonate_color_hint,life_stage_hint,discovered_at`,
     { headers: h, cache: "no-store" },
   );
   if (!candidatesResponse.ok) {
@@ -35,6 +35,7 @@ export async function GET() {
     locality_raw: string | null;
     thumbnail_url: string | null;
     source_key: string;
+    source_url: string;
     title: string | null;
     neonate_color_hint: string | null;
     life_stage_hint: string | null;
@@ -94,6 +95,7 @@ export async function GET() {
     .map((candidate) => ({
       id: candidate.id,
       source_key: candidate.source_key,
+      source_url: candidate.source_url,
       title: candidate.title,
       locality: candidate.provisional_locality || candidate.locality_raw || "Unknown",
       neonate_color_hint: candidate.neonate_color_hint,
