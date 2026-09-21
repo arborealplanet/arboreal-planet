@@ -1,0 +1,75 @@
+import { NextResponse } from "next/server";
+import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+
+async function ownerIdentity() {
+  const identity = await getServerIdentity();
+  if (!identity) return null;
+  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
+  if (profile?.role !== "owner") return null;
+  return identity;
+}
+
+export async function GET() {
+  const identity = await ownerIdentity();
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const h = {
+    apikey: SUPABASE_AUTH_KEY,
+    Authorization: `Bearer ${identity.token}`,
+    Accept: "application/json",
+  };
+
+  const candidatesResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&select=id,review_status,exclusion_reason,provisional_locality,locality_raw,thumbnail_url`,
+    { headers: h, cache: "no-store" },
+  );
+  if (!candidatesResponse.ok) {
+    return NextResponse.json({ error: "Could not inspect MorphMarket candidates." }, { status: 502 });
+  }
+
+  const candidates = await candidatesResponse.json() as Array<{
+    id: string;
+    review_status: string;
+    exclusion_reason: string | null;
+    provisional_locality: string | null;
+    locality_raw: string | null;
+    thumbnail_url: string | null;
+  }>;
+
+  const ids = candidates.map((candidate) => candidate.id);
+  let mediaRows: Array<{ candidate_id: string }> = [];
+  if (ids.length) {
+    const response = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=in.(${ids.map(encodeURIComponent).join(",")})&select=candidate_id`,
+      { headers: h, cache: "no-store" },
+    );
+    if (response.ok) mediaRows = await response.json() as Array<{ candidate_id: string }>;
+  }
+
+  const withMedia = new Set(mediaRows.map((row) => row.candidate_id));
+  const missing = candidates.filter((candidate) => !withMedia.has(candidate.id));
+  const eligible = missing.filter((candidate) =>
+    !candidate.exclusion_reason &&
+    ["pending","approved"].includes(candidate.review_status),
+  );
+
+  const localityCounts = new Map<string, number>();
+  for (const candidate of eligible) {
+    const locality = candidate.provisional_locality || candidate.locality_raw || "Unknown";
+    localityCounts.set(locality, (localityCounts.get(locality) ?? 0) + 1);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    live_collection_started: false,
+    morphmarket_candidates: candidates.length,
+    candidates_with_media: candidates.length - missing.length,
+    candidates_missing_media: missing.length,
+    eligible_for_future_backfill: eligible.length,
+    excluded_from_backfill: missing.length - eligible.length,
+    candidates_with_preview_thumbnail: candidates.filter((candidate) => Boolean(candidate.thumbnail_url)).length,
+    by_locality: [...localityCounts.entries()]
+      .map(([locality, count]) => ({ locality, count }))
+      .sort((a, b) => b.count - a.count || a.locality.localeCompare(b.locality)),
+  });
+}
