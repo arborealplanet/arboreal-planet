@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-export function SnakeSorterInstallButton() {
+export function SnakeSorterInstallButton({ prominent = false }: { prominent?: boolean }) {
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [isIos] = useState(() => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent));
   const [installed, setInstalled] = useState(() => {
@@ -68,10 +68,12 @@ export function SnakeSorterInstallButton() {
     <button
       type="button"
       onClick={() => void install()}
-      className="rounded-full border border-sky-300/12 bg-sky-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-sky-100/55 transition hover:border-sky-300/22 hover:bg-sky-300/[.06]"
+      className={prominent
+        ? "rounded-xl border border-sky-200/25 bg-sky-200 px-4 py-2.5 text-[10px] font-black text-[#03100c] shadow-[0_8px_28px_rgba(125,211,252,.12)] transition hover:bg-sky-100"
+        : "rounded-full border border-sky-300/12 bg-sky-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-sky-100/55 transition hover:border-sky-300/22 hover:bg-sky-300/[.06]"}
       title="Install Snake Sorter as its own app"
     >
-      Install App
+      {prominent ? "Add Snake Sorter to Home Screen" : "Install App"}
     </button>
   );
 }

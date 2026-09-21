@@ -166,6 +166,7 @@ export function SnakeSorterLabShell({
           <Home
             isOwner={isOwner}
             canReview={canReview}
+            canInstall={canInstall}
             animals={animals}
             media={media}
             candidateStats={candidateStats}
@@ -268,6 +269,7 @@ function Screen({ title, detail, children }: { title: string; detail: string; ch
 function Home({
   isOwner,
   canReview,
+  canInstall,
   animals,
   media,
   candidateStats,
@@ -275,6 +277,7 @@ function Home({
 }: {
   isOwner: boolean;
   canReview: boolean;
+  canInstall: boolean;
   animals: SnakeReferenceAnimal[];
   media: SnakeReferenceMedia[];
   candidateStats: CandidateStats;
@@ -295,6 +298,7 @@ function Home({
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/44">The scanner stays simple. Candidate acquisition, reference curation, model work, and member access live in separate workspaces so the tool remains usable as the dataset grows.</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <button type="button" onClick={() => onOpen("scan")} className="rounded-xl bg-emerald-300 px-4 py-2.5 text-[10px] font-black text-[#06100c]">Start scan</button>
+                {canInstall && <SnakeSorterInstallButton prominent />}
                 {canReview && <button type="button" onClick={() => onOpen("candidates")} className="rounded-xl border border-amber-300/14 bg-amber-300/[.035] px-4 py-2.5 text-[10px] font-black text-amber-100/60">Review candidates</button>}
               </div>
             </div>
