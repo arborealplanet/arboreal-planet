@@ -40,6 +40,7 @@ type SaveState = Record<string, unknown> & {
   femaleRecovery?: Record<string, number>;
   favoriteIds?: string[];
   retiredBreeders?: RetiredBreeder[];
+  enclosures?: Record<string, number>;
 };
 
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
@@ -171,13 +172,29 @@ export function ChondroAnimalRecordActions({ animalId, initialName, initialNotes
         lifeStage as never,
         sex as never,
       );
+
+      const nextStage = String(requirement.next);
+      if (nextStage === "Subadult" || nextStage === "Adult") {
+        const dojoCapacity = Math.max(0, Number(state.enclosures?.["Chondro Dojo Bin"] ?? 0) || 0) * 2;
+        const pvcCapacity = Math.max(0, Number(state.enclosures?.["PVC Arboreal"] ?? 0) || 0);
+        const otherAnimals = state.colony.filter((item) => String(item.id ?? "") !== animalId);
+        const olderAnimals = otherAnimals.filter((item) => item.lifeStage === "Subadult" || item.lifeStage === "Adult").length;
+        const juveniles = Math.max(0, otherAnimals.length - olderAnimals);
+        const juvenileOverflowIntoPvc = Math.max(0, juveniles - dojoCapacity);
+        const requiredPvc = olderAnimals + juvenileOverflowIntoPvc;
+
+        if (pvcCapacity <= requiredPvc) {
+          setStatus("An open PVC Arboreal Enclosure is required before this animal can be raised to subadult.");
+          return;
+        }
+      }
+
       const cash = Number(state.cash ?? 0);
       if (cash < cost) {
         setStatus(`Raising this animal costs ${cost.toLocaleString()}. You currently have ${cash.toLocaleString()}.`);
         return;
       }
 
-      const nextStage = String(requirement.next);
       const next: SaveState = {
         ...state,
         cash: cash - cost,
