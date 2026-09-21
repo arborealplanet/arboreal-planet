@@ -250,6 +250,13 @@ function clickNext() {
   return false;
 }
 
+globalThis.__snakeSorterContentBridgeTestHooks = {
+  readListing,
+  prepareCapture,
+  removeOverlay,
+  clickNext,
+};
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "READ_LISTING") {
     sendResponse(readListing());
