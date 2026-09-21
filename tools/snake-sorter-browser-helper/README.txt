@@ -20,13 +20,13 @@ Use
 1. Open an existing MorphMarket Green Tree Python listing normally.
 2. Click the Snake Sorter Browser Helper extension icon.
 3. Click "Send listing refs to Snake Sorter".
-4. The helper opens Snake Sorter and attaches the exposed gallery image URLs
-   to the matching acquisition candidate.
+4. The helper opens Snake Sorter and attaches the exposed gallery image URLs.
+   If that MorphMarket listing is not in the acquisition queue yet, Snake
+   Sorter creates a new pending candidate automatically.
 5. Review the imported images in Snake Sorter.
 
 Important
 ---------
-- The listing must already exist in the Snake Sorter acquisition queue.
 - Imported images remain metadata-only/live references.
 - They are not training media unless separately reviewed and rights-cleared.
 - If MorphMarket presents an access-control or challenge page, use the site
