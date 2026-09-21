@@ -52,6 +52,14 @@ export async function POST(request: NextRequest) {
     ? body.candidate_id.trim()
     : undefined;
 
+  if (source === "morphmarket" || mode === "backfill_existing") {
+    return NextResponse.json({
+      error: "Server-side MorphMarket acquisition is disabled because the controlled probe receives HTTP 403. Use the Snake Sorter Browser Helper for live listing references.",
+      browser_helper_required: true,
+      server_side_morphmarket_disabled: true,
+    }, { status: 409 });
+  }
+
   if (mode === "backfill_existing") {
     const morphmarket = await invokeHarvester(
       "snake-sorter-harvest-morphmarket",
