@@ -34,6 +34,10 @@ SERVICE_KEY = os.environ.get("SNAKE_SORTER_SUPABASE_SERVICE_ROLE_KEY", "").strip
 USER_AGENT = "SnakeSorterCaptureWorker/1.0 (+private owner-reviewed reference workflow)"
 BUCKET = "snake-sorter-acquisition"
 MAX_CAPTURES = 12
+MM_LISTING_RE = re.compile(
+    r"^https://(?:www\.)?morphmarket\.com/(?:us|eu|za|mx)/c/reptiles/pythons/green-tree-pythons/\d+/?(?:\?.*)?$",
+    re.I,
+)
 
 BLOCK_RE = re.compile(
     r"captcha|access denied|too many requests|verify you are human|challenge-platform|cloudflare",
@@ -52,6 +56,10 @@ class Job:
     candidate_id: str
     source_url: str
     attempt_count: int
+
+
+def valid_listing_url(url: str) -> bool:
+    return bool(MM_LISTING_RE.match(url.strip()))
 
 
 def require_env() -> None:
@@ -444,7 +452,10 @@ async def click_next_gallery(page: Page, root: ElementHandle | None) -> bool:
     return False
 
 
-async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | None, str | None]:
+async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int, int | None, str | None]:
+    if not valid_listing_url(job.source_url):
+        return ("failed", 0, 0, None, "Capture job source is not an approved MorphMarket GTP listing URL.")
+
     captured = 0
     discovered = 0
     status_code: int | None = None
@@ -464,8 +475,12 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | 
         try:
             response = await page.goto(job.source_url, wait_until="domcontentloaded", timeout=45000)
             status_code = response.status if response else None
+
+            final_url = page.url
             if await page_is_blocked(page, status_code):
-                return ("blocked", 0, status_code, "Access-control or challenge page encountered.")
+                return ("blocked", 0, 0, status_code, "Access-control or challenge page encountered.")
+            if not valid_listing_url(final_url):
+                return ("blocked", 0, 0, status_code, "Listing navigation left the approved MorphMarket GTP listing path.")
 
             await polite_wait(page, 1400, 3600)
             seen_hashes: set[str] = set()
@@ -473,7 +488,7 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | 
             root = await gallery_root(page)
 
             if root is None:
-                return ("failed", 0, status_code, "Could not identify a listing-gallery container safely.")
+                return ("failed", 0, 0, status_code, "Could not identify a listing-gallery container safely.")
 
             for _ in range(MAX_CAPTURES):
                 current = await capture_unique_gallery_images(page, root, seen_hashes)
@@ -490,13 +505,13 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | 
                 if captured >= MAX_CAPTURES:
                     break
                 if await page_is_blocked(page, status_code):
-                    return ("blocked", captured, status_code, "Access-control or challenge page encountered after gallery navigation.")
+                    return ("blocked", captured, discovered, status_code, "Access-control or challenge page encountered after gallery navigation.")
                 if not await click_next_gallery(page, root):
                     break
 
-            return ("completed", captured, status_code, None)
+            return ("completed", captured, discovered, status_code, None)
         except Exception as exc:
-            return ("failed", captured, status_code, str(exc)[:1000])
+            return ("failed", captured, discovered, status_code, str(exc)[:1000])
         finally:
             await context.close()
             await browser.close()
@@ -511,7 +526,7 @@ async def run(limit: int, headless: bool = True) -> int:
         if not job:
             break
 
-        status, captured, http_status, error = await process_job(job, headless=headless)
+        status, captured, discovered, http_status, error = await process_job(job, headless=headless)
         patch_job(
             job.id,
             {
@@ -519,7 +534,7 @@ async def run(limit: int, headless: bool = True) -> int:
                 "last_http_status": http_status,
                 "last_error": error,
                 "captured_media_count": captured,
-                "discovered_media_count": captured,
+                "discovered_media_count": discovered,
                 "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             },
         )
