@@ -32,7 +32,7 @@ jobs:
             echo "Package push attempt $attempt"
 
             git fetch origin main
-            git rebase origin/main
+            git reset --hard origin/main
 
             mkdir -p public/downloads
             rm -f public/downloads/snake-sorter-browser-helper.zip
@@ -47,18 +47,13 @@ jobs:
             fi
 
             git add public/downloads/snake-sorter-browser-helper.zip
-
-            if [ "$(git log -1 --format=%s)" = "Package Snake Sorter browser helper" ]; then
-              git commit --amend --no-edit
-            else
-              git commit -m "Package Snake Sorter browser helper"
-            fi
+            git commit -m "Package Snake Sorter browser helper"
 
             if git push origin HEAD:main; then
               exit 0
             fi
 
-            echo "Main moved during package push; retrying safely."
+            echo "Main moved during package push; resetting to latest main and retrying."
           done
 
           echo "Could not publish helper package after retries."
