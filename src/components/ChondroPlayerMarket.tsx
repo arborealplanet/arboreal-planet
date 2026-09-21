@@ -38,9 +38,24 @@ type Listing = {
 
 type SaveState = {
   cash?: number;
-  colony?: Array<{ id: string }>;
+  colony?: SnakeLite[];
   enclosures?: Record<string, number>;
+  [key: string]: unknown;
 };
+
+const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
+
+async function persistPlayerMarketSave(save: SaveState) {
+  const persisted = { ...save, updatedAt: Date.now() };
+  window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(persisted));
+  const response = await fetch("/api/hatchery/chondro-breeder/save", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(persisted),
+  });
+  if (!response.ok) throw new Error("save failed");
+  window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
+}
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-US", {
@@ -101,20 +116,39 @@ export function ChondroPlayerMarket() {
   const capacity = animalHousingCapacity(save.enclosures);
   const openSlots = Math.max(0, capacity - (save.colony?.length ?? 0));
 
-  function buy(listing: Listing) {
+  async function buy(listing: Listing) {
     if (busy || cash < listing.price || openSlots <= 0) return;
     setBusy(listing.id);
     setStatus(`Claiming ${listing.snake.name}…`);
-    window.dispatchEvent(
-      new CustomEvent("arboreal-chondro-market-action", {
-        detail: { action: "buy-player-snake", listing },
-      }),
-    );
-    window.setTimeout(() => {
+    try {
+      const response = await fetch("/api/hatchery/chondro-breeder/player-market", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "buy", listingId: listing.id }),
+      });
+      const data = await response.json().catch(() => null) as { error?: string; result?: { snake?: SnakeLite } } | null;
+      if (!response.ok) {
+        setStatus(data?.error ?? "This animal is no longer available.");
+        await refresh();
+        return;
+      }
+
+      const purchasedSnake = data?.result?.snake ?? listing.snake;
+      const next: SaveState = {
+        ...save,
+        cash: Math.max(0, cash - listing.price),
+        colony: [...(save.colony ?? []), purchasedSnake],
+      };
+      await persistPlayerMarketSave(next);
+      setSave(next);
+      setListings((current) => current.filter((item) => item.id !== listing.id));
+      setStatus(`${purchasedSnake.name} joined your Animals collection.`);
+    } catch {
+      setStatus("The purchase completed unsuccessfully. Refresh the market before trying again.");
+      await refresh();
+    } finally {
       setBusy(null);
-      setStatus("");
-      void refresh();
-    }, 1800);
+    }
   }
 
   return (
@@ -180,7 +214,7 @@ export function ChondroPlayerMarket() {
                 <button
                   type="button"
                   disabled={cannotBuy}
-                  onClick={() => buy(listing)}
+                  onClick={() => void buy(listing)}
                   className="mt-3 w-full rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-[#06100c] disabled:opacity-30"
                 >
                   {busy === listing.id ? "Claiming…" : openSlots <= 0 ? "Need enclosure" : cash < listing.price ? "Not enough cash" : "Buy virtual snake"}
