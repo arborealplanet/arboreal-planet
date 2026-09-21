@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
+import { getSnakeSorterAccess, getServerIdentity } from "@/lib/supabase-auth";
 
-async function ownerIdentity() {
+async function sorterIdentity() {
   const identity = await getServerIdentity();
   if (!identity) return null;
-  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
-  if (profile?.role !== "owner") return null;
-  return identity;
+  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
+  if (!access.allowed) return null;
+  return { ...identity, access };
 }
 
 function cleanBaseUrl(value: string) {
@@ -14,7 +14,7 @@ function cleanBaseUrl(value: string) {
 }
 
 export async function GET() {
-  const identity = await ownerIdentity();
+  const identity = await sorterIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const inferenceUrl = process.env.SNAKE_SORTER_INFERENCE_URL?.trim();
