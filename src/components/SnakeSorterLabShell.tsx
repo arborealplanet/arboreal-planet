@@ -17,6 +17,7 @@ import { SnakeSorterMembers } from "@/components/SnakeSorterMembers";
 import { SnakeSorterBulkImport } from "@/components/SnakeSorterBulkImport";
 import { SnakeSorterOperations } from "@/components/SnakeSorterOperations";
 import { SnakeSorterInstallButton } from "@/components/SnakeSorterInstallButton";
+import { SnakeSorterDatasetDiagnostics } from "@/components/SnakeSorterDatasetDiagnostics";
 
 type View = "home" | "scan" | "candidates" | "references" | "history" | "more";
 type AccessLevel = "owner" | "reviewer" | "scanner" | string | null;
@@ -65,7 +66,7 @@ export function SnakeSorterLabShell({
   const [animals, setAnimals] = useState<SnakeReferenceAnimal[]>([]);
   const [media, setMedia] = useState<SnakeReferenceMedia[]>([]);
   const [candidateStats, setCandidateStats] = useState<CandidateStats>(emptyCandidateStats);
-  const [moreTool, setMoreTool] = useState<"models" | "members" | "import" | "system">("models");
+  const [moreTool, setMoreTool] = useState<"models" | "diagnostics" | "members" | "import" | "system">("diagnostics");
 
   async function loadReferences() {
     if (!isOwner) return;
@@ -200,8 +201,9 @@ export function SnakeSorterLabShell({
 
         {view === "more" && isOwner && (
           <Screen title="Laboratory tools" detail="Keep the heavy administration out of the main workflow until you need it.">
-            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
               {([
+                ["diagnostics", "Diagnostics", "Coverage gaps & dataset balance"],
                 ["models", "Models", "Model registry & snapshots"],
                 ["members", "Members", "Scanner/reviewer access"],
                 ["import", "Import", "Bulk reference intake"],
@@ -218,6 +220,7 @@ export function SnakeSorterLabShell({
                 </button>
               ))}
             </div>
+            {moreTool === "diagnostics" && <SnakeSorterDatasetDiagnostics animals={animals} media={media} />}
             {moreTool === "models" && <SnakeSorterModelStatus />}
             {moreTool === "members" && <SnakeSorterMembers />}
             {moreTool === "import" && <SnakeSorterBulkImport onImported={loadReferences} />}
