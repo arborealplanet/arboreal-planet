@@ -68,6 +68,18 @@ export async function POST(request: NextRequest) {
   const challengeExpectation = text(form.get("challenge_expectation"), 20) || "review";
   const rightsStatus = text(form.get("rights_status"), 40) || "unknown";
   const rightsNotes = text(form.get("rights_notes"), 2000);
+  const breederName = text(form.get("breeder_name"), 200);
+  const sireName = text(form.get("sire_name"), 200);
+  const damName = text(form.get("dam_name"), 200);
+  const clutchId = text(form.get("clutch_id"), 160);
+  const hatchDate = text(form.get("hatch_date"), 20);
+  const hatchYearRaw = text(form.get("hatch_year"), 4);
+  const sex = text(form.get("sex"), 20) || "unknown";
+  const originStatus = text(form.get("origin_status"), 30) || "unknown";
+  const localityEvidence = text(form.get("locality_evidence"), 40) || "unknown";
+  const provenanceConfidence = text(form.get("provenance_confidence"), 30) || "unknown";
+  const provenanceClaim = text(form.get("provenance_claim"), 4000);
+  const exclusionReason = text(form.get("exclusion_reason"), 2000);
 
   const allowedTaxa = new Set(["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis", "Unknown / review"]);
   const allowedStages = new Set(["hatchling", "neonate", "juvenile", "subadult", "adult", "unknown"]);
@@ -77,8 +89,12 @@ export async function POST(request: NextRequest) {
   const allowedSources = new Set(["personal", "breeder", "listing", "publication", "other"]);
   const allowedRights = new Set(["owned_by_owner","permission_granted","private_reference_only","unknown"]);
   const allowedChallengeExpectation = new Set(["reject","classify","review"]);
+  const allowedSex = new Set(["male","female","unknown"]);
+  const allowedOrigin = new Set(["captive_bred","wild_caught","import","unknown"]);
+  const allowedLocalityEvidence = new Set(["owner_known","breeder_documented","seller_listed","import_claim","field_record","publication","museum_record","inferred","unknown"]);
+  const allowedProvenanceConfidence = new Set(["confirmed","strong","provisional","uncertain","unknown"]);
 
-  if (!allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedSources.has(sourceType) || !allowedRights.has(rightsStatus) || !allowedChallengeExpectation.has(challengeExpectation)) {
+  if (!allowedTaxa.has(taxon) || !allowedStages.has(lifeStage) || !allowedColors.has(neonateColor) || !allowedConfidence.has(labelConfidence) || !allowedPurity.has(purityStatus) || !allowedSources.has(sourceType) || !allowedRights.has(rightsStatus) || !allowedChallengeExpectation.has(challengeExpectation) || !allowedSex.has(sex) || !allowedOrigin.has(originStatus) || !allowedLocalityEvidence.has(localityEvidence) || !allowedProvenanceConfidence.has(provenanceConfidence)) {
     return NextResponse.json({ error: "Invalid reference metadata" }, { status: 400 });
   }
 
@@ -110,6 +126,18 @@ export async function POST(request: NextRequest) {
       challenge_expectation: challengeExpectation,
       rights_status: rightsStatus,
       rights_notes: rightsNotes || null,
+      breeder_name: breederName || null,
+      sire_name: sireName || null,
+      dam_name: damName || null,
+      clutch_id: clutchId || null,
+      hatch_date: /^\d{4}-\d{2}-\d{2}$/.test(hatchDate) ? hatchDate : null,
+      hatch_year: /^\d{4}$/.test(hatchYearRaw) ? Number(hatchYearRaw) : null,
+      sex,
+      origin_status: originStatus,
+      locality_evidence: localityEvidence,
+      provenance_confidence: provenanceConfidence,
+      provenance_claim: provenanceClaim || null,
+      exclusion_reason: exclusionReason || null,
     }),
     cache: "no-store",
   });
