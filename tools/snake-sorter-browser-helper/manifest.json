@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Snake Sorter Browser Helper",
+  "version": "0.1.0",
+  "description": "Owner-only helper that reads the currently open MorphMarket GTP listing and sends exposed gallery image references to Snake Sorter.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.morphmarket.com/*",
+    "https://arboreal-planet.vercel.app/*"
+  ],
+  "action": {
+    "default_title": "Send listing to Snake Sorter",
+    "default_popup": "popup.html"
+  }
+}
