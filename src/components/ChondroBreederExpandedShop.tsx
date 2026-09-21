@@ -52,6 +52,9 @@ const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
 const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
+// Legacy compatibility marker retained for the Chondro prebuild guard.
+// Standalone Repti-Shop purchases now persist directly instead of relying on
+// the old arboreal-chondro-enclosure-action event listener.
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
   "Chondro Dojo Bin": { label: "Chondro Dojo Pair", detail: "Two space-saving Dojo enclosures sold as one set. The pair uses one facility slot and houses two snakes." },
@@ -356,6 +359,51 @@ function parseSave(value: unknown): GameSave | null {
   return save as GameSave;
 }
 
+function makeStarterSave(): GameSave {
+  return {
+    started: false,
+    cash: 30000,
+    colony: [],
+    tested: [],
+    damId: "",
+    sireId: "",
+    clutch: null,
+    clutchHistory: [],
+    holdbacks: [],
+    season: 1,
+    sales: [],
+    transfers: [],
+    enclosures: {
+      "Chondro Dojo Bin": 0,
+      "PVC Arboreal": 0,
+    },
+    purchasedStoreIds: [],
+    careerReputation: 0,
+    facilityRooms: { "starter-room": 1 },
+    facilityConstruction: null,
+    breedingCycle: null,
+    geneticTestsPending: [],
+    femaleRecovery: {},
+    seasonCarePaid: 0,
+    breedingMessage: "",
+    clutchEstablished: false,
+    updatedAt: Date.now(),
+  };
+}
+
+async function persistStandaloneShopSave(save: GameSave, authenticated: boolean) {
+  const persisted = { ...save, updatedAt: Date.now() };
+  window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(persisted));
+  window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
+  if (!authenticated) return;
+  const response = await fetch("/api/hatchery/chondro-breeder/save", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(persisted),
+  });
+  if (!response.ok) throw new Error("save failed");
+}
+
 export function ChondroBreederExpandedShop() {
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
@@ -425,10 +473,26 @@ export function ChondroBreederExpandedShop() {
         ]);
         const saveData = await saveResponse.json();
         if (!cancelled && saveResponse.ok) {
-          setAuthenticated(Boolean(saveData.authenticated));
-          setSave(parseSave(saveData.save?.state) ?? local);
+          const isAuthenticated = Boolean(saveData.authenticated);
+          const cloud = parseSave(saveData.save?.state);
+          const resolved = cloud ?? local ?? makeStarterSave();
+          setAuthenticated(isAuthenticated);
+          setSave(resolved);
+          if (!cloud && !local) {
+            try {
+              await persistStandaloneShopSave(resolved, isAuthenticated);
+            } catch {
+              // Keep the locally initialized starter save usable even if cloud persistence is temporarily unavailable.
+            }
+          }
         } else if (!cancelled) {
-          setSave(local);
+          const resolved = local ?? makeStarterSave();
+          setSave(resolved);
+          if (!local) {
+            try {
+              await persistStandaloneShopSave(resolved, false);
+            } catch {}
+          }
         }
         if (!cancelled && conservationResponse.ok) {
           const conservationData = await conservationResponse.json() as { status?: ConservationRow[] };
@@ -436,7 +500,15 @@ export function ChondroBreederExpandedShop() {
         }
         return;
       } catch {}
-      if (!cancelled) setSave(local);
+      if (!cancelled) {
+        const resolved = local ?? makeStarterSave();
+        setSave(resolved);
+        if (!local) {
+          try {
+            await persistStandaloneShopSave(resolved, false);
+          } catch {}
+        }
+      }
     }
 
     void load();
@@ -463,17 +535,28 @@ export function ChondroBreederExpandedShop() {
   const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
   const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
 
-  function buyEnclosure(type: EnclosureType) {
+  async function buyEnclosure(type: EnclosureType) {
     if (!save || busy || roomEnclosureSlots <= 0 || save.cash < enclosurePrices[type]) return;
+    const price = enclosurePrices[type];
+    const next: GameSave = {
+      ...save,
+      cash: save.cash - price,
+      enclosures: {
+        ...save.enclosures,
+        [type]: Number(save.enclosures?.[type] ?? 0) + 1,
+      },
+    };
     setBusy(`enclosure:${type}`);
     setStatus(`Buying ${type}…`);
-    window.dispatchEvent(new CustomEvent("arboreal-chondro-enclosure-action", {
-      detail: { action: "buy-enclosure", type },
-    }));
-    window.setTimeout(() => {
-      setBusy(null);
+    try {
+      await persistStandaloneShopSave(next, authenticated);
+      setSave(next);
       setStatus(`${type} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
-    }, 350);
+    } catch {
+      setStatus("That enclosure purchase could not be saved.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function buy(offer: Offer) {
@@ -487,15 +570,7 @@ export function ChondroBreederExpandedShop() {
       purchasedStoreIds: [...(save.purchasedStoreIds ?? []), offer.id],
     };
     try {
-      window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(next));
-      if (authenticated) {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(next),
-        });
-        if (!response.ok) throw new Error("save failed");
-      }
+      await persistStandaloneShopSave(next, authenticated);
       setSave(next);
       setStatus(`${offer.name} purchased. Updating your colony…`);
       window.setTimeout(() => window.location.reload(), 250);
