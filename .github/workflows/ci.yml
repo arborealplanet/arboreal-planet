@@ -29,6 +29,7 @@ jobs:
           node --check tools/snake-sorter-browser-helper/popup.js
           node --check tools/snake-sorter-browser-helper/background.js
           node --check tools/snake-sorter-browser-helper/content.js
+          node --check tools/snake-sorter-browser-helper/app-bridge.js
           node -e "JSON.parse(require('fs').readFileSync('tools/snake-sorter-browser-helper/manifest.json','utf8'))"
 
       - name: Test Snake Sorter policy rules
