@@ -103,6 +103,7 @@ type BackfillPlan = {
   suggested_priority?: Array<{
     id: string;
     source_key: string;
+    source_url: string;
     title: string | null;
     locality: string;
     neonate_color_hint: string | null;
@@ -505,6 +506,18 @@ export function SnakeSorterAcquisitionQueue({
           {(backfillPlan.suggested_priority?.length ?? 0) > 0 && (
             <div className="mt-3">
               <div className="text-[8px] font-black uppercase tracking-[.08em] text-white/22">Priority candidates for browser-helper import / fallback</div>
+              {backfillPlan.suggested_priority?.[0]?.source_url && (
+                <div className="mt-2">
+                  <a
+                    href={backfillPlan.suggested_priority[0].source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-lg border border-emerald-300/12 bg-emerald-300/[.02] px-3 py-1.5 text-[8px] font-black text-emerald-100/50"
+                  >
+                    Open first controlled test listing
+                  </a>
+                </div>
+              )}
               <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
                 {(backfillPlan.suggested_priority ?? []).slice(0, 8).map((item) => (
                   <div key={item.id} className="min-w-40 rounded-xl border border-white/[.05] bg-black/[.05] px-3 py-2">
