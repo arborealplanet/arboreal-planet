@@ -99,5 +99,33 @@ export async function PATCH(request: NextRequest) {
   }
 
   const candidate = await response.json();
+
+  const biologicalStatus =
+    reviewStatus === "approved" ? "approved" :
+    reviewStatus === "rejected" ? "rejected" :
+    reviewStatus === "permission_required" ? "uncertain" :
+    "pending";
+  const acquisitionStage =
+    reviewStatus === "approved" ? "biologically_approved" :
+    reviewStatus === "rejected" ? "awaiting_review" :
+    "awaiting_review";
+
+  await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: {
+        ...headers(identity.token),
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        biological_review_status: biologicalStatus,
+        acquisition_stage: acquisitionStage,
+      }),
+      cache: "no-store",
+    },
+  ).catch(() => undefined);
+
   return NextResponse.json({ ok: true, candidate });
 }
