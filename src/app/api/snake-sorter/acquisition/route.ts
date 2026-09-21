@@ -22,37 +22,28 @@ export async function GET() {
   const identity = await reviewerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const h = headers(identity.token);
-  const [candidateResponse, profileResponse] = await Promise.all([
-    fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?select=*&order=discovered_at.desc&limit=300`,
-      { headers: h, cache: "no-store" },
-    ),
-    fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_profiles?select=*&order=target_locality.asc.nullslast,name.asc`,
-      { headers: h, cache: "no-store" },
-    ),
-  ]);
+  const response = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/rpc/get_snake_sorter_acquisition_queue`,
+    {
+      method: "POST",
+      headers: {
+        ...headers(identity.token),
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      cache: "no-store",
+    },
+  );
 
-  if (!candidateResponse.ok || !profileResponse.ok) {
-    return NextResponse.json({ error: "Could not load acquisition queue." }, { status: 502 });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return NextResponse.json({
+      error: "Could not load acquisition queue.",
+      detail: typeof data?.message === "string" ? data.message : null,
+    }, { status: 502 });
   }
 
-  const candidates = await candidateResponse.json() as Array<Record<string, unknown>>;
-  const profiles = await profileResponse.json() as Array<Record<string, unknown>>;
-
-  const stats = {
-    total: candidates.length,
-    pending: candidates.filter((row) => row.review_status === "pending").length,
-    approved: candidates.filter((row) => row.review_status === "approved").length,
-    rejected: candidates.filter((row) => row.review_status === "rejected").length,
-    permission_required: candidates.filter((row) => row.review_status === "permission_required").length,
-    staged: candidates.filter((row) => Boolean(row.staged_storage_path)).length,
-    open_license: candidates.filter((row) => row.rights_status === "open_license").length,
-    metadata_only: candidates.filter((row) => row.rights_status === "metadata_only").length,
-  };
-
-  return NextResponse.json({ candidates, profiles, stats });
+  return NextResponse.json(data);
 }
 
 export async function PATCH(request: NextRequest) {
