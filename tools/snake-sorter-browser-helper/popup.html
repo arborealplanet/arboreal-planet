@@ -7,14 +7,16 @@
   <style>
     body{font:13px system-ui;background:#111;color:#eee;width:320px;margin:0;padding:14px}
     button{width:100%;padding:10px;border-radius:10px;border:1px solid #345;background:#17202a;color:#dff;cursor:pointer}
+    button+button{margin-top:8px}
     button:disabled{opacity:.45}
     #status{margin-top:10px;line-height:1.4;color:#aaa;white-space:pre-wrap}
   </style>
 </head>
 <body>
   <strong>Snake Sorter Browser Helper</strong>
-  <p>This reads image references exposed by the MorphMarket listing already open in this tab. It does not bypass access controls or download images.</p>
-  <button id="send">Send listing refs to Snake Sorter</button>
+  <p>Use live image references first. If those will not render in Snake Sorter, use the browser-local gallery capture fallback. Neither path bypasses access controls.</p>
+  <button id="send">Send live refs to Snake Sorter</button>
+  <button id="capture">Capture gallery fallback</button>
   <div id="status"></div>
   <script src="popup.js"></script>
 </body>
