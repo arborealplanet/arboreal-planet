@@ -27,6 +27,8 @@ type Candidate = {
   staged_bytes: number | null;
   staged_at: string | null;
   acquisition_error: string | null;
+  promoted_reference_animal_id: string | null;
+  promoted_at: string | null;
   discovered_at: string;
 };
 
@@ -68,7 +70,7 @@ function statusClass(value: string) {
   return "border-white/[.07] text-white/30";
 }
 
-export function SnakeSorterAcquisitionQueue() {
+export function SnakeSorterAcquisitionQueue({ onPromoted }: { onPromoted?: () => Promise<void> | void }) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0 });
@@ -145,6 +147,43 @@ export function SnakeSorterAcquisitionQueue() {
     setBusy("");
   }
 
+  async function promote(candidate: Candidate, formData: FormData) {
+    setBusy(`promote-${candidate.id}`);
+    setMessage("");
+
+    const payload = {
+      candidate_id: candidate.id,
+      taxon: String(formData.get("taxon") ?? "Unknown / review"),
+      locality: String(formData.get("locality") ?? ""),
+      life_stage: String(formData.get("life_stage") ?? "unknown"),
+      neonate_color: String(formData.get("neonate_color") ?? "unknown"),
+      label_confidence: String(formData.get("label_confidence") ?? "provisional"),
+      purity_status: String(formData.get("purity_status") ?? "unknown"),
+      view_type: String(formData.get("view_type") ?? "unknown"),
+      animal_code: String(formData.get("animal_code") ?? ""),
+      split_group: String(formData.get("split_group") ?? ""),
+      training_eligible: formData.get("training_eligible") === "true",
+      challenge_eligible: formData.get("challenge_eligible") === "true",
+      challenge_expectation: String(formData.get("challenge_expectation") ?? "review"),
+    };
+
+    const response = await fetch("/api/snake-sorter/acquisition/promote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      setMessage(`Candidate promoted into the reference library as animal ${data.animal_id}.`);
+      await load();
+      await onPromoted?.();
+    } else {
+      setMessage(data.error ?? "Could not promote candidate.");
+    }
+    setBusy("");
+  }
+
   const sources = [...new Set(candidates.map((candidate) => candidate.source_type))].sort();
 
   return (
@@ -213,7 +252,10 @@ export function SnakeSorterAcquisitionQueue() {
                       <span className="rounded-full border border-white/[.06] px-2 py-0.5 text-[8px] text-white/24">{candidate.rights_status.replaceAll("_"," ")}</span>
                     </div>
                   </div>
-                  {candidate.staged_storage_path && <span className="rounded-full border border-emerald-300/12 px-2 py-1 text-[8px] font-black uppercase text-emerald-100/45">Staged</span>}
+                  <div className="flex flex-wrap gap-1">
+                    {candidate.staged_storage_path && <span className="rounded-full border border-emerald-300/12 px-2 py-1 text-[8px] font-black uppercase text-emerald-100/45">Staged</span>}
+                    {candidate.promoted_reference_animal_id && <span className="rounded-full border border-sky-300/12 px-2 py-1 text-[8px] font-black uppercase text-sky-100/45">Promoted</span>}
+                  </div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[9px]">
@@ -232,6 +274,62 @@ export function SnakeSorterAcquisitionQueue() {
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"rejected")} className="rounded-xl border border-rose-300/12 bg-rose-300/[.025] px-3 py-2 text-[9px] font-black text-rose-100/45 disabled:opacity-35">Reject</button>
                 </div>
+                {candidate.review_status === "approved" && candidate.rights_status === "open_license" && candidate.staged_storage_path && !candidate.promoted_reference_animal_id && (
+                  <form onSubmit={(event) => { event.preventDefault(); void promote(candidate, new FormData(event.currentTarget)); }} className="mt-4 rounded-2xl border border-sky-300/10 bg-sky-300/[.02] p-3">
+                    <div className="text-[9px] font-black uppercase tracking-[.09em] text-sky-100/45">Promote to reference library</div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Taxon
+                        <select name="taxon" defaultValue="Unknown / review" className={`${select} mt-1 w-full`}>
+                          <option>Unknown / review</option>
+                          <option>Morelia azurea azurea</option>
+                          <option>Morelia azurea pulcher</option>
+                          <option>Morelia azurea utaraensis</option>
+                          <option>Morelia viridis</option>
+                        </select>
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Locality
+                        <input name="locality" defaultValue={candidate.provisional_locality || candidate.locality_raw || ""} className={`${select} mt-1 w-full`} />
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Life stage
+                        <select name="life_stage" defaultValue={["hatchling","neonate","juvenile","subadult","adult","unknown"].includes(candidate.life_stage_hint || "") ? candidate.life_stage_hint || "unknown" : "unknown"} className={`${select} mt-1 w-full`}>
+                          <option value="unknown">Unknown</option><option value="hatchling">Hatchling</option><option value="neonate">Neonate</option><option value="juvenile">Juvenile</option><option value="subadult">Subadult</option><option value="adult">Adult</option>
+                        </select>
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Color phase
+                        <select name="neonate_color" defaultValue={candidate.neonate_color_hint || "unknown"} className={`${select} mt-1 w-full`}>
+                          <option value="unknown">Unknown</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="not_applicable">Not applicable</option>
+                        </select>
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Label confidence
+                        <select name="label_confidence" defaultValue="provisional" className={`${select} mt-1 w-full`}>
+                          <option value="provisional">Provisional</option><option value="uncertain">Uncertain</option><option value="strong">Strong</option><option value="confirmed">Confirmed</option>
+                        </select>
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Ancestry / purity
+                        <select name="purity_status" defaultValue="unknown" className={`${select} mt-1 w-full`}>
+                          <option value="unknown">Unknown</option><option value="possible_mixed">Possible mixed</option><option value="believed_pure">Believed pure</option><option value="known_pure">Known pure</option><option value="hybrid">Hybrid</option>
+                        </select>
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Image view
+                        <select name="view_type" defaultValue="unknown" className={`${select} mt-1 w-full`}>
+                          <option value="unknown">Unknown</option><option value="full_body">Full body</option><option value="head">Head</option><option value="dorsal">Dorsal</option><option value="left_lateral">Left lateral</option><option value="right_lateral">Right lateral</option><option value="tail">Tail</option><option value="other">Other</option>
+                        </select>
+                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-[.07em] text-white/20">Animal code
+                        <input name="animal_code" placeholder="Optional" className={`${select} mt-1 w-full`} />
+                      </label>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <label className="flex items-center gap-2 rounded-xl border border-white/[.05] px-3 py-2 text-[9px] text-white/28"><input type="checkbox" name="training_eligible" value="true" className="accent-emerald-300" />Training eligible after normal reference review</label>
+                      <label className="flex items-center gap-2 rounded-xl border border-white/[.05] px-3 py-2 text-[9px] text-white/28"><input type="checkbox" name="challenge_eligible" value="true" className="accent-amber-300" />Challenge / OOD candidate</label>
+                    </div>
+                    <input type="hidden" name="challenge_expectation" value="review" />
+                    <input type="hidden" name="split_group" value="" />
+                    <button type="submit" disabled={busy === `promote-${candidate.id}`} className="mt-3 rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === `promote-${candidate.id}` ? "Promoting…" : "Promote with these labels"}</button>
+                    <div className="mt-2 text-[8px] leading-4 text-white/18">Defaults are intentionally conservative. Choosing a clean taxon does not bypass the normal reference review/split/snapshot rules.</div>
+                  </form>
+                )}
+                {candidate.promoted_reference_animal_id && <div className="mt-3 rounded-xl border border-sky-300/10 bg-sky-300/[.02] px-3 py-2 text-[9px] text-sky-100/40">Promoted to reference animal {candidate.promoted_reference_animal_id}.</div>}
               </div>
             </div>
           </article>
