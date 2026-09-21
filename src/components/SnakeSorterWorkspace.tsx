@@ -8,6 +8,7 @@ import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
 import { SnakeSorterBulkImport } from "@/components/SnakeSorterBulkImport";
 import { SnakeSorterOperations } from "@/components/SnakeSorterOperations";
 import { SnakeSorterAcquisitionQueue } from "@/components/SnakeSorterAcquisitionQueue";
+import { SnakeSorterMembers } from "@/components/SnakeSorterMembers";
 
 type ReferenceAnimal = {
   id: string;
@@ -359,6 +360,8 @@ export function SnakeSorterWorkspace() {
           </div>
         </div>
       )}
+
+      <div id="snake-sorter-members" className="mt-6 scroll-mt-6"><SnakeSorterMembers /></div>
 
       <div id="snake-sorter-acquisition" className="mt-6 scroll-mt-6"><SnakeSorterAcquisitionQueue /></div>
 
