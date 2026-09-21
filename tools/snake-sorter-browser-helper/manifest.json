@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Snake Sorter Browser Helper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Owner-only helper that reads the currently open MorphMarket GTP listing and sends exposed gallery image references to Snake Sorter.",
   "permissions": [
     "activeTab",
