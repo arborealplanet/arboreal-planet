@@ -194,7 +194,17 @@ export function SnakeSorterAcquisitionQueue({
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessage(`Open-source harvest: ${data.added ?? 0} new candidate(s), ${data.already_known ?? 0} already known.`);
+      const openAdded = Number(data.open_sources?.added ?? 0);
+      const mmStats = data.morphmarket?.stats ?? {};
+      const mmAdded = Number(mmStats.added ?? 0);
+      const mmKnown = Number(mmStats.already_known ?? 0);
+      const mmUrls = Number(mmStats.listing_urls ?? 0);
+      const paused = mmStats.access_paused === true;
+      setMessage(
+        `Harvest complete: ${openAdded} open-source + ${mmAdded} MorphMarket new candidate(s). ` +
+        `MorphMarket discovered ${mmUrls} listing URL(s) this pass, ${mmKnown} already known.` +
+        (paused ? " MorphMarket access-control signal detected; its crawl paused safely." : "")
+      );
       await load();
     } else {
       setMessage(data.error ?? "Could not harvest open sources.");
@@ -284,7 +294,7 @@ export function SnakeSorterAcquisitionQueue({
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => void load()} className={button}>Refresh</button>
-          {canHarvest && <button type="button" disabled={Boolean(busy)} onClick={() => void harvestOpenSources()} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === "harvest" ? "Harvesting…" : "Harvest open sources"}</button>}
+          {canHarvest && <button type="button" disabled={Boolean(busy)} onClick={() => void harvestOpenSources()} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === "harvest" ? "Harvesting…" : "Harvest sources"}</button>}
           {canHarvest && <button type="button" disabled={Boolean(busy)} onClick={() => void stageOpenMedia()} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-3 py-2 text-[9px] font-black text-emerald-100/60 disabled:opacity-35">{busy === "stage" ? "Staging all…" : "Stage all open-license media"}</button>}
         </div>
       </div>
