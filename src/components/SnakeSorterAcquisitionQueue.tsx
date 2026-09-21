@@ -97,6 +97,16 @@ type BackfillPlan = {
   excluded_from_backfill?: number;
   candidates_with_preview_thumbnail?: number;
   by_locality?: Array<{ locality: string; count: number }>;
+  suggested_priority?: Array<{
+    id: string;
+    source_key: string;
+    title: string | null;
+    locality: string;
+    neonate_color_hint: string | null;
+    life_stage_hint: string | null;
+    review_status: string;
+    priority_score: number;
+  }>;
 };
 
 type Stats = {
@@ -500,6 +510,19 @@ export function SnakeSorterAcquisitionQueue({
           <div className="mt-2 text-[9px] text-white/24">
             {backfillPlan.eligible_for_future_backfill ?? 0} candidate(s) are currently eligible for a future controlled media backfill; {backfillPlan.excluded_from_backfill ?? 0} are excluded by review state or filtering.
           </div>
+          {(backfillPlan.suggested_priority?.length ?? 0) > 0 && (
+            <div className="mt-3">
+              <div className="text-[8px] font-black uppercase tracking-[.08em] text-white/22">First candidates when eventually armed</div>
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                {(backfillPlan.suggested_priority ?? []).slice(0, 8).map((item) => (
+                  <div key={item.id} className="min-w-40 rounded-xl border border-white/[.05] bg-black/[.05] px-3 py-2">
+                    <div className="truncate text-[9px] font-semibold text-white/42">{item.title || item.source_key}</div>
+                    <div className="mt-1 text-[8px] text-white/24">{item.locality} · {item.neonate_color_hint || "color ?"} · {item.life_stage_hint || "stage ?"}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
