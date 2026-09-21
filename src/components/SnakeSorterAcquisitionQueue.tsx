@@ -158,6 +158,7 @@ export function SnakeSorterAcquisitionQueue({
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0,media_total:0,animals_with_multiple_media:0 });
   const [balance, setBalance] = useState<Balance>({});
   const [backfillPlan, setBackfillPlan] = useState<BackfillPlan>({});
+  const [helperVersion, setHelperVersion] = useState<string | null>(null);
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
   const [query, setQuery] = useState("");
@@ -209,6 +210,24 @@ export function SnakeSorterAcquisitionQueue({
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const readHelper = () => {
+      const root = document.documentElement;
+      const installed = root.dataset.snakeSorterHelperInstalled === "true";
+      setHelperVersion(installed ? (root.dataset.snakeSorterHelperVersion || "installed") : null);
+    };
+
+    readHelper();
+    const listener = () => readHelper();
+    window.addEventListener("snake-sorter-helper-status", listener as EventListener);
+    const timer = window.setInterval(readHelper, 1500);
+
+    return () => {
+      window.removeEventListener("snake-sorter-helper-status", listener as EventListener);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const filtered = useMemo(() => candidates.filter((candidate) => {
@@ -544,18 +563,28 @@ export function SnakeSorterAcquisitionQueue({
 
       {canHarvest && (
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.018] p-3">
-          <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">Owner browser helper</div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">Owner browser helper</div>
+            <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase ${helperVersion ? "border-emerald-300/12 text-emerald-100/50" : "border-amber-300/12 text-amber-100/45"}`}>
+              {helperVersion ? `Helper detected · v${helperVersion}` : "Helper not detected"}
+            </span>
+          </div>
           <div className="mt-1 text-[9px] leading-4 text-white/22">
             MorphMarket returns HTTP 403 to our server-side probe, so the helper works from a listing you already opened normally in your browser. Use &quot;Send live refs&quot; first. If those references will not render in Snake Sorter, use &quot;Capture gallery fallback&quot; to capture the displayed gallery locally in your browser and attach review-only images to the same candidate.
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <a href="/downloads/snake-sorter-browser-helper.zip" className="rounded-lg border border-violet-300/12 px-2.5 py-1.5 text-[8px] font-black text-violet-100/50">
-              Download helper ZIP
+              {helperVersion ? "Download latest helper ZIP" : "Download helper ZIP"}
             </a>
             <span className="rounded-lg border border-white/[.06] px-2.5 py-1.5 text-[8px] font-black text-white/35">
-              Then open chrome://extensions → Developer mode → Load unpacked
+              Extract → chrome://extensions → Developer mode → Load unpacked
             </span>
           </div>
+          {!helperVersion && (
+            <div className="mt-2 text-[8px] leading-4 text-amber-100/32">
+              After loading the extension, refresh this Snake Sorter page. This card should change to &quot;Helper detected&quot; before the first real listing test.
+            </div>
+          )}
         </div>
       )}
 
