@@ -52,6 +52,8 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const userId = String(body.user_id ?? "").trim();
   const enabled = body.enabled === true;
+  const requestedLevel = String(body.access_level ?? "scanner").trim();
+  const accessLevel = requestedLevel === "reviewer" ? "reviewer" : "scanner";
   const notes = String(body.notes ?? "").trim().slice(0, 1000);
   if (!/^[0-9a-f-]{36}$/i.test(userId)) {
     return NextResponse.json({ error: "Invalid user" }, { status: 400 });
@@ -79,7 +81,7 @@ export async function PATCH(request: NextRequest) {
       },
       body: JSON.stringify({
         user_id: userId,
-        access_level: "scanner",
+        access_level: accessLevel,
         is_enabled: enabled,
         approved_by: identity.user.id,
         approved_at: enabled ? new Date().toISOString() : undefined,
