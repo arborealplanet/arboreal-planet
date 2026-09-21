@@ -408,7 +408,14 @@ export function SnakeSorterAcquisitionQueue({
     const data = await response.json().catch(() => ({}));
 
     if (response.ok) {
-      setMessage(`Candidate promoted into the reference library as animal ${data.animal_id}.`);
+      setMessage(
+        `Candidate promoted into the reference library as animal ${data.animal_id}.` +
+        (data.training_downgraded
+          ? " Training eligibility was withheld because the labels are not yet strong enough for model training."
+          : data.training_eligible
+            ? " Training eligibility passed the quality gate."
+            : "")
+      );
       await load();
       await onPromoted?.();
     } else {
@@ -1023,13 +1030,13 @@ export function SnakeSorterAcquisitionQueue({
                       </label>
                     </div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <label className="flex items-center gap-2 rounded-xl border border-white/[.05] px-3 py-2 text-[9px] text-white/28"><input type="checkbox" name="training_eligible" value="true" className="accent-emerald-300" />Training eligible after normal reference review</label>
+                      <label className="flex items-center gap-2 rounded-xl border border-white/[.05] px-3 py-2 text-[9px] text-white/28"><input type="checkbox" name="training_eligible" value="true" className="accent-emerald-300" />Request training eligibility (requires strong/confirmed labels, known/believed-pure ancestry, locality, and non-challenge status)</label>
                       <label className="flex items-center gap-2 rounded-xl border border-white/[.05] px-3 py-2 text-[9px] text-white/28"><input type="checkbox" name="challenge_eligible" value="true" className="accent-amber-300" />Challenge / OOD candidate</label>
                     </div>
                     <input type="hidden" name="challenge_expectation" value="review" />
                     <input type="hidden" name="split_group" value="" />
                     <button type="submit" disabled={busy === `promote-${candidate.id}`} className="mt-3 rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-3 py-2 text-[9px] font-black text-sky-100/60 disabled:opacity-35">{busy === `promote-${candidate.id}` ? "Promoting…" : "Promote with these labels"}</button>
-                    <div className="mt-2 text-[8px] leading-4 text-white/18">Defaults are intentionally conservative. Choosing a clean taxon does not bypass the normal reference review/split/snapshot rules.</div>
+                    <div className="mt-2 text-[8px] leading-4 text-white/18">Defaults are intentionally conservative. Choosing a clean taxon does not bypass the normal reference review/split/snapshot rules. Viridis red neonates and Kofiau red neonates are blocked by the taxonomy consistency gate.</div>
                   </form>
                 )}
                 {candidate.promoted_reference_animal_id && <div className="mt-3 rounded-xl border border-sky-300/10 bg-sky-300/[.02] px-3 py-2 text-[9px] text-sky-100/40">Promoted to reference animal {candidate.promoted_reference_animal_id}.</div>}
