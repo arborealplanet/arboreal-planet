@@ -2,6 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type CandidateMedia = {
+  id: string;
+  source_media_url: string | null;
+  source_page_url: string | null;
+  media_order: number;
+  capture_method: string;
+  rights_status: string;
+  review_status: string;
+  view_type: string;
+  quality_status: string;
+  staged_storage_path: string | null;
+  acquisition_error: string | null;
+};
+
 type Candidate = {
   id: string;
   source_type: string;
@@ -31,6 +45,12 @@ type Candidate = {
   promoted_reference_animal_id: string | null;
   promoted_at: string | null;
   discovered_at: string;
+  acquisition_stage?: string;
+  biological_review_status?: string;
+  rights_review_status?: string;
+  media?: CandidateMedia[];
+  media_count?: number;
+  accepted_media_count?: number;
 };
 
 type Profile = {
@@ -54,6 +74,8 @@ type Stats = {
   staged: number;
   open_license: number;
   metadata_only: number;
+  media_total?: number;
+  animals_with_multiple_media?: number;
 };
 
 const button = "rounded-xl border border-white/[.07] bg-black/[.06] px-3 py-2 text-[9px] font-black text-white/42 disabled:opacity-35";
@@ -86,7 +108,7 @@ export function SnakeSorterAcquisitionQueue({
 }) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0 });
+  const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0,media_total:0,animals_with_multiple_media:0 });
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
   const [query, setQuery] = useState("");
@@ -95,6 +117,7 @@ export function SnakeSorterAcquisitionQueue({
   const [message, setMessage] = useState("");
   const [previewById, setPreviewById] = useState<Record<string, { image_url?: string; description?: string; error?: string }>>({});
   const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
+  const [activeMediaIndex, setActiveMediaIndex] = useState<Record<string, number>>({});
 
   async function load() {
     const response = await fetch("/api/snake-sorter/acquisition", { cache: "no-store" });
@@ -264,6 +287,42 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
+  async function reviewMedia(mediaId: string, changes: Partial<Pick<CandidateMedia, "review_status" | "quality_status" | "view_type">>) {
+    setBusy(`media-${mediaId}`);
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/media-review", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: mediaId, ...changes }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setMessage(data.error ?? "Could not update candidate image.");
+    await load();
+    setBusy("");
+  }
+
+  function mediaFor(candidate: Candidate) {
+    return Array.isArray(candidate.media) ? candidate.media : [];
+  }
+
+  function selectedMedia(candidate: Candidate) {
+    const media = mediaFor(candidate);
+    if (!media.length) return null;
+    const raw = activeMediaIndex[candidate.id] ?? 0;
+    const index = Math.max(0, Math.min(raw, media.length - 1));
+    return media[index] ?? null;
+  }
+
+  function moveMedia(candidate: Candidate, delta: number) {
+    const media = mediaFor(candidate);
+    if (!media.length) return;
+    setActiveMediaIndex((current) => {
+      const raw = current[candidate.id] ?? 0;
+      const next = (raw + delta + media.length) % media.length;
+      return { ...current, [candidate.id]: next };
+    });
+  }
+
   async function loadPreview(candidate: Candidate) {
     setBusy(`preview-${candidate.id}`);
     setPreviewById((current) => ({ ...current, [candidate.id]: {} }));
@@ -300,7 +359,7 @@ export function SnakeSorterAcquisitionQueue({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-10">
         {[
           ["Total", stats.total],
           ["Pending", stats.pending],
@@ -310,6 +369,8 @@ export function SnakeSorterAcquisitionQueue({
           ["Permission", stats.permission_required],
           ["Open license", stats.open_license],
           ["Metadata only", stats.metadata_only],
+          ["Media refs", stats.media_total ?? 0],
+          ["Multi-image", stats.animals_with_multiple_media ?? 0],
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
 
@@ -354,9 +415,48 @@ export function SnakeSorterAcquisitionQueue({
         {filtered.map((candidate) => (
           <article key={candidate.id} className="overflow-hidden rounded-[22px] border border-white/[.055] bg-black/[.06]">
             <div className="flex min-h-36">
-              <div className="w-36 shrink-0 bg-black/20">
+              <div className="w-40 shrink-0 bg-black/20">
                 {candidate.staged_storage_path ? (
-                  <img src={`/api/snake-sorter/acquisition/media/${encodeURIComponent(candidate.id)}`} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  <img src={`/api/snake-sorter/acquisition/media/${encodeURIComponent(candidate.id)}`} alt="" loading="lazy" className="h-36 w-full object-cover" />
+                ) : selectedMedia(candidate)?.source_media_url ? (
+                  <div>
+                    <img
+                      src={selectedMedia(candidate)?.source_media_url || ""}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-36 w-full object-cover"
+                    />
+                    <div className="border-t border-white/[.05] p-2">
+                      <div className="flex items-center justify-between gap-1 text-[8px] text-white/26">
+                        <button type="button" onClick={() => moveMedia(candidate, -1)} className={button} disabled={(candidate.media_count ?? 0) < 2}>‹</button>
+                        <span>{(activeMediaIndex[candidate.id] ?? 0) + 1} / {candidate.media_count ?? mediaFor(candidate).length}</span>
+                        <button type="button" onClick={() => moveMedia(candidate, 1)} className={button} disabled={(candidate.media_count ?? 0) < 2}>›</button>
+                      </div>
+                      {selectedMedia(candidate) && (
+                        <>
+                          <select
+                            value={selectedMedia(candidate)?.view_type || "unknown"}
+                            onChange={(event) => void reviewMedia(selectedMedia(candidate)!.id, { view_type: event.target.value })}
+                            className={`${select} mt-2 w-full`}
+                          >
+                            <option value="unknown">Unknown view</option>
+                            <option value="full_body">Full body</option>
+                            <option value="head">Head</option>
+                            <option value="dorsal">Dorsal</option>
+                            <option value="left_lateral">Left lateral</option>
+                            <option value="right_lateral">Right lateral</option>
+                            <option value="tail">Tail</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <div className="mt-2 flex gap-1">
+                            <button type="button" disabled={busy === `media-${selectedMedia(candidate)!.id}`} onClick={() => void reviewMedia(selectedMedia(candidate)!.id, { review_status: "accepted", quality_status: "accepted" })} className="flex-1 rounded-lg border border-emerald-300/12 px-2 py-1.5 text-[8px] text-emerald-100/50 disabled:opacity-35">Keep</button>
+                            <button type="button" disabled={busy === `media-${selectedMedia(candidate)!.id}`} onClick={() => void reviewMedia(selectedMedia(candidate)!.id, { review_status: "rejected", quality_status: "rejected" })} className="flex-1 rounded-lg border border-rose-300/12 px-2 py-1.5 text-[8px] text-rose-100/45 disabled:opacity-35">Reject</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 ) : candidate.thumbnail_url ? (
                   <img
                     src={candidate.thumbnail_url}
@@ -371,7 +471,7 @@ export function SnakeSorterAcquisitionQueue({
                 ) : (
                   <div className="grid h-full min-h-36 place-items-center px-3 text-center text-[9px] leading-4 text-white/16">
                     <div>
-                      <div>{candidate.source_type === "morphmarket" ? "Listing image not stored" : candidate.rights_status === "open_license" ? "Open media not staged yet" : "No staged media"}</div>
+                      <div>{candidate.source_type === "morphmarket" ? "No listing media collected yet" : candidate.rights_status === "open_license" ? "Open media not staged yet" : "No staged media"}</div>
                       {candidate.source_type === "morphmarket" && (
                         <button
                           type="button"
@@ -395,6 +495,8 @@ export function SnakeSorterAcquisitionQueue({
                       <span className="rounded-full border border-white/[.06] px-2 py-0.5 text-[8px] text-white/28">{sourceLabel(candidate.source_type)}</span>
                       <span className={`rounded-full border px-2 py-0.5 text-[8px] ${statusClass(candidate.review_status)}`}>{candidate.review_status.replaceAll("_"," ")}</span>
                       <span className="rounded-full border border-white/[.06] px-2 py-0.5 text-[8px] text-white/24">{candidate.rights_status.replaceAll("_"," ")}</span>
+                      {(candidate.media_count ?? 0) > 0 && <span className="rounded-full border border-sky-300/10 px-2 py-0.5 text-[8px] text-sky-100/40">{candidate.media_count} image{candidate.media_count === 1 ? "" : "s"}</span>}
+                      {candidate.acquisition_stage && <span className="rounded-full border border-white/[.06] px-2 py-0.5 text-[8px] text-white/22">{candidate.acquisition_stage.replaceAll("_"," ")}</span>}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
