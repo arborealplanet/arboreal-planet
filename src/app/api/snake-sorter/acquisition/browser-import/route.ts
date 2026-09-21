@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
     ? await candidateResponse.json() as Array<{ id: string; source_key: string; source_url: string; title: string | null; thumbnail_url: string | null }>
     : [];
   let candidate = candidates[0];
+  let candidateCreated = false;
 
   if (!candidate) {
     const createResponse = await fetch(
@@ -173,6 +174,7 @@ export async function POST(request: NextRequest) {
     }
 
     candidate = created[0];
+    candidateCreated = true;
   }
 
   const rows = imageUrls.map((url, index) => ({
@@ -241,5 +243,6 @@ export async function POST(request: NextRequest) {
     attached: inserted.length,
     live_reference_count: imageUrls.length,
     stored_copies: 0,
+    candidate_created: candidateCreated,
   });
 }
