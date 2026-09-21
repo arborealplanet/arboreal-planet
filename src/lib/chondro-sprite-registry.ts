@@ -79,7 +79,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Cyclops: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/cyclops/red-neonate.webp")],
+      Red: [variant("/hatchery/snakes/recovered-v7/cyclops/red-neonate.webp")],
     },
   },
   Manokwari: {
@@ -91,7 +91,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Red: [
         variant("/hatchery/snakes/localities/manokwari/red-adult.webp", { maxPhenotypeScore: 84 }),
         variant("/hatchery/snakes/special/manokwari-red-adult-a-plus.webp", { minPhenotypeScore: 85 }),
-        variant("/hatchery/snakes/special/manokwari-red-adult-a-plus-02.webp", { minPhenotypeScore: 85 }),
+        variant("/hatchery/snakes/recovered-v7/manokwari/red-adult-a-plus-02.webp", { minPhenotypeScore: 85 }),
       ],
       Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp")],
     },
@@ -144,7 +144,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Aru: {
     juvenile: {
-      Yellow: [variant("/hatchery/snakes/localities/aru/yellow-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/recovered-v7/aru/yellow-neonate.webp")],
     },
     adultAny: [variant("/hatchery/snakes/localities/aru/adult-live-v2.webp")],
   },
@@ -332,6 +332,45 @@ function localityCandidates(request: ChondroSpriteRequest) {
 }
 
 export function localitySpriteFor(request: ChondroSpriteRequest) {
+  // Mixed-locality offspring should visually resolve to either parent locality,
+  // not always the first ancestry entry. Use the permanent sprite seed so an
+  // individual animal keeps the same portrait on every render while a clutch
+  // distributes approximately 50/50 across the two parent sprite pools.
+  if (
+    normalizeLocalityToken(request.locality) === "mixed-locality" &&
+    request.localityAncestry
+  ) {
+    const parentLocalities = Object.entries(request.localityAncestry)
+      .filter(([, value]) => Number(value ?? 0) > 0)
+      .sort((a, b) => Number(b[1] ?? 0) - Number(a[1] ?? 0))
+      .map(([name]) => canonicalLocalityKey(name))
+      .filter((name): name is string => Boolean(name))
+      .filter((name, index, names) => names.indexOf(name) === index)
+      .slice(0, 2);
+
+    const parentSprites = parentLocalities
+      .map((locality) => {
+        const set = localitySprites[locality];
+        return pickVariant(
+          poolForStage(set, request),
+          request,
+          `locality:${locality}`,
+        );
+      })
+      .filter((sprite): sprite is string => Boolean(sprite));
+
+    if (parentSprites.length === 1) return parentSprites[0];
+    if (parentSprites.length >= 2) {
+      const seed = request.variantSeed ?? [
+        request.locality,
+        request.subspecies,
+        request.neonateColor,
+        request.lifeStage,
+      ].filter(Boolean).join("|");
+      return parentSprites[hashString(`${seed}|mixed-locality-50-50`) % 2];
+    }
+  }
+
   for (const locality of localityCandidates(request)) {
     const set = localitySprites[locality];
     const sprite = pickVariant(
@@ -387,7 +426,7 @@ export function chondroSpecificSpriteCandidatesFor(request: ChondroSpriteRequest
 export const CHONDRO_SPRITE_ASSET_PLAN = {
   special: {
     manokwariRedAdultAPlus: "/hatchery/snakes/special/manokwari-red-adult-a-plus.webp",
-    manokwariRedAdultAPlus02: "/hatchery/snakes/special/manokwari-red-adult-a-plus-02.webp",
+    manokwariRedAdultAPlus02: "/hatchery/snakes/recovered-v7/manokwari/red-adult-a-plus-02.webp",
     sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp",
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.webp",
     designerRedNeonate01: "/hatchery/snakes/special/designer/red-neonate-01.webp",
