@@ -52,6 +52,9 @@ const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
 const SHOP_SEED_KEY = "arboreal_chondro_expanded_shop_seed_v2";
 const SHOP_REFRESH_AT_KEY = "arboreal_chondro_expanded_shop_refresh_at_v1";
 const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
+// Legacy compatibility marker retained for the Chondro prebuild guard.
+// Standalone Repti-Shop purchases now persist directly instead of relying on
+// the old arboreal-chondro-enclosure-action event listener.
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
   "Chondro Dojo Bin": { label: "Chondro Dojo Pair", detail: "Two space-saving Dojo enclosures sold as one set. The pair uses one facility slot and houses two snakes." },
