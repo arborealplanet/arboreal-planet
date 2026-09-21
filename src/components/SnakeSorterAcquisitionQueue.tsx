@@ -14,6 +14,9 @@ type CandidateMedia = {
   quality_status: string;
   staged_storage_path: string | null;
   acquisition_error: string | null;
+  live_reference_status?: "unknown" | "available" | "unavailable" | "blocked" | "expired";
+  last_verified_at?: string | null;
+  last_verified_http_status?: number | null;
 };
 
 type CaptureJob = {
@@ -174,6 +177,7 @@ export function SnakeSorterAcquisitionQueue({
   const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
   const [rightsNoteById, setRightsNoteById] = useState<Record<string, string>>({});
   const [activeMediaIndex, setActiveMediaIndex] = useState<Record<string, number>>({});
+  const [reportedMediaHealth, setReportedMediaHealth] = useState<Record<string, string>>({});
 
   async function load() {
     const response = await fetch("/api/snake-sorter/acquisition", { cache: "no-store" });
@@ -242,6 +246,57 @@ export function SnakeSorterAcquisitionQueue({
     return true;
   }), [candidates, source, status, locality, query]);
 
+  async function reportMediaHealth(mediaId: string, health: "available" | "unavailable") {
+    const key = `${mediaId}:${health}`;
+    if (reportedMediaHealth[mediaId] === key) return;
+    setReportedMediaHealth((current) => ({ ...current, [mediaId]: key }));
+    await fetch("/api/snake-sorter/acquisition/media-health", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: mediaId, status: health }),
+    }).catch(() => undefined);
+  }
+
+  async function refreshMorphMarketLiveRefs(limit = 10) {
+    setBusy("mm-live-refs");
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/harvest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit, mode: "backfill_existing", source: "morphmarket" }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(data.error ?? "Could not refresh MorphMarket live image references.");
+    } else {
+      const stats = data.morphmarket?.stats ?? {};
+      setMessage(
+        `Live-reference refresh complete: ${Number(stats.media_references ?? 0)} image reference(s) attached across ${Number(stats.backfill_candidates ?? 0)} candidate(s).` +
+        (stats.access_paused ? " MorphMarket returned an access-control signal, so the refresh stopped safely." : "")
+      );
+    }
+    await load();
+    setBusy("");
+  }
+
+  async function queueFallbackBatch(limit = 5) {
+    setBusy("queue-fallbacks");
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/capture-jobs/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(data.error ?? "Could not queue fallback gallery captures.");
+    } else {
+      setMessage(`Queued ${Number(data.queued ?? 0)} fallback capture job(s). The live worker remains disarmed until explicitly armed.`);
+    }
+    await load();
+    setBusy("");
+  }
+
   async function stageOpenMedia() {
     setBusy("stage");
     setMessage("");
@@ -288,7 +343,7 @@ export function SnakeSorterAcquisitionQueue({
     const response = await fetch("/api/snake-sorter/acquisition/harvest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ limit: 40 }),
+      body: JSON.stringify({ limit: 40, source: "open_sources" }),
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
@@ -656,6 +711,30 @@ export function SnakeSorterAcquisitionQueue({
         </div>
       )}
 
+      {canHarvest && (
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            disabled={busy === "mm-live-refs"}
+            onClick={() => void refreshMorphMarketLiveRefs(10)}
+            className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
+          >
+            {busy === "mm-live-refs" ? "Refreshing live refs…" : "Refresh MM live refs"}
+          </button>
+          <button
+            type="button"
+            disabled={busy === "queue-fallbacks"}
+            onClick={() => void queueFallbackBatch(5)}
+            className="rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48 disabled:opacity-35"
+          >
+            {busy === "queue-fallbacks" ? "Queueing fallbacks…" : "Queue capture fallbacks"}
+          </button>
+          <div className="rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[8px] leading-4 text-white/20">
+            Preferred order: live image reference → rendered gallery fallback → manual attachment.
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto_auto_auto] sm:items-center">
         <input
           value={query}
@@ -710,6 +789,17 @@ export function SnakeSorterAcquisitionQueue({
                       loading="lazy"
                       referrerPolicy="no-referrer"
                       className="h-36 w-full object-cover"
+                      onLoad={() => {
+                        const media = selectedMedia(candidate);
+                        if (media?.source_media_url && !media.staged_storage_path) void reportMediaHealth(media.id, "available");
+                      }}
+                      onError={(event) => {
+                        const media = selectedMedia(candidate);
+                        if (media?.source_media_url && !media.staged_storage_path) {
+                          event.currentTarget.style.display = "none";
+                          void reportMediaHealth(media.id, "unavailable");
+                        }
+                      }}
                     />
                     <div className="border-t border-white/[.05] p-2">
                       <div className="flex items-center justify-between gap-1 text-[8px] text-white/26">
