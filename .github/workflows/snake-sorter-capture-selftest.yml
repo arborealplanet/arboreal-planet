@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - "scripts/snake_sorter_capture_worker.py"
+      - "scripts/snake_sorter_browser_helper_selftest.py"
+      - "tools/snake-sorter-browser-helper/**"
       - ".github/workflows/snake-sorter-capture-selftest.yml"
   pull_request:
     paths:
       - "scripts/snake_sorter_capture_worker.py"
+      - "scripts/snake_sorter_browser_helper_selftest.py"
+      - "tools/snake-sorter-browser-helper/**"
       - ".github/workflows/snake-sorter-capture-selftest.yml"
 
 permissions:
@@ -31,5 +35,8 @@ jobs:
           pip install requests playwright
           python -m playwright install --with-deps chromium
 
-      - name: Run offline Snake Sorter gallery self-test
+      - name: Run offline Snake Sorter server-worker gallery self-test
         run: python scripts/snake_sorter_capture_worker.py --self-test
+
+      - name: Run offline Snake Sorter browser-helper self-test
+        run: python scripts/snake_sorter_browser_helper_selftest.py
