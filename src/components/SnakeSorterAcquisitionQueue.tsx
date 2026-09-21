@@ -565,7 +565,7 @@ export function SnakeSorterAcquisitionQueue({
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.018] p-3">
           <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">Owner browser helper</div>
           <div className="mt-1 text-[9px] leading-4 text-white/22">
-            MorphMarket returns HTTP 403 to our server-side probe, so the helper works from a listing you already opened normally in your browser. Use "Send live refs" first. If those references will not render in Snake Sorter, use "Capture gallery fallback" to capture the displayed gallery locally in your browser and attach review-only images to the same candidate.
+            MorphMarket returns HTTP 403 to our server-side probe, so the helper works from a listing you already opened normally in your browser. Use &quot;Send live refs&quot; first. If those references will not render in Snake Sorter, use &quot;Capture gallery fallback&quot; to capture the displayed gallery locally in your browser and attach review-only images to the same candidate.
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <a href="/downloads/snake-sorter-browser-helper.zip" className="rounded-lg border border-violet-300/12 px-2.5 py-1.5 text-[8px] font-black text-violet-100/50">
