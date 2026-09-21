@@ -108,5 +108,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: message, detail: data }, { status: response.status });
   }
 
-  return NextResponse.json({ ok: true, profile: Array.isArray(data) ? data[0] : data });
+  if (!Array.isArray(data) || !data[0]) {
+    return NextResponse.json({ error: "Profile changes were not saved. Please sign in again and retry." }, { status: 409 });
+  }
+
+  return NextResponse.json({ ok: true, profile: data[0] });
 }
