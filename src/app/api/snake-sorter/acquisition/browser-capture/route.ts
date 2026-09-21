@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (!["image/jpeg","image/png","image/webp"].includes(mimeType)) {
     return NextResponse.json({ error: "Captured image must be JPEG, PNG, or WebP." }, { status: 415 });
   }
-  if (base64.length > 6_000_000) {
+  if (base64.length > 3_500_000) {
     return NextResponse.json({ error: "Captured image payload is too large." }, { status: 413 });
   }
 
@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Captured image payload is invalid." }, { status: 400 });
   }
-  if (!bytes.length || bytes.length > 4 * 1024 * 1024) {
-    return NextResponse.json({ error: "Captured image must be 4 MB or smaller." }, { status: 413 });
+  if (!bytes.length || bytes.length > 2_500_000) {
+    return NextResponse.json({ error: "Captured image must be 2.5 MB or smaller." }, { status: 413 });
   }
 
   const h = {
