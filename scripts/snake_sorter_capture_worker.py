@@ -146,9 +146,8 @@ def next_media_order(candidate_id: str) -> int:
 def hash_exists(candidate_id: str, sha256: str) -> bool:
     response = rest(
         "snake_sorter_acquisition_media"
-        f"?candidate_id=eq.{quote(candidate_id)}"
-        f"&staged_content_sha256=eq.{quote(sha256)}"
-        "&select=id&limit=1"
+        f"?staged_content_sha256=eq.{quote(sha256)}"
+        "&select=id,candidate_id&limit=1"
     )
     response.raise_for_status()
     return bool(response.json())
