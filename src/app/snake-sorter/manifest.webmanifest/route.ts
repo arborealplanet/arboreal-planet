@@ -7,7 +7,7 @@ export function GET() {
     short_name: "Snake Sorter",
     description: "Private Green Tree Python visual identification and reference laboratory.",
     start_url: "/snake-sorter?app=snake-sorter",
-    scope: "/snake-sorter/",
+    scope: "/snake-sorter",
     display: "standalone",
     display_override: ["standalone"],
     prefer_related_applications: false,
