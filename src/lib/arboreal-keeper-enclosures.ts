@@ -35,7 +35,7 @@ export const ARBOREAL_KEEPER_ENCLOSURES: KeeperEnclosureDefinition[] = [
     sizeClass: "small",
     price: 250,
     compatibleSpecies: {
-      green_tree_python: ["neonate", "subadult"],
+      green_tree_python: ["neonate"],
       northern_emerald_tree_boa: ["neonate"],
       amazon_basin_emerald_tree_boa: ["neonate"],
     },
