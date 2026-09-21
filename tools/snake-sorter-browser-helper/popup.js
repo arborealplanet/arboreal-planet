@@ -11,7 +11,7 @@ button.addEventListener("click", async () => {
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url?.startsWith("https://www.morphmarket.com/")) {
+    if (!tab?.id || !/^https:\/\/(?:www\.)?morphmarket\.com\//i.test(tab.url || "")) {
       throw new Error("Open a MorphMarket listing first.");
     }
 
@@ -144,8 +144,9 @@ button.addEventListener("click", async () => {
     if (!data?.ok) throw new Error(data?.error || "Snake Sorter rejected the import.");
 
     show(
+      (data.candidate_created ? "Created a new Snake Sorter candidate.\n" : "") +
       `Attached ${data.attached ?? 0} live reference(s) to ${data.title || "the listing"}.\n\n` +
-      "The Snake Sorter tab has been opened so you can review them."
+      "Snake Sorter is open so you can review them."
     );
   } catch (error) {
     show(error instanceof Error ? error.message : "Import failed.");
