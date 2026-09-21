@@ -15,15 +15,21 @@ export function GET() {
     categories: ["education", "utilities"],
     icons: [
       {
-        src: "/branding/snake-sorter-logo.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/api/snake-sorter/app-icon-192",
+        sizes: "192x192",
+        type: "image/png",
         purpose: "any"
       },
       {
-        src: "/branding/snake-sorter-logo.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/api/snake-sorter/app-icon-512",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any"
+      },
+      {
+        src: "/api/snake-sorter/app-icon-512",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable"
       }
     ]
