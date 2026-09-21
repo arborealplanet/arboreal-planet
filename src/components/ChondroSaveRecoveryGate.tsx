@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { ArborealKeeperLoadingScreen } from "@/components/ArborealKeeperLoadingScreen";
 
 // Legacy local key is preserved during migration so existing players keep their saves.
 const LOCAL_SAVE_KEY = "arboreal_chondro_breeder_v2";
+const MIN_LOADING_SCREEN_MS = 950;
 
 function sanitizeLocalSave(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -36,10 +38,13 @@ function sanitizeLocalSave(value: unknown) {
 
 export function ChondroSaveRecoveryGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [message, setMessage] = useState("Checking your Arboreal Keeper save…");
+  const [message, setMessage] = useState("Loading save file…");
 
   useEffect(() => {
     let cancelled = false;
+    const minimumDisplay = new Promise<void>((resolve) => {
+      window.setTimeout(resolve, MIN_LOADING_SCREEN_MS);
+    });
     const fallback = window.setTimeout(() => {
       if (!cancelled) setReady(true);
     }, 8000);
@@ -57,10 +62,11 @@ export function ChondroSaveRecoveryGate({ children }: { children: ReactNode }) {
 
       try {
         const response = await fetch("/api/hatchery/arboreal-keeper/repair-save", { method: "POST", cache: "no-store" });
-        if (response.ok) setMessage("Save checked. Loading your Arboreal Keeper facility…");
+        if (response.ok) setMessage("Preparing your facility…");
       } catch {
         // Continue into the game even if cloud repair is temporarily unavailable.
       } finally {
+        await minimumDisplay;
         window.clearTimeout(fallback);
         if (!cancelled) setReady(true);
       }
@@ -74,11 +80,7 @@ export function ChondroSaveRecoveryGate({ children }: { children: ReactNode }) {
   }, []);
 
   if (!ready) {
-    return (
-      <div className="mx-auto max-w-5xl px-5 py-16 sm:px-6">
-        <div className="panel rounded-[30px] p-8 text-center text-sm text-white/45">{message}</div>
-      </div>
-    );
+    return <ArborealKeeperLoadingScreen message={message} />;
   }
 
   return <>{children}</>;
