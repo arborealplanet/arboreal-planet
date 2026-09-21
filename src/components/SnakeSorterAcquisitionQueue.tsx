@@ -287,6 +287,23 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
+  async function uploadCandidateMedia(candidateId: string, file: File) {
+    setBusy(`upload-${candidateId}`);
+    setMessage("");
+    const form = new FormData();
+    form.set("candidate_id", candidateId);
+    form.set("file", file);
+    const response = await fetch("/api/snake-sorter/acquisition/media-upload", {
+      method: "POST",
+      body: form,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setMessage(data.error ?? "Could not attach candidate image.");
+    else setMessage("Candidate image attached for review.");
+    await load();
+    setBusy("");
+  }
+
   async function reviewMedia(mediaId: string, changes: Partial<Pick<CandidateMedia, "review_status" | "quality_status" | "view_type">>) {
     setBusy(`media-${mediaId}`);
     setMessage("");
@@ -421,7 +438,9 @@ export function SnakeSorterAcquisitionQueue({
                 ) : selectedMedia(candidate)?.source_media_url ? (
                   <div>
                     <img
-                      src={selectedMedia(candidate)?.source_media_url || ""}
+                      src={selectedMedia(candidate)?.staged_storage_path
+                        ? `/api/snake-sorter/acquisition/media-file/${encodeURIComponent(selectedMedia(candidate)!.id)}`
+                        : selectedMedia(candidate)?.source_media_url || ""}
                       alt=""
                       loading="lazy"
                       referrerPolicy="no-referrer"
@@ -520,6 +539,22 @@ export function SnakeSorterAcquisitionQueue({
                   <a href={candidate.source_url} target="_blank" rel="noreferrer" className={button}>Open source</a>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"approved")} className="rounded-xl border border-emerald-300/12 bg-emerald-300/[.025] px-3 py-2 text-[9px] font-black text-emerald-100/50 disabled:opacity-35">Approve candidate</button>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
+                  {canHarvest && (
+                    <label className="cursor-pointer rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48">
+                      {busy === `upload-${candidate.id}` ? "Attaching…" : "Attach review image"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        disabled={busy === `upload-${candidate.id}`}
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          if (file) void uploadCandidateMedia(candidate.id, file);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <select
