@@ -302,6 +302,21 @@ export function SnakeSorterAcquisitionQueue({
     setBusy("");
   }
 
+  async function queueCapture(candidateId: string) {
+    setBusy(`capture-${candidateId}`);
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/capture-jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidate_id: candidateId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setMessage(data.error ?? "Could not queue gallery capture.");
+    else setMessage(data.already_queued ? "Gallery capture is already queued." : "Gallery capture queued. It will remain idle until the capture worker is run.");
+    await load();
+    setBusy("");
+  }
+
   async function updateRights(candidateId: string, rightsReviewStatus: "unreviewed" | "cleared" | "permission_required" | "restricted", mediaRightsStatus: "open_license" | "permission_required" | "permission_granted" | "metadata_only" | "unknown") {
     setBusy(`rights-${candidateId}`);
     setMessage("");
@@ -608,6 +623,16 @@ export function SnakeSorterAcquisitionQueue({
                   <a href={candidate.source_url} target="_blank" rel="noreferrer" className={button}>Open source</a>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"approved")} className="rounded-xl border border-emerald-300/12 bg-emerald-300/[.025] px-3 py-2 text-[9px] font-black text-emerald-100/50 disabled:opacity-35">Approve candidate</button>
                   <button type="button" disabled={busy === candidate.id} onClick={() => void review(candidate.id,"permission_required")} className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/48 disabled:opacity-35">Permission needed</button>
+                  {canHarvest && candidate.source_type === "morphmarket" && (
+                    <button
+                      type="button"
+                      disabled={busy === `capture-${candidate.id}`}
+                      onClick={() => void queueCapture(candidate.id)}
+                      className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
+                    >
+                      {busy === `capture-${candidate.id}` ? "Queueing…" : "Queue gallery capture"}
+                    </button>
+                  )}
                   {canHarvest && (
                     <label className="cursor-pointer rounded-xl border border-sky-300/12 bg-sky-300/[.025] px-3 py-2 text-[9px] font-black text-sky-100/48">
                       {busy === `upload-${candidate.id}` ? "Attaching…" : "Attach review image"}
