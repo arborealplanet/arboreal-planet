@@ -16,6 +16,7 @@ import { SnakeSorterModelStatus } from "@/components/SnakeSorterModelStatus";
 import { SnakeSorterMembers } from "@/components/SnakeSorterMembers";
 import { SnakeSorterBulkImport } from "@/components/SnakeSorterBulkImport";
 import { SnakeSorterOperations } from "@/components/SnakeSorterOperations";
+import { SnakeSorterInstallButton } from "@/components/SnakeSorterInstallButton";
 
 type View = "home" | "scan" | "candidates" | "references" | "history" | "more";
 type AccessLevel = "owner" | "reviewer" | "scanner" | string | null;
@@ -122,6 +123,7 @@ export function SnakeSorterLabShell({
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <SnakeSorterInstallButton />
             {canReview && candidateStats.pending > 0 && (
               <button
                 type="button"
