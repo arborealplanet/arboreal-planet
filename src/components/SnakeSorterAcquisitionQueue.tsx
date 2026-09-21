@@ -16,6 +16,18 @@ type CandidateMedia = {
   acquisition_error: string | null;
 };
 
+type CaptureJob = {
+  id: string;
+  status: "queued" | "processing" | "completed" | "blocked" | "failed" | "cancelled";
+  requested_at?: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  captured_media_count?: number;
+  discovered_media_count?: number;
+  last_http_status?: number | null;
+  last_error?: string | null;
+};
+
 type Candidate = {
   id: string;
   source_type: string;
@@ -51,6 +63,7 @@ type Candidate = {
   media?: CandidateMedia[];
   media_count?: number;
   accepted_media_count?: number;
+  latest_capture_job?: CaptureJob | null;
 };
 
 type Profile = {
@@ -604,6 +617,12 @@ export function SnakeSorterAcquisitionQueue({
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {candidate.staged_storage_path && <span className="rounded-full border border-emerald-300/12 px-2 py-1 text-[8px] font-black uppercase text-emerald-100/45">Staged</span>}
+                    {candidate.latest_capture_job && (
+                      <span className="rounded-full border border-violet-300/12 px-2 py-1 text-[8px] font-black uppercase text-violet-100/45">
+                        Capture {candidate.latest_capture_job.status}
+                        {candidate.latest_capture_job.captured_media_count ? ` · ${candidate.latest_capture_job.captured_media_count}` : ""}
+                      </span>
+                    )}
                     {candidate.promoted_reference_animal_id && <span className="rounded-full border border-sky-300/12 px-2 py-1 text-[8px] font-black uppercase text-sky-100/45">Promoted</span>}
                   </div>
                 </div>
@@ -617,6 +636,12 @@ export function SnakeSorterAcquisitionQueue({
 
                 {previewById[candidate.id]?.description && <div className="mt-3 line-clamp-3 rounded-xl border border-sky-300/8 bg-sky-300/[.015] px-3 py-2 text-[9px] leading-4 text-white/28">{previewById[candidate.id].description}</div>}
                 {candidate.acquisition_error && <div className="mt-3 rounded-xl border border-rose-300/10 bg-rose-300/[.025] px-3 py-2 text-[9px] leading-4 text-rose-50/40">{candidate.acquisition_error}</div>}
+                {candidate.latest_capture_job?.last_error && (
+                  <div className="mt-3 rounded-xl border border-violet-300/10 bg-violet-300/[.02] px-3 py-2 text-[9px] leading-4 text-violet-50/40">
+                    Capture {candidate.latest_capture_job.status}: {candidate.latest_capture_job.last_error}
+                    {candidate.latest_capture_job.last_http_status ? ` (HTTP ${candidate.latest_capture_job.last_http_status})` : ""}
+                  </div>
+                )}
                 {candidate.exclusion_reason && <div className="mt-3 text-[9px] leading-4 text-white/22">Excluded: {candidate.exclusion_reason}</div>}
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -626,11 +651,21 @@ export function SnakeSorterAcquisitionQueue({
                   {canHarvest && candidate.source_type === "morphmarket" && (
                     <button
                       type="button"
-                      disabled={busy === `capture-${candidate.id}`}
+                      disabled={
+                        busy === `capture-${candidate.id}` ||
+                        candidate.latest_capture_job?.status === "queued" ||
+                        candidate.latest_capture_job?.status === "processing"
+                      }
                       onClick={() => void queueCapture(candidate.id)}
                       className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-[9px] font-black text-violet-100/48 disabled:opacity-35"
                     >
-                      {busy === `capture-${candidate.id}` ? "Queueing…" : "Queue gallery capture"}
+                      {busy === `capture-${candidate.id}`
+                        ? "Queueing…"
+                        : candidate.latest_capture_job?.status === "queued"
+                          ? "Capture queued"
+                          : candidate.latest_capture_job?.status === "processing"
+                            ? "Capturing…"
+                            : "Queue gallery capture"}
                     </button>
                   )}
                   {canHarvest && (
