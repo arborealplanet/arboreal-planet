@@ -47,10 +47,7 @@ export async function POST(request: NextRequest) {
   const rawLimit = Number(body.limit ?? 40);
   const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? Math.trunc(rawLimit) : 40, 50));
   const mode = body.mode === "backfill_existing" ? "backfill_existing" : "discover";
-  const source = body.source === "open_sources" || body.source === "morphmarket" ? body.source : "both";
-  const candidateId = typeof body.candidate_id === "string" && body.candidate_id.trim()
-    ? body.candidate_id.trim()
-    : undefined;
+  const source = body.source === "morphmarket" ? "morphmarket" : "open_sources";
 
   if (source === "morphmarket" || mode === "backfill_existing") {
     return NextResponse.json({
@@ -60,48 +57,20 @@ export async function POST(request: NextRequest) {
     }, { status: 409 });
   }
 
-  if (mode === "backfill_existing") {
-    const morphmarket = await invokeHarvester(
-      "snake-sorter-harvest-morphmarket",
-      identity.token,
-      candidateId ? 1 : limit,
-      mode,
-      candidateId,
-    );
-    if (!morphmarket.ok) {
-      return NextResponse.json({
-        error: "MorphMarket media backfill failed.",
-        morphmarket: morphmarket.data,
-      }, { status: Math.max(morphmarket.status, 502) });
-    }
-    return NextResponse.json({
-      ok: true,
-      mode,
-      morphmarket: morphmarket.data,
-      partial_failure: false,
-    });
-  }
+  const openSources = await invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit);
 
-  const openSources = source === "morphmarket"
-    ? { ok: true, status: 200, data: { skipped: true } }
-    : await invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit);
-  const morphmarket = source === "open_sources"
-    ? { ok: true, status: 200, data: { skipped: true } }
-    : await invokeHarvester("snake-sorter-harvest-morphmarket", identity.token, limit, "discover");
-
-  if (!openSources.ok && !morphmarket.ok) {
+  if (!openSources.ok) {
     return NextResponse.json({
-      error: "Harvest failed.",
+      error: "Open-source harvest failed.",
       open_sources: openSources.data,
-      morphmarket: morphmarket.data,
-    }, { status: Math.max(openSources.status, morphmarket.status, 502) });
+    }, { status: Math.max(openSources.status, 502) });
   }
 
   return NextResponse.json({
     ok: true,
-    source,
+    source: "open_sources",
     open_sources: openSources.data,
-    morphmarket: morphmarket.data,
-    partial_failure: !openSources.ok || !morphmarket.ok,
+    morphmarket: { skipped: true, reason: "browser_helper_only" },
+    partial_failure: false,
   });
 }
