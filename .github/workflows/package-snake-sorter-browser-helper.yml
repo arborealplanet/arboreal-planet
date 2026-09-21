@@ -22,13 +22,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build helper zip
-        run: |
-          mkdir -p public/downloads
-          rm -f public/downloads/snake-sorter-browser-helper.zip
-          cd tools/snake-sorter-browser-helper
-          zip -r ../../public/downloads/snake-sorter-browser-helper.zip .
-
       - name: Commit packaged helper
         shell: bash
         run: |
