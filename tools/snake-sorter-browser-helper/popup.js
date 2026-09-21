@@ -60,9 +60,63 @@ button.addEventListener("click", async () => {
           } catch {}
         }
 
-        for (const img of document.images) {
+        const ogImage = meta("og:image");
+        let galleryRoot = null;
+
+        const candidateImages = [...document.images]
+          .map((img) => {
+            const rect = img.getBoundingClientRect();
+            const source = img.currentSrc || img.src || "";
+            const context = `${img.alt || ""} ${img.className || ""} ${img.id || ""}`;
+            let score = Math.max(0, rect.width * rect.height);
+
+            if (bad.test(context) || bad.test(source)) return null;
+            if (rect.width < 220 || rect.height < 160) return null;
+
+            try {
+              if (ogImage && new URL(source, location.href).href === new URL(ogImage, location.href).href) {
+                score *= 8;
+              } else if (ogImage && new URL(source, location.href).hostname === new URL(ogImage, location.href).hostname) {
+                score *= 2;
+              }
+            } catch {}
+
+            return { img, score };
+          })
+          .filter(Boolean)
+          .sort((a, b) => b.score - a.score);
+
+        const anchor = candidateImages[0]?.img || null;
+        if (anchor) {
+          let node = anchor;
+          for (let depth = 0; depth < 7 && node?.parentElement; depth++) {
+            node = node.parentElement;
+            const rect = node.getBoundingClientRect();
+            const imgs = [...node.querySelectorAll("img")].filter((img) => {
+              const r = img.getBoundingClientRect();
+              return r.width >= 100 && r.height >= 80;
+            });
+            const nextControls = node.querySelectorAll(
+              'button[aria-label*="next" i], [role="button"][aria-label*="next" i], button[title*="next" i], a[aria-label*="next" i], [data-testid*="next" i]'
+            ).length;
+            const plausible =
+              rect.width >= 260 &&
+              rect.height >= 160 &&
+              rect.width <= Math.max(innerWidth * 1.15, 1700) &&
+              rect.height <= Math.max(innerHeight * 1.7, 1900);
+
+            if (plausible && imgs.length >= 1 && imgs.length <= 24) {
+              galleryRoot = node;
+              if (nextControls > 0 || imgs.length >= 2) break;
+            }
+          }
+        }
+
+        const scopedImages = galleryRoot ? [...galleryRoot.querySelectorAll("img")] : [];
+        for (const img of scopedImages) {
+          const rect = img.getBoundingClientRect();
           const context = `${img.alt || ""} ${img.className || ""} ${img.id || ""}`;
-          if (bad.test(context)) continue;
+          if (bad.test(context) || rect.width < 90 || rect.height < 70) continue;
           add(img.currentSrc || img.src);
           for (const part of (img.srcset || "").split(",")) {
             add(part.trim().split(/\s+/)[0]);
