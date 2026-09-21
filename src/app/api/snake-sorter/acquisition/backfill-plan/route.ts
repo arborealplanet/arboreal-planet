@@ -42,22 +42,22 @@ export async function GET() {
   }>;
 
   const ids = candidates.map((candidate) => candidate.id);
-  let mediaRows: Array<{ candidate_id: string }> = [];
+  let mediaRows: Array<{
+    candidate_id: string;
+    source_media_url: string | null;
+    staged_storage_path: string | null;
+    live_reference_status: string | null;
+  }> = [];
   if (ids.length) {
     const response = await fetch(
       `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=in.(${ids.map(encodeURIComponent).join(",")})&select=candidate_id,source_media_url,staged_storage_path,live_reference_status`,
       { headers: h, cache: "no-store" },
     );
-    if (response.ok) mediaRows = await response.json() as Array<{ candidate_id: string }>;
+    if (response.ok) mediaRows = await response.json() as typeof mediaRows;
   }
 
   const usableMedia = new Set<string>();
-  for (const row of mediaRows as Array<{
-    candidate_id: string;
-    source_media_url?: string | null;
-    staged_storage_path?: string | null;
-    live_reference_status?: string | null;
-  }>) {
+  for (const row of mediaRows) {
     const staged = Boolean(row.staged_storage_path);
     const liveUsable =
       Boolean(row.source_media_url) &&
