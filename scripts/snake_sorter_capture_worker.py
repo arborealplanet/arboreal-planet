@@ -169,7 +169,8 @@ def upload_capture(candidate_id: str, job: Job, image_bytes: bytes, order: int) 
         "source_metadata": {
             "capture_job_id": job.id,
             "rendered_capture": True,
-            "worker_version": 1,
+            "worker_version": 2,
+            "gallery_scoped": True,
         },
     }
     insert = rest(
@@ -216,8 +217,20 @@ async def preview_host(page: Page) -> str | None:
     return None
 
 
-async def likely_gallery_images(page: Page) -> list[ElementHandle]:
-    host = await preview_host(page)
+async def gallery_root(page: Page) -> ElementHandle | None:
+    """
+    Find the smallest plausible listing-gallery container instead of scanning the
+    whole page. This prevents large images from related listings or seller pages
+    from being captured as if they belonged to the current animal.
+    """
+    preview_url = None
+    try:
+        preview_url = await page.locator('meta[property="og:image"]').get_attribute("content")
+        if not preview_url:
+            preview_url = await page.locator('meta[name="twitter:image"]').get_attribute("content")
+    except Exception:
+        preview_url = None
+
     handles = await page.query_selector_all("img")
     ranked: list[tuple[float, ElementHandle]] = []
 
@@ -228,10 +241,11 @@ async def likely_gallery_images(page: Page) -> list[ElementHandle]:
             box = await handle.bounding_box()
             if not box:
                 continue
+
             width = float(box["width"])
             height = float(box["height"])
             area = width * height
-            if width < 220 or height < 160 or area < 50000:
+            if width < 260 or height < 180 or area < 70000:
                 continue
 
             src = (
@@ -243,21 +257,134 @@ async def likely_gallery_images(page: Page) -> list[ElementHandle]:
             if not src or BAD_SRC_RE.search(src):
                 continue
 
-            src_host = urlparse(src if src.startswith("http") else job_safe_absolute(page.url, src)).hostname
+            absolute_src = job_safe_absolute(page.url, src)
             score = area
-            if host and src_host == host:
-                score *= 2.0
+
+            if preview_url and absolute_src == preview_url:
+                score *= 8.0
+            elif preview_url:
+                try:
+                    if urlparse(absolute_src).hostname == urlparse(preview_url).hostname:
+                        score *= 2.5
+                except Exception:
+                    pass
 
             alt = (await handle.get_attribute("alt") or "").lower()
-            if re.search(r"logo|avatar|seller|profile|store", alt):
+            if re.search(r"logo|avatar|seller|profile|store|related", alt):
                 continue
 
             ranked.append((score, handle))
         except Exception:
             continue
 
+    if not ranked:
+        return None
+
     ranked.sort(key=lambda item: item[0], reverse=True)
-    return [handle for _, handle in ranked[:6]]
+    anchor = ranked[0][1]
+
+    try:
+        root_handle = await anchor.evaluate_handle(
+            """(img) => {
+              let node = img;
+              let best = img.parentElement;
+              for (let depth = 0; depth < 7 && node && node.parentElement; depth++) {
+                node = node.parentElement;
+                const rect = node.getBoundingClientRect();
+                const imgs = Array.from(node.querySelectorAll('img'));
+                const visibleLarge = imgs.filter((candidate) => {
+                  const r = candidate.getBoundingClientRect();
+                  return r.width >= 120 && r.height >= 90 && r.bottom >= 0 && r.right >= 0;
+                });
+                const nextControls = node.querySelectorAll(
+                  'button[aria-label*="next" i], [role="button"][aria-label*="next" i], button[title*="next" i], a[aria-label*="next" i], [data-testid*="next" i]'
+                ).length;
+                const plausibleSize = rect.width >= 280 && rect.height >= 180 &&
+                  rect.width <= Math.max(window.innerWidth * 1.1, 1600) &&
+                  rect.height <= Math.max(window.innerHeight * 1.6, 1800);
+                if (plausibleSize && visibleLarge.length >= 1 && visibleLarge.length <= 24) {
+                  best = node;
+                  if (nextControls > 0 || visibleLarge.length >= 2) break;
+                }
+              }
+              return best || img.parentElement;
+            }"""
+        )
+        element = root_handle.as_element()
+        if element:
+            return element
+    except Exception:
+        pass
+
+    return anchor
+
+
+async def likely_gallery_images(page: Page, root: ElementHandle | None) -> list[ElementHandle]:
+    host = await preview_host(page)
+    handles = await (root.query_selector_all("img") if root else page.query_selector_all("img"))
+    ranked: list[tuple[float, ElementHandle]] = []
+
+    root_box = None
+    if root:
+        try:
+            root_box = await root.bounding_box()
+        except Exception:
+            root_box = None
+
+    for handle in handles:
+        try:
+            if not await handle.is_visible():
+                continue
+            box = await handle.bounding_box()
+            if not box:
+                continue
+            width = float(box["width"])
+            height = float(box["height"])
+            area = width * height
+
+            # The gallery root lets us accept thumbnails as well as the main view.
+            minimum_area = 18000 if root else 70000
+            if width < (120 if root else 260) or height < (90 if root else 180) or area < minimum_area:
+                continue
+
+            src = (
+                await handle.get_attribute("src")
+                or await handle.get_attribute("data-src")
+                or await handle.get_attribute("data-original")
+                or ""
+            )
+            if not src or BAD_SRC_RE.search(src):
+                continue
+
+            alt = (await handle.get_attribute("alt") or "").lower()
+            if re.search(r"logo|avatar|seller|profile|store|related|recommended", alt):
+                continue
+
+            absolute_src = job_safe_absolute(page.url, src)
+            src_host = urlparse(absolute_src).hostname
+            score = area
+
+            if host and src_host == host:
+                score *= 2.0
+
+            if root_box:
+                # Favor images centered inside the detected gallery rather than
+                # edge decorations or neighboring cards.
+                cx = float(box["x"]) + width / 2
+                cy = float(box["y"]) + height / 2
+                rx = float(root_box["x"])
+                ry = float(root_box["y"])
+                rw = float(root_box["width"])
+                rh = float(root_box["height"])
+                if rx <= cx <= rx + rw and ry <= cy <= ry + rh:
+                    score *= 1.5
+
+            ranked.append((score, handle))
+        except Exception:
+            continue
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [handle for _, handle in ranked[:8]]
 
 
 def job_safe_absolute(base: str, src: str) -> str:
@@ -269,9 +396,9 @@ def job_safe_absolute(base: str, src: str) -> str:
     return src
 
 
-async def capture_unique_gallery_images(page: Page, seen_hashes: set[str]) -> list[bytes]:
+async def capture_unique_gallery_images(page: Page, root: ElementHandle | None, seen_hashes: set[str]) -> list[bytes]:
     captures: list[bytes] = []
-    for handle in await likely_gallery_images(page):
+    for handle in await likely_gallery_images(page, root):
         if len(captures) + len(seen_hashes) >= MAX_CAPTURES:
             break
         try:
@@ -286,7 +413,7 @@ async def capture_unique_gallery_images(page: Page, seen_hashes: set[str]) -> li
     return captures
 
 
-async def click_next_gallery(page: Page) -> bool:
+async def click_next_gallery(page: Page, root: ElementHandle | None) -> bool:
     selectors = [
         'button[aria-label*="next" i]',
         '[role="button"][aria-label*="next" i]',
@@ -294,14 +421,18 @@ async def click_next_gallery(page: Page) -> bool:
         'a[aria-label*="next" i]',
         '[data-testid*="next" i]',
     ]
+
+    # Never click a generic "next" elsewhere on the page. If a gallery root
+    # cannot be identified, stop rather than risk navigating related content.
+    if not root:
+        return False
+
     for selector in selectors:
-        locator = page.locator(selector)
         try:
-            count = await locator.count()
+            items = await root.query_selector_all(selector)
         except Exception:
             continue
-        for index in range(min(count, 4)):
-            item = locator.nth(index)
+        for item in items[:4]:
             try:
                 if not await item.is_visible() or not await item.is_enabled():
                     continue
@@ -339,9 +470,13 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | 
             await polite_wait(page, 1400, 3600)
             seen_hashes: set[str] = set()
             order = next_media_order(job.candidate_id)
+            root = await gallery_root(page)
+
+            if root is None:
+                return ("failed", 0, status_code, "Could not identify a listing-gallery container safely.")
 
             for _ in range(MAX_CAPTURES):
-                current = await capture_unique_gallery_images(page, seen_hashes)
+                current = await capture_unique_gallery_images(page, root, seen_hashes)
                 discovered += len(current)
 
                 for image_bytes in current:
@@ -356,7 +491,7 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | 
                     break
                 if await page_is_blocked(page, status_code):
                     return ("blocked", captured, status_code, "Access-control or challenge page encountered after gallery navigation.")
-                if not await click_next_gallery(page):
+                if not await click_next_gallery(page, root):
                     break
 
             return ("completed", captured, status_code, None)
