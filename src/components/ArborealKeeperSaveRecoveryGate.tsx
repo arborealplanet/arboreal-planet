@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { ArborealKeeperLoadingScreen } from "@/components/ArborealKeeperLoadingScreen";
 import { ChondroSaveRecoveryGate } from "@/components/ChondroSaveRecoveryGate";
 import {
   EMERALD_KEEPER_SAVE_KEY,
@@ -34,13 +35,7 @@ export function ArborealKeeperSaveRecoveryGate({ children }: { children: ReactNo
   }, []);
 
   if (!emeraldReady) {
-    return (
-      <div className="mx-auto max-w-5xl px-5 py-16 sm:px-6">
-        <div className="panel rounded-[30px] p-8 text-center text-sm text-white/45">
-          Checking your Arboreal Keeper animal and housing records…
-        </div>
-      </div>
-    );
+    return <ArborealKeeperLoadingScreen message="Loading save file…" />;
   }
 
   return <ChondroSaveRecoveryGate>{children}</ChondroSaveRecoveryGate>;
