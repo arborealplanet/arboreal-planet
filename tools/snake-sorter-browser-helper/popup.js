@@ -17,7 +17,17 @@ async function currentListing() {
     throw new Error("Open a MorphMarket listing first.");
   }
 
-  const payload = await chrome.tabs.sendMessage(tab.id, { type: "READ_LISTING" });
+  let payload;
+  try {
+    payload = await chrome.tabs.sendMessage(tab.id, { type: "READ_LISTING" });
+  } catch {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"],
+    });
+    payload = await chrome.tabs.sendMessage(tab.id, { type: "READ_LISTING" });
+  }
+
   if (!payload?.ok) {
     throw new Error(payload?.error || "Could not read this listing.");
   }
