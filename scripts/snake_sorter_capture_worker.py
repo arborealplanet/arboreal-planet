@@ -632,45 +632,55 @@ async def run(limit: int, headless: bool = True) -> int:
 
     recovered = recover_stale_jobs()
     processed = 0
+    disarmed = False
 
-    for _ in range(limit):
-        job = fetch_next_job()
-        if not job:
-            break
+    try:
+        for _ in range(limit):
+            if not collector_is_armed():
+                raise RuntimeError("Collector arm expired or was revoked while the worker was running.")
 
-        status, captured, discovered, http_status, error = await process_job(job, headless=headless)
-        patch_job(
-            job.id,
-            {
-                "status": status,
-                "last_http_status": http_status,
-                "last_error": error,
-                "captured_media_count": captured,
-                "discovered_media_count": discovered,
-                "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            },
-        )
+            job = fetch_next_job()
+            if not job:
+                break
 
-        if captured:
-            response = rest(
-                f"snake_sorter_acquisition_candidates?id=eq.{quote(job.candidate_id)}",
-                method="PATCH",
-                headers={"Content-Type": "application/json", "Prefer": "return=minimal"},
-                data=json.dumps({"acquisition_stage": "media_collected"}),
+            status, captured, discovered, http_status, error = await process_job(job, headless=headless)
+            patch_job(
+                job.id,
+                {
+                    "status": status,
+                    "last_http_status": http_status,
+                    "last_error": error,
+                    "captured_media_count": captured,
+                    "discovered_media_count": discovered,
+                    "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
             )
-            response.raise_for_status()
 
-        processed += 1
-        if status == "blocked":
-            break
-        if processed < limit:
-            await asyncio.sleep(random.uniform(6.0, 15.0))
+            if captured:
+                response = rest(
+                    f"snake_sorter_acquisition_candidates?id=eq.{quote(job.candidate_id)}",
+                    method="PATCH",
+                    headers={"Content-Type": "application/json", "Prefer": "return=minimal"},
+                    data=json.dumps({"acquisition_stage": "media_collected"}),
+                )
+                response.raise_for_status()
 
-    auto_disarm_collector()
+            processed += 1
+            if status == "blocked":
+                break
+            if processed < limit:
+                await asyncio.sleep(random.uniform(6.0, 15.0))
+    finally:
+        try:
+            auto_disarm_collector()
+            disarmed = True
+        except Exception:
+            disarmed = False
+
     print(json.dumps({
         "processed_jobs": processed,
         "recovered_stale_jobs": recovered,
-        "collector_auto_disarmed": True,
+        "collector_auto_disarmed": disarmed,
     }))
     return 0
 
