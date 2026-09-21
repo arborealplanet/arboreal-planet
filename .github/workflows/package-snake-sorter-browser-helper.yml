@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: package-snake-sorter-browser-helper
+  cancel-in-progress: false
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -28,12 +32,41 @@ jobs:
       - name: Commit packaged helper
         shell: bash
         run: |
-          if [ -z "$(git status --porcelain -- public/downloads/snake-sorter-browser-helper.zip)" ]; then
-            echo "Helper package is already current."
-            exit 0
-          fi
           git config user.name "arborealplanet-bot"
           git config user.email "arborealplanet@gmail.com"
-          git add public/downloads/snake-sorter-browser-helper.zip
-          git commit -m "Package Snake Sorter browser helper"
-          git push origin HEAD:main
+
+          for attempt in 1 2 3 4; do
+            echo "Package push attempt $attempt"
+
+            git fetch origin main
+            git rebase origin/main
+
+            mkdir -p public/downloads
+            rm -f public/downloads/snake-sorter-browser-helper.zip
+            (
+              cd tools/snake-sorter-browser-helper
+              zip -qr ../../public/downloads/snake-sorter-browser-helper.zip .
+            )
+
+            if [ -z "$(git status --porcelain -- public/downloads/snake-sorter-browser-helper.zip)" ]; then
+              echo "Helper package is already current."
+              exit 0
+            fi
+
+            git add public/downloads/snake-sorter-browser-helper.zip
+
+            if [ "$(git log -1 --format=%s)" = "Package Snake Sorter browser helper" ]; then
+              git commit --amend --no-edit
+            else
+              git commit -m "Package Snake Sorter browser helper"
+            fi
+
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Main moved during package push; retrying safely."
+          done
+
+          echo "Could not publish helper package after retries."
+          exit 1
