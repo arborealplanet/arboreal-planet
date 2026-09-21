@@ -60,6 +60,8 @@ type Candidate = {
   acquisition_stage?: string;
   biological_review_status?: string;
   rights_review_status?: string;
+  rights_review_note?: string | null;
+  duplicate_of_candidate_id?: string | null;
   media?: CandidateMedia[];
   media_count?: number;
   accepted_media_count?: number;
@@ -139,6 +141,7 @@ export function SnakeSorterAcquisitionQueue({
   const [message, setMessage] = useState("");
   const [previewById, setPreviewById] = useState<Record<string, { image_url?: string; description?: string; error?: string }>>({});
   const [rejectReasonById, setRejectReasonById] = useState<Record<string, string>>({});
+  const [rightsNoteById, setRightsNoteById] = useState<Record<string, string>>({});
   const [activeMediaIndex, setActiveMediaIndex] = useState<Record<string, number>>({});
 
   async function load() {
@@ -340,6 +343,7 @@ export function SnakeSorterAcquisitionQueue({
         candidate_id: candidateId,
         rights_review_status: rightsReviewStatus,
         media_rights_status: mediaRightsStatus,
+        rights_note: rightsNoteById[candidateId] ?? "",
       }),
     });
     const data = await response.json().catch(() => ({}));
@@ -688,6 +692,14 @@ export function SnakeSorterAcquisitionQueue({
                 {canHarvest && candidate.review_status === "approved" && (
                   <div className="mt-3 rounded-xl border border-amber-300/10 bg-amber-300/[.02] p-3">
                     <div className="text-[8px] font-black uppercase tracking-[.08em] text-amber-100/45">Rights review</div>
+                    {candidate.rights_status !== "open_license" && (
+                      <textarea
+                        value={rightsNoteById[candidate.id] ?? candidate.rights_review_note ?? ""}
+                        onChange={(event) => setRightsNoteById((current) => ({ ...current, [candidate.id]: event.target.value }))}
+                        placeholder="Permission / rights basis (required before clearing non-open-license images)"
+                        className="mt-2 min-h-16 w-full rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[9px] leading-4 text-white/45 outline-none placeholder:text-white/18"
+                      />
+                    )}
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button
                         type="button"
