@@ -17,8 +17,8 @@ export function SnakeSorterInstallButton() {
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [isIos] = useState(() => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent));
   const [installed, setInstalled] = useState(() => {
-    if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-    return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("app") === "snake-sorter";
   });
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function SnakeSorterInstallButton() {
     };
   }, []);
 
-  if (installed || (!promptEvent && !isIos)) return null;
+  if (installed) return null;
 
   async function install() {
     if (promptEvent) {
@@ -55,8 +55,13 @@ export function SnakeSorterInstallButton() {
     }
 
     if (isIos) {
-      window.alert("In Safari, tap Share, then Add to Home Screen. Snake Sorter will open directly from its home-screen icon.");
+      window.alert("In Safari, tap Share, then Add to Home Screen. Snake Sorter will install with its own home-screen icon.");
+      return;
     }
+
+    window.alert(
+      "Snake Sorter is ready to install. In Chrome, open the browser menu (⋮) and choose Install app. If Chrome has not enabled that option yet, refresh this page once and try again."
+    );
   }
 
   return (
@@ -64,9 +69,9 @@ export function SnakeSorterInstallButton() {
       type="button"
       onClick={() => void install()}
       className="rounded-full border border-sky-300/12 bg-sky-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-sky-100/55 transition hover:border-sky-300/22 hover:bg-sky-300/[.06]"
-      title={isIos && !promptEvent ? "Add Snake Sorter to your Home Screen" : "Install Snake Sorter"}
+      title="Install Snake Sorter as its own app"
     >
-      Install
+      Install App
     </button>
   );
 }
