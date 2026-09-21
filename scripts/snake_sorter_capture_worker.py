@@ -101,6 +101,27 @@ def patch_job(job_id: str, payload: dict[str, Any]) -> None:
     response.raise_for_status()
 
 
+def collector_is_armed() -> bool:
+    response = rest(
+        "rpc/snake_sorter_collector_is_armed",
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data="{}",
+    )
+    response.raise_for_status()
+    return bool(response.json())
+
+
+def auto_disarm_collector() -> None:
+    response = rest(
+        "rpc/snake_sorter_auto_disarm_collector",
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data="{}",
+    )
+    response.raise_for_status()
+
+
 def recover_stale_jobs() -> int:
     response = rest(
         "rpc/recover_snake_sorter_capture_jobs",
@@ -603,6 +624,12 @@ async def self_test() -> int:
 
 async def run(limit: int, headless: bool = True) -> int:
     require_env()
+
+    if not collector_is_armed():
+        raise RuntimeError(
+            "Snake Sorter collector is not armed in the app. Live MorphMarket capture is blocked."
+        )
+
     recovered = recover_stale_jobs()
     processed = 0
 
@@ -639,7 +666,12 @@ async def run(limit: int, headless: bool = True) -> int:
         if processed < limit:
             await asyncio.sleep(random.uniform(6.0, 15.0))
 
-    print(json.dumps({"processed_jobs": processed, "recovered_stale_jobs": recovered}))
+    auto_disarm_collector()
+    print(json.dumps({
+        "processed_jobs": processed,
+        "recovered_stale_jobs": recovered,
+        "collector_auto_disarmed": True,
+    }))
     return 0
 
 
