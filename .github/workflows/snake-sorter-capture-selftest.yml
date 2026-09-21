@@ -1,0 +1,35 @@
+name: Snake Sorter Capture Self-Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/snake_sorter_capture_worker.py"
+      - ".github/workflows/snake-sorter-capture-selftest.yml"
+  pull_request:
+    paths:
+      - "scripts/snake_sorter_capture_worker.py"
+      - ".github/workflows/snake-sorter-capture-selftest.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-self-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install browser-test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run offline Snake Sorter gallery self-test
+        run: python scripts/snake_sorter_capture_worker.py --self-test
