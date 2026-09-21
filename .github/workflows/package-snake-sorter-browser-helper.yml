@@ -28,7 +28,7 @@ jobs:
       - name: Commit packaged helper
         shell: bash
         run: |
-          if git diff --quiet -- public/downloads/snake-sorter-browser-helper.zip; then
+          if [ -z "$(git status --porcelain -- public/downloads/snake-sorter-browser-helper.zip)" ]; then
             echo "Helper package is already current."
             exit 0
           fi
