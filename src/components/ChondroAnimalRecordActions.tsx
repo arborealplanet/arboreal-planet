@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { geneticTestingUnlocked } from "@/lib/chondro-facility-limits";
+import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor } from "@/lib/breeder-species-profiles";
 
 type Props = {
   animalId: string;
   initialName: string;
   initialNotes?: string;
+  initialLifeStage: string;
+  initialSex: string;
   favorite: boolean;
 };
 
@@ -17,6 +20,8 @@ type SaveAnimal = Record<string, unknown> & {
   notes?: string;
   source?: string;
   lifeStage?: string;
+  sex?: string;
+  condition?: string;
   nidoStatus?: string;
   geneticsTested?: boolean;
 };
@@ -74,13 +79,25 @@ async function persistSave(state: SaveState, authenticated: boolean) {
   window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
 }
 
-export function ChondroAnimalRecordActions({ animalId, initialName, initialNotes = "", favorite }: Props) {
+export function ChondroAnimalRecordActions({ animalId, initialName, initialNotes = "", initialLifeStage, initialSex, favorite }: Props) {
   const [name, setName] = useState(initialName);
   const [notes, setNotes] = useState(initialNotes);
+  const [currentLifeStage, setCurrentLifeStage] = useState(initialLifeStage);
   const [isFavorite, setIsFavorite] = useState(favorite);
   const [listingPrice, setListingPrice] = useState(1500);
-  const [busy, setBusy] = useState<"record" | "favorite" | "nido" | "genetic" | "market" | "retire" | null>(null);
+  const [busy, setBusy] = useState<"record" | "favorite" | "grow" | "nido" | "genetic" | "market" | "retire" | null>(null);
   const [status, setStatus] = useState("");
+
+  const growthRequirement = growthRequirementFor(
+    CHONDRO_SPECIES_PROFILE,
+    currentLifeStage as never,
+    initialSex as never,
+  );
+  const displayedGrowthCost = growthCostFor(
+    CHONDRO_SPECIES_PROFILE,
+    currentLifeStage as never,
+    initialSex as never,
+  );
 
   async function saveRecord() {
     const cleanName = name.trim();
@@ -121,6 +138,64 @@ export function ChondroAnimalRecordActions({ animalId, initialName, initialNotes
       setStatus(nextFavorite ? "Protected as a favorite." : "Removed from favorites.");
     } catch {
       setStatus("Favorite status could not be changed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function raiseAnimal() {
+    if (busy) return;
+    setBusy("grow");
+    setStatus("");
+    try {
+      const { state, authenticated } = await loadSave();
+      if (!state || !Array.isArray(state.colony)) throw new Error("No breeder save loaded");
+      const animal = state.colony.find((item) => String(item.id ?? "") === animalId);
+      if (!animal) throw new Error("Animal not found");
+
+      const lifeStage = String(animal.lifeStage ?? currentLifeStage);
+      const sex = String(animal.sex ?? initialSex);
+      const requirement = growthRequirementFor(
+        CHONDRO_SPECIES_PROFILE,
+        lifeStage as never,
+        sex as never,
+      );
+      if (!requirement) {
+        setCurrentLifeStage(lifeStage);
+        setStatus("This animal is already an adult and breeding eligible.");
+        return;
+      }
+
+      const cost = growthCostFor(
+        CHONDRO_SPECIES_PROFILE,
+        lifeStage as never,
+        sex as never,
+      );
+      const cash = Number(state.cash ?? 0);
+      if (cash < cost) {
+        setStatus(`Raising this animal costs ${cost.toLocaleString()}. You currently have ${cash.toLocaleString()}.`);
+        return;
+      }
+
+      const nextStage = String(requirement.next);
+      const next: SaveState = {
+        ...state,
+        cash: cash - cost,
+        colony: state.colony.map((item) =>
+          String(item.id ?? "") === animalId
+            ? {
+                ...item,
+                lifeStage: nextStage,
+                condition: item.condition === "Fair" ? "Good" : item.condition,
+              }
+            : item,
+        ),
+      };
+      await persistSave(next, authenticated);
+      setCurrentLifeStage(nextStage);
+      setStatus(`Raised to ${nextStage}. The updated sprite and breeding eligibility will follow this life stage.`);
+    } catch {
+      setStatus("This animal could not be raised right now.");
     } finally {
       setBusy(null);
     }
@@ -299,6 +374,28 @@ export function ChondroAnimalRecordActions({ animalId, initialName, initialNotes
       </label>
       <div className="mt-3 flex justify-end">
         <button type="button" disabled={busy !== null || !name.trim()} onClick={() => void saveRecord()} className="rounded-xl border border-emerald-300/18 bg-emerald-300/[.055] px-4 py-2 text-[10px] font-black uppercase tracking-[.08em] text-emerald-100/80 transition hover:bg-emerald-300/[.09] disabled:opacity-35">{busy === "record" ? "Saving…" : "Save record"}</button>
+      </div>
+
+      <div className="mt-5 border-t border-white/[.06] pt-4">
+        <div className="text-[9px] font-black uppercase tracking-[.12em] text-white/34">Care & growth</div>
+        {growthRequirement ? (
+          <div className="mt-3 rounded-2xl border border-amber-200/15 bg-amber-200/[.035] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-amber-50/82">{currentLifeStage} → {String(growthRequirement.next)}</div>
+                <div className="mt-1 text-[10px] leading-5 text-white/40">{growthRequirement.feederUnits} feeder units · {growthRequirement.months} months of care</div>
+              </div>
+              <div className="text-sm font-semibold text-amber-100/75">{"$" + displayedGrowthCost.toLocaleString()}</div>
+            </div>
+            <button type="button" disabled={busy !== null} onClick={() => void raiseAnimal()} className="mt-3 w-full rounded-xl border border-amber-200/20 bg-amber-200/[.08] px-4 py-3 text-xs font-black uppercase tracking-[.06em] text-amber-50/85 transition hover:bg-amber-200/[.13] disabled:opacity-35">
+              {busy === "grow" ? "Raising…" : `Raise to ${String(growthRequirement.next)}`}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 rounded-2xl border border-emerald-300/12 bg-emerald-300/[.03] p-4 text-xs leading-5 text-emerald-100/65">
+            Adult · breeding eligible. Use the <strong>Breed</strong> tab when you are ready to pair this animal.
+          </div>
+        )}
       </div>
 
       <div className="mt-5 border-t border-white/[.06] pt-4">

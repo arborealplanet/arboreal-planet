@@ -104,8 +104,8 @@ export function ChondroCollectionManager() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="section-kicker">Colony</div>
-            <h2 className="mt-2 text-2xl font-semibold">Find an animal, then open its record.</h2>
-            <p className="mt-2 text-sm text-white/48">Filters stay compact. Detailed animal information opens in a dedicated drawer so the collection itself stays easy to scan.</p>
+            <h2 className="mt-2 text-2xl font-semibold">Tap an animal to manage it.</h2>
+            <p className="mt-2 text-sm text-white/48">Raise life stage, test health/genetics, rename, add notes, favorite, sell or retire from the animal record.</p>
           </div>
           <div className="text-right"><div className="text-2xl font-black text-white">{filtered.length}</div><div className="text-[10px] uppercase tracking-[.16em] text-white/36">of {animals.length} animals</div></div>
         </div>
@@ -140,13 +140,14 @@ export function ChondroCollectionManager() {
                 <span className="text-xs text-emerald-200/45 transition group-hover:translate-x-0.5 group-hover:text-emerald-200/80">→</span>
               </div>
               <div className="mt-3 text-[10px] leading-5 text-white/42">HB {animal.highBlack}% · HW {animal.highWhite}% · Blue {animal.blueStripe}% · Yellow {animal.yellowRetention}% · Blotches {animal.blotches}%</div>
+              <div className="mt-2 text-[9px] font-bold uppercase tracking-[.08em] text-amber-100/55">{animal.lifeStage === "Adult" ? "Adult · ready for breeding" : "Open record to raise life stage"}</div>
             </button>
           ))}
         </div>
         {filtered.length > 60 ? <div className="mt-4 text-center text-[10px] text-white/34">Showing first 60 matches. Refine filters to narrow the list.</div> : null}
       </section>
 
-      <ChondroFocusOverlay open={Boolean(selectedAnimal)} onClose={() => setSelectedAnimal(null)} title={selectedAnimal?.name ?? "Animal record"} eyebrow="Colony animal" mode="drawer">
+      <ChondroFocusOverlay open={Boolean(selectedAnimal)} onClose={() => setSelectedAnimal(null)} title={selectedAnimal?.name ?? "Animal record"} eyebrow="Animal" mode="drawer">
         {selectedAnimal ? <AnimalDetail animal={selectedAnimal} favorite={favorites.includes(selectedAnimal.id)} animals={animals} /> : null}
       </ChondroFocusOverlay>
     </>
@@ -166,7 +167,7 @@ function AnimalDetail({ animal, favorite, animals }: { animal: Snake; favorite: 
 
   return (
     <div className="space-y-5">
-      <ChondroAnimalRecordActions key={animal.id} animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} favorite={favorite} />
+      <ChondroAnimalRecordActions key={animal.id} animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} initialLifeStage={animal.lifeStage} initialSex={animal.sex} favorite={favorite} />
       <div className="rounded-[24px] border border-white/[.07] bg-[radial-gradient(circle_at_50%_35%,rgba(57,230,125,.08),transparent_45%),rgba(0,0,0,.18)] p-5">
         <div className="mx-auto max-w-[360px]"><ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification as never} ancestry={animal.ancestry as never} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} /></div>
         <div className="mt-4 flex flex-wrap justify-center gap-2 text-[10px] font-bold uppercase tracking-[.1em]">
