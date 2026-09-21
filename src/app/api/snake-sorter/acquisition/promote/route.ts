@@ -172,6 +172,12 @@ export async function POST(request: NextRequest) {
   const sourceName = clean(candidate.photographer || candidate.seller_or_observer || candidate.source_type, 160);
   const title = clean(candidate.title, 255);
   const sourceType = candidate.source_type === "morphmarket" ? "listing" : "other";
+  const localityEvidence =
+    candidate.source_type === "morphmarket" ? "seller_listed" :
+    candidate.source_type === "smithsonian" ? "museum_record" :
+    candidate.source_type === "wikimedia" ? "publication" :
+    "unknown";
+  const sellerClaimedLocality = clean(candidate.provisional_locality || candidate.locality_raw, 120);
   const rightsNotes = [
     license ? `License: ${license}` : "",
     attribution ? `Attribution: ${attribution}` : "",
@@ -201,7 +207,13 @@ export async function POST(request: NextRequest) {
         source_type: sourceType,
         source_name: sourceName || null,
         source_url: sourceUrl || null,
-        notes: title ? `Promoted from acquisition candidate: ${title}` : "Promoted from acquisition candidate.",
+        locality_evidence: localityEvidence,
+        provenance_confidence: labelConfidence,
+        notes: [
+          title ? `Promoted from acquisition candidate: ${title}` : "Promoted from acquisition candidate.",
+          sellerClaimedLocality ? `Source locality claim: ${sellerClaimedLocality}` : "",
+          locality && sellerClaimedLocality && locality !== sellerClaimedLocality ? `Reviewed locality: ${locality}` : "",
+        ].filter(Boolean).join("\n"),
         training_eligible: trainingEligible,
         challenge_eligible: challengeEligible,
         challenge_expectation: challengeExpectation,
