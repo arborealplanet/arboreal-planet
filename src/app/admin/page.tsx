@@ -5,6 +5,7 @@ import { AdminCommunityModeration } from "@/components/AdminCommunityModeration"
 import { AdminEventReview } from "@/components/AdminEventReview";
 import { AdminGtpPedigreeReports } from "@/components/AdminGtpPedigreeReports";
 import { AdminJournalEditor } from "@/components/AdminJournalEditor";
+import { AdminMemberDirectory } from "@/components/AdminMemberDirectory";
 import { AdminReferenceEditor } from "@/components/AdminReferenceEditor";
 import { AdminSellerVerification } from "@/components/AdminSellerVerification";
 import { OwnerConsoleOverview } from "@/components/OwnerConsoleOverview";
@@ -12,7 +13,7 @@ import { OwnerRoleManager } from "@/components/OwnerRoleManager";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
 const adminSections=[
-  ["Journal","journal"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Accounts","accounts"],["Moderation","moderation"]
+  ["Members","members"],["Journal","journal"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Accounts","accounts"],["Moderation","moderation"]
 ] as const;
 
 export default async function AdminPage(){
@@ -44,6 +45,15 @@ export default async function AdminPage(){
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Promote trusted accounts to moderator or admin without exposing private account data. The owner role itself is protected and cannot be assigned or changed from this interface.</p>
       </div>
       <OwnerRoleManager/>
+    </section>}
+
+    {isOwner&&<section id="members" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+      <div className="mb-5 panel rounded-3xl p-6">
+        <div className="section-kicker">Members</div>
+        <h2 className="mt-3 text-2xl font-semibold">Arboreal Planet member directory</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">See everyone who has joined Arboreal Planet, when they joined, their account role and seller-verification status. This directory is owner-only.</p>
+      </div>
+      <AdminMemberDirectory/>
     </section>}
 
     <section id="journal" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
