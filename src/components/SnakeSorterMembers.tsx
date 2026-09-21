@@ -70,13 +70,14 @@ export function SnakeSorterMembers() {
     );
   }, [members, query]);
 
-  async function setAccess(member: Member, enabled: boolean) {
+  async function setAccess(member: Member, enabled: boolean, accessLevel?: "scanner" | "reviewer") {
     setBusy(member.id);
     setMessage("");
+    const level = accessLevel ?? (member.snake_sorter?.access_level === "reviewer" ? "reviewer" : "scanner");
     const response = await fetch("/api/snake-sorter/members", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: member.id, enabled }),
+      body: JSON.stringify({ user_id: member.id, enabled, access_level: level }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) setMessage(data.error ?? "Could not update Snake Sorter access.");
@@ -94,7 +95,7 @@ export function SnakeSorterMembers() {
           <div className="section-kicker">Member access</div>
           <h2 className="mt-2 text-2xl font-semibold">Arboreal Planet members</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-white/30">
-            Owner-only directory. Approving a member gives them scanner access to Snake Sorter, not reference, acquisition, dataset, or model administration.
+            Owner-only directory. Scanner access can identify animals and review personal scan history. Reviewer access can also triage harvested candidates, but cannot harvest, promote references, train models, import data, or manage members.
           </p>
         </div>
         <div className="flex gap-2">
@@ -144,13 +145,25 @@ export function SnakeSorterMembers() {
               </div>
               <div className="flex items-center gap-2">
                 <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${enabled ? "border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/60" : "border-white/[.06] text-white/22"}`}>
-                  {isOwner ? "Owner" : enabled ? "Snake Sorter approved" : "No access"}
+                  {isOwner ? "Owner" : enabled ? (member.snake_sorter?.access_level === "reviewer" ? "Reviewer" : "Scanner") : "No access"}
                 </span>
+                {!isOwner && enabled && (
+                  <select
+                    value={member.snake_sorter?.access_level === "reviewer" ? "reviewer" : "scanner"}
+                    disabled={busy === member.id}
+                    onChange={(event) => void setAccess(member, true, event.target.value as "scanner" | "reviewer")}
+                    className="rounded-xl border border-white/[.07] bg-black/20 px-2.5 py-2 text-[9px] font-bold text-white/48 outline-none"
+                    aria-label={`Snake Sorter access level for ${name}`}
+                  >
+                    <option value="scanner">Scanner</option>
+                    <option value="reviewer">Reviewer</option>
+                  </select>
+                )}
                 {!isOwner && (
                   <button
                     type="button"
                     disabled={busy === member.id}
-                    onClick={() => void setAccess(member, !enabled)}
+                    onClick={() => void setAccess(member, !enabled, "scanner")}
                     className={`${button} ${enabled ? "border-rose-300/12 bg-rose-300/[.025] text-rose-100/48" : "border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/60"}`}
                   >
                     {busy === member.id ? "Saving…" : enabled ? "Revoke" : "Approve"}
