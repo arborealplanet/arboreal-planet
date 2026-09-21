@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid snapshot purpose." }, { status: 400 });
   }
 
-  const classifierFilter = "review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)";
+  const classifierFilter = "review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,open_license)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&locality=not.is.null&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)";
   const challengeFilter = "review_status=eq.approved&challenge_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)";
   const animalFilter = purpose === "challenge" ? challengeFilter : classifierFilter;
 
