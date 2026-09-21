@@ -463,7 +463,7 @@ export function SnakeSorterAcquisitionQueue({
               <div className="w-40 shrink-0 bg-black/20">
                 {candidate.staged_storage_path ? (
                   <img src={`/api/snake-sorter/acquisition/media/${encodeURIComponent(candidate.id)}`} alt="" loading="lazy" className="h-36 w-full object-cover" />
-                ) : selectedMedia(candidate)?.source_media_url ? (
+                ) : selectedMedia(candidate) && (selectedMedia(candidate)?.source_media_url || selectedMedia(candidate)?.staged_storage_path) ? (
                   <div>
                     <img
                       src={selectedMedia(candidate)?.staged_storage_path
