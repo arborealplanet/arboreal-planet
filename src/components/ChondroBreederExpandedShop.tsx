@@ -57,8 +57,8 @@ const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 // the old arboreal-chondro-enclosure-action event listener.
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
-  "Chondro Dojo Bin": { label: "Chondro Dojo Pair", detail: "Two space-saving Dojo enclosures sold as one set. The pair uses one facility slot and houses two snakes." },
-  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing built around PVC structure and perching." },
+  "Chondro Dojo Bin": { label: "Chondro Dojo 2 Stack", detail: "Two space-saving neonate enclosures sold as one stack. The stack uses one facility slot and provides two neonate spaces." },
+  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing required for subadult and adult Green Tree Pythons." },
 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
@@ -532,7 +532,23 @@ export function ChondroBreederExpandedShop() {
   const capacity = animalHousingCapacity(save?.enclosures);
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms: save?.facilityRooms });
   const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedFootprint);
-  const openSlots = Math.max(0, capacity - (save?.colony.length ?? 0));
+  const colony = save?.colony ?? [];
+  const dojoCapacity = Math.max(0, Number(save?.enclosures?.["Chondro Dojo Bin"] ?? 0) || 0) * 2;
+  const pvcCapacity = Math.max(0, Number(save?.enclosures?.["PVC Arboreal"] ?? 0) || 0);
+  const olderAnimals = colony.filter((animal) => animal.lifeStage === "Subadult" || animal.lifeStage === "Adult").length;
+  const juvenileAnimals = Math.max(0, colony.length - olderAnimals);
+  const pvcAfterRequiredOlderHousing = Math.max(0, pvcCapacity - olderAnimals);
+  const juvenilesInDojo = Math.min(juvenileAnimals, dojoCapacity);
+  const juvenilesNeedingPvc = Math.max(0, juvenileAnimals - juvenilesInDojo);
+  const openPvcSlots = Math.max(0, pvcAfterRequiredOlderHousing - juvenilesNeedingPvc);
+  const openDojoSlots = Math.max(0, dojoCapacity - juvenilesInDojo);
+  const openSlots = openDojoSlots + openPvcSlots;
+
+  function housingAvailableFor(offer: Offer) {
+    if (offer.lifeStage === "Subadult" || offer.lifeStage === "Adult") return openPvcSlots > 0;
+    return openSlots > 0;
+  }
+
   const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
 
   async function buyEnclosure(type: EnclosureType) {
@@ -560,7 +576,7 @@ export function ChondroBreederExpandedShop() {
   }
 
   async function buy(offer: Offer) {
-    if (!save || busy || purchased.has(offer.id) || openSlots <= 0 || save.cash < offer.price) return;
+    if (!save || busy || purchased.has(offer.id) || !housingAvailableFor(offer) || save.cash < offer.price) return;
     setBusy(offer.id);
     setStatus("");
     const next: GameSave = {
@@ -640,7 +656,7 @@ export function ChondroBreederExpandedShop() {
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">Buy housing before you buy snakes.</h3>
-            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake. A Chondro Dojo Pair uses that same single facility slot for two snakes. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
+            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake and is required for subadults and adults. A Chondro Dojo 2 Stack uses one facility slot and provides two neonate spaces. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
           </div>
           <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
@@ -710,7 +726,7 @@ export function ChondroBreederExpandedShop() {
 
         <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/32">
           <span>Swipe to browse all {offers.length} listings</span>
-          <span>{openSlots} open enclosure{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</span>
+          <span>{openSlots} open animal space{openSlots === 1 ? "" : "s"} · {openPvcSlots} adult-ready · cash {money(save.cash)}</span>
         </div>
 
         <div
