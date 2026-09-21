@@ -134,20 +134,28 @@ def main() -> int:
             final_url = response.geturl()
             body = response.read(3_000_000).decode("utf-8", "replace")
     except HTTPError as exc:
-        print(json.dumps({"ok": False, "http_status": exc.code, "blocked": exc.code in (403, 429)}))
-        return 2
+        blocked = exc.code in (403, 429)
+        print(json.dumps({
+            "ok": blocked,
+            "http_status": exc.code,
+            "blocked": blocked,
+            "server_side_live_ref_supported": False if blocked else None,
+            "reason": "access-control signal encountered" if blocked else "http error",
+        }))
+        return 0 if blocked else 2
     except URLError as exc:
         print(json.dumps({"ok": False, "network_error": str(exc.reason)}))
         return 3
 
     if status in (403, 429) or BLOCK_RE.search(body):
         print(json.dumps({
-            "ok": False,
+            "ok": True,
             "http_status": status,
             "blocked": True,
-            "reason": "access-control signal encountered",
+            "server_side_live_ref_supported": False,
+            "reason": "access-control signal encountered; stopped without retry or bypass",
         }))
-        return 4
+        return 0
 
     refs = extract_refs(body)
     title = meta_content(body, "og:title") or re.sub(r"\s+", " ", re.search(r"<title[^>]*>([\s\S]*?)</title>", body, re.I).group(1)).strip() if re.search(r"<title[^>]*>([\s\S]*?)</title>", body, re.I) else ""
