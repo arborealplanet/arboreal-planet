@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { getServerIdentity, getSnakeSorterAccess, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const headers = (token: string) => ({
   apikey: SUPABASE_AUTH_KEY,
@@ -7,18 +7,19 @@ const headers = (token: string) => ({
   Accept: "application/json",
 });
 
-async function ownerIdentity() {
+async function reviewerIdentity() {
   const identity = await getServerIdentity();
   if (!identity) return null;
-  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
-  if (profile?.role !== "owner") return null;
-  return identity;
+  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
+  if (!access.allowed) return null;
+  if (!access.isOwner && access.accessLevel !== "reviewer") return null;
+  return { ...identity, access };
 }
 
 const allowedStatuses = new Set(["pending","approved","rejected","permission_required"]);
 
 export async function GET() {
-  const identity = await ownerIdentity();
+  const identity = await reviewerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const h = headers(identity.token);
@@ -55,7 +56,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const identity = await ownerIdentity();
+  const identity = await reviewerIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
