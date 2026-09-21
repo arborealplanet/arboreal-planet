@@ -87,7 +87,7 @@ type Balance = {
   by_locality?: Array<{ locality: string; candidate_count: number; approved_count: number; media_count: number }>;
   by_stage?: Array<{ stage: string; candidate_count: number }>;
   by_color?: Array<{ color: string; candidate_count: number }>;
-  media?: { total?: number; accepted?: number; staged?: number; rendered_capture?: number; manual_upload?: number };
+  media?: { total?: number; accepted?: number; staged?: number; live_refs?: number; live_available?: number; live_unavailable?: number; rendered_capture?: number; manual_upload?: number };
   capture_jobs?: { queued?: number; processing?: number; completed?: number; blocked?: number; failed?: number };
 };
 
@@ -686,6 +686,9 @@ export function SnakeSorterAcquisitionQueue({
             <div className="flex flex-wrap gap-2 text-[8px] text-white/24">
               <span>{balance.media?.total ?? 0} media refs</span>
               <span>{balance.media?.staged ?? 0} staged</span>
+              <span>{balance.media?.live_refs ?? 0} live refs</span>
+              <span>{balance.media?.live_available ?? 0} live OK</span>
+              <span>{balance.media?.live_unavailable ?? 0} live broken</span>
               <span>{balance.media?.accepted ?? 0} accepted</span>
               <span>{balance.capture_jobs?.queued ?? 0} capture queued</span>
               <span>{balance.capture_jobs?.blocked ?? 0} blocked</span>
@@ -800,6 +803,19 @@ export function SnakeSorterAcquisitionQueue({
                       </div>
                       {selectedMedia(candidate) && (
                         <>
+                          <div className="mt-2 flex flex-wrap gap-1 text-[7px] font-black uppercase tracking-[.06em]">
+                            <span className="rounded-full border border-white/[.06] px-1.5 py-0.5 text-white/28">
+                              {selectedMedia(candidate)!.staged_storage_path ? "stored" : "live ref"}
+                            </span>
+                            <span className="rounded-full border border-white/[.06] px-1.5 py-0.5 text-white/24">
+                              {selectedMedia(candidate)!.capture_method.replaceAll("_"," ")}
+                            </span>
+                            {selectedMedia(candidate)!.source_media_url && !selectedMedia(candidate)!.staged_storage_path && (
+                              <span className="rounded-full border border-violet-300/10 px-1.5 py-0.5 text-violet-100/38">
+                                {selectedMedia(candidate)!.live_reference_status || "unknown"}
+                              </span>
+                            )}
+                          </div>
                           <select
                             value={selectedMedia(candidate)?.view_type || "unknown"}
                             onChange={(event) => void reviewMedia(selectedMedia(candidate)!.id, { view_type: event.target.value })}
