@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   const h = headers(identity.token);
 
   const candidatesResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&exclusion_reason=is.null&review_status=in.(pending,approved)&select=id,source_url,source_key,review_status,discovered_at&order=discovered_at.asc&limit=${limit * 4}`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_type=eq.morphmarket&exclusion_reason=is.null&review_status=in.(pending,approved)&select=id,source_url,source_key,review_status,discovered_at,provisional_locality,locality_raw,neonate_color_hint,life_stage_hint&order=discovered_at.asc&limit=1000`,
     { headers: h, cache: "no-store" },
   );
   if (!candidatesResponse.ok) {
@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
     source_key: string;
     review_status: string;
     discovered_at: string;
+    provisional_locality: string | null;
+    locality_raw: string | null;
+    neonate_color_hint: string | null;
+    life_stage_hint: string | null;
   }>;
 
   if (!candidates.length) {
@@ -67,8 +71,28 @@ export async function POST(request: NextRequest) {
       : [],
   );
 
-  const chosen = candidates
-    .filter((candidate) => !withMedia.has(candidate.id) && !active.has(candidate.id))
+  const available = candidates.filter((candidate) => !withMedia.has(candidate.id) && !active.has(candidate.id));
+
+  const localityFrequency = new Map<string, number>();
+  for (const candidate of available) {
+    const locality = candidate.provisional_locality || candidate.locality_raw || "Unknown";
+    localityFrequency.set(locality, (localityFrequency.get(locality) ?? 0) + 1);
+  }
+
+  const priorityScore = (candidate: (typeof available)[number]) => {
+    const locality = candidate.provisional_locality || candidate.locality_raw || "Unknown";
+    const rarity = localityFrequency.get(locality) ?? available.length;
+    let score = 0;
+    if (candidate.review_status === "approved") score += 1000;
+    if (candidate.neonate_color_hint === "red") score += 300;
+    if (candidate.life_stage_hint === "hatchling" || candidate.life_stage_hint === "neonate") score += 180;
+    if (locality !== "Unknown") score += 120;
+    score += Math.max(0, 100 - rarity);
+    return score;
+  };
+
+  const chosen = [...available]
+    .sort((a, b) => priorityScore(b) - priorityScore(a) || a.discovered_at.localeCompare(b.discovered_at))
     .slice(0, limit);
 
   if (!chosen.length) {
@@ -99,6 +123,10 @@ export async function POST(request: NextRequest) {
           source_key: candidate.source_key,
           requested_from: "snake_sorter_batch_queue",
           review_status_at_queue: candidate.review_status,
+          provisional_locality: candidate.provisional_locality || candidate.locality_raw || null,
+          neonate_color_hint: candidate.neonate_color_hint,
+          life_stage_hint: candidate.life_stage_hint,
+          queue_priority_score: priorityScore(candidate),
         },
       }))),
       cache: "no-store",
