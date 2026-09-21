@@ -78,10 +78,10 @@ export async function POST(request: NextRequest) {
       const sha = createHash("sha256").update(bytes).digest("hex");
 
       const duplicateResponse = await fetch(
-        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=eq.${encodeURIComponent(job.candidate_id)}&staged_content_sha256=eq.${sha}&select=id&limit=1`,
+        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?staged_content_sha256=eq.${sha}&select=id,candidate_id&limit=1`,
         { headers: h, cache: "no-store" },
       );
-      const duplicates = duplicateResponse.ok ? await duplicateResponse.json() as Array<{id:string}> : [];
+      const duplicates = duplicateResponse.ok ? await duplicateResponse.json() as Array<{id:string;candidate_id:string}> : [];
       if (duplicates.length) continue;
 
       const path = `${job.candidate_id}/capture-${String(mediaOrder).padStart(2,"0")}-${randomUUID()}-${safeFileName(file.name)}`;
