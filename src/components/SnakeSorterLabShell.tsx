@@ -84,8 +84,11 @@ export function SnakeSorterLabShell({
   }
 
   useEffect(() => {
-    void loadReferences();
-    void loadCandidateStats();
+    const timer = window.setTimeout(() => {
+      void loadReferences();
+      void loadCandidateStats();
+    }, 0);
+    return () => window.clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwner, canReview]);
 
