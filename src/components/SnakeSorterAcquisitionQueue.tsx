@@ -109,6 +109,13 @@ type BackfillPlan = {
   }>;
 };
 
+type CollectorControl = {
+  is_armed?: boolean;
+  effective_armed?: boolean;
+  armed_until?: string | null;
+  note?: string | null;
+};
+
 type Stats = {
   total: number;
   pending: number;
@@ -155,6 +162,8 @@ export function SnakeSorterAcquisitionQueue({
   const [stats, setStats] = useState<Stats>({ total:0,pending:0,approved:0,rejected:0,permission_required:0,staged:0,open_license:0,metadata_only:0,media_total:0,animals_with_multiple_media:0 });
   const [balance, setBalance] = useState<Balance>({});
   const [backfillPlan, setBackfillPlan] = useState<BackfillPlan>({});
+  const [collectorControl, setCollectorControl] = useState<CollectorControl>({});
+  const [armConfirmation, setArmConfirmation] = useState("");
   const [source, setSource] = useState("all");
   const [status, setStatus] = useState("pending");
   const [query, setQuery] = useState("");
@@ -182,6 +191,9 @@ export function SnakeSorterAcquisitionQueue({
     void fetch("/api/snake-sorter/acquisition/backfill-plan", { cache: "no-store" })
       .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
       .then(({ ok, data }) => { if (ok) setBackfillPlan(data ?? {}); });
+    void fetch("/api/snake-sorter/acquisition/collector-control", { cache: "no-store" })
+      .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
+      .then(({ ok, data }) => { if (ok) setCollectorControl(data ?? {}); });
   }
 
   useEffect(() => {
@@ -203,6 +215,9 @@ export function SnakeSorterAcquisitionQueue({
         void fetch("/api/snake-sorter/acquisition/backfill-plan", { cache: "no-store" })
           .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
           .then(({ ok, data: planData }) => { if (ok) setBackfillPlan(planData ?? {}); });
+        void fetch("/api/snake-sorter/acquisition/collector-control", { cache: "no-store" })
+          .then(async (response) => ({ ok: response.ok, data: await response.json().catch(() => ({})) }))
+          .then(({ ok, data: controlData }) => { if (ok) setCollectorControl(controlData ?? {}); });
       });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -343,6 +358,47 @@ export function SnakeSorterAcquisitionQueue({
     } else {
       setMessage(data.error ?? "Could not promote candidate.");
     }
+    setBusy("");
+  }
+
+  async function armCollector() {
+    setBusy("collector-arm");
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/collector-control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "arm",
+        confirmation: armConfirmation,
+        minutes: 15,
+        note: "Owner armed collector from Snake Sorter acquisition queue.",
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setMessage(data.error ?? "Could not arm collector.");
+    else {
+      setMessage("Collector armed for 15 minutes. It will still do nothing until the capture workflow is explicitly started.");
+      setArmConfirmation("");
+    }
+    await load();
+    setBusy("");
+  }
+
+  async function disarmCollector() {
+    setBusy("collector-disarm");
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/acquisition/collector-control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "disarm",
+        note: "Owner manually disarmed collector from Snake Sorter acquisition queue.",
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setMessage(data.error ?? "Could not disarm collector.");
+    else setMessage("Collector disarmed.");
+    await load();
     setBusy("");
   }
 
@@ -493,6 +549,54 @@ export function SnakeSorterAcquisitionQueue({
           ["Multi-image", stats.animals_with_multiple_media ?? 0],
         ].map(([name,value]) => <div key={String(name)} className="rounded-2xl border border-white/[.055] bg-black/[.06] p-3"><div className="text-lg font-semibold text-white/55">{value}</div><div className="mt-1 text-[8px] font-black uppercase tracking-[.07em] text-white/20">{name}</div></div>)}
       </div>
+
+      {canHarvest && (
+        <div className="mt-4 rounded-2xl border border-rose-300/10 bg-rose-300/[.018] p-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[.08em] text-rose-100/48">Live collector control</div>
+              <div className="mt-1 text-[9px] leading-4 text-white/22">
+                Two keys are required: this app-side arm plus an explicitly armed GitHub capture workflow. Either one being off blocks live capture.
+              </div>
+            </div>
+            <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase ${collectorControl.effective_armed ? "border-amber-300/15 text-amber-100/60" : "border-emerald-300/12 text-emerald-100/50"}`}>
+              {collectorControl.effective_armed ? "Armed temporarily" : "Disarmed"}
+            </span>
+          </div>
+          {collectorControl.effective_armed ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="text-[9px] text-amber-100/45">
+                Expires {collectorControl.armed_until ? new Date(collectorControl.armed_until).toLocaleTimeString() : "soon"}.
+              </div>
+              <button
+                type="button"
+                disabled={busy === "collector-disarm"}
+                onClick={() => void disarmCollector()}
+                className="rounded-lg border border-rose-300/12 px-3 py-1.5 text-[8px] font-black text-rose-100/55 disabled:opacity-35"
+              >
+                {busy === "collector-disarm" ? "Disarming…" : "Disarm now"}
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto]">
+              <input
+                value={armConfirmation}
+                onChange={(event) => setArmConfirmation(event.target.value)}
+                placeholder='Type "ARM SNAKE SORTER" only when ready for a controlled live test'
+                className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[9px] text-white/45 outline-none placeholder:text-white/16"
+              />
+              <button
+                type="button"
+                disabled={busy === "collector-arm" || armConfirmation !== "ARM SNAKE SORTER"}
+                onClick={() => void armCollector()}
+                className="rounded-xl border border-amber-300/12 bg-amber-300/[.025] px-3 py-2 text-[9px] font-black text-amber-100/50 disabled:opacity-25"
+              >
+                {busy === "collector-arm" ? "Arming…" : "Arm for 15 min"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {(backfillPlan.morphmarket_candidates ?? 0) > 0 && (
         <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.02] p-3">
