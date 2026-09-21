@@ -118,7 +118,7 @@ const checks = [
       "Loading snake store…",
       'type EnclosureType = "Chondro Dojo Bin" | "PVC Arboreal";',
       'arboreal-chondro-enclosure-action',
-      "Chondro Dojo Pair",
+      "Chondro Dojo 2 Stack",
       "PVC Arboreal Enclosure",
       "Expanded daily listings",
       "animalHousingCapacity",
