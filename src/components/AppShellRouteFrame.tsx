@@ -10,16 +10,18 @@ type Props = {
   children: ReactNode;
 };
 
-function isImmersiveBreederPath(pathname: string) {
+function isImmersiveToolPath(pathname: string) {
   return pathname === "/hatchery/chondro-breeder"
     || pathname === "/arcade/chondro-breeder"
     || pathname === "/hatchery/arboreal-keeper"
-    || pathname === "/arcade/arboreal-keeper";
+    || pathname === "/arcade/arboreal-keeper"
+    || pathname === "/snake-sorter"
+    || pathname.startsWith("/snake-sorter/");
 }
 
 export function AppShellRouteFrame({ header, mobileNav, footer, children }: Props) {
   const pathname = usePathname();
-  const immersive = isImmersiveBreederPath(pathname);
+  const immersive = isImmersiveToolPath(pathname);
 
   return (
     <div className="min-h-screen overflow-x-hidden text-white">
