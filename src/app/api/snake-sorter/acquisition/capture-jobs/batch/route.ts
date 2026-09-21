@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   const ids = candidates.map((candidate) => candidate.id);
   const [mediaResponse, jobsResponse] = await Promise.all([
     fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=in.(${ids.map(encodeURIComponent).join(",")})&select=candidate_id`,
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=in.(${ids.map(encodeURIComponent).join(",")})&select=candidate_id,source_media_url,staged_storage_path,live_reference_status`,
       { headers: h, cache: "no-store" },
     ),
     fetch(
@@ -60,18 +60,30 @@ export async function POST(request: NextRequest) {
     ),
   ]);
 
-  const withMedia = new Set<string>(
-    mediaResponse.ok
-      ? ((await mediaResponse.json()) as Array<{ candidate_id: string }>).map((row) => row.candidate_id)
-      : [],
-  );
+  const mediaRows = mediaResponse.ok
+    ? await mediaResponse.json() as Array<{
+        candidate_id: string;
+        source_media_url: string | null;
+        staged_storage_path: string | null;
+        live_reference_status: string | null;
+      }>
+    : [];
+
+  const usableMedia = new Set<string>();
+  for (const row of mediaRows) {
+    const staged = Boolean(row.staged_storage_path);
+    const liveUsable =
+      Boolean(row.source_media_url) &&
+      !["unavailable","blocked","expired"].includes(String(row.live_reference_status ?? "unknown"));
+    if (staged || liveUsable) usableMedia.add(row.candidate_id);
+  }
   const active = new Set<string>(
     jobsResponse.ok
       ? ((await jobsResponse.json()) as Array<{ candidate_id: string }>).map((row) => row.candidate_id)
       : [],
   );
 
-  const available = candidates.filter((candidate) => !withMedia.has(candidate.id) && !active.has(candidate.id));
+  const available = candidates.filter((candidate) => !usableMedia.has(candidate.id) && !active.has(candidate.id));
 
   const localityFrequency = new Map<string, number>();
   for (const candidate of available) {
