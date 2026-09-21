@@ -101,6 +101,18 @@ def patch_job(job_id: str, payload: dict[str, Any]) -> None:
     response.raise_for_status()
 
 
+def recover_stale_jobs() -> int:
+    response = rest(
+        "rpc/recover_snake_sorter_capture_jobs",
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data="{}",
+    )
+    response.raise_for_status()
+    value = response.json()
+    return int(value or 0)
+
+
 def fetch_next_job() -> Job | None:
     response = rest(
         "rpc/claim_snake_sorter_capture_job",
@@ -519,6 +531,7 @@ async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int, i
 
 async def run(limit: int, headless: bool = True) -> int:
     require_env()
+    recovered = recover_stale_jobs()
     processed = 0
 
     for _ in range(limit):
@@ -554,7 +567,7 @@ async def run(limit: int, headless: bool = True) -> int:
         if processed < limit:
             await asyncio.sleep(random.uniform(6.0, 15.0))
 
-    print(json.dumps({"processed_jobs": processed}))
+    print(json.dumps({"processed_jobs": processed, "recovered_stale_jobs": recovered}))
     return 0
 
 
