@@ -8,6 +8,7 @@ type Candidate = {
   source_key: string;
   source_url: string;
   media_url: string | null;
+  thumbnail_url: string | null;
   title: string | null;
   seller_or_observer: string | null;
   photographer: string | null;
@@ -356,6 +357,15 @@ export function SnakeSorterAcquisitionQueue({
               <div className="w-36 shrink-0 bg-black/20">
                 {candidate.staged_storage_path ? (
                   <img src={`/api/snake-sorter/acquisition/media/${encodeURIComponent(candidate.id)}`} alt="" loading="lazy" className="h-full w-full object-cover" />
+                ) : candidate.thumbnail_url ? (
+                  <img
+                    src={candidate.thumbnail_url}
+                    alt=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    className="h-full w-full object-cover"
+                    onError={(event) => { event.currentTarget.style.display = "none"; }}
+                  />
                 ) : previewById[candidate.id]?.image_url ? (
                   <img src={previewById[candidate.id].image_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
                 ) : (
