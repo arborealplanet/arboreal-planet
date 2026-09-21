@@ -67,35 +67,38 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid acquisition review update." }, { status: 400 });
   }
 
-  const patch: Record<string, unknown> = {
-    review_status: reviewStatus,
-    reviewed_at: new Date().toISOString(),
-    reviewed_by: identity.user.id,
+  const rpcBody: Record<string, unknown> = {
+    p_id: id,
+    p_review_status: reviewStatus,
+    p_provisional_taxon: null,
+    p_provisional_locality: null,
+    p_life_stage_hint: null,
+    p_neonate_color_hint: null,
+    p_exclusion_reason: null,
   };
 
-  for (const [key, limit] of [
-    ["provisional_taxon", 120],
-    ["provisional_locality", 120],
-    ["life_stage_hint", 40],
-    ["neonate_color_hint", 40],
-    ["exclusion_reason", 1000],
+  for (const [key, rpcKey, limit] of [
+    ["provisional_taxon", "p_provisional_taxon", 120],
+    ["provisional_locality", "p_provisional_locality", 120],
+    ["life_stage_hint", "p_life_stage_hint", 40],
+    ["neonate_color_hint", "p_neonate_color_hint", 40],
+    ["exclusion_reason", "p_exclusion_reason", 1000],
   ] as const) {
     if (key in body) {
       const value = String(body[key] ?? "").trim().slice(0, limit);
-      patch[key] = value || null;
+      rpcBody[rpcKey] = value || null;
     }
   }
 
   const response = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(id)}`,
+    `${SUPABASE_AUTH_URL}/rest/v1/rpc/review_snake_sorter_candidate`,
     {
-      method: "PATCH",
+      method: "POST",
       headers: {
         ...headers(identity.token),
         "Content-Type": "application/json",
-        Prefer: "return=representation",
       },
-      body: JSON.stringify(patch),
+      body: JSON.stringify(rpcBody),
       cache: "no-store",
     },
   );
@@ -104,6 +107,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Could not update acquisition candidate." }, { status: 400 });
   }
 
-  const rows = await response.json();
-  return NextResponse.json({ ok: true, candidate: rows[0] ?? null });
+  const candidate = await response.json();
+  return NextResponse.json({ ok: true, candidate });
 }
