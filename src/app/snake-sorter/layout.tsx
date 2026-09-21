@@ -5,8 +5,11 @@ export const metadata: Metadata = {
   description: "Private Green Tree Python visual identification and reference laboratory.",
   manifest: "/snake-sorter/manifest.webmanifest",
   icons: {
-    icon: "/branding/snake-sorter-logo.svg",
-    apple: "/branding/snake-sorter-logo.svg",
+    icon: [
+      { url: "/api/snake-sorter/app-icon-192", sizes: "192x192", type: "image/png" },
+      { url: "/api/snake-sorter/app-icon-512", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/api/snake-sorter/app-icon-192",
   },
   appleWebApp: {
     capable: true,
