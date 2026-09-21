@@ -95,14 +95,15 @@ def patch_job(job_id: str, payload: dict[str, Any]) -> None:
 
 def fetch_next_job() -> Job | None:
     response = rest(
-        "snake_sorter_capture_jobs?status=eq.queued&select=id,candidate_id,source_url,attempt_count"
-        "&order=requested_at.asc&limit=1"
+        "rpc/claim_snake_sorter_capture_job",
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data="{}",
     )
     response.raise_for_status()
-    rows = response.json()
-    if not rows:
+    row = response.json()
+    if not row:
         return None
-    row = rows[0]
     return Job(
         id=row["id"],
         candidate_id=row["candidate_id"],
@@ -313,16 +314,6 @@ async def click_next_gallery(page: Page) -> bool:
 
 
 async def process_job(job: Job, headless: bool = True) -> tuple[str, int, int | None, str | None]:
-    patch_job(
-        job.id,
-        {
-            "status": "processing",
-            "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "attempt_count": job.attempt_count + 1,
-            "last_error": None,
-        },
-    )
-
     captured = 0
     discovered = 0
     status_code: int | None = None
