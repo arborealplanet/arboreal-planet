@@ -126,6 +126,7 @@ button.addEventListener("click", async () => {
         return {
           source_url: location.href,
           title: document.title,
+          description: meta("og:description"),
           image_urls: refs.slice(0, 20),
         };
       },
