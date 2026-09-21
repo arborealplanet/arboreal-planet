@@ -766,8 +766,8 @@ export function ChondroBreederExpandedShop() {
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || openSlots <= 0} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Purchased" : openSlots <= 0 ? "Need space" : "Buy"}
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Subadult" || offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
                   </button>
                 </div>
               </article>
