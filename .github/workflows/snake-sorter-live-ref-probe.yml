@@ -1,0 +1,25 @@
+name: Snake Sorter Live Ref Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/snake_sorter_live_ref_probe.py"
+      - ".github/workflows/snake-sorter-live-ref-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe-one-listing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe one known MorphMarket listing
+        run: python scripts/snake_sorter_live_ref_probe.py
