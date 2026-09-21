@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { SnakeSorterWorkspace } from "@/components/SnakeSorterWorkspace";
-import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
+import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
+import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
+import { getServerIdentity, getSnakeSorterAccess } from "@/lib/supabase-auth";
 
 export const metadata = {
   title: "Snake Sorter",
@@ -12,8 +14,9 @@ export default async function SnakeSorterPage() {
   const identity = await getServerIdentity();
   if (!identity) redirect("/login?next=/snake-sorter");
 
-  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
-  if (profile?.role !== "owner") notFound();
+  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
+  if (!access.allowed) notFound();
+  const isOwner = access.isOwner;
 
   return (
     <main>
@@ -34,7 +37,7 @@ export default async function SnakeSorterPage() {
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               <span className="rounded-full border border-emerald-300/15 bg-emerald-300/[.05] px-3 py-2 text-[9px] font-black uppercase tracking-[.14em] text-emerald-100/65">Visual identification system</span>
-              <span className="rounded-full border border-amber-300/20 bg-amber-300/[.06] px-3 py-2 text-[9px] font-black uppercase tracking-[.14em] text-amber-100/70">★ Owner only</span>
+              <span className="rounded-full border border-amber-300/20 bg-amber-300/[.06] px-3 py-2 text-[9px] font-black uppercase tracking-[.14em] text-amber-100/70">{isOwner ? "★ Owner laboratory" : "Approved member"}</span>
             </div>
 
             <h1 className="mt-5 text-3xl font-semibold tracking-[-.035em] text-white/90 sm:text-4xl">Snake Sorter Laboratory</h1>
@@ -60,7 +63,7 @@ export default async function SnakeSorterPage() {
 
             <div className="mt-6 grid w-full max-w-3xl grid-cols-2 gap-2 sm:grid-cols-4">
               {[
-                ["Access", "Owner locked"],
+                ["Access", isOwner ? "Owner" : "Approved member"],
                 ["Scans", "Non-persistent"],
                 ["Dataset", "Curated only"],
                 ["Model", "Version controlled"],
@@ -74,7 +77,16 @@ export default async function SnakeSorterPage() {
           </div>
         </div>
       </section>
-      <SnakeSorterWorkspace />
+      {isOwner ? (
+        <SnakeSorterWorkspace />
+      ) : (
+        <section className="mx-auto max-w-7xl space-y-6 px-5 pb-16 sm:px-6">
+          <div id="snake-sorter-scanner" className="scroll-mt-6">
+            <SnakeSorterScanner canManageReferences={false} />
+          </div>
+          <SnakeSorterScanHistory />
+        </section>
+      )}
     </main>
   );
 }
