@@ -17,7 +17,7 @@ export function GET() {
       {
         src: "/api/snake-sorter/app-icon-192",
         sizes: "192x192",
-        type: "image/png",
+        type: "image/webp",
         purpose: "any"
       },
       {
