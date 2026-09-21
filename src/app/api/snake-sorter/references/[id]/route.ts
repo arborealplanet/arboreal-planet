@@ -27,7 +27,7 @@ const purities = new Set(["known_pure","believed_pure","possible_mixed","hybrid"
 const sources = new Set(["personal","breeder","listing","publication","other"]);
 const reviews = new Set(["pending","approved","hold","rejected"]);
 const splits = new Set(["unassigned","train","validation","test"]);
-const rights = new Set(["owned_by_owner","permission_granted","private_reference_only","unknown"]);
+const rights = new Set(["owned_by_owner","permission_granted","open_license","private_reference_only","unknown"]);
 const challengeExpectations = new Set(["reject","classify","review"]);
 const sexes = new Set(["male","female","unknown"]);
 const origins = new Set(["captive_bred","wild_caught","import","unknown"]);
@@ -77,9 +77,35 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ error: "Invalid reference metadata" }, { status: 400 });
   }
 
+  const locality = clean(body.locality, 100);
+  const isNeonateStage = lifeStage === "hatchling" || lifeStage === "neonate";
+  if (taxon === "Morelia viridis" && isNeonateStage && neonateColor === "red") {
+    return NextResponse.json({
+      error: "Morelia viridis neonates are yellow-only in the Snake Sorter taxonomy rules.",
+    }, { status: 409 });
+  }
+  if (locality.toLowerCase() === "kofiau" && isNeonateStage && neonateColor === "red") {
+    return NextResponse.json({
+      error: "Kofiau neonates are yellow-only in the Snake Sorter locality rules.",
+    }, { status: 409 });
+  }
+
+  const requestedTraining = Boolean(body.training_eligible);
+  const requestedChallenge = Boolean(body.challenge_eligible);
+  const rightsCleared = ["owned_by_owner","permission_granted","open_license"].includes(rightsStatus);
+  const trainingMetadataStrongEnough =
+    taxon !== "Unknown / review" &&
+    Boolean(locality) &&
+    ["confirmed","strong"].includes(labelConfidence) &&
+    ["known_pure","believed_pure"].includes(purityStatus) &&
+    reviewStatus === "approved" &&
+    rightsCleared &&
+    !requestedChallenge;
+  const effectiveTrainingEligible = requestedTraining && trainingMetadataStrongEnough;
+
   const payload = {
     taxon,
-    locality: clean(body.locality, 100) || null,
+    locality: locality || null,
     life_stage: lifeStage,
     neonate_color: neonateColor,
     label_confidence: labelConfidence,
@@ -93,8 +119,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     review_status: reviewStatus,
     review_notes: clean(body.review_notes, 4000) || null,
     dataset_split: datasetSplit,
-    training_eligible: Boolean(body.training_eligible),
-    challenge_eligible: Boolean(body.challenge_eligible),
+    training_eligible: effectiveTrainingEligible,
+    challenge_eligible: requestedChallenge,
     challenge_expectation: challengeExpectation,
     rights_status: rightsStatus,
     rights_notes: clean(body.rights_notes, 2000) || null,
@@ -121,7 +147,12 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   });
   if (!response.ok) return NextResponse.json({ error: "Could not update reference animal" }, { status: 400 });
   const rows = await response.json();
-  return NextResponse.json({ ok: true, animal: rows[0] ?? null });
+  return NextResponse.json({
+    ok: true,
+    animal: rows[0] ?? null,
+    training_eligible: effectiveTrainingEligible,
+    training_downgraded: requestedTraining && !effectiveTrainingEligible,
+  });
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
