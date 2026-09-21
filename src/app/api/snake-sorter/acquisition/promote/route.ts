@@ -73,6 +73,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid promotion metadata." }, { status: 400 });
   }
 
+  const localityLower = locality.toLowerCase();
+  const isNeonateStage = lifeStage === "hatchling" || lifeStage === "neonate";
+  if (taxon === "Morelia viridis" && isNeonateStage && neonateColor === "red") {
+    return NextResponse.json({
+      error: "Morelia viridis neonates are yellow-only in the Snake Sorter taxonomy rules. Recheck the taxon or color label before promotion.",
+    }, { status: 409 });
+  }
+  if (localityLower === "kofiau" && isNeonateStage && neonateColor === "red") {
+    return NextResponse.json({
+      error: "Kofiau neonates are yellow-only in the Snake Sorter locality rules. Recheck the locality or color label before promotion.",
+    }, { status: 409 });
+  }
+
+  const trainingMetadataStrongEnough =
+    taxon !== "Unknown / review" &&
+    Boolean(locality) &&
+    ["confirmed","strong"].includes(labelConfidence) &&
+    ["known_pure","believed_pure"].includes(purityStatus) &&
+    !challengeEligible;
+  const effectiveTrainingEligible = trainingEligible && trainingMetadataStrongEnough;
+
   const h = restHeaders(identity.token);
   const candidateResponse = await fetch(
     `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(candidateId)}&select=*&limit=1`,
@@ -178,7 +199,12 @@ export async function POST(request: NextRequest) {
     candidate.source_type === "wikimedia" ? "publication" :
     "unknown";
   const sellerClaimedLocality = clean(candidate.provisional_locality || candidate.locality_raw, 120);
+  const acquisitionRightsNote = clean(candidate.rights_review_note, 1200);
+  const promotedRightsStatus = promotableMedia.every((media) => media.rights_status === "open_license")
+    ? "open_license"
+    : "permission_granted";
   const rightsNotes = [
+    acquisitionRightsNote ? `Acquisition rights review: ${acquisitionRightsNote}` : "",
     license ? `License: ${license}` : "",
     attribution ? `Attribution: ${attribution}` : "",
     sourceUrl ? `Source: ${sourceUrl}` : "",
@@ -214,10 +240,10 @@ export async function POST(request: NextRequest) {
           sellerClaimedLocality ? `Source locality claim: ${sellerClaimedLocality}` : "",
           locality && sellerClaimedLocality && locality !== sellerClaimedLocality ? `Reviewed locality: ${locality}` : "",
         ].filter(Boolean).join("\n"),
-        training_eligible: trainingEligible,
+        training_eligible: effectiveTrainingEligible,
         challenge_eligible: challengeEligible,
         challenge_expectation: challengeExpectation,
-        rights_status: "permission_granted",
+        rights_status: promotedRightsStatus,
         rights_notes: rightsNotes || null,
       }),
       cache: "no-store",
@@ -325,7 +351,14 @@ export async function POST(request: NextRequest) {
     );
     if (!candidateUpdate.ok) throw new Error("Reference was created but candidate promotion tracking failed.");
 
-    return NextResponse.json({ ok: true, animal_id: animalId, promoted_media: promotedCount }, { status: 201 });
+    return NextResponse.json({
+      ok: true,
+      animal_id: animalId,
+      promoted_media: promotedCount,
+      training_eligible: effectiveTrainingEligible,
+      training_downgraded: trainingEligible && !effectiveTrainingEligible,
+      rights_status: promotedRightsStatus,
+    }, { status: 201 });
   } catch (error) {
     for (const referencePath of createdReferencePaths) {
       await fetch(
