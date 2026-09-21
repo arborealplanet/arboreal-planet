@@ -117,21 +117,28 @@ async function cropVisibleTab(tab, state) {
   const width = Math.max(1, Math.min(bitmap.width - x, Math.ceil(state.rect.width * scaleX)));
   const height = Math.max(1, Math.min(bitmap.height - y, Math.ceil(state.rect.height * scaleY)));
 
-  const canvas = new OffscreenCanvas(width, height);
+  const maxDimension = 1600;
+  const dimensionScale = Math.min(1, maxDimension / Math.max(width, height));
+  const outputWidth = Math.max(1, Math.round(width * dimensionScale));
+  const outputHeight = Math.max(1, Math.round(height * dimensionScale));
+
+  const canvas = new OffscreenCanvas(outputWidth, outputHeight);
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Could not prepare gallery capture.");
 
-  context.drawImage(bitmap, x, y, width, height, 0, 0, width, height);
+  context.drawImage(bitmap, x, y, width, height, 0, 0, outputWidth, outputHeight);
   bitmap.close();
 
-  const output = await canvas.convertToBlob({
-    type: "image/jpeg",
-    quality: 0.92,
-  });
+  let quality = 0.88;
+  let output = await canvas.convertToBlob({ type: "image/jpeg", quality });
+  while (output.size > 2_500_000 && quality > 0.58) {
+    quality -= 0.08;
+    output = await canvas.convertToBlob({ type: "image/jpeg", quality });
+  }
 
   const bytes = new Uint8Array(await output.arrayBuffer());
-  if (!bytes.length || bytes.length > 4 * 1024 * 1024) {
-    throw new Error("Rendered gallery capture was too large.");
+  if (!bytes.length || bytes.length > 2_500_000) {
+    throw new Error("Rendered gallery capture could not be compressed below the safe upload limit.");
   }
 
   return {
