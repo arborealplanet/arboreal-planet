@@ -686,12 +686,10 @@ export function SnakeSorterAcquisitionQueue({
       {canHarvest && (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <a
-            href="https://github.com/arborealplanet/arboreal-planet/tree/main/tools/snake-sorter-browser-helper"
-            target="_blank"
-            rel="noreferrer"
+            href="/downloads/snake-sorter-browser-helper.zip"
             className="rounded-xl border border-violet-300/12 bg-violet-300/[.025] px-3 py-2 text-center text-[9px] font-black text-violet-100/48"
           >
-            Browser helper source
+            Download browser helper
           </a>
           <button
             type="button"
@@ -703,6 +701,23 @@ export function SnakeSorterAcquisitionQueue({
           </button>
           <div className="rounded-xl border border-white/[.05] bg-black/[.04] px-3 py-2 text-[8px] leading-4 text-white/20">
             Preferred order: browser helper live reference → rendered gallery fallback → manual attachment. Server-side MorphMarket requests are not used for live refs because the controlled probe returns HTTP 403.
+          </div>
+        </div>
+      )}
+
+      {canHarvest && (
+        <div className="mt-4 rounded-2xl border border-violet-300/10 bg-violet-300/[.018] p-3">
+          <div className="text-[9px] font-black uppercase tracking-[.08em] text-violet-100/45">Owner browser helper</div>
+          <div className="mt-1 text-[9px] leading-4 text-white/22">
+            MorphMarket returns HTTP 403 to our server-side probe, so live gallery references are imported from a listing you already opened normally in your browser. Download the helper, extract it, load that folder as an unpacked Chrome extension, then open a MorphMarket GTP listing and press the helper button. It sends only exposed image references into Snake Sorter; it does not download the images.
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <a href="/downloads/snake-sorter-browser-helper.zip" className="rounded-lg border border-violet-300/12 px-2.5 py-1.5 text-[8px] font-black text-violet-100/50">
+              Download helper ZIP
+            </a>
+            <a href="chrome://extensions/" className="rounded-lg border border-white/[.06] px-2.5 py-1.5 text-[8px] font-black text-white/35">
+              Chrome extensions page
+            </a>
           </div>
         </div>
       )}
