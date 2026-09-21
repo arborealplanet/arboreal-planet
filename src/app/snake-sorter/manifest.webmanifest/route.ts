@@ -30,7 +30,8 @@ export function GET() {
   }, {
     headers: {
       "Content-Type": "application/manifest+json",
-      "Cache-Control": "public, max-age=3600"
+      "Cache-Control": "public, max-age=3600",
+      "X-Robots-Tag": "noindex, nofollow, noarchive"
     }
   });
 }
