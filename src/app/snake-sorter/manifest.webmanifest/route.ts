@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 export function GET() {
   return NextResponse.json({
-    id: "/snake-sorter",
+    id: "/snake-sorter-app",
     name: "Snake Sorter",
     short_name: "Snake Sorter",
     description: "Private Green Tree Python visual identification and reference laboratory.",
-    start_url: "/snake-sorter?app=snake-sorter",
+    start_url: "/snake-sorter?source=pwa",
     scope: "/snake-sorter",
     display: "standalone",
     display_override: ["standalone"],
@@ -38,7 +38,7 @@ export function GET() {
   }, {
     headers: {
       "Content-Type": "application/manifest+json",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "no-store, max-age=0",
       "X-Robots-Tag": "noindex, nofollow, noarchive"
     }
   });
