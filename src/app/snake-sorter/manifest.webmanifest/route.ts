@@ -23,13 +23,13 @@ export function GET() {
         purpose: "any"
       },
       {
-        src: "/api/snake-sorter/app-icon-512",
+        src: "/branding/snake-sorter-app-icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any"
       },
       {
-        src: "/api/snake-sorter/app-icon-512",
+        src: "/branding/snake-sorter-app-icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable"
