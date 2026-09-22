@@ -174,6 +174,40 @@ export function SnakeSorterDatasetDiagnostics({
     const multiImageAnimals = approved.filter((animal) => (mediaCount.get(animal.id) ?? 0) >= 2).length;
     const unassignedTrainReady = trainReady.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned").length;
 
+    const classifierTaxa = [
+      "Morelia azurea azurea",
+      "Morelia azurea pulcher",
+      "Morelia azurea utaraensis",
+      "Morelia viridis",
+    ];
+    const splitCoverage = classifierTaxa.map((taxon) => {
+      const taxonAnimals = trainReady.filter((animal) => animal.taxon === taxon);
+      const counts = {
+        train: taxonAnimals.filter((animal) => animal.dataset_split === "train").length,
+        validation: taxonAnimals.filter((animal) => animal.dataset_split === "validation").length,
+        test: taxonAnimals.filter((animal) => animal.dataset_split === "test").length,
+        unassigned: taxonAnimals.filter((animal) => !animal.dataset_split || animal.dataset_split === "unassigned").length,
+      };
+      return { taxon, ...counts, total: taxonAnimals.length };
+    });
+
+    const missingEvalTaxa = splitCoverage.filter((row) =>
+      row.total > 0 && (row.validation === 0 || row.test === 0)
+    );
+
+    const groups = new Map<string, Set<string>>();
+    for (const animal of trainReady) {
+      const group = String(animal.split_group ?? "").trim();
+      const split = String(animal.dataset_split ?? "unassigned");
+      if (!group) continue;
+      const set = groups.get(group) ?? new Set<string>();
+      set.add(split);
+      groups.set(group, set);
+    }
+    const leakingGroups = [...groups.entries()]
+      .filter(([, splits]) => splits.size > 1)
+      .map(([group, splits]) => ({ group, splits: [...splits] }));
+
     return {
       approved,
       trainReady,
@@ -187,6 +221,9 @@ export function SnakeSorterDatasetDiagnostics({
       multiImageAnimals,
       unassignedTrainReady,
       usableCandidateCount: usableCandidates.length,
+      splitCoverage,
+      missingEvalTaxa,
+      leakingGroups,
     };
   }, [animals, media, candidates]);
 
@@ -316,13 +353,56 @@ export function SnakeSorterDatasetDiagnostics({
         <Distribution title="Approved animals by neonate color" values={diagnostics.colorCounts} />
       </section>
 
+      <section className="rounded-[24px] border border-violet-300/10 bg-violet-300/[.018] p-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-[.12em] text-violet-100/45">Train / validation / test coverage</div>
+            <div className="mt-1 text-[10px] leading-5 text-white/24">Each classifier taxon should eventually be represented in validation and test, not only train.</div>
+          </div>
+          <div className="rounded-full border border-white/[.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.08em] text-white/28">
+            {diagnostics.missingEvalTaxa.length} taxon gap(s)
+          </div>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[620px] text-left text-[9px]">
+            <thead className="text-white/22">
+              <tr>
+                <th className="pb-2 pr-3 font-black uppercase tracking-[.07em]">Taxon</th>
+                <th className="pb-2 px-3 font-black uppercase tracking-[.07em]">Train</th>
+                <th className="pb-2 px-3 font-black uppercase tracking-[.07em]">Validation</th>
+                <th className="pb-2 px-3 font-black uppercase tracking-[.07em]">Test</th>
+                <th className="pb-2 pl-3 font-black uppercase tracking-[.07em]">Unassigned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {diagnostics.splitCoverage.map((row) => (
+                <tr key={row.taxon} className="border-t border-white/[.04] text-white/38">
+                  <td className="py-2 pr-3">{row.taxon}</td>
+                  <td className="px-3 py-2">{row.train}</td>
+                  <td className={`px-3 py-2 ${row.total > 0 && row.validation === 0 ? "text-amber-100/65" : ""}`}>{row.validation}</td>
+                  <td className={`px-3 py-2 ${row.total > 0 && row.test === 0 ? "text-amber-100/65" : ""}`}>{row.test}</td>
+                  <td className={`pl-3 py-2 ${row.unassigned > 0 ? "text-amber-100/65" : ""}`}>{row.unassigned}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {diagnostics.leakingGroups.length > 0 && (
+          <div className="mt-3 rounded-xl border border-rose-300/12 bg-rose-300/[.025] px-3 py-2 text-[9px] leading-4 text-rose-100/50">
+            Related-group leakage detected in {diagnostics.leakingGroups.length} split group(s). Re-run split assignment or correct those groups before snapshotting.
+          </div>
+        )}
+      </section>
+
       <section className="rounded-[24px] border border-sky-300/10 bg-sky-300/[.018] p-4">
         <div className="text-[9px] font-black uppercase tracking-[.12em] text-sky-100/45">Dataset integrity checks</div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <Integrity label="Animals with 2+ images" value={diagnostics.multiImageAnimals} okay={diagnostics.multiImageAnimals > 0 || diagnostics.approved.length === 0} />
           <Integrity label="Training-ready unassigned split" value={diagnostics.unassignedTrainReady} okay={diagnostics.unassignedTrainReady === 0} />
           <Integrity label="Approved but not training-ready" value={Math.max(0, diagnostics.approved.length - diagnostics.trainReady.length)} okay={diagnostics.approved.length === diagnostics.trainReady.length || diagnostics.approved.length === 0} />
           <Integrity label="Challenge/OOD examples" value={diagnostics.approved.filter((animal) => animal.challenge_eligible).length} okay />
+          <Integrity label="Related-group split leaks" value={diagnostics.leakingGroups.length} okay={diagnostics.leakingGroups.length === 0} />
+          <Integrity label="Taxa missing val/test" value={diagnostics.missingEvalTaxa.length} okay={diagnostics.missingEvalTaxa.length === 0} />
         </div>
       </section>
     </div>
