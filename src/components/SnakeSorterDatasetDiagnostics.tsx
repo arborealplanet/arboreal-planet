@@ -50,11 +50,19 @@ function canonical(value: string | null | undefined) {
 export function SnakeSorterDatasetDiagnostics({
   animals,
   media,
+  onOpenCandidates,
+  onOpenReferences,
+  onRefreshReferences,
 }: {
   animals: SnakeReferenceAnimal[];
   media: SnakeReferenceMedia[];
+  onOpenCandidates?: () => void;
+  onOpenReferences?: () => void;
+  onRefreshReferences?: () => Promise<void> | void;
 }) {
   const [candidates, setCandidates] = useState<AcquisitionCandidate[]>([]);
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -187,6 +195,34 @@ export function SnakeSorterDatasetDiagnostics({
   const zeroBuckets = coverageBuckets - filledBuckets;
   const coveragePercent = coverageBuckets ? Math.round((filledBuckets / coverageBuckets) * 100) : 0;
 
+  const nextAction =
+    diagnostics.approved.length === 0 && diagnostics.usableCandidateCount > 0
+      ? { title: "Review existing candidates", detail: "You already have candidates waiting. Promote trustworthy animals before searching for more.", action: "Open candidates", run: onOpenCandidates }
+      : diagnostics.approved.length === 0
+        ? { title: "Build the first reference set", detail: "No approved reference animals exist yet. Add or harvest a small, trustworthy starter set first.", action: "Open candidates", run: onOpenCandidates }
+        : diagnostics.trainReady.length === 0
+          ? { title: "Strengthen reference records", detail: "Approved animals exist, but none currently pass the training gate. Review labels, provenance, purity, rights, and challenge status.", action: "Open references", run: onOpenReferences }
+          : diagnostics.unassignedTrainReady > 0
+            ? { title: "Assign dataset splits", detail: `${diagnostics.unassignedTrainReady} training-ready animal(s) still need train/validation/test assignment.`, action: "Assign splits now", run: undefined }
+            : zeroBuckets > 0
+              ? { title: "Fill the highest-value gaps", detail: `${zeroBuckets} expected locality/stage/color bucket(s) still have no approved animal.`, action: "Open candidates", run: onOpenCandidates }
+              : { title: "Dataset structure looks ready", detail: "Coverage targets are populated and training-ready animals are split. You can move toward a frozen classifier snapshot when the counts are large enough.", action: "Open references", run: onOpenReferences };
+
+  async function assignSplits() {
+    setBusy("splits");
+    setMessage("");
+    const response = await fetch("/api/snake-sorter/splits", { method: "POST" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(data.error ?? "Could not assign dataset splits.");
+      setBusy("");
+      return;
+    }
+    setMessage(`Dataset splits assigned. ${data.changed ?? 0} record(s) changed.`);
+    await onRefreshReferences?.();
+    setBusy("");
+  }
+
   return (
     <div className="space-y-4">
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-6">
@@ -203,6 +239,28 @@ export function SnakeSorterDatasetDiagnostics({
             <div className="mt-1 text-[8px] font-black uppercase tracking-[.09em] text-white/22">{label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-[24px] border border-emerald-300/10 bg-emerald-300/[.018] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-[.12em] text-emerald-100/45">Suggested next action</div>
+            <div className="mt-2 text-sm font-semibold text-white/65">{nextAction.title}</div>
+            <div className="mt-1 max-w-3xl text-[10px] leading-5 text-white/28">{nextAction.detail}</div>
+          </div>
+          <button
+            type="button"
+            disabled={busy === "splits" || (!nextAction.run && diagnostics.unassignedTrainReady === 0)}
+            onClick={() => {
+              if (diagnostics.unassignedTrainReady > 0 && nextAction.action === "Assign splits now") void assignSplits();
+              else nextAction.run?.();
+            }}
+            className="rounded-xl border border-emerald-300/12 bg-emerald-300/[.03] px-4 py-2 text-[9px] font-black text-emerald-100/55 disabled:opacity-35"
+          >
+            {busy === "splits" ? "Assigning…" : nextAction.action}
+          </button>
+        </div>
+        {message && <div className="mt-3 text-[9px] leading-4 text-white/30">{message}</div>}
       </section>
 
       <section className="rounded-[24px] border border-amber-300/10 bg-amber-300/[.018] p-4">
