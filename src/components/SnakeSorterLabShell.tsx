@@ -220,7 +220,15 @@ export function SnakeSorterLabShell({
                 </button>
               ))}
             </div>
-            {moreTool === "diagnostics" && <SnakeSorterDatasetDiagnostics animals={animals} media={media} />}
+            {moreTool === "diagnostics" && (
+              <SnakeSorterDatasetDiagnostics
+                animals={animals}
+                media={media}
+                onOpenCandidates={() => openView("candidates")}
+                onOpenReferences={() => openView("references")}
+                onRefreshReferences={loadReferences}
+              />
+            )}
             {moreTool === "models" && <SnakeSorterModelStatus />}
             {moreTool === "members" && <SnakeSorterMembers />}
             {moreTool === "import" && <SnakeSorterBulkImport onImported={loadReferences} />}
