@@ -28,7 +28,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -right-24 top-16 h-[520px] w-[520px] rounded-full border border-emerald-300/[.05] bg-emerald-400/[.02]" />
         <div className="pointer-events-none absolute right-20 top-40 h-64 w-64 rounded-full bg-emerald-300/[.035] blur-3xl" />
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-72px)] max-w-7xl items-center justify-center px-5 py-6 sm:px-6 sm:py-8"><HomeLogoAnimation /></div>
+        <div className="relative z-10 mx-auto flex max-w-7xl items-start justify-center px-5 py-3 sm:min-h-[calc(100svh-72px)] sm:items-center sm:px-6 sm:py-8"><HomeLogoAnimation /></div>
 
         <div className="mx-auto grid min-h-[620px] max-w-7xl items-center gap-12 border-t border-white/[.055] px-5 pb-16 pt-14 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:pb-20 lg:pt-16">
           <div className="relative z-10">
