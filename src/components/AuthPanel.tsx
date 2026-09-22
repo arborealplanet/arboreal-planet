@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export function AuthPanel() {
+export function AuthPanel({ appName = "Arboreal Planet", destination }: { appName?: string; destination?: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
@@ -14,7 +14,7 @@ export function AuthPanel() {
   const [status, setStatus] = useState<string | null>(null);
   const initialError = params.get("authError");
   const [error, setError] = useState<string | null>(initialError === "invalid_confirmation" ? "That email link is invalid or expired. Request a fresh one below." : null);
-  const next = params.get("next") || "/profile";
+  const next = destination || params.get("next") || "/profile";
 
   function resetMessages() {
     setError(null);
@@ -96,7 +96,7 @@ export function AuthPanel() {
       {error ? <div className="rounded-2xl border border-red-300/15 bg-red-300/[.04] p-3 text-xs text-red-100/70">{error}</div> : null}
       {unconfirmedEmail ? <button type="button" disabled={loading} onClick={() => resendConfirmation(unconfirmedEmail)} className="w-full rounded-2xl border border-amber-200/20 bg-amber-200/[.05] px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-amber-100/75 disabled:opacity-50">Resend confirmation email</button> : null}
       {status ? <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-3 text-xs text-emerald-100/75">{status}</div> : null}
-      <button disabled={loading} className="w-full rounded-2xl bg-emerald-300 px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-[#06100c] disabled:opacity-50">{loading ? "Working…" : "Enter Arboreal Planet"}</button>
+      <button disabled={loading} className="w-full rounded-2xl bg-emerald-300 px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-[#06100c] disabled:opacity-50">{loading ? "Working…" : `Enter ${appName}`}</button>
     </form> : signupSent ? <div className="space-y-4 p-6 sm:p-8">
       <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-5"><div className="text-base font-bold text-emerald-100/85">Check your email</div><p className="mt-2 text-xs leading-5 text-white/45">We requested a confirmation link for <span className="font-semibold text-white/70">{signupEmail}</span>. Click it to finish creating your account.</p></div>
       <button type="button" disabled={loading} onClick={() => resendConfirmation(signupEmail)} className="w-full rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-emerald-100/75 disabled:opacity-50">Resend confirmation email</button>

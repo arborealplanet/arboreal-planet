@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Snake Sorter",
+  title: { absolute: "Snake Sorter", template: "%s", default: "Snake Sorter" },
+  applicationName: "Snake Sorter",
   description: "Private Green Tree Python visual identification and reference laboratory.",
   manifest: "/snake-sorter/manifest.webmanifest",
   icons: {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
       { url: "/api/snake-sorter/app-icon-192", sizes: "192x192", type: "image/webp" },
       { url: "/branding/snake-sorter-app-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/api/snake-sorter/app-icon-192",
+    apple: "/branding/snake-sorter-app-icon-512.png",
   },
   appleWebApp: {
     capable: true,

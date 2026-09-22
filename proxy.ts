@@ -29,6 +29,8 @@ function isSnakeSorterPath(pathname: string) {
 
 function isSnakeSorterUnlockExempt(pathname: string) {
   return pathname === "/snake-sorter/unlock"
+    || pathname === "/snake-sorter/login"
+    || pathname === "/snake-sorter/install"
     || pathname === "/snake-sorter/manifest.webmanifest"
     || pathname === "/api/snake-sorter/security"
     || pathname === "/api/snake-sorter/app-icon-192"

@@ -9,7 +9,7 @@ export const metadata = {
 
 export default async function SnakeSorterPage() {
   const identity = await getServerIdentity();
-  if (!identity) redirect("/login?next=/snake-sorter");
+  if (!identity) redirect("/snake-sorter/login");
 
   const access = await getSnakeSorterAccess(identity.token, identity.user.id);
   if (!access.allowed) notFound();

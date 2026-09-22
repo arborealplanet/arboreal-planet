@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
 import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
 import { SnakeSorterAcquisitionQueue } from "@/components/SnakeSorterAcquisitionQueue";
@@ -123,12 +122,12 @@ export function SnakeSorterLabShell({
       <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#020705]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[62px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[68px] sm:px-5">
           <Link
-            href="/"
-            aria-label="Exit Snake Sorter and return to Arboreal Planet"
-            title="Return to Arboreal Planet"
+            href="/snake-sorter"
+            aria-label="Snake Sorter home"
+            title="Snake Sorter home"
             className="group grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/[.07] bg-white/[.025] transition hover:border-emerald-300/20 hover:bg-white/[.045]"
           >
-            <ArborealPlanetMark className="h-9 w-9 transition group-hover:scale-[1.03]" />
+            <Image src="/branding/snake-sorter-app-icon-512.png" alt="" width={36} height={36} className="rounded-xl" />
           </Link>
 
           <div className="min-w-0">

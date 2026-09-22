@@ -16,14 +16,11 @@ declare global {
 export function SnakeSorterInstallButton({ prominent = false }: { prominent?: boolean }) {
   const [promptEvent, setPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [isIos] = useState(() => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent));
-  const [installed, setInstalled] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return new URLSearchParams(window.location.search).get("app") === "snake-sorter";
-  });
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
+      void navigator.serviceWorker.register("/snake-sorter-sw.js", { scope: "/snake-sorter", updateViaCache: "none" }).catch(() => undefined);
     }
 
     const onPrompt = (event: Event) => {
@@ -60,7 +57,7 @@ export function SnakeSorterInstallButton({ prominent = false }: { prominent?: bo
     }
 
     window.alert(
-      "Snake Sorter is ready to install. In Chrome, open the browser menu (⋮) and choose Install app. If Chrome has not enabled that option yet, refresh this page once and try again."
+      "Open /snake-sorter/install in a normal Chrome tab, outside the Arboreal Planet app. Then use Chrome’s menu → Add to Home screen → Install. Confirm the name is Snake Sorter. If only Arboreal Planet is offered, cancel rather than installing the wrong app."
     );
   }
 
