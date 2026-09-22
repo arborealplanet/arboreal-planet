@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait-primary",
     categories: ["social", "education", "lifestyle"],
     icons: [
-      { src: "/branding/arboreal-planet-app-icon.webp", sizes: "320x320", type: "image/webp", purpose: "any" },
-      { src: "/branding/arboreal-planet-app-icon.webp", sizes: "320x320", type: "image/webp", purpose: "maskable" },
+      { src: "/icon.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
