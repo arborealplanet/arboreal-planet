@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { AuthHashBridge } from "@/components/AuthHashBridge";
@@ -42,10 +43,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const host = (await headers()).get("host")?.split(":")[0].toLowerCase() ?? "";
+  const standaloneSnakeSorter = host === "snake-sorter.vercel.app" || host.startsWith("snake-sorter-");
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <body><AuthHashBridge/><AppShell>{children}</AppShell></body>
+      <body>
+        {standaloneSnakeSorter ? children : <><AuthHashBridge /><AppShell>{children}</AppShell></>}
+      </body>
     </html>
   );
 }
