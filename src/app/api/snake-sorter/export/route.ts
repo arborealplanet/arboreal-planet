@@ -19,12 +19,30 @@ export async function GET(request: NextRequest) {
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const [animalsResponse, mediaResponse] = await Promise.all([
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,private_reference_only)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)&select=*&order=taxon.asc,locality.asc,created_at.asc`, { headers: headers(identity.token), cache: "no-store" }),
+    fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_animals?review_status=eq.approved&training_eligible=eq.true&rights_status=in.(owned_by_owner,permission_granted,open_license)&label_confidence=in.(confirmed,strong)&purity_status=in.(known_pure,believed_pure)&locality=not.is.null&taxon=in.(Morelia azurea azurea,Morelia azurea pulcher,Morelia azurea utaraensis,Morelia viridis)&select=*&order=taxon.asc,locality.asc,created_at.asc`, { headers: headers(identity.token), cache: "no-store" }),
     fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?quality_status=eq.accepted&select=id,animal_id,storage_path,original_name,mime_type,view_type,is_primary,quality_status,life_stage_override,neonate_color_override,capture_date,approximate_age_days,created_at&order=created_at.asc`, { headers: headers(identity.token), cache: "no-store" }),
   ]);
   if (!animalsResponse.ok || !mediaResponse.ok) return NextResponse.json({ error: "Dataset export unavailable" }, { status: 502 });
 
   const animals = await animalsResponse.json() as Array<Record<string, unknown>>;
+  const invalidTaxonomy = animals.find((animal) => {
+    const stage = String(animal.life_stage ?? "");
+    const color = String(animal.neonate_color ?? "");
+    const taxon = String(animal.taxon ?? "");
+    const locality = String(animal.locality ?? "").trim().toLowerCase();
+    const isNeonateStage = stage === "hatchling" || stage === "neonate";
+    return isNeonateStage && color === "red" && (
+      taxon === "Morelia viridis" ||
+      locality === "kofiau"
+    );
+  });
+  if (invalidTaxonomy) {
+    return NextResponse.json({
+      error: "Dataset export blocked by a taxonomy consistency violation.",
+      animal_id: invalidTaxonomy.id,
+    }, { status: 409 });
+  }
+
   const media = await mediaResponse.json() as Array<Record<string, unknown>>;
   const byAnimal = new Map(animals.map((animal) => [String(animal.id), animal]));
   const rows = media.flatMap((item) => {
