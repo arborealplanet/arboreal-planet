@@ -38,8 +38,9 @@ export function ChondroBreederPreview() {
         loop
         playsInline
         preload="metadata"
+        poster="/branding/arboreal-arcade-splash.webp"
         aria-label="Animated green tree python with a clutch of eggs"
-        className="h-full w-full object-contain"
+        className="h-full w-full object-cover"
       >
         <source src="/branding/chondro-breeder-home.mp4" type="video/mp4" />
       </video>
