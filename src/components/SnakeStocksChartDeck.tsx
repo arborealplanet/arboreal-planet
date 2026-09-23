@@ -16,31 +16,31 @@ const localitySlides: Slide[] = [
   {
     short: "azurea",
     title: "Morelia azurea azurea",
-    subtitle: "Biak and Numfor stay together in the azurea market grouping.",
-    localities: ["Biak", "Numfor"],
-    legends: ["Biak", "Numfor"],
+    subtitle: "Numfor remains in the azurea market grouping.",
+    localities: ["Numfor"],
+    legends: ["Numfor"],
   },
   {
     short: "pulcher",
     title: "Morelia azurea pulcher",
-    subtitle: "Timika, Sorong, Manokwari and Kofiau are grouped together. Batanta stays visibly review-flagged until we lock that classification.",
-    localities: ["Timika", "Sorong", "Manokwari", "Kofiau", "Batanta · review"],
-    legends: ["Timika", "Sorong", "Manokwari", "Kofiau"],
+    subtitle: "Timika, Sorong, Manokwari, Arfak and Kofiau are grouped together. Batanta stays visibly review-flagged until we lock that classification.",
+    localities: ["Timika", "Sorong", "Manokwari", "Arfak", "Kofiau", "Batanta · review"],
+    legends: ["Timika", "Sorong", "Manokwari", "Arfak", "Kofiau"],
     note: "Batanta is not plotted as a permanent locality line until the grouping review is resolved.",
   },
   {
     short: "utaraensis",
     title: "Morelia azurea utaraensis",
-    subtitle: "Wamena, Lereh / Highland, Cyclops and Jayapura share the utaraensis market deck.",
-    localities: ["Wamena", "Lereh / Highland", "Cyclops", "Jayapura"],
-    legends: ["Wamena", "Lereh", "Cyclops", "Jayapura"],
+    subtitle: "Wamena, Lereh / Highland, Cyclops, Jayapura and Yapen share the utaraensis market deck.",
+    localities: ["Wamena", "Lereh / Highland", "Cyclops", "Jayapura", "Yapen"],
+    legends: ["Wamena", "Lereh", "Cyclops", "Jayapura", "Yapen"],
   },
   {
     short: "viridis",
     title: "Morelia viridis",
-    subtitle: "Aru and Merauke stay together in the viridis market grouping.",
-    localities: ["Aru", "Merauke"],
-    legends: ["Aru", "Merauke"],
+    subtitle: "Aru, Merauke and Biak stay together in the viridis market grouping.",
+    localities: ["Aru", "Merauke", "Biak"],
+    legends: ["Aru", "Merauke", "Biak"],
   },
 ];
 
@@ -78,8 +78,8 @@ const wamenaSlides: Slide[] = [
   {
     short: "peer localities",
     title: "Utaraensis locality comparison",
-    subtitle: "Wamena, Lereh, Cyclops and Jayapura under the same filters.",
-    legends: ["Wamena", "Lereh", "Cyclops", "Jayapura"],
+    subtitle: "Wamena, Lereh, Cyclops, Jayapura and Yapen under the same filters.",
+    legends: ["Wamena", "Lereh", "Cyclops", "Jayapura", "Yapen"],
   },
 ];
 
