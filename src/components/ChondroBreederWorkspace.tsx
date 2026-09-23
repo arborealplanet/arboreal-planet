@@ -327,9 +327,9 @@ function SecondaryScreen({ active, onBack, children }: { active: ViewMeta; onBac
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6">
-        <button type="button" onClick={onBack} className="secondary-action px-3 py-2 text-[10px]">← Breeder Home</button>
+        <button type="button" onClick={onBack} className="secondary-action px-3 py-2 text-[10px]">← Keeper Home</button>
       </div>
-      <ScreenHeading eyebrow="Breeder tools" title={active.label} detail={active.detail} />
+      <ScreenHeading eyebrow="Keeper tools" title={active.label} detail={active.detail} />
       <div>{children}</div>
     </>
   );
