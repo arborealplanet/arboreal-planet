@@ -111,6 +111,7 @@ export function ChondroPlayerMarket() {
     };
   }, [refresh]);
 
+  const mine = useMemo(() => listings.filter((listing) => listing.isMine), [listings]);
   const available = useMemo(() => listings.filter((listing) => !listing.isMine), [listings]);
   const cash = Math.max(0, Number(save.cash ?? 0));
   const capacity = animalHousingCapacity(save.enclosures);
@@ -157,8 +158,8 @@ export function ChondroPlayerMarket() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · Virtual animals</div>
-            <h2 className="mt-2 text-xl font-semibold text-white/84 sm:text-2xl">Chondros listed by other breeders</h2>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-white/38">Shared virtual listings keep the animal&apos;s locality, testing and breeding record when it changes hands inside Chondro Breeder.</p>
+            <h2 className="mt-2 text-xl font-semibold text-white/84 sm:text-2xl">Player snake market</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-white/38">Your active listings stay visible here while other breeders can browse and buy them. Shared virtual listings keep the animal&apos;s locality, testing and breeding record when it changes hands inside Arboreal Keeper.</p>
           </div>
           <button type="button" onClick={() => void refresh()} className="rounded-xl border border-white/[.08] px-3 py-2 text-[10px] font-bold text-white/52">Refresh</button>
         </div>
@@ -167,12 +168,62 @@ export function ChondroPlayerMarket() {
           <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-2.5 py-1 font-black uppercase tracking-[.08em] text-emerald-100/60">Virtual only</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Cash {money(cash)}</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Open animal spaces {openSlots}</span>
-          <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{available.length} available</span>
+          <span className="rounded-full border border-amber-200/10 px-2.5 py-1 text-amber-100/48">{mine.length} your listing{mine.length === 1 ? "" : "s"}</span>
+          <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{available.length} from other breeders</span>
         </div>
 
         {status ? <div role="status" className="mt-4 rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-xs text-white/55">{status}</div> : null}
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {mine.length ? (
+          <div className="mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4">
+            <div className="text-[9px] font-black uppercase tracking-[.15em] text-amber-100/55">Your active listings</div>
+            <p className="mt-1 text-xs leading-5 text-white/34">These snakes are still listed. They are intentionally kept visible here so selling an animal never makes it look lost.</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {mine.map((listing) => {
+                const animal = listing.snake;
+                return (
+                  <article key={listing.id} className="rounded-[22px] border border-amber-200/10 bg-black/14 p-3">
+                    <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
+                      <ChondroSnakeIcon
+                        subspecies={animal.subspecies as never}
+                        name={animal.name}
+                        traits={{
+                          highBlack: Number(animal.highBlack ?? 0),
+                          highWhite: Number(animal.highWhite ?? 0),
+                          blueStripe: Number(animal.blueStripe ?? 0),
+                          yellowRetention: Number(animal.yellowRetention ?? 0),
+                          blotches: Number(animal.blotches ?? 0),
+                        }}
+                        lifeStage={(animal.lifeStage ?? "Adult") as never}
+                        neonateColor={animal.neonateColor}
+                        locality={animal.locality}
+                        classification={animal.classification as never}
+                        ancestry={animal.ancestry as never}
+                        localityAncestry={animal.localityAncestry}
+                        phenotypeScore={animal.phenotypeScore}
+                        spriteSeed={animal.id}
+                        compact
+                      />
+                    </div>
+                    <div className="mt-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-white/78">{animal.name}</div>
+                        <div className="mt-1 truncate text-[10px] text-white/34">{animal.sex ?? "Unknown sex"} · {animal.lifeStage ?? "Unknown stage"} · {animal.locality ?? animal.subspecies}</div>
+                      </div>
+                      <div className="shrink-0 text-base font-semibold text-amber-100/72">{money(listing.price)}</div>
+                    </div>
+                    <div className="mt-3 rounded-xl border border-amber-200/10 bg-amber-200/[.025] px-3 py-2 text-[10px] font-semibold text-amber-100/58">Listed by you · visible to other players</div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-5">
+          <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Other breeders</div>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {available.map((listing) => {
             const animal = listing.snake;
             const cannotBuy = busy !== null || cash < listing.price || openSlots <= 0;
