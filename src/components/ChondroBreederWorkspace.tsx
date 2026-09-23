@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
+import { ArborealKeeperFacilityOverview } from "@/components/ArborealKeeperFacilityOverview";
 import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
@@ -101,7 +102,7 @@ export function ChondroBreederWorkspace() {
               <div className="overflow-hidden rounded-[30px] border border-amber-200/12 bg-[#06100c] shadow-[0_24px_70px_rgba(0,0,0,.22)]">
                 <div className="grid lg:min-h-[300px] lg:grid-cols-[minmax(300px,42%)_1fr]">
                   <div className="relative min-h-[250px] overflow-hidden border-b border-white/[.06] bg-black/35 lg:min-h-full lg:border-b-0 lg:border-r">
-                    <Image src="/hatchery/game/incubator.webp" alt="Illustrated Chondro Breeder incubator" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover" />
+                    <Image src="/hatchery/game/incubator.webp" alt="Illustrated Arboreal Keeper incubator" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover" />
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_52%,rgba(3,8,6,.64)_100%)] lg:bg-[linear-gradient(90deg,transparent_60%,rgba(6,16,12,.75)_100%)]" />
                   </div>
                   <div className="relative flex items-center overflow-hidden p-5 sm:p-7 lg:p-9">
@@ -115,6 +116,7 @@ export function ChondroBreederWorkspace() {
                 </div>
               </div>
             </section>
+            <ArborealKeeperFacilityOverview />
             <ChondroBreederManagementView section="career" />
           </SecondaryScreen>
         ) : null}
@@ -195,7 +197,7 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                 <div className="relative">
                   <div className="text-[9px] font-black uppercase tracking-[.19em] text-emerald-200/55">Your program is alive</div>
                   <h2 className="mt-3 text-2xl font-semibold tracking-[-.04em] text-white sm:text-3xl">Breed, incubate, hatch and build a lineage.</h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48 sm:text-[15px]">The Chondro Breeder artwork is part of the main experience. Move between breeding, colony, clutch and store screens to see the program progress visually.</p>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48 sm:text-[15px]">The Arboreal Keeper artwork is part of the main experience. Move between breeding, animals, offspring and store screens to see the program progress visually.</p>
                   <div className="mt-5 h-px w-24 bg-gradient-to-r from-emerald-300/45 to-transparent" />
                 </div>
               </div>
