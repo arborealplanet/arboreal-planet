@@ -1482,9 +1482,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
 
   function resetGame() {
     const confirmation = window.prompt(
-      "This permanently erases your Chondro Breeder save on this device and account.\n\nType RESET CHONDRO BREEDER exactly to continue.",
+      "This permanently erases your Arboreal Keeper save on this device and account.\n\nType RESET ARBOREAL KEEPER exactly to continue.",
     );
-    if (confirmation !== "RESET CHONDRO BREEDER") return;
+    if (confirmation !== "RESET ARBOREAL KEEPER") return;
     setResetMenuOpen(false);
     setStarted(false);
     setCash(STARTING_CASH);
@@ -1520,7 +1520,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   if (!hydrated)
     return (
       <div className="mx-auto max-w-5xl px-5 py-16 sm:px-6">
-        <div className="panel rounded-[30px] p-8 text-center text-sm text-white/45">Loading your Chondro Breeder save…</div>
+        <div className="panel rounded-[30px] p-8 text-center text-sm text-white/45">Loading your Arboreal Keeper save…</div>
       </div>
     );
 
