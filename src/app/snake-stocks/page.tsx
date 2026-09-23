@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SnakeStocksExplorer } from "@/components/SnakeStocksExplorer";
 import { SnakeStocksBrandBanner } from "@/components/BrandVisuals";
 import { LocalitySubspeciesCarousel, WamenaAnalysisCarousel } from "@/components/SnakeStocksChartDeck";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default function SnakeStocksPage() {
   return (
