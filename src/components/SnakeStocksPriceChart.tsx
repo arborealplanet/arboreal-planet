@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export type SnakeStocksPricePoint = {
   point_date: string;
@@ -66,11 +66,6 @@ export function SnakeStocksPriceChart({
     [points],
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    setSelectedDate(usable.at(-1)?.point_date ?? null);
-  }, [usable]);
-
   const selected = usable.find((point) => point.point_date === selectedDate) ?? usable.at(-1) ?? null;
 
   const chart = useMemo(() => {
