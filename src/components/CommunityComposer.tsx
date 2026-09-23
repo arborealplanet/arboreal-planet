@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadFileToSignedStorage, type SignedStorageUpload } from "@/lib/direct-storage-upload";
 
 const postTypes = [["Post","POST"],["Question","QUESTION"],["Breeding update","BREEDING_UPDATE"]] as const;
 const tags = ["Green Tree Python","Boiga","Tree Monitors","Nepenthes","Breeding","Husbandry","Enclosures"];
@@ -52,11 +53,18 @@ export function CommunityComposer(){
     let media_urls:string[]=[];
     try{
       if(files.length){
-        const form=new FormData();files.forEach(file=>form.append("images",file));
-        const upload=await fetch("/api/community/upload",{method:"POST",body:form});
-        const uploadData=await upload.json().catch(()=>({})) as {urls?:string[];error?:string};
-        if(!upload.ok)throw new Error(uploadData.error||"Could not upload photos.");
-        media_urls=uploadData.urls??[];
+        const authorize=await fetch("/api/community/upload",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({files:files.map(file=>({name:file.name,type:file.type,size:file.size}))}),
+        });
+        const uploadData=await authorize.json().catch(()=>({})) as {uploads?:SignedStorageUpload[];error?:string};
+        if(authorize.status===401){router.push("/login?next=/community");return}
+        if(!authorize.ok||!uploadData.uploads||uploadData.uploads.length!==files.length)throw new Error(uploadData.error||"Could not authorize photos.");
+        for(let index=0;index<files.length;index++){
+          const signed=uploadData.uploads[index];
+          media_urls.push(await uploadFileToSignedStorage(files[index],signed));
+        }
       }
       const response=await fetch("/api/community/posts",{
         method:"POST",
