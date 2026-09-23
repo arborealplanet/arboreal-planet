@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export function AuthPanel({ appName = "Arboreal Planet", destination }: { appName?: string; destination?: string }) {
   const router = useRouter();
   const params = useSearchParams();
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">(() => params.get("mode") === "signup" ? "signup" : "login");
   const [loading, setLoading] = useState(false);
   const [signupSent, setSignupSent] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
@@ -110,6 +111,7 @@ export function AuthPanel({ appName = "Arboreal Planet", destination }: { appNam
       <label className="block"><span className="mb-2 block text-xs font-bold text-white/40">Password</span><input required minLength={8} name="password" type="password" autoComplete="new-password" className="w-full rounded-2xl border border-white/[.08] bg-black/15 px-4 py-3 outline-none" /></label>
       {error ? <div className="rounded-2xl border border-red-300/15 bg-red-300/[.04] p-3 text-xs leading-5 text-red-100/70">{error}</div> : null}
       <button disabled={loading} className="w-full rounded-2xl bg-emerald-300 px-4 py-3 text-xs font-black uppercase tracking-[.12em] text-[#06100c] disabled:opacity-50">{loading ? "Creating account…" : "Create account"}</button>
+      <p className="text-center text-[10px] leading-4 text-white/28">By creating an account, you agree to the <Link href="/terms" className="font-semibold text-emerald-200/55 hover:text-emerald-200">Terms</Link> and acknowledge the <Link href="/privacy" className="font-semibold text-emerald-200/55 hover:text-emerald-200">Privacy Policy</Link>.</p>
     </form>}
   </div>;
 }
