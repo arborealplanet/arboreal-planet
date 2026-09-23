@@ -11,7 +11,6 @@ const nav = [
   ["Genetics", "/genetics"],
   ["Plants", "/plants"],
   ["Learn", "/learn"],
-  ["Snake Stocks", "/snake-stocks"],
   ["Marketplace", "/marketplace"],
   ["Community", "/community"],
   ["Arcade", "/arcade/enter?next=%2Farcade"],
@@ -25,7 +24,6 @@ const footerProductLinks = [
   ["Animals", "/animals"],
   ["Genetics", "/genetics"],
   ["Plants", "/plants"],
-  ["Snake Stocks", "/snake-stocks"],
   ["Community", "/community"],
   ["Marketplace", "/marketplace"],
   ["Arcade", "/arcade/enter?next=%2Farcade"],
@@ -63,7 +61,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
           <ArborealPlanetMark className="h-10 w-10 shrink-0 transition duration-200 group-hover:scale-[1.03]" />
           <div className="hidden min-w-0 sm:block">
             <div className="truncate text-[14px] font-extrabold tracking-[.15em] sm:text-base">ARBOREAL PLANET</div>
-            <div className="mt-0.5 hidden text-[8px] font-semibold tracking-[.22em] text-emerald-300/55 md:block sm:text-[9px]">COMMUNITY · REFERENCE · MARKET DATA</div>
+            <div className="mt-0.5 hidden text-[8px] font-semibold tracking-[.22em] text-emerald-300/55 md:block sm:text-[9px]">COMMUNITY · REFERENCE · LINEAGE</div>
           </div>
         </Link>
 
@@ -96,7 +94,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         {signedIn&&<Link href="/saved" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Saved</Link>}
         <Link href="/learn" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Learn</Link>
         <Link href="/events" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Events</Link>
-        {nav.slice(0,4).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
+        {nav.slice(0,3).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
       </nav>
     </header>
   );
@@ -120,8 +118,8 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-8 xl:grid-cols-[1fr_auto] xl:items-start">
           <div className="max-w-xl">
-            <div className="flex items-center gap-3 text-xs text-white/45"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Reptile community, reference data, lineage tools and market intelligence.</span></div>
-            <p className="mt-3 max-w-lg text-[11px] leading-5 text-white/28">Built for keepers, breeders and plant people who want one place for community, reference work, pedigrees, market context and virtual education.</p>
+            <div className="flex items-center gap-3 text-xs text-white/45"><ArborealPlanetMark className="h-8 w-8" /><span>Arboreal Planet · Reptile community, reference data, lineage tools and keeper resources.</span></div>
+            <p className="mt-3 max-w-lg text-[11px] leading-5 text-white/28">Built for keepers, breeders and plant people who want one place for community, reference work, pedigrees, marketplace discovery and virtual education.</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 xl:min-w-[520px]">
             <div>
