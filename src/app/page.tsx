@@ -6,7 +6,6 @@ import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 const platformCards = [
   { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
   { title: "Genetics & Pedigrees", text: "Subspecies calculator, family trees, registered lineages and public pedigree records.", href: "/genetics", tag: "LINEAGE", icon: "⌘" },
-  { title: "Snake Stocks", text: "Median-first reptile market intelligence with source transparency.", href: "/snake-stocks", tag: "MARKET DATA", icon: "↗" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "MARKET", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
   { title: "Arcade", text: "Educational breeder games with virtual animals, lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "PLAY", icon: "◈" },
@@ -34,17 +33,17 @@ export default function Home() {
           <div className="relative z-10">
             <div className="section-kicker">The arboreal keeper network</div>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[.98] tracking-[-.055em] text-white sm:text-6xl lg:text-[72px]">
-              Reptile keeping, knowledge, market data and community <span className="text-emerald-300">in one platform.</span>
+              Reptile keeping, knowledge, lineage and community <span className="text-emerald-300">in one platform.</span>
             </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">Arboreal Planet connects species records, plant cultivation, education, shows, marketplace listings, keeper activity, pedigrees and reptile market intelligence in one ecosystem.</p>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">Arboreal Planet connects species records, plant cultivation, education, shows, marketplace listings, keeper activity and pedigrees in one ecosystem.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/search" className="primary-action">Search the hub</Link>
-              <Link href="/learn" className="secondary-action">Open Learn</Link>
+              <Link href="/login" className="primary-action">Join Arboreal Planet</Link>
+              <Link href="/search" className="secondary-action">Search the hub</Link>
               <Link href="/community" className="secondary-action">Explore the network</Link>
             </div>
             <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/[.055] pt-6 text-xs text-white/45">
-              <span><b className="text-white/72">USA-first</b> market terminology</span>
-              <span><b className="text-white/72">Median-first</b> market analysis</span>
+              <span><b className="text-white/72">Locality-first</b> animal records</span>
+              <span><b className="text-white/72">Private-by-default</b> pedigree tools</span>
               <span><b className="text-white/72">Source-linked</b> learning & events</span>
             </div>
           </div>
@@ -55,7 +54,7 @@ export default function Home() {
                 <div className="section-kicker">Green Tree Python · Reference Species</div>
                 <div className="mt-12 max-w-lg">
                   <div className="text-sm italic text-white/42">Morelia viridis complex</div>
-                  <div className="mt-2 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Locality-first records, lineage tools and market context.</div>
+                  <div className="mt-2 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Locality-first records, lineage tools and keeper context.</div>
                   <p className="mt-4 text-sm leading-6 text-white/52">Built around the distinctions keepers actually use—not a generic reptile catalog.</p>
                 </div>
                 <div className="mt-8 flex flex-wrap gap-2">
@@ -64,9 +63,8 @@ export default function Home() {
                 <Link href="/animals/green-tree-python" className="primary-action mt-8 w-fit">Open Green Tree Python →</Link>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4">
-                {[["Origin groups","2"],["Price method","Median"],["Locality views","Enabled"],["Source review","Required"]].map(([label,value],i)=><div key={label} className={`p-4 ${i<3?"border-r border-white/[.05]":""}`}><div className="text-[8px] font-bold uppercase tracking-[.12em] text-white/32">{label}</div><div className="mt-2 text-lg font-semibold text-white/75">{value}</div></div>)}
+                {[["Reference groups","4"],["Pedigree tools","Enabled"],["Locality views","Enabled"],["Source review","Required"]].map(([label,value],i)=><div key={label} className={`p-4 ${i<3?"border-r border-white/[.05]":""}`}><div className="text-[8px] font-bold uppercase tracking-[.12em] text-white/32">{label}</div><div className="mt-2 text-lg font-semibold text-white/75">{value}</div></div>)}
               </div>
-              <Link href="/snake-stocks" className="flex items-center justify-between border-t border-white/[.055] bg-emerald-300/[.025] px-5 py-4 text-xs font-bold text-emerald-100/75"><span>SNAKE STOCKS · TRACK · COMPARE · DISCOVER</span><span>↗</span></Link>
             </div>
           </div>
         </div>
@@ -75,7 +73,7 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><div className="section-kicker">Explore Arboreal Planet</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">Core sections</h2></div>
-          <p className="max-w-md text-sm leading-6 text-white/52">Search, reference data, learning, shows, genetics, marketplace listings, community activity, market tools and educational breeder games all share the same platform.</p>
+          <p className="max-w-md text-sm leading-6 text-white/52">Search, reference data, learning, shows, genetics, marketplace listings, community activity and educational breeder games all share the same platform.</p>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {platformCards.map((card) => (
