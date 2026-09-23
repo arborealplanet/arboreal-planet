@@ -4,7 +4,7 @@ import { ChondroBreederPreview } from "@/components/ChondroBreederPreview";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 
 const platformCards = [
-  { title: "Animal Database", text: "Species, localities, husbandry, breeding and market context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
+  { title: "Animal Database", text: "Species, localities, husbandry, breeding and keeper context.", href: "/animals", tag: "ANIMALS", icon: "◇" },
   { title: "Genetics & Pedigrees", text: "Subspecies calculator, family trees, registered lineages and public pedigree records.", href: "/genetics", tag: "LINEAGE", icon: "⌘" },
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "MARKET", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
@@ -37,7 +37,7 @@ export default function Home() {
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-white/60">Arboreal Planet connects species records, plant cultivation, education, shows, marketplace listings, keeper activity and pedigrees in one ecosystem.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/login" className="primary-action">Join Arboreal Planet</Link>
+              <Link href="/login?mode=signup" className="primary-action">Join Arboreal Planet</Link>
               <Link href="/search" className="secondary-action">Search the hub</Link>
               <Link href="/community" className="secondary-action">Explore the network</Link>
             </div>
@@ -93,13 +93,13 @@ export default function Home() {
           <div className="flex flex-col justify-center">
             <div className="section-kicker">Reference animal</div>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Green Tree Python</h2>
-            <p className="mt-2 text-sm italic text-white/42">Morelia viridis complex · Arboreal Planet market grouping</p>
-            <p className="mt-6 max-w-xl text-base leading-7 text-white/58">Green Tree Python is the first fully connected animal record, linking locality structure, origin terminology, Genetics, Learn, marketplace listings, Snake Stocks and community activity.</p>
+            <p className="mt-2 text-sm italic text-white/42">Morelia viridis complex · Arboreal Planet reference grouping</p>
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/58">Green Tree Python is the first fully connected animal record, linking locality structure, taxonomy, Genetics, Learn, marketplace listings, public pedigrees and community activity.</p>
             <div className="mt-7 flex flex-wrap gap-2">{populations.map((name) => <span key={name} className="rounded-full border border-white/[.07] bg-white/[.018] px-3 py-1.5 text-xs text-white/55">{name}</span>)}</div>
             <div className="mt-7 flex flex-wrap gap-4"><Link href="/animals/green-tree-python" className="w-fit text-sm font-bold text-emerald-300">Explore Green Tree Python →</Link><Link href="/genetics" className="w-fit text-sm font-bold text-emerald-300">Open genetics & pedigrees →</Link><Link href="/learn?q=Green%20Tree%20Python" className="w-fit text-sm font-bold text-emerald-300">Read related Journal pieces →</Link></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {[["CAPTIVE BRED", "USCBB, CBB and other unambiguous captive-produced terms normalize here."],["IMPORT", "Import, farm bred, farm raised, wild caught and LTC normalize into the public Import market."],["LOCALITY", "Population and locality stay visible instead of being flattened into one generic species price."],["DESIGNER LINES", "Designer and project animals remain separate from locality import comparisons."]].map(([title, text]) => <div key={title} className="panel-soft rounded-[22px] p-5"><div className="text-[10px] font-bold tracking-[.15em] text-emerald-300/65">{title}</div><p className="mt-3 text-sm leading-6 text-white/50">{text}</p></div>)}
+            {[["TAXONOMY", "Subspecies and species-level groups stay explicit instead of being flattened into one generic record."],["LOCALITY", "Population and locality labels remain visible alongside the broader biological grouping."],["PEDIGREES", "Published animal records can connect parentage, producer credit and permanent registry identity."],["KEEPER CONTEXT", "Community and Marketplace activity can link to the reference without becoming reference fact."]].map(([title, text]) => <div key={title} className="panel-soft rounded-[22px] p-5"><div className="text-[10px] font-bold tracking-[.15em] text-emerald-300/65">{title}</div><p className="mt-3 text-sm leading-6 text-white/50">{text}</p></div>)}
           </div>
         </div>
       </section>
