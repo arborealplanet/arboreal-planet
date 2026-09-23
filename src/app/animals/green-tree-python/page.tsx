@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
-import { GreenTreePythonArt, PitcherPlantArt } from "@/components/ArborealArt";
 import { AnimalRecordTabs } from "@/components/AnimalRecordTabs";
 
 export default function GreenTreePythonPage() {
@@ -25,11 +24,24 @@ export default function GreenTreePythonPage() {
                 {["4 reference groups", "13 localities", "Pedigree-linked", "8 record sections"].map((item) => <div key={item} className="rounded-xl border border-white/[.07] bg-black/10 px-3 py-2 text-center font-semibold text-white/42">{item}</div>)}
               </div>
             </div>
-            <div className="grid-surface relative min-h-[340px] overflow-hidden border-t border-white/[.06] bg-emerald-300/[.025] lg:border-l lg:border-t-0">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_44%,rgba(57,230,125,.12),transparent_36%)]" />
-              <div className="absolute bottom-0 left-0 right-0 h-[95%]"><GreenTreePythonArt /></div>
-              <div className="absolute bottom-0 right-2 h-44 w-36 opacity-60"><PitcherPlantArt /></div>
-              <div className="absolute left-5 top-5 rounded-full border border-emerald-300/15 bg-black/25 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.14em] text-emerald-200/60">Stylized reference art</div>
+            <div className="relative min-h-[340px] overflow-hidden border-t border-white/[.06] bg-[radial-gradient(circle_at_55%_35%,rgba(57,230,125,.10),transparent_38%),#06100c] p-6 lg:border-l lg:border-t-0 sm:p-8">
+              <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/55">Reference structure</div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  ["M. a. azurea", "Biak · Numfor"],
+                  ["M. a. pulcher", "Manokwari · Arfak · Sorong · Timika · Kofiau"],
+                  ["M. a. utaraensis", "Cyclops · Jayapura · Lereh · Wamena · Yapen"],
+                  ["M. viridis", "Aru · Merauke"],
+                ].map(([taxon, localities]) => (
+                  <div key={taxon} className="rounded-2xl border border-white/[.06] bg-black/18 p-4">
+                    <div className="text-sm font-semibold text-white/72">{taxon}</div>
+                    <div className="mt-2 text-[11px] leading-5 text-white/34">{localities}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.03] p-4 text-xs leading-5 text-white/40">
+                Custom Green Tree Python hero artwork will live here without changing the reference structure around it.
+              </div>
             </div>
           </div>
 
