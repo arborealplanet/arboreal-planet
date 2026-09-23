@@ -26,12 +26,14 @@ export function applyBiologicalRules({
   const adjusted = { ...scores };
   const flags: string[] = [];
 
-  // Project rule: Morelia viridis neonates are yellow-only. Only enforce this
-  // when both life stage and color are sufficiently trusted or supplied as hints.
-  if (stageTrusted && colorTrusted && lifeStage === "neonate" && neonateColor === "red") {
-    if (adjusted["Morelia viridis"] > 0) flags.push("Red neonate evidence conflicts with the M. viridis neonate reference rule.");
-    adjusted["Morelia viridis"] = 0;
-  }
+  // Neonate color is supporting evidence only. It must never hard-exclude a
+  // taxon because red and yellow neonates can occur across multiple GTP
+  // populations, including Biak. Keep color available to the model as a hint
+  // without turning it into a biological veto.
+  void lifeStage;
+  void neonateColor;
+  void stageTrusted;
+  void colorTrusted;
 
   return { scores: normalizeScores(adjusted), flags };
 }
