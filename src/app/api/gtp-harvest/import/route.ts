@@ -216,7 +216,11 @@ export async function POST(request: NextRequest) {
     const ageClass = normalizeAgeClass(item.life_stage ?? item.age_class);
     const neonateColor = normalizeNeonateColor(item.neonate_color);
     const explicitSorterEligibility = typeof item.snake_sorter_eligible === "boolean" ? item.snake_sorter_eligible : null;
-    const sorterEligible = explicitSorterEligibility ?? ancestry.snake_sorter_eligible;
+    // Pairs/groups can never be auto-admitted: gallery screenshots cannot be
+    // attributed to one animal, so one-snake-one-folder would break. An explicit
+    // snake_sorter_eligible=true from the harvest still overrides (deliberate call).
+    const autoEligible = (explicitSorterEligibility ?? ancestry.snake_sorter_eligible) && singleAnimal;
+    const sorterEligible = explicitSorterEligibility === true || autoEligible;
 
     const masterResponse = await fetch(
       `${SUPABASE_AUTH_URL}/rest/v1/gtp_observed_animals?on_conflict=source_key`,
