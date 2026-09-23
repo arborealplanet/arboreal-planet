@@ -4,7 +4,7 @@ import { supabasePublicFetch } from "@/lib/supabase-public";
 type EvidenceRow = {
   id: string;
   label: string;
-  observation_kind: "CURRENT_ASKING" | "SOLD_LISTING" | "CONFIRMED_SALE";
+  observation_kind: "CURRENT_ASKING" | "SOLD_LISTING" | "CONFIRMED_SALE" | "MIXED";
   captured_at: string;
   source_scope: string | null;
   raw_count: number | null;
