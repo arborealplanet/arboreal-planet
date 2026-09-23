@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/plants",
     "/plants/nepenthes",
     "/learn",
+    "/news",
     "/events",
     "/marketplace",
     "/community",
