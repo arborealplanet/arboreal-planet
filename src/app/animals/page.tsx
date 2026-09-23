@@ -3,7 +3,7 @@ import { PageIntro } from "@/components/AppShell";
 import { AnimalDatabaseExplorer } from "@/components/AnimalDatabaseExplorer";
 
 const priorityAreas = [
-  ["Green Tree Pythons", "LIVE REFERENCE", "The flagship reference record connects taxonomy, locality structure, Genetics, Snake Stocks, public pedigrees, marketplace listings and keeper discussion."],
+  ["Green Tree Pythons", "LIVE REFERENCE", "The flagship reference record connects taxonomy, locality structure, Genetics, public pedigrees, marketplace listings and keeper discussion."],
   ["Boiga", "PRIORITY AREA", "Arboreal colubrids belong in the same system with species identity, husbandry context, keeper discussion and marketplace discovery kept separate from unverified claims."],
   ["Emerald Tree Boas", "PRIORITY AREA", "A natural next boa group for an arboreal-first database, with room for taxonomy, distribution, husbandry and market context without flattening individual line or locality claims."],
   ["Tree Monitors", "PRIORITY AREA", "Monitor records can bring arboreal lizards into the same reference structure instead of making Arboreal Planet snake-only."],
@@ -24,7 +24,7 @@ export default function AnimalsPage() {
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[["PUBLISHED", "1", "Green Tree Python reference"], ["PRIORITY", "5", "Core arboreal animal areas"], ["GROUPS", "9", "Supported database groups"], ["CONNECTED", "4", "Genetics · Stocks · Market · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
+          {[["PUBLISHED", "1", "Green Tree Python reference"], ["PRIORITY", "5", "Core arboreal animal areas"], ["GROUPS", "9", "Supported database groups"], ["CONNECTED", "4", "Genetics · Pedigrees · Market · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
         </div>
       </section>
 
@@ -54,11 +54,11 @@ export default function AnimalsPage() {
           <div>
             <div className="section-kicker">Connected records</div>
             <h2 className="mt-3 text-2xl font-semibold">One animal record can connect the whole platform.</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/38">Reference pages can point to Genetics, market intelligence, public pedigrees, community discussion and marketplace inventory without allowing any one of those sources to overwrite the reference layer.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/38">Reference pages can point to Genetics, public pedigrees, community discussion and marketplace inventory without allowing any one of those sources to overwrite the reference layer.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <Link href="/genetics" className="panel-soft rounded-2xl p-5 transition hover:bg-emerald-300/[.025]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300/55">Education tool</div><div className="mt-2 font-semibold">Genetics Hub →</div><p className="mt-2 text-xs leading-5 text-white/30">Green Tree Python locality, subspecies ancestry and public lineage records.</p></Link>
-            <Link href="/snake-stocks" className="panel-soft rounded-2xl p-5 transition hover:bg-emerald-300/[.025]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300/55">Market intelligence</div><div className="mt-2 font-semibold">Snake Stocks →</div><p className="mt-2 text-xs leading-5 text-white/30">Reviewed market observations stay separate from species facts.</p></Link>
+            <Link href="/genetics/database" className="panel-soft rounded-2xl p-5 transition hover:bg-emerald-300/[.025]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300/55">Public records</div><div className="mt-2 font-semibold">Pedigree Database →</div><p className="mt-2 text-xs leading-5 text-white/30">Published lineages stay connected to permanent animal records.</p></Link>
             <Link href="/marketplace" className="panel-soft rounded-2xl p-5 transition hover:bg-white/[.03]"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/25">Live inventory</div><div className="mt-2 font-semibold">Marketplace →</div><p className="mt-2 text-xs leading-5 text-white/30">Current listings remain seller-submitted inventory, not reference evidence.</p></Link>
           </div>
         </div>
