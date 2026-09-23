@@ -201,6 +201,7 @@ export async function POST(request: NextRequest) {
     const fxRateDate = dateOnlyOrNull(item.fx_rate_date);
     const fxSource = optionalText(item.fx_source, 160);
     const status = normalizeListingStatus(item.listing_status ?? item.status);
+    const confirmedTransactionPrice = numberOrNull(item.confirmed_transaction_price);
     const observedAt = dateOrNull(item.observed_at) ?? capturedAt;
     const listedAt = dateOrNull(item.listed_at);
     const soldAt = dateOrNull(item.sold_at ?? item.date_sold_or_closed);
@@ -279,9 +280,9 @@ export async function POST(request: NextRequest) {
       master_animal_id: masterAnimalId,
       observed_at: observedAt,
       listing_status: status,
-      price_context: status === "SOLD" ? "SOLD_DISPLAYED" : "ASKING",
+      price_context: confirmedTransactionPrice !== null ? "CONFIRMED_TRANSACTION" : status === "SOLD" ? "SOLD_DISPLAYED" : "ASKING",
       displayed_price: displayedPrice,
-      confirmed_transaction_price: numberOrNull(item.confirmed_transaction_price),
+      confirmed_transaction_price: confirmedTransactionPrice,
       currency,
       seller_name: sellerName,
       seller_source_id: optionalText(item.seller_source_id, 160),
