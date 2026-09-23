@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SnakeStocksExplorer } from "@/components/SnakeStocksExplorer";
 import { SnakeStocksBrandBanner } from "@/components/BrandVisuals";
 import { LocalitySubspeciesCarousel, WamenaAnalysisCarousel } from "@/components/SnakeStocksChartDeck";
@@ -8,7 +9,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
+const SNAKE_STOCKS_PUBLIC = false;
+
 export default function SnakeStocksPage() {
+  if (!SNAKE_STOCKS_PUBLIC) notFound();
+
   return (
     <main>
       <section className="border-b border-white/[.06] bg-black/10">
