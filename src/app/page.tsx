@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArborealsByBunnBadge } from "@/components/BrandVisuals";
 import { ChondroBreederPreview } from "@/components/ChondroBreederPreview";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
@@ -28,7 +29,26 @@ export default function Home() {
         <div className="pointer-events-none absolute -right-24 top-16 h-[520px] w-[520px] rounded-full border border-emerald-300/[.05] bg-emerald-400/[.02]" />
         <div className="pointer-events-none absolute right-20 top-40 h-64 w-64 rounded-full bg-emerald-300/[.035] blur-3xl" />
 
-        <div className="relative z-10 mx-auto flex max-w-7xl items-start justify-center px-5 py-3 sm:min-h-[calc(100svh-72px)] sm:items-center sm:px-6 sm:py-8"><HomeLogoAnimation /></div>
+        <div className="relative z-10 mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-5 py-5 sm:min-h-[calc(100svh-72px)] sm:px-6 sm:py-8">
+          <HomeLogoAnimation />
+          <Link
+            href="/arboreals-by-bunn"
+            aria-label="Visit the Arboreals By Bunn website"
+            className="group flex w-full max-w-lg items-center gap-4 rounded-2xl border border-amber-200/30 bg-black/85 p-3 shadow-[0_12px_36px_rgba(0,0,0,.4)] transition hover:border-amber-200/70 hover:bg-[#10130e] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200"
+          >
+            <Image
+              src="/abb-site/assets/abb-logo-masthead.jpg"
+              alt="Arboreals By Bunn logo with a Green Tree Python"
+              width={160}
+              height={102}
+              className="h-20 w-32 shrink-0 rounded-lg object-contain sm:h-24 sm:w-40"
+            />
+            <span className="min-w-0">
+              <span className="block text-base font-bold text-white sm:text-lg">Arboreals By Bunn</span>
+              <span className="mt-1 block text-sm font-semibold text-amber-100/80 group-hover:text-amber-100">Visit the website →</span>
+            </span>
+          </Link>
+        </div>
 
         <div className="mx-auto grid min-h-[620px] max-w-7xl items-center gap-12 border-t border-white/[.055] px-5 pb-16 pt-14 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:pb-20 lg:pt-16">
           <div className="relative z-10">
