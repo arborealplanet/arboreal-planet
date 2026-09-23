@@ -6,6 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     "/",
     "/animals",
+    "/arboreals-by-bunn",
     "/animals/green-tree-python",
     "/genetics",
     "/genetics/database",
