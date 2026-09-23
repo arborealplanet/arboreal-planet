@@ -1,52 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { classifyGtpListing } from "@/lib/gtp-harvest";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const MM_LISTING_RE = /^https:\/\/(?:www\.)?morphmarket\.com\/(?:us|eu|za|mx)\/c\/reptiles\/pythons\/green-tree-pythons\/(\d+)\/?(?:\?.*)?$/i;
-
-const LOCALITIES: Array<[string,string]> = [
-  ["jayapura","Jayapura"],["cyclops","Cyclops"],["lereh","Lereh"],["yapen","Yapen"],
-  ["wamena","Wamena"],["arfak","Arfak"],["sorong","Sorong"],["timika","Timika"],
-  ["manokwari","Manokwari"],["kofiau","Kofiau"],["aru","Aru"],["merauke","Merauke"],
-  ["biak","Biak"],["numfor","Numfor"],["numfoor","Numfor"],
-];
-
-function classify(title: string, description: string) {
-  const text = `${title} ${description}`.toLowerCase();
-  const localities = [...new Set(
-    LOCALITIES.filter(([needle]) => text.includes(needle)).map(([,label]) => label)
-  )];
-
-  let exclusionReason: string | null = null;
-  if (/\bdesigner\b|\bcalico\b/.test(text)) exclusionReason = "designer";
-  else if (/\bhybrid\b/.test(text)) exclusionReason = "hybrid";
-  else if (/\bmixed locality\b|\blocality cross\b/.test(text)) exclusionReason = "mixed locality";
-  else if (/\bunknown locality\b|\bunknown lineage\b/.test(text)) exclusionReason = "unknown locality";
-  else if (localities.length > 1) exclusionReason = "mixed locality";
-  else if (/\s[x×]\s/i.test(` ${title} `) && localities.length >= 1) exclusionReason = "locality cross";
-  else if (localities.length === 0) exclusionReason = "unknown locality";
-
-  const neonateColor =
-    /\bred\b/.test(text) ? "red" :
-    /\byellow\b/.test(text) ? "yellow" :
-    null;
-
-  const lifeStage =
-    /\bhatchling\b/.test(text) ? "hatchling" :
-    /\bneo(?:nate)?\b/.test(text) ? "neonate" :
-    /\bjuvenile\b|\bjuvi\b/.test(text) ? "juvenile" :
-    /\bsubadult\b/.test(text) ? "subadult" :
-    /\badult\b/.test(text) ? "adult" :
-    null;
-
-  return {
-    localities,
-    locality: localities.length === 1 ? localities[0] : null,
-    review_status: exclusionReason ? "rejected" : "pending",
-    exclusion_reason: exclusionReason,
-    neonate_color_hint: neonateColor,
-    life_stage_hint: lifeStage,
-  };
-}
 
 function titleParts(raw: string) {
   const clean = raw.replace(/\s*-\s*MorphMarket.*$/i, "").trim();
@@ -86,9 +42,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const sourceUrl = String(body.source_url ?? "").trim();
   const rawTitle = String(body.title ?? "").trim().slice(0, 255);
-  const description = String(body.description ?? "").trim().slice(0, 2000);
+  const description = String(body.description ?? "").trim().slice(0, 4000);
   const parts = titleParts(rawTitle);
-  const decision = classify(parts.title, description);
+  const decision = classifyGtpListing(parts.title, description);
   const match = sourceUrl.match(MM_LISTING_RE);
 
   if (!match) {
@@ -99,7 +55,7 @@ export async function POST(request: NextRequest) {
     (Array.isArray(body.image_urls) ? body.image_urls : [])
       .map(normalizeMediaUrl)
       .filter((value): value is string => Boolean(value)),
-  )].slice(0, 20);
+  )].slice(0, 40);
 
   if (!imageUrls.length) {
     return NextResponse.json({ error: "No usable live image references were found on the listing." }, { status: 409 });
@@ -107,22 +63,107 @@ export async function POST(request: NextRequest) {
 
   const sourceId = match[1];
   const sourceKey = `morphmarket:${sourceId}`;
+  const now = new Date().toISOString();
   const h = {
     apikey: SUPABASE_AUTH_KEY,
     Authorization: `Bearer ${identity.token}`,
     Accept: "application/json",
   };
 
+  const masterResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/gtp_observed_animals?on_conflict=source_key`,
+    {
+      method: "POST",
+      headers: {
+        ...h,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify({
+        source_type: "morphmarket",
+        source_key: sourceKey,
+        source_id: sourceId,
+        source_url: sourceUrl,
+        seller_name: parts.seller,
+        listing_title: parts.title || rawTitle || null,
+        normalized_taxon: decision.taxon,
+        normalized_locality: decision.locality,
+        ancestry_class: decision.ancestry_class,
+        pure_locality: decision.pure_locality,
+        pure_subspecies: decision.pure_subspecies,
+        life_stage: decision.life_stage_hint,
+        neonate_color: decision.neonate_color_hint,
+        source_metadata: {
+          description,
+          locality_mentions: decision.localities,
+          browser_helper_import: true,
+        },
+        last_seen_at: now,
+        updated_at: now,
+      }),
+      cache: "no-store",
+    },
+  );
+
+  const masterRows = masterResponse.ok
+    ? await masterResponse.json() as Array<{ id: string }>
+    : [];
+  const masterAnimalId = masterRows[0]?.id ?? null;
+
+  if (!masterAnimalId) {
+    return NextResponse.json({ error: "Could not create or update the shared GTP animal record." }, { status: 502 });
+  }
+
   const candidateResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_key=eq.${encodeURIComponent(sourceKey)}&select=id,source_key,source_url,title,thumbnail_url&limit=1`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_key=eq.${encodeURIComponent(sourceKey)}&select=id,source_key,source_url,title,thumbnail_url,reviewed_at&limit=1`,
     { headers: h, cache: "no-store" },
   );
 
   const candidates = candidateResponse.ok
-    ? await candidateResponse.json() as Array<{ id: string; source_key: string; source_url: string; title: string | null; thumbnail_url: string | null }>
+    ? await candidateResponse.json() as Array<{
+        id: string;
+        source_key: string;
+        source_url: string;
+        title: string | null;
+        thumbnail_url: string | null;
+        reviewed_at: string | null;
+      }>
     : [];
+
   let candidate = candidates[0];
   let candidateCreated = false;
+
+  const candidateFields = {
+    master_animal_id: masterAnimalId,
+    source_type: "morphmarket",
+    source_key: sourceKey,
+    source_id: sourceId,
+    source_url: sourceUrl,
+    thumbnail_url: imageUrls[0] || null,
+    title: parts.title || rawTitle || null,
+    seller_or_observer: parts.seller,
+    taxon_raw: "Green Tree Python",
+    locality_raw: decision.locality,
+    provisional_taxon: decision.taxon,
+    provisional_locality: decision.locality,
+    life_stage_hint: decision.life_stage_hint,
+    neonate_color_hint: decision.neonate_color_hint,
+    rights_status: "metadata_only",
+    source_metadata: {
+      discovery_method: "owner_browser_helper",
+      description,
+      media_downloaded: false,
+      browser_helper_import: true,
+      snake_sorter_eligible: decision.snake_sorter_eligible,
+      ancestry_class: decision.ancestry_class,
+      pure_locality: decision.pure_locality,
+      pure_subspecies: decision.pure_subspecies,
+      locality_mentions: decision.localities,
+      taxa_mentions: decision.taxa,
+    },
+    acquisition_stage: "media_collected",
+    last_seen_at: now,
+  };
 
   if (!candidate) {
     const createResponse = await fetch(
@@ -135,38 +176,17 @@ export async function POST(request: NextRequest) {
           Prefer: "return=representation",
         },
         body: JSON.stringify({
-          source_type: "morphmarket",
-          source_key: sourceKey,
-          source_id: sourceId,
-          source_url: sourceUrl,
-          thumbnail_url: imageUrls[0] || null,
-          title: parts.title || rawTitle || null,
-          seller_or_observer: parts.seller,
-          taxon_raw: "Green Tree Python",
-          locality_raw: decision.locality,
-          provisional_locality: decision.locality,
-          life_stage_hint: decision.life_stage_hint,
-          neonate_color_hint: decision.neonate_color_hint,
-          rights_status: "metadata_only",
+          ...candidateFields,
           review_status: decision.review_status,
           exclusion_reason: decision.exclusion_reason,
-          source_metadata: {
-            discovery_method: "owner_browser_helper",
-            description,
-            media_downloaded: false,
-            browser_helper_import: true,
-            single_locality_candidate: decision.review_status === "pending",
-            locality_mentions: decision.localities,
-          },
           created_by: identity.user.id,
-          acquisition_stage: "media_collected",
         }),
         cache: "no-store",
       },
     );
 
     const created = createResponse.ok
-      ? await createResponse.json() as Array<{ id: string; source_key: string; source_url: string; title: string | null; thumbnail_url: string | null }>
+      ? await createResponse.json() as Array<typeof candidate & { id: string }>
       : [];
 
     if (!createResponse.ok || !created[0]) {
@@ -175,13 +195,37 @@ export async function POST(request: NextRequest) {
 
     candidate = created[0];
     candidateCreated = true;
+  } else {
+    const patch: Record<string, unknown> = { ...candidateFields };
+    if (!candidate.reviewed_at) {
+      patch.review_status = decision.review_status;
+      patch.exclusion_reason = decision.exclusion_reason;
+    }
+
+    await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(candidate.id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...h,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(patch),
+        cache: "no-store",
+      },
+    );
   }
 
   const rows = imageUrls.map((url, index) => ({
-    candidate_id: candidate.id,
+    candidate_id: candidate!.id,
     source_media_url: url,
     source_page_url: sourceUrl,
     media_order: index,
+    gallery_index: index + 1,
+    gallery_total: imageUrls.length,
+    image_subject: "listed_animal",
+    source_capture_kind: "live_reference",
     capture_method: index === 0 ? "page_metadata" : "gallery_url",
     rights_status: "metadata_only",
     review_status: "pending",
@@ -191,10 +235,11 @@ export async function POST(request: NextRequest) {
       source_type: "morphmarket",
       source_key: sourceKey,
       source_id: sourceId,
+      master_animal_id: masterAnimalId,
       imported_from_browser_helper: true,
-      browser_helper_version: 1,
+      browser_helper_version: 2,
     },
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   }));
 
   const insertResponse = await fetch(
@@ -216,30 +261,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Could not attach live image references to this candidate." }, { status: 502 });
   }
 
-  await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(candidate.id)}`,
-    {
-      method: "PATCH",
-      headers: {
-        ...h,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        thumbnail_url: imageUrls[0],
-        title: candidate.title || parts.title || rawTitle || null,
-        acquisition_stage: "media_collected",
-        last_seen_at: new Date().toISOString(),
-      }),
-      cache: "no-store",
-    },
-  );
-
   return NextResponse.json({
     ok: true,
-    candidate_id: candidate.id,
+    master_animal_id: masterAnimalId,
+    candidate_id: candidate!.id,
     source_key: sourceKey,
-    title: candidate.title || parts.title || rawTitle || null,
+    title: candidate!.title || parts.title || rawTitle || null,
+    ancestry_class: decision.ancestry_class,
+    snake_sorter_eligible: decision.snake_sorter_eligible,
     attached: inserted.length,
     live_reference_count: imageUrls.length,
     stored_copies: 0,
