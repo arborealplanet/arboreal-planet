@@ -8,7 +8,7 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-const description = "A keeper-first reptile platform for animal and plant reference data, Green Tree Python genetics and pedigrees, community, marketplace tools and The Hatchery breeder games.";
+const description = "A keeper-first reptile platform for animal and plant reference data, Green Tree Python genetics and pedigrees, community, marketplace tools and the Arboreal Keeper arcade.";
 
 export const metadata: Metadata = {
   title: { default: "Arboreal Planet", template: "%s · Arboreal Planet" },
