@@ -70,8 +70,10 @@ export function SnakeStocksExplorer() {
   const [sex, setSex] = useState(sexes[0]);
   const [age, setAge] = useState(ages[0]);
   const [locality, setLocality] = useState("All localities");
-  const [snapshotPoints, setSnapshotPoints] = useState<SnapshotPoint[]>([]);
-  const [marketLoading, setMarketLoading] = useState(true);
+  const [marketResult, setMarketResult] = useState<{ query: string; points: SnapshotPoint[] }>({
+    query: "",
+    points: [],
+  });
 
   const activeGroup = marketGroups.find((group) => group.label === marketGroup) ?? marketGroups[0];
   const localityOptions = [
@@ -84,31 +86,37 @@ export function SnakeStocksExplorer() {
     setLocality("All localities");
   };
 
+  const marketQuery = useMemo(() => new URLSearchParams({
+    range: time,
+    locality,
+    view: mode === "FOR SALE" ? "CURRENT_ASKING" : "SOLD_LISTING",
+    origin: origin === "Captive Bred" ? "CAPTIVE_BRED" : origin === "Import" ? "IMPORT" : "ALL",
+    sex: sex === "Female" ? "FEMALE" : sex === "Male" ? "MALE" : "ALL",
+    age: age === "All ages" ? "ALL" : age.toUpperCase(),
+    color: neoColor === "Red" ? "RED" : neoColor === "Yellow" ? "YELLOW" : "ALL",
+  }).toString(), [time, locality, mode, origin, sex, age, neoColor]);
+
   useEffect(() => {
     const controller = new AbortController();
-    const query = new URLSearchParams({
-      range: time,
-      locality,
-      view: mode === "FOR SALE" ? "CURRENT_ASKING" : "SOLD_LISTING",
-      origin: origin === "Captive Bred" ? "CAPTIVE_BRED" : origin === "Import" ? "IMPORT" : "ALL",
-      sex: sex === "Female" ? "FEMALE" : sex === "Male" ? "MALE" : "ALL",
-      age: age === "All ages" ? "ALL" : age.toUpperCase(),
-      color: neoColor === "Red" ? "RED" : neoColor === "Yellow" ? "YELLOW" : "ALL",
-    });
 
-    setMarketLoading(true);
-    fetch(`/api/market/snapshots?${query.toString()}`, { signal: controller.signal })
+    fetch(`/api/market/snapshots?${marketQuery}`, { signal: controller.signal })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Market snapshot request failed")))
-      .then((payload: { points?: SnapshotPoint[] }) => setSnapshotPoints(Array.isArray(payload.points) ? payload.points : []))
+      .then((payload: { points?: SnapshotPoint[] }) => {
+        setMarketResult({
+          query: marketQuery,
+          points: Array.isArray(payload.points) ? payload.points : [],
+        });
+      })
       .catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setSnapshotPoints([]);
-      })
-      .finally(() => setMarketLoading(false));
+        setMarketResult({ query: marketQuery, points: [] });
+      });
 
     return () => controller.abort();
-  }, [time, locality, mode, origin, sex, age, neoColor]);
+  }, [marketQuery]);
 
+  const marketLoading = marketResult.query !== marketQuery;
+  const snapshotPoints = marketLoading ? [] : marketResult.points;
   const latest = snapshotPoints.at(-1) ?? null;
 
   const context = useMemo(() => {
