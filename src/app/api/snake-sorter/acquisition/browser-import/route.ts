@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { classifyGtpListing } from "@/lib/gtp-harvest";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
-const MM_LISTING_RE = /^https:\/\/(?:www\.)?morphmarket\.com\/(?:us|eu|za|mx)\/c\/reptiles\/pythons\/green-tree-pythons\/(\d+)\/?(?:\?.*)?$/i;
+const MM_LISTING_RE = /^https:\/\/(?:www\.)?morphmarket\.com\/[a-z]{2}\/c\/reptiles\/pythons\/green-tree-pythons\/(\d+)\/?(?:\?.*)?$/i;
 
 function titleParts(raw: string) {
   const clean = raw.replace(/\s*-\s*MorphMarket.*$/i, "").trim();
