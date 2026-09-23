@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabasePublicFetch } from "@/lib/supabase-public";
 
-type SnapshotRow = {
-  snapshot_date: string;
-  locality_id: string | null;
-  public_origin: string;
-  sex: string;
-  age_class: string;
-  neonate_color: string;
-  view_kind: string;
+type CommonPoint = {
   sample_size: number;
   seller_count: number;
   source_count: number;
@@ -19,8 +12,22 @@ type SnapshotRow = {
   q75: number | null;
   high: number | null;
   confidence: string;
-  market_country: string;
-  display_currency: string;
+};
+
+type DailySnapshotRow = CommonPoint & {
+  snapshot_date: string;
+};
+
+type PeriodSnapshotRow = CommonPoint & {
+  period_start: string;
+  period_end: string;
+  granularity: "MONTH" | "QUARTER" | "YEAR";
+};
+
+type MarketPoint = CommonPoint & {
+  point_date: string;
+  point_end: string | null;
+  granularity: "DAY" | "MONTH" | "QUARTER" | "YEAR";
 };
 
 function dateFloor(range: string) {
@@ -37,9 +44,39 @@ function dateFloor(range: string) {
   return now.toISOString().slice(0, 10);
 }
 
+function monthFloor(date: string | null) {
+  return date ? `${date.slice(0, 7)}-01` : null;
+}
+
+function recentMonthlyCutoff() {
+  const now = new Date();
+  now.setUTCMonth(now.getUTCMonth() - 24);
+  const month = now.getUTCMonth();
+  const quarterMonth = Math.floor(month / 3) * 3;
+  return new Date(Date.UTC(now.getUTCFullYear(), quarterMonth, 1)).toISOString().slice(0, 10);
+}
+
 function enumValue(value: string | null, allowed: string[], fallback: string) {
   const normalized = String(value ?? "").trim().toUpperCase().replace(/[ -]+/g, "_");
   return allowed.includes(normalized) ? normalized : fallback;
+}
+
+function pointFromDaily(row: DailySnapshotRow): MarketPoint {
+  return {
+    ...row,
+    point_date: row.snapshot_date,
+    point_end: row.snapshot_date,
+    granularity: "DAY",
+  };
+}
+
+function pointFromPeriod(row: PeriodSnapshotRow): MarketPoint {
+  return {
+    ...row,
+    point_date: row.period_start,
+    point_end: row.period_end,
+    granularity: row.granularity,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -62,7 +99,7 @@ export async function GET(request: NextRequest) {
     localityId = localities[0]?.id ?? "__missing__";
   }
 
-  const filters = [
+  const commonFilters = [
     "market_country=eq.USA",
     `view_kind=eq.${viewKind}`,
     `public_origin=eq.${origin}`,
@@ -71,17 +108,69 @@ export async function GET(request: NextRequest) {
     `neonate_color=eq.${color}`,
     localityId === null ? "locality_id=is.null" : `locality_id=eq.${encodeURIComponent(localityId)}`,
   ];
-  if (startDate) filters.push(`snapshot_date=gte.${startDate}`);
 
-  const rows = await supabasePublicFetch<SnapshotRow[]>(
-    `market_daily_snapshots?select=snapshot_date,locality_id,public_origin,sex,age_class,neonate_color,view_kind,sample_size,seller_count,source_count,low,q25,median,mean,q75,high,confidence,market_country,display_currency&${filters.join("&")}&order=snapshot_date.asc`,
-  );
+  const periodSelect = "period_start,period_end,granularity,sample_size,seller_count,source_count,low,q25,median,mean,q75,high,confidence";
+  const dailySelect = "snapshot_date,sample_size,seller_count,source_count,low,q25,median,mean,q75,high,confidence";
+
+  let points: MarketPoint[] = [];
+  let resolution = "MONTH";
+
+  const useDailyLive = viewKind === "CURRENT_ASKING" && (range === "1M" || range === "3M");
+
+  if (useDailyLive) {
+    const filters = [...commonFilters];
+    if (startDate) filters.push(`snapshot_date=gte.${startDate}`);
+    const dailyRows = await supabasePublicFetch<DailySnapshotRow[]>(
+      `market_daily_snapshots?select=${dailySelect}&${filters.join("&")}&order=snapshot_date.asc`,
+    );
+    points = dailyRows.map(pointFromDaily);
+    resolution = "DAY";
+
+    if (!points.length) {
+      const fallbackFilters = [...commonFilters, "granularity=eq.MONTH"];
+      const periodStart = monthFloor(startDate);
+      if (periodStart) fallbackFilters.push(`period_start=gte.${periodStart}`);
+      const periodRows = await supabasePublicFetch<PeriodSnapshotRow[]>(
+        `market_period_snapshots?select=${periodSelect}&${fallbackFilters.join("&")}&order=period_start.asc`,
+      );
+      points = periodRows.map(pointFromPeriod);
+      resolution = "MONTH";
+    }
+  } else if (["1M", "3M", "1Y", "3Y"].includes(range)) {
+    const filters = [...commonFilters, "granularity=eq.MONTH"];
+    const periodStart = monthFloor(startDate);
+    if (periodStart) filters.push(`period_start=gte.${periodStart}`);
+    const rows = await supabasePublicFetch<PeriodSnapshotRow[]>(
+      `market_period_snapshots?select=${periodSelect}&${filters.join("&")}&order=period_start.asc`,
+    );
+    points = rows.map(pointFromPeriod);
+    resolution = "MONTH";
+  } else {
+    const cutoff = recentMonthlyCutoff();
+    const quarterlyFilters = [...commonFilters, "granularity=eq.QUARTER", `period_start=lt.${cutoff}`];
+    const quarterStart = monthFloor(startDate);
+    if (quarterStart) quarterlyFilters.push(`period_start=gte.${quarterStart}`);
+
+    const monthlyFilters = [...commonFilters, "granularity=eq.MONTH", `period_start=gte.${cutoff}`];
+
+    const quarterlyRows = await supabasePublicFetch<PeriodSnapshotRow[]>(
+      `market_period_snapshots?select=${periodSelect}&${quarterlyFilters.join("&")}&order=period_start.asc`,
+    );
+    const monthlyRows = await supabasePublicFetch<PeriodSnapshotRow[]>(
+      `market_period_snapshots?select=${periodSelect}&${monthlyFilters.join("&")}&order=period_start.asc`,
+    );
+
+    points = [...quarterlyRows.map(pointFromPeriod), ...monthlyRows.map(pointFromPeriod)]
+      .sort((a, b) => a.point_date.localeCompare(b.point_date));
+    resolution = "QUARTER_TO_MONTH";
+  }
 
   return NextResponse.json({
     market_country: "USA",
     range,
     locality: localityName || "All localities",
-    points: rows,
-    latest: rows.at(-1) ?? null,
+    resolution,
+    points,
+    latest: points.at(-1) ?? null,
   });
 }
