@@ -1,45 +1,81 @@
 import { NextRequest,NextResponse } from "next/server";
 import { getServerIdentity,SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
-const allowed=new Set(["image/jpeg","image/png","image/webp"]);
+
+const allowed=new Map([["image/jpeg","jpg"],["image/png","png"],["image/webp","webp"]]);
+const MAX_IMAGES=10;
+const MAX_BYTES=10*1024*1024;
+type UploadRequestFile={name?:unknown;type?:unknown;size?:unknown};
+
+function storagePath(path:string){return path.split("/").map(encodeURIComponent).join("/")}
+
+async function createSignedUpload(identity:{token:string;user:{id:string}},path:string){
+  const response=await fetch(
+    `${SUPABASE_AUTH_URL}/storage/v1/object/upload/sign/marketplace/${storagePath(path)}`,
+    {
+      method:"POST",
+      headers:{
+        apikey:SUPABASE_AUTH_KEY,
+        Authorization:`Bearer ${identity.token}`,
+        "Content-Type":"application/json",
+      },
+      body:"{}",
+      cache:"no-store",
+    },
+  );
+  const data=await response.json().catch(()=>null) as {url?:string;error?:string;message?:string}|null;
+  if(!response.ok||!data?.url)throw new Error(data?.message||data?.error||"Could not authorize photo upload.");
+  const signedUrl=data.url.startsWith("http")?data.url:`${SUPABASE_AUTH_URL}/storage/v1${data.url.startsWith("/")?"":"/"}${data.url}`;
+  return{
+    path,
+    signedUrl,
+    publicUrl:`${SUPABASE_AUTH_URL}/storage/v1/object/public/marketplace/${path}`,
+  };
+}
 
 async function removeUploaded(identity:{token:string;user:{id:string}},paths:string[]){
   for(const path of paths){
-    await fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/marketplace/${path}`,{method:"DELETE",headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`}}).catch(()=>null);
+    await fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/marketplace/${storagePath(path)}`,{
+      method:"DELETE",
+      headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`},
+    }).catch(()=>null);
   }
 }
 
 export async function POST(request:NextRequest){
   const identity=await getServerIdentity();
   if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});
-  const data=await request.formData();
-  const files=data.getAll("images").filter((x):x is File=>x instanceof File);
-  if(!files.length||files.length>10)return NextResponse.json({error:"Choose 1 to 10 images"},{status:400});
-  if(files.some((file)=>!allowed.has(file.type)||file.size>10*1024*1024))return NextResponse.json({error:"Images must be JPG, PNG, or WebP and no larger than 10 MB each"},{status:400});
 
-  const urls:string[]=[];
-  const uploadedPaths:string[]=[];
-  for(const file of files){
-    const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
-    const path=`${identity.user.id}/${crypto.randomUUID()}.${ext}`;
-    const upload=await fetch(`${SUPABASE_AUTH_URL}/storage/v1/object/marketplace/${path}`,{method:"POST",headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,"Content-Type":file.type,"x-upsert":"false"},body:await file.arrayBuffer()}).catch(()=>null);
-    if(!upload?.ok){
-      await removeUploaded(identity,uploadedPaths);
-      return NextResponse.json({error:"Photo upload failed. No photos from this attempt were kept."},{status:400});
-    }
-    uploadedPaths.push(path);
-    urls.push(`${SUPABASE_AUTH_URL}/storage/v1/object/public/marketplace/${path}`);
+  const body=await request.json().catch(()=>null) as {files?:UploadRequestFile[]}|null;
+  const files=Array.isArray(body?.files)?body.files.slice(0,MAX_IMAGES+1):[];
+  if(!files.length||files.length>MAX_IMAGES)return NextResponse.json({error:"Choose 1 to 10 images"},{status:400});
+
+  const normalized=files.map((file)=>({type:String(file.type??""),size:Number(file.size??0)}));
+  if(normalized.some((file)=>!allowed.has(file.type)||!Number.isFinite(file.size)||file.size<=0||file.size>MAX_BYTES)){
+    return NextResponse.json({error:"Images must be JPG, PNG, or WebP and no larger than 10 MB each"},{status:400});
   }
-  return NextResponse.json({urls});
+
+  try{
+    const uploads=[];
+    for(const file of normalized){
+      const ext=allowed.get(file.type)!;
+      const path=`${identity.user.id}/${crypto.randomUUID()}.${ext}`;
+      uploads.push(await createSignedUpload(identity,path));
+    }
+    return NextResponse.json({uploads});
+  }catch(error){
+    return NextResponse.json({error:error instanceof Error?error.message:"Could not authorize photo upload."},{status:400});
+  }
 }
 
 export async function DELETE(request:NextRequest){
   const identity=await getServerIdentity();
   if(!identity)return NextResponse.json({error:"Sign in required"},{status:401});
   const body=await request.json().catch(()=>null) as {urls?:unknown}|null;
-  const urls=Array.isArray(body?.urls)?body?.urls.filter((value):value is string=>typeof value==="string").slice(0,10):[];
+  const urls=Array.isArray(body?.urls)?body.urls.filter((value):value is string=>typeof value==="string").slice(0,MAX_IMAGES):[];
   if(!urls.length)return NextResponse.json({ok:true});
   const prefix=`${SUPABASE_AUTH_URL}/storage/v1/object/public/marketplace/${identity.user.id}/`;
-  const paths=urls.filter((url)=>url.startsWith(prefix)).map((url)=>url.slice(`${SUPABASE_AUTH_URL}/storage/v1/object/public/marketplace/`.length));
+  const base=`${SUPABASE_AUTH_URL}/storage/v1/object/public/marketplace/`;
+  const paths=urls.filter((url)=>url.startsWith(prefix)).map((url)=>url.slice(base.length));
   await removeUploaded(identity,paths);
   return NextResponse.json({ok:true,removed:paths.length});
 }
