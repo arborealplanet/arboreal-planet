@@ -11,6 +11,7 @@ const nav = [
   ["Genetics", "/genetics"],
   ["Plants", "/plants"],
   ["Learn", "/learn"],
+  ["News", "/news"],
   ["Marketplace", "/marketplace"],
   ["Community", "/community"],
   ["Arcade", "/arcade/enter?next=%2Farcade"],
@@ -93,6 +94,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <Link href="/search" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Search</Link>
         {signedIn&&<Link href="/saved" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Saved</Link>}
         <Link href="/learn" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Learn</Link>
+        <Link href="/news" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">News</Link>
         <Link href="/events" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Events</Link>
         {nav.slice(0,3).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
       </nav>
