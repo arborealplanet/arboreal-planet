@@ -10,10 +10,10 @@ const ages = ["All ages", "Neonate", "Juvenile", "Subadult", "Adult"];
 
 const marketGroups = [
   { label: "All market groups", localities: [] },
-  { label: "M. a. azurea", localities: ["Biak", "Numfor"] },
-  { label: "M. a. pulcher", localities: ["Timika", "Sorong", "Manokwari", "Kofiau", "Batanta · review"] },
-  { label: "M. a. utaraensis", localities: ["Wamena", "Lereh / Highland", "Cyclops", "Jayapura"] },
-  { label: "M. viridis", localities: ["Aru", "Merauke"] },
+  { label: "M. a. azurea", localities: ["Numfor"] },
+  { label: "M. a. pulcher", localities: ["Timika", "Sorong", "Manokwari", "Arfak", "Kofiau", "Batanta · review"] },
+  { label: "M. a. utaraensis", localities: ["Wamena", "Lereh / Highland", "Cyclops", "Jayapura", "Yapen"] },
+  { label: "M. viridis", localities: ["Aru", "Merauke", "Biak"] },
   { label: "Designer / line projects", localities: [] },
   { label: "Unspecified", localities: [] },
 ];
