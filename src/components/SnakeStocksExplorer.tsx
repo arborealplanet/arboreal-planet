@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const timeRanges = ["1M", "3M", "1Y", "3Y", "5Y", "10Y", "ALL"];
 const origins = ["All origins", "Captive Bred", "Import"];
@@ -21,6 +21,26 @@ const marketGroups = [
 const allLocalities = Array.from(
   new Set(marketGroups.flatMap((group) => group.localities.filter((locality) => !locality.includes("review"))))
 );
+
+type SnapshotPoint = {
+  snapshot_date: string;
+  sample_size: number;
+  seller_count: number;
+  source_count: number;
+  low: number | null;
+  q25: number | null;
+  median: number | null;
+  mean: number | null;
+  q75: number | null;
+  high: number | null;
+  confidence: string;
+};
+
+function money(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)
+    : "—";
+}
 
 function ChoiceRow({ label, values, active, onChange }: { label: string; values: string[]; active: string; onChange: (value: string) => void }) {
   return (
@@ -50,6 +70,8 @@ export function SnakeStocksExplorer() {
   const [sex, setSex] = useState(sexes[0]);
   const [age, setAge] = useState(ages[0]);
   const [locality, setLocality] = useState("All localities");
+  const [snapshotPoints, setSnapshotPoints] = useState<SnapshotPoint[]>([]);
+  const [marketLoading, setMarketLoading] = useState(true);
 
   const activeGroup = marketGroups.find((group) => group.label === marketGroup) ?? marketGroups[0];
   const localityOptions = [
@@ -61,6 +83,33 @@ export function SnakeStocksExplorer() {
     setMarketGroup(value);
     setLocality("All localities");
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = new URLSearchParams({
+      range: time,
+      locality,
+      view: mode === "FOR SALE" ? "CURRENT_ASKING" : "SOLD_LISTING",
+      origin: origin === "Captive Bred" ? "CAPTIVE_BRED" : origin === "Import" ? "IMPORT" : "ALL",
+      sex: sex === "Female" ? "FEMALE" : sex === "Male" ? "MALE" : "ALL",
+      age: age === "All ages" ? "ALL" : age.toUpperCase(),
+      color: neoColor === "Red" ? "RED" : neoColor === "Yellow" ? "YELLOW" : "ALL",
+    });
+
+    setMarketLoading(true);
+    fetch(`/api/market/snapshots?${query.toString()}`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Market snapshot request failed")))
+      .then((payload: { points?: SnapshotPoint[] }) => setSnapshotPoints(Array.isArray(payload.points) ? payload.points : []))
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setSnapshotPoints([]);
+      })
+      .finally(() => setMarketLoading(false));
+
+    return () => controller.abort();
+  }, [time, locality, mode, origin, sex, age, neoColor]);
+
+  const latest = snapshotPoints.at(-1) ?? null;
 
   const context = useMemo(() => {
     const bits = [marketGroup, locality, origin, neoColor, sex, age].filter(
@@ -78,7 +127,7 @@ export function SnakeStocksExplorer() {
           <p className="mt-2 text-xs text-white/30">Filter market observations by subspecies group, locality, origin, neonate color, sex and age.</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <span className="rounded-full border border-amber-300/15 bg-amber-300/[.04] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.13em] text-amber-100/55">Dataset pending review</span>
+          <span className="rounded-full border border-amber-300/15 bg-amber-300/[.04] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.13em] text-amber-100/55">{marketLoading ? "Loading market data" : latest ? `${latest.sample_size} reviewed observations` : "Dataset awaiting reviewed observations"}</span>
           <div className="inline-flex w-fit rounded-xl border border-white/[.07] bg-black/15 p-1 text-[11px] font-bold">
             {(["FOR SALE", "SOLD HISTORY"] as const).map((item) => (
               <button key={item} onClick={() => setMode(item)} className={`rounded-lg px-4 py-2 transition ${mode === item ? "bg-emerald-300 text-[#06100c]" : "text-white/38 hover:text-white/60"}`}>{item}</button>
@@ -99,12 +148,12 @@ export function SnakeStocksExplorer() {
 
       <div className="grid grid-cols-2 border-b border-white/[.06] sm:grid-cols-3 lg:grid-cols-6">
         {[
-          [mode === "FOR SALE" ? "Median ask" : "Median last-listed", "—"],
-          ["Typical range", "—"],
-          [mode === "FOR SALE" ? "Eligible current" : "Readable sold", "—"],
-          ["Unique sellers", "—"],
-          ["Sources", "—"],
-          ["Confidence", "Pending"],
+          [mode === "FOR SALE" ? "Median ask" : "Median last-listed", money(latest?.median)],
+          ["Typical range", latest ? `${money(latest.q25)}–${money(latest.q75)}` : "—"],
+          [mode === "FOR SALE" ? "Eligible current" : "Readable sold", latest ? String(latest.sample_size) : "—"],
+          ["Unique sellers", latest ? String(latest.seller_count) : "—"],
+          ["Sources", latest ? String(latest.source_count) : "—"],
+          ["Confidence", latest?.confidence?.replaceAll("_", " ") ?? (marketLoading ? "Loading" : "Pending")],
         ].map(([label, value]) => (
           <div key={label} className="border-b border-r border-white/[.055] px-4 py-5 lg:border-b-0">
             <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/24">{label}</div>
@@ -122,8 +171,8 @@ export function SnakeStocksExplorer() {
         <div className="absolute inset-0 grid place-items-center px-6 text-center">
           <div className="max-w-md">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/15 bg-emerald-300/[.05] text-lg text-emerald-200/60">↗</div>
-            <div className="mt-4 text-base font-semibold text-white/62">Market data pending</div>
-            <p className="mt-2 text-xs leading-5 text-white/30">Price lines and summary statistics will appear after the replacement dataset completes source review and normalization.</p>
+            <div className="mt-4 text-base font-semibold text-white/62">{marketLoading ? "Loading market data" : latest ? `${snapshotPoints.length} market snapshots available` : "Market data pending"}</div>
+            <p className="mt-2 text-xs leading-5 text-white/30">{latest ? `Latest reviewed U.S. snapshot: ${latest.snapshot_date}. Median ${money(latest.median)} from ${latest.sample_size} eligible observations.` : "Price lines and summary statistics will appear as Muse harvest records pass review and normalization."}</p>
           </div>
         </div>
         <div className="absolute inset-x-5 bottom-5 flex justify-between text-[9px] text-white/18"><span>OLDER</span><span>RECENT</span></div>
