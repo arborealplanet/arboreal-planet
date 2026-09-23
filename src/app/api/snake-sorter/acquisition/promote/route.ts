@@ -40,6 +40,8 @@ type AcquisitionMedia = {
   rights_status: string;
   media_order: number;
   source_media_url: string | null;
+  perceptual_hash: string | null;
+  source_capture_kind: string | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -75,11 +77,6 @@ export async function POST(request: NextRequest) {
 
   const localityLower = locality.toLowerCase();
   const isNeonateStage = lifeStage === "hatchling" || lifeStage === "neonate";
-  if (taxon === "Morelia viridis" && isNeonateStage && neonateColor === "red") {
-    return NextResponse.json({
-      error: "Morelia viridis neonates are yellow-only in the Snake Sorter taxonomy rules. Recheck the taxon or color label before promotion.",
-    }, { status: 409 });
-  }
   if (localityLower === "kofiau" && isNeonateStage && neonateColor === "red") {
     return NextResponse.json({
       error: "Kofiau neonates are yellow-only in the Snake Sorter locality rules. Recheck the locality or color label before promotion.",
@@ -151,6 +148,8 @@ export async function POST(request: NextRequest) {
         rights_status: "open_license",
         media_order: 0,
         source_media_url: String(candidate.media_url ?? candidate.thumbnail_url ?? "") || null,
+        perceptual_hash: null,
+        source_capture_kind: "legacy",
       }];
     }
   }
@@ -319,6 +318,8 @@ export async function POST(request: NextRequest) {
             original_name: sourceNameForFile,
             mime_type: mime,
             content_sha256: sha256,
+            perceptual_hash: media.perceptual_hash || null,
+            source_capture_kind: media.source_capture_kind || "screenshot",
             file_size_bytes: stagedBytes,
             view_type: allowedViews.has(media.view_type || "") ? media.view_type : fallbackViewType,
             quality_status: "accepted",
