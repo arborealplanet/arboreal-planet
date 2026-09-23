@@ -1,9 +1,16 @@
 import type { CSSProperties } from "react";
 import type { KeeperLifeStage, KeeperPhase, KeeperSpeciesId } from "@/lib/arboreal-keeper-species";
 
-const EMERALD_ATLAS = "/hatchery/animals/emerald-tree-boas/emerald-atlas-v3.webp";
-const COLS = 5;
-const ROWS = 4;
+// Use shipped species artwork until the full atlas is available.
+const EMERALD_ART_BASE = "/hatchery/animals/emerald-tree-boas";
+function emeraldImageForAsset(asset: EmeraldArt) {
+  if (asset.speciesId === "northern_emerald_tree_boa") {
+    return `${EMERALD_ART_BASE}/northern/northern-sprite.webp`;
+  }
+  return asset.stage === "neonate"
+    ? `${EMERALD_ART_BASE}/amazon-basin/neonate-sprite.webp`
+    : `${EMERALD_ART_BASE}/amazon-basin/later-sprite.webp`;
+}
 
 type EmeraldSpeciesId = Extract<KeeperSpeciesId, "northern_emerald_tree_boa" | "amazon_basin_emerald_tree_boa">;
 type EmeraldArt = {
@@ -43,13 +50,11 @@ export const EMERALD_ART: EmeraldArt[] = [
 const BY_ID = new Map(EMERALD_ART.map((asset) => [asset.id, asset]));
 
 function emeraldStyleForAsset(asset: EmeraldArt): CSSProperties {
-  const column = asset.cell % COLS;
-  const row = Math.floor(asset.cell / COLS);
   return {
-    backgroundImage: `url("${EMERALD_ATLAS}")`,
+    backgroundImage: `url("${emeraldImageForAsset(asset)}")`,
     backgroundRepeat: "no-repeat",
-    backgroundSize: `${COLS * 100}% ${ROWS * 100}%`,
-    backgroundPosition: `${(column / (COLS - 1)) * 100}% ${(row / (ROWS - 1)) * 100}%`,
+    backgroundSize: "contain",
+    backgroundPosition: "center",
   };
 }
 
