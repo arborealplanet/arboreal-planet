@@ -172,6 +172,7 @@ export async function POST(request: NextRequest) {
   if (!batchId) return NextResponse.json({ error: "Could not create the market import batch." }, { status: 502 });
 
   const results: Array<Record<string, unknown>> = [];
+  const periodDates = new Set<string>();
   let newCandidates = 0;
   let qualifiedMarket = 0;
   let reviewMarket = 0;
@@ -205,6 +206,10 @@ export async function POST(request: NextRequest) {
     const observedAt = dateOrNull(item.observed_at) ?? capturedAt;
     const listedAt = dateOrNull(item.listed_at);
     const soldAt = dateOrNull(item.sold_at ?? item.date_sold_or_closed);
+    const marketEventAt = (confirmedTransactionPrice !== null || status === "SOLD")
+      ? (soldAt ?? observedAt)
+      : observedAt;
+    periodDates.add(marketEventAt.slice(0, 10));
     const localityName = normalizeLocalityName(ancestry.locality ?? item.locality);
     const locality = localityName ? localityByName.get(localityName.toLowerCase()) ?? null : null;
     const singleAnimal = priceType === "individual" && Number(item.quantity ?? 1) === 1;
@@ -467,6 +472,26 @@ export async function POST(request: NextRequest) {
     snapshotRows = Number(value ?? 0);
   }
 
+  let periodSnapshotRows = 0;
+  if (periodDates.size) {
+    const periodRefreshResponse = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/rpc/refresh_gtp_market_period_snapshots_for_dates`,
+      {
+        method: "POST",
+        headers: writeHeaders,
+        body: JSON.stringify({
+          p_dates: Array.from(periodDates),
+          p_market_country: "USA",
+        }),
+        cache: "no-store",
+      },
+    );
+    if (periodRefreshResponse.ok) {
+      const value = await periodRefreshResponse.json().catch(() => 0);
+      periodSnapshotRows = Number(value ?? 0);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     harvest_id: harvestId,
@@ -478,6 +503,8 @@ export async function POST(request: NextRequest) {
     review_in_this_chunk: reviewMarket,
     new_snake_sorter_candidates: newCandidates,
     usa_snapshot_rows: snapshotRows,
+    usa_period_snapshot_rows: periodSnapshotRows,
+    refreshed_market_dates: Array.from(periodDates).sort(),
     screenshot_upload_endpoint: "/api/snake-sorter/acquisition/media-upload",
     results,
   });
