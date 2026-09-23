@@ -17,6 +17,7 @@ const utilityLinks = [
   ["Search everything", "/search"],
   ["Plant database", "/plants"],
   ["Journal & guides", "/learn"],
+  ["Keeper news", "/news"],
   ["Shows & events", "/events"],
 ] as const;
 
