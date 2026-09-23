@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SnakeStocksPriceChart, type SnakeStocksPricePoint } from "@/components/SnakeStocksPriceChart";
 
 const timeRanges = ["1M", "3M", "1Y", "3Y", "5Y", "10Y", "ALL"];
 const origins = ["All origins", "Captive Bred", "Import"];
@@ -22,19 +23,6 @@ const allLocalities = Array.from(
   new Set(marketGroups.flatMap((group) => group.localities.filter((locality) => !locality.includes("review"))))
 );
 
-type SnapshotPoint = {
-  snapshot_date: string;
-  sample_size: number;
-  seller_count: number;
-  source_count: number;
-  low: number | null;
-  q25: number | null;
-  median: number | null;
-  mean: number | null;
-  q75: number | null;
-  high: number | null;
-  confidence: string;
-};
 
 function money(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value)
@@ -70,7 +58,7 @@ export function SnakeStocksExplorer() {
   const [sex, setSex] = useState(sexes[0]);
   const [age, setAge] = useState(ages[0]);
   const [locality, setLocality] = useState("All localities");
-  const [marketResult, setMarketResult] = useState<{ query: string; points: SnapshotPoint[] }>({
+  const [marketResult, setMarketResult] = useState<{ query: string; points: SnakeStocksPricePoint[] }>({
     query: "",
     points: [],
   });
@@ -101,7 +89,7 @@ export function SnakeStocksExplorer() {
 
     fetch(`/api/market/snapshots?${marketQuery}`, { signal: controller.signal })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Market snapshot request failed")))
-      .then((payload: { points?: SnapshotPoint[] }) => {
+      .then((payload: { points?: SnakeStocksPricePoint[] }) => {
         setMarketResult({
           query: marketQuery,
           points: Array.isArray(payload.points) ? payload.points : [],
@@ -171,19 +159,13 @@ export function SnakeStocksExplorer() {
       </div>
 
       <div className="chart-grid relative min-h-[330px] overflow-hidden bg-[radial-gradient(circle_at_65%_42%,rgba(57,230,125,.05),transparent_28%)]">
-        <div className="absolute inset-x-5 top-5 flex flex-wrap items-center justify-between gap-2 text-[9px] font-medium uppercase tracking-[.15em] text-white/22">
-          <span>{mode === "FOR SALE" ? "Asking-price history" : "Sold-listing history"}</span>
-          <span>{time} · Median-first</span>
-        </div>
-        <div className="absolute left-5 top-14 max-w-[calc(100%-2.5rem)] rounded-full border border-white/[.07] bg-black/20 px-3 py-1.5 text-[10px] text-white/34">{context}</div>
-        <div className="absolute inset-0 grid place-items-center px-6 text-center">
-          <div className="max-w-md">
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/15 bg-emerald-300/[.05] text-lg text-emerald-200/60">↗</div>
-            <div className="mt-4 text-base font-semibold text-white/62">{marketLoading ? "Loading market data" : latest ? `${snapshotPoints.length} market snapshots available` : "Market data pending"}</div>
-            <p className="mt-2 text-xs leading-5 text-white/30">{latest ? `Latest reviewed U.S. snapshot: ${latest.snapshot_date}. Median ${money(latest.median)} from ${latest.sample_size} eligible observations.` : "Price lines and summary statistics will appear as Muse harvest records pass review and normalization."}</p>
-          </div>
-        </div>
-        <div className="absolute inset-x-5 bottom-5 flex justify-between text-[9px] text-white/18"><span>OLDER</span><span>RECENT</span></div>
+        <SnakeStocksPriceChart
+          points={snapshotPoints}
+          loading={marketLoading}
+          mode={mode}
+          range={time}
+          context={context}
+        />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-white/[.06] bg-black/10 px-5 py-4 text-[10px] leading-5 text-white/28 sm:flex-row sm:items-center sm:justify-between">
