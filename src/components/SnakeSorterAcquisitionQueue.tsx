@@ -358,7 +358,15 @@ export function SnakeSorterAcquisitionQueue({
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
       const openAdded = Number(data.open_sources?.added ?? 0);
-      setMessage(`Open-source harvest complete: ${openAdded} new candidate(s). MorphMarket was not contacted by this action.`);
+      const mediaReferences = Number(data.open_sources?.media_references ?? 0);
+      const groupedCandidates = Number(data.open_sources?.grouped_candidates ?? 0);
+      const targets = Array.isArray(data.open_sources?.targets)
+        ? data.open_sources.targets.filter((value: unknown): value is string => typeof value === "string")
+        : [];
+      const targetText = targets.length ? ` Targets: ${targets.join(", ")}.` : "";
+      setMessage(
+        `Open-source harvest complete: ${openAdded} new candidate(s), ${mediaReferences} media reference(s), ${groupedCandidates} multi-image animal(s).${targetText} MorphMarket was not contacted by this action.`
+      );
       await load();
     } else {
       setMessage(data.error ?? "Could not harvest open sources.");
