@@ -347,3 +347,9 @@ footer{display:flex;align-items:center;gap:1rem;padding:2rem clamp(1.25rem,6vw,6
 @media(max-width:620px){.animal-archive__grid{grid-template-columns:1fr}.animal-archive__image{min-height:260px}.animal-archive__image img{max-height:250px}}
 
 .planet-return{position:fixed;z-index:80;right:1rem;bottom:1rem;display:flex;align-items:center;gap:.55rem;padding:.4rem .8rem .4rem .4rem;border:1px solid rgba(239,229,209,.55);border-radius:999px;background:#090e0b;color:#efe5d1;text-decoration:none;font:700 .86rem/1.2 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:transform .2s,border-color .2s}.planet-return:hover,.planet-return:focus-visible{transform:translateY(-3px);border-color:#efe5d1}.planet-return img{width:43px;height:43px;object-fit:cover;border-radius:50%}.planet-return b{color:#9aca76}@media(max-width:850px){.planet-return{right:.75rem;bottom:5.55rem;padding:.25rem .55rem .25rem .25rem;font-size:.72rem}.planet-return img{width:32px;height:32px}}
+
+/* Keep the Planet route visible in the brand header on desktop and phones. */
+.topbar .planet-return{position:static;z-index:auto;display:flex;align-self:stretch;justify-content:center;align-items:center;gap:.7rem;min-height:68px;margin:0;padding:.55rem 1rem;border:0;border-top:1px solid rgba(239,229,209,.3);border-radius:0;background:#101c14;color:#f5ecd7;text-decoration:none;font:700 1rem/1.2 system-ui,sans-serif;box-shadow:none;transform:none}
+.topbar .planet-return:hover,.topbar .planet-return:focus-visible{background:#203625;outline:2px solid #d9c784;outline-offset:-3px;transform:none}
+.topbar .planet-return img{width:52px;height:52px;object-fit:contain;border-radius:0}
+@media(max-width:850px){.topbar .planet-return{position:static;min-height:72px;padding:.5rem 1rem;font-size:.98rem}.topbar .planet-return img{width:54px;height:54px}}
