@@ -9,6 +9,7 @@ const platformCards = [
   { title: "Marketplace", text: "Animals, plants, enclosures, supplies and feeders in one market.", href: "/marketplace", tag: "MARKET", icon: "▣" },
   { title: "Community", text: "Follow keepers, animals, plants and topics across the hobby.", href: "/community", tag: "CONNECT", icon: "◎" },
   { title: "Arcade", text: "Educational breeder games with virtual animals, lineages, facilities, projects and long-term progression.", href: "/arcade/enter?next=%2Farcade", tag: "PLAY", icon: "◈" },
+  { title: "Arboreals By Bunn", text: "Green Tree Pythons, Chondro Dojo enclosures, breeder projects and the founding brand behind Arboreal Planet.", href: "/arboreals-by-bunn", tag: "FOUNDING BRAND", icon: "△" },
 ];
 
 const utilityLinks = [
@@ -122,7 +123,7 @@ export default function Home() {
                 </div>
               </div>
             </Link>
-            <ArborealsByBunnBadge />
+            <Link href="/arboreals-by-bunn" aria-label="Visit Arboreals By Bunn" className="block transition hover:-translate-y-0.5"><ArborealsByBunnBadge /></Link>
           </div>
         </div>
       </section>
