@@ -50,7 +50,7 @@ export function CommunityComposer(){
   async function publish(){
     if(!ready||busy)return;
     setBusy(true);setError("");
-    let media_urls:string[]=[];
+    const media_urls:string[]=[];
     try{
       if(files.length){
         const authorize=await fetch("/api/community/upload",{
