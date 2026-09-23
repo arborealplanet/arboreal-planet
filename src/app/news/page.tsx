@@ -21,7 +21,8 @@ type Story = {
 
 const topics = [
   { label: "All news", category: "" },
-  { label: "Breeding & husbandry", category: "BREEDING" },
+  { label: "Breeding", category: "BREEDING" },
+  { label: "Husbandry", category: "HUSBANDRY" },
   { label: "U.S. market", category: "MARKET" },
   { label: "Research & taxonomy", category: "TAXONOMY" },
   { label: "Conservation", category: "CONSERVATION" },
