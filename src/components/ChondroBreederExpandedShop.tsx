@@ -586,7 +586,16 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   }
 
   async function buy(offer: Offer) {
-    if (!save || busy || purchased.has(offer.id) || !housingAvailableFor(offer)) return;
+    if (!save || busy) return;
+    if (purchased.has(offer.id)) {
+      playHankScaleLine(18);
+      return;
+    }
+    if (!housingAvailableFor(offer)) {
+      setStatus(`${offer.name} needs a home first — grab an enclosure before bringing this one home.`);
+      playHankScaleLine(19);
+      return;
+    }
     if (save.cash < offer.price) {
       setStatus(`Not enough cash for ${offer.name} — come back when the funds are right.`);
       playHankScaleLine(10);
@@ -605,6 +614,10 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       setSave(next);
       setStatus(`${offer.name} purchased. It is now in your colony.`);
       playHankScaleLine(9);
+      // Milestone callout once the purchase line finishes.
+      if (next.colony.length === 5 || next.colony.length === 10) {
+        window.setTimeout(() => playHankScaleLine(21), 6500);
+      }
     } catch {
       setStatus("That purchase could not be saved.");
     } finally {
@@ -818,7 +831,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || !housingAvailableFor(offer)} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                  <button type="button" disabled={busy !== null} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
                     {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
                   </button>
                 </div>

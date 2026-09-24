@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PageIntro } from "@/components/AppShell";
 import { EpisodePlayer, formatDuration } from "@/components/EpisodePlayer";
 import { EpisodeSubmitForm, EPISODE_SUBMISSIONS_EMAIL } from "@/components/EpisodeSubmitForm";
+import { HankScaleIntroButton } from "@/components/HankScaleIntroButton";
 import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function EpisodesPage() {
       eyebrow="Arboreal Planet TV"
       title="Episodes: television by keepers, for keepers."
       description="Husbandry walkthroughs, breeding projects, plant builds and field notes — filmed by the community and aired here. New episodes land after review."
-      aside={<a href="#submit" className="primary-action">Submit an episode</a>}
+      aside={<div className="flex flex-wrap gap-2"><HankScaleIntroButton src="/audio/hank-scale/episodes-intro.mp3" label="Play Hank Scale's Arboreal Planet TV intro" /><a href="#submit" className="primary-action">Submit an episode</a></div>}
     />
 
     <div className="mx-auto max-w-7xl px-5 pb-16 sm:px-6">

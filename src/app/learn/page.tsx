@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
+import { HankScaleIntroButton } from "@/components/HankScaleIntroButton";
 import { SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const dynamic="force-dynamic";
@@ -15,7 +16,7 @@ export default async function LearnPage({searchParams}:{searchParams:Promise<{q?
   const visible=rows.filter(article=>(!category||article.category===category)&&(!type||article.content_type===type)&&(!q||[article.title,article.excerpt,article.author_display,categoryLabels[article.category],typeLabels[article.content_type],...(article.tags??[])].some(value=>String(value??"").toLowerCase().includes(q))));
   const featured=visible[0]??null,rest=featured?visible.slice(1):visible;
   return <main>
-    <PageIntro eyebrow="Learn" title="Arboreal Planet Journal" description="Guides, explainers, conservation stories and source-linked hobby news for reptile keepers, breeders and plant people. Editorial content stays distinct from community posts, marketplace claims and database reference records." aside={<div className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/58">Reviewed · Published content</div>}/>
+    <PageIntro eyebrow="Learn" title="Arboreal Planet Journal" description="Guides, explainers, conservation stories and source-linked hobby news for reptile keepers, breeders and plant people. Editorial content stays distinct from community posts, marketplace claims and database reference records." aside={<div className="flex flex-wrap items-center gap-2"><HankScaleIntroButton src="/audio/hank-scale/journal-intro.mp3" label="Play Hank Scale's Journal intro" /><div className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/58">Reviewed · Published content</div></div>}/>
 
     <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
       <form action="/learn" method="get" className="panel grid gap-3 rounded-[26px] p-4 md:grid-cols-[1.4fr_.7fr_.7fr_auto]">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
+import { playHankScaleLine } from "@/lib/hank-scale-voice";
 
 type SnakeLite = {
   id: string;
@@ -82,6 +83,8 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
   const [save, setSave] = useState<SaveState>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [marketLoaded, setMarketLoaded] = useState(false);
+  const emptyAnnouncedRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -91,7 +94,10 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
       ]);
       const market = await marketResponse.json();
       const saved = await saveResponse.json();
-      if (marketResponse.ok) setListings(Array.isArray(market.listings) ? market.listings : []);
+      if (marketResponse.ok) {
+        setListings(Array.isArray(market.listings) ? market.listings : []);
+        setMarketLoaded(true);
+      }
       if (saveResponse.ok) {
         const apiState = saved.save?.state;
         if (apiState && typeof apiState === "object" && !Array.isArray(apiState)) {
@@ -129,6 +135,20 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
 
   const mine = useMemo(() => listings.filter((listing) => listing.isMine), [listings]);
   const available = useMemo(() => listings.filter((listing) => !listing.isMine), [listings]);
+
+  // Hank Scale notes a bare market board once per empty spell, after the
+  // market-tab greeting has had room to finish.
+  useEffect(() => {
+    if (!marketLoaded) return;
+    if (available.length > 0) {
+      emptyAnnouncedRef.current = false;
+      return;
+    }
+    if (emptyAnnouncedRef.current) return;
+    emptyAnnouncedRef.current = true;
+    const timer = window.setTimeout(() => playHankScaleLine(20), 7000);
+    return () => window.clearTimeout(timer);
+  }, [marketLoaded, available.length]);
   const cash = Math.max(0, Number(save.cash ?? 0));
   const capacity = animalHousingCapacity(save.enclosures);
   const openSlots = Math.max(0, capacity - (save.colony?.length ?? 0));

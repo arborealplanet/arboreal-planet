@@ -45,12 +45,24 @@ export function ArborealKeeperReptiShop() {
     setHankScaleMuted(next);
   }
 
+  function hasReturningSave(): boolean {
+    try {
+      const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as { colony?: unknown };
+      return Array.isArray(parsed?.colony) && parsed.colony.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   function handleTipClick() {
     const next = (tip + 1) % BUNN_TIPS.length;
     setTip(next);
     if (!introducedRef.current) {
       introducedRef.current = true;
-      playHankScaleLine(1);
+      // Returning keepers get the welcome-back line; new players get the intro.
+      playHankScaleLine(hasReturningSave() ? 17 : 1);
     } else {
       playHankScaleLine(TIP_LINES[next]);
     }

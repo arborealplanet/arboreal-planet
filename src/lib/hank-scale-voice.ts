@@ -6,8 +6,7 @@
 const BASE = "/hatchery/game/voice/snake-hill";
 const MUTE_KEY = "hank-scale-voice-muted";
 
-// Line number -> audio file. Lines 9-16 exist as scripts; their MP3s land here
-// as snakehill_line_09..16 are generated.
+// Line number -> audio file. All 21 lines have MP3s in place.
 const LINE_FILES: Record<number, string> = {
   1: "line-01.mp3", // greeting
   2: "line-02.mp3", // animals tab
@@ -25,6 +24,11 @@ const LINE_FILES: Record<number, string> = {
   14: "line-14.mp3", // breeding how-to
   15: "line-15.mp3", // idle browse
   16: "line-16.mp3", // farewell
+  17: "line-17.mp3", // returning player welcome
+  18: "line-18.mp3", // already sold
+  19: "line-19.mp3", // no housing available
+  20: "line-20.mp3", // player market empty
+  21: "line-21.mp3", // collection milestone
 };
 
 let current: HTMLAudioElement | null = null;
@@ -56,14 +60,23 @@ export function setHankScaleMuted(muted: boolean): void {
   window.dispatchEvent(new CustomEvent("hank-scale-mute-changed"));
 }
 
-/** Play a Hank Scale voice line by number (1-16). Stops any line already playing. */
+/** Play a Hank Scale voice line by number (1-21). Stops any line already playing. */
 export function playHankScaleLine(n: number): void {
-  if (typeof window === "undefined" || isHankScaleMuted()) return;
   const file = LINE_FILES[n];
   if (!file) return;
+  playHankScaleSrc(`${BASE}/${file}`);
+}
+
+/** Play any Hank Scale audio file by public path (e.g. site section intros). */
+export function playHankScaleAudio(src: string): void {
+  playHankScaleSrc(src);
+}
+
+function playHankScaleSrc(src: string): void {
+  if (typeof window === "undefined" || isHankScaleMuted()) return;
   try {
     current?.pause();
-    const audio = new Audio(`${BASE}/${file}`);
+    const audio = new Audio(src);
     current = audio;
     audio.play().catch(() => {
       // autoplay blocked or file missing — stay silent

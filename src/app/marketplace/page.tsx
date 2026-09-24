@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
 import { MarketplaceExplorer } from "@/components/MarketplaceExplorer";
 import { MarketplaceCategoryCards } from "@/components/MarketplaceCategoryCards";
+import { HankScaleIntroButton } from "@/components/HankScaleIntroButton";
 
 export default async function MarketplacePage({searchParams}:{searchParams:Promise<{species?:string;category?:string;q?:string}>}){
   const params=await searchParams;
@@ -9,7 +10,7 @@ export default async function MarketplacePage({searchParams}:{searchParams:Promi
   const category=(params.category??"All").trim().slice(0,20);
   const query=(params.q??"").trim().slice(0,120);
   return <main>
-    <PageIntro eyebrow="Marketplace" title="Browse listings from Arboreal Planet sellers." description="Find animals, plants, enclosures, supplies and feeders. Listings stay separate from reference records so seller claims never become reference facts automatically." aside={<div className="flex gap-2"><Link href="/marketplace/mine" className="secondary-action">My Listings</Link><Link href="/marketplace/new" className="primary-action">Create listing</Link></div>}/>
+    <PageIntro eyebrow="Marketplace" title="Browse listings from Arboreal Planet sellers." description="Find animals, plants, enclosures, supplies and feeders. Listings stay separate from reference records so seller claims never become reference facts automatically." aside={<div className="flex flex-wrap gap-2"><HankScaleIntroButton src="/audio/hank-scale/marketplace-intro.mp3" label="Play Hank Scale's marketplace intro" /><Link href="/marketplace/mine" className="secondary-action">My Listings</Link><Link href="/marketplace/new" className="primary-action">Create listing</Link></div>}/>
 
     <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6"><MarketplaceExplorer initialSpeciesId={species} initialCategory={category} initialQuery={query}/></section>
 
