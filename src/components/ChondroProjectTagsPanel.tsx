@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 
 type Snake = { id: string; name: string; locality: string; classification: string; lifeStage: string };
 type ProjectTagMap = Record<string, string[]>;
@@ -19,10 +20,9 @@ export function ChondroProjectTagsPanel() {
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) {
-          const state = (data.save?.state ?? {}) as Save;
+        const { state: loaded } = await loadChondroSaveState();
+        if (!cancelled && loaded) {
+          const state = loaded as Save;
           setSave(state);
           if (!selected && state.colony?.[0]?.id) setSelected(state.colony[0].id);
         }

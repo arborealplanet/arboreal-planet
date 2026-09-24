@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import { ChondroFocusOverlay } from "@/components/ChondroFocusOverlay";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
@@ -39,9 +40,8 @@ export function ChondroClutchHistoryTable() {
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) setSave(data.save?.state ?? {});
+        const { state } = await loadChondroSaveState();
+        if (!cancelled && state) setSave(state);
       } catch {}
     }
     void load();

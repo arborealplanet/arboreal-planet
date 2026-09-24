@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
@@ -48,9 +49,8 @@ export function ChondroActiveClutchShowcase() {
     let active = true;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (active && response.ok) setSave(data.save?.state ?? {});
+        const { state } = await loadChondroSaveState();
+        if (active && state) setSave(state);
       } catch {}
     }
     void load();

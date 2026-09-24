@@ -195,6 +195,51 @@ function addMissingBadges(save: GameSave) {
   }
 }
 
+const traitLabels: Record<string, string> = {
+  highBlack: "High Black",
+  highWhite: "High White",
+  blueStripe: "Blue",
+  yellowRetention: "Yellow Retention",
+  blotches: "Blotches",
+};
+
+const preferredTraitsByTaxon: Record<Subspecies, string[]> = {
+  "Morelia azurea azurea": ["highBlack", "yellowRetention"],
+  "Morelia azurea pulcher": ["yellowRetention", "blueStripe"],
+  "Morelia azurea utaraensis": ["blueStripe", "highWhite"],
+  "Morelia viridis": ["highWhite", "highBlack"],
+};
+
+const taxonNotes: Record<Subspecies, string> = {
+  "Morelia azurea azurea":
+    "Island form from Biak and Numfor. Biak neonates hatch red or yellow — locality is never judged from color alone.",
+  "Morelia azurea pulcher":
+    "Western New Guinea form. Breeders prize clean yellow retention and blue tones in this taxon.",
+  "Morelia azurea utaraensis":
+    "Northern New Guinea form, including the Jayapura animals the store rotates. Blue striping and high white are the signature traits.",
+  "Morelia viridis":
+    "Southern form from the Aru Islands and Merauke. High white and high black lines are the classic look.",
+};
+
+const traitGuide: Array<{ key: string; label: string; detail: string }> = [
+  { key: "highBlack", label: "High Black", detail: "Dark dorsal markings and black scaling. A signature trait of azurea and viridis lines." },
+  { key: "highWhite", label: "High White", detail: "White or pale lateral and dorsal markings. Prized in utaraensis and viridis." },
+  { key: "blueStripe", label: "Blue", detail: "Blue tones along the dorsum and vertebral stripe. The utaraensis hallmark." },
+  { key: "yellowRetention", label: "Yellow Retention", detail: "How much juvenile yellow persists into adulthood. Key for pulcher and azurea projects." },
+  { key: "blotches", label: "Blotches", detail: "Bold dorsal blotching pattern. Scored on every animal." },
+];
+
+const gradeScale: Array<{ grade: string; detail: string }> = [
+  { grade: "A+", detail: "95+ — Elite. Foundation stock for a serious project." },
+  { grade: "A", detail: "90–94 — Exceptional." },
+  { grade: "A-", detail: "85–89 — Excellent." },
+  { grade: "B+", detail: "80–84 — Strong." },
+  { grade: "B", detail: "74–79 — Good." },
+  { grade: "B-", detail: "68–73 — Fair." },
+  { grade: "C+", detail: "62–67 — Modest." },
+  { grade: "C", detail: "Below 62 — Pet quality." },
+];
+
 export function ChondroBreederSubspeciesPhenotypes() {
   const [save, setSave] = useState<GameSave | null>(null);
 
@@ -256,5 +301,94 @@ export function ChondroBreederSubspeciesPhenotypes() {
     return () => observer.disconnect();
   }, [save]);
 
-  return null;
+  const taxa = (Object.keys(shortName) as Subspecies[]).map((taxon) => ({
+    taxon,
+    short: shortName[taxon],
+    localities: Object.entries(localitySubspecies)
+      .filter(([, value]) => value === taxon)
+      .map(([locality]) => locality)
+      .sort(),
+    preferred: preferredTraitsByTaxon[taxon],
+    note: taxonNotes[taxon],
+  }));
+
+  return (
+    <div className="mx-auto max-w-5xl px-5 pt-5 sm:px-6">
+      <section className="overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_40%),#07110d] p-5 sm:p-6">
+        <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Field Guide</div>
+        <h2 className="mt-2 text-2xl font-bold text-white/90">Green Tree Python Complex</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">
+          Taxonomy follows Natusch et al. 2020. The old “Morelia viridis” is now four taxa: three subspecies of{" "}
+          <em className="text-white/70">Morelia azurea</em> plus <em className="text-white/70">Morelia viridis</em> in the strict sense.
+          Pure means both parents belong to the same subspecies — locality crosses within one subspecies (for example Numfor × Biak)
+          still count as pure <em className="text-white/70">Morelia azurea azurea</em>.
+        </p>
+      </section>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {taxa.map(({ taxon, short, localities, preferred, note }) => (
+          <article key={taxon} className="rounded-[24px] border border-white/[.06] bg-white/[.02] p-5">
+            <div className="text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/50">{short}</div>
+            <h3 className="mt-1 text-lg font-bold italic text-white/90">{taxon}</h3>
+            <p className="mt-2 text-xs leading-5 text-white/45">{note}</p>
+            <div className="mt-3">
+              <div className="text-[9px] font-black uppercase tracking-[.14em] text-white/30">Localities in game</div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {localities.map((locality) => (
+                  <span key={locality} className="rounded-full border border-white/[.08] bg-black/20 px-2.5 py-1 text-[11px] text-white/60">
+                    {locality}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-[9px] font-black uppercase tracking-[.14em] text-white/30">Prized traits</div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {preferred.map((trait) => (
+                  <span key={trait} className="rounded-full border border-emerald-300/20 bg-emerald-300/[.06] px-2.5 py-1 text-[11px] text-emerald-100/75">
+                    {traitLabels[trait] ?? trait}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <section className="mt-4 rounded-[24px] border border-white/[.06] bg-white/[.02] p-5">
+        <h3 className="text-base font-bold text-white/85">Phenotype traits</h3>
+        <p className="mt-1 text-xs leading-5 text-white/40">
+          Every animal is scored 0–100 on each trait. The phenotype score on a snake card is the average of its trait scores,
+          graded on the scale below.
+        </p>
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          {traitGuide.map((trait) => (
+            <div key={trait.key} className="rounded-2xl border border-white/[.05] bg-black/15 p-3.5">
+              <div className="text-sm font-semibold text-white/80">{trait.label}</div>
+              <div className="mt-1 text-xs leading-5 text-white/40">{trait.detail}</div>
+            </div>
+          ))}
+        </div>
+        <h4 className="mt-5 text-sm font-bold text-white/80">Grade scale</h4>
+        <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {gradeScale.map((row) => (
+            <div key={row.grade} className="flex items-center gap-3 rounded-xl border border-white/[.05] bg-black/15 px-3.5 py-2">
+              <span className="w-8 text-sm font-black text-emerald-100/80">{row.grade}</span>
+              <span className="text-xs text-white/45">{row.detail}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-[24px] border border-amber-300/15 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,.07),transparent_40%),#100c06] p-5">
+        <h3 className="text-base font-bold text-white/85">Breeding rules of thumb</h3>
+        <ul className="mt-2 space-y-2 text-xs leading-5 text-white/45">
+          <li className="flex gap-2"><span className="text-amber-200/70">•</span><span>Breed within a subspecies to keep offspring pure. Same-subspecies locality crosses (Jayapura × Lereh, Biak × Numfor) are still pure.</span></li>
+          <li className="flex gap-2"><span className="text-amber-200/70">•</span><span>Crossing subspecies produces hybrids — the game tracks classification honestly, and hybrids grade on the same trait scale.</span></li>
+          <li className="flex gap-2"><span className="text-amber-200/70">•</span><span>Never judge locality from color. Biak neonates hatch red or yellow, and adult color shifts with mood, temperature, and age.</span></li>
+          <li className="flex gap-2"><span className="text-amber-200/70">•</span><span>Pair adults in Excellent condition, and rest females after a clutch — recovery time protects future breeding success.</span></li>
+        </ul>
+      </section>
+    </div>
+  );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { ChondroFocusOverlay } from "@/components/ChondroFocusOverlay";
 import { ChondroAnimalRecordActions } from "@/components/ChondroAnimalRecordActions";
@@ -54,11 +55,10 @@ export function ChondroCollectionManager() {
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) {
-          setAnimals(Array.isArray(data.save?.state?.colony) ? data.save.state.colony : []);
-          setFavorites(Array.isArray(data.save?.state?.favoriteIds) ? data.save.state.favoriteIds : []);
+        const { state } = await loadChondroSaveState();
+        if (!cancelled && state) {
+          setAnimals(Array.isArray(state.colony) ? (state.colony as Snake[]) : []);
+          setFavorites(Array.isArray(state.favoriteIds) ? (state.favoriteIds as string[]) : []);
         }
       } catch {}
     }

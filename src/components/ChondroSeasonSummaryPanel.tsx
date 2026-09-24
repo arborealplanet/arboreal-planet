@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 
 type Snake = { id: string; name: string; classification: string; locality: string; highBlack: number; highWhite: number; blueStripe: number; yellowRetention: number; blotches: number };
 type Clutch = { season: number; offspring: Snake[]; holdbackIds?: string[] };
@@ -17,10 +18,9 @@ export function ChondroSeasonSummaryPanel() {
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) {
-          const state = (data.save?.state ?? {}) as Save;
+        const { state: loaded } = await loadChondroSaveState();
+        if (!cancelled && loaded) {
+          const state = loaded as Save;
           setSave(state);
           const lastCompleted = Math.max(1, Number(state.season ?? 1) - 1);
           setSelectedSeason((current) => current ?? lastCompleted);

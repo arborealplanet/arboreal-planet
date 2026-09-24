@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import { ROOM_EXPANSIONS, roomCapacityFromSave, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 
 type Save = {
@@ -36,9 +37,8 @@ export function ChondroRoomExpansionPanel() {
 
   async function load() {
     try {
-      const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-      const data = await response.json();
-      if (response.ok && data.save?.state) setSave(data.save.state as Save);
+      const { state } = await loadChondroSaveState();
+      if (state) setSave(state as Save);
     } catch {}
   }
 

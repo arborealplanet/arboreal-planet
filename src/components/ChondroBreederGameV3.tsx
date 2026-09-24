@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
@@ -789,6 +789,68 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [now, setNow] = useState(Date.now());
   const latestSaveRef = useRef<GameSave | null>(null);
   const cloudSaveRef = useRef(false);
+  // Timestamp of the most recent save this component wrote itself. External
+  // writers (e.g. the standalone store) dispatch the same save-change event,
+  // so this guards the adoption listener below against echoing our own writes.
+  const lastSelfWriteAt = useRef(0);
+
+  // Apply a loaded save object to component state. Shared by the initial load
+  // and by the listener that adopts saves written by other components.
+  const applySave = useCallback((chosen: GameSave) => {
+    setStarted(chosen.started);
+    setCash(chosen.cash);
+    setColony((chosen.colony ?? []).map(normalizeSnake));
+    setTested(chosen.tested ?? []);
+    setDamId(chosen.damId ?? "");
+    setSireId(chosen.sireId ?? "");
+    setClutch(
+      chosen.clutch
+        ? {
+            ...chosen.clutch,
+            dam: normalizeSnake(chosen.clutch.dam),
+            sire: normalizeSnake(chosen.clutch.sire),
+            offspring: chosen.clutch.offspring.map(normalizeSnake),
+          }
+        : null,
+    );
+    setClutchHistory(
+      (chosen.clutchHistory ?? []).map((record) => ({
+        ...record,
+        dam: normalizeSnake(record.dam),
+        sire: normalizeSnake(record.sire),
+        offspring: record.offspring.map(normalizeSnake),
+        holdbackIds: record.holdbackIds ?? [],
+      })),
+    );
+    setHoldbacks(chosen.holdbacks ?? []);
+    setSeason(chosen.season ?? 1);
+    setSales(chosen.sales ?? []);
+    setTransfers(chosen.transfers ?? []);
+    setEnclosures(chosen.enclosures ?? { "Chondro Dojo Bin": 0, "PVC Arboreal": 0 });
+    setPurchasedStoreIds(chosen.purchasedStoreIds ?? []);
+    setCareerReputation(Number(chosen.careerReputation ?? 0));
+    setFacilityRooms(chosen.facilityRooms ?? { "starter-room": 1 });
+    setFacilityConstruction(chosen.facilityConstruction ?? null);
+    const savedCycle = chosen.breedingCycle ?? null;
+    if (savedCycle) {
+      const legacyStage = String(savedCycle.stage);
+      const migratedStage: BreedingStage =
+        legacyStage === "cycling" || legacyStage === "pairing" || legacyStage === "incubation"
+          ? legacyStage as BreedingStage
+          : legacyStage === "hatch-day"
+            ? "incubation"
+            : "development";
+      setBreedingCycle({ ...savedCycle, stage: migratedStage });
+    } else {
+      setBreedingCycle(null);
+    }
+    setGeneticTestsPending(chosen.geneticTestsPending ?? []);
+    setFemaleRecovery(chosen.femaleRecovery ?? {});
+    setSeasonCarePaid(Number(chosen.seasonCarePaid ?? 0));
+    setBreedingMessage(chosen.breedingMessage ?? "");
+    // Grandfather already-hatched clutches from older saves so players do not lose progress.
+    setClutchEstablished(chosen.clutchEstablished ?? Boolean(chosen.clutch));
+  }, []);
 
   const storeEpoch = Math.floor(now / DAY_MS);
   const store = useMemo(() => storeForEpoch(storeEpoch), [storeEpoch]);
@@ -850,61 +912,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
           }
         }
       } catch {}
-      if (!cancelled && chosen) {
-        setStarted(chosen.started);
-        setCash(chosen.cash);
-        setColony((chosen.colony ?? []).map(normalizeSnake));
-        setTested(chosen.tested ?? []);
-        setDamId(chosen.damId ?? "");
-        setSireId(chosen.sireId ?? "");
-        setClutch(
-          chosen.clutch
-            ? {
-                ...chosen.clutch,
-                dam: normalizeSnake(chosen.clutch.dam),
-                sire: normalizeSnake(chosen.clutch.sire),
-                offspring: chosen.clutch.offspring.map(normalizeSnake),
-              }
-            : null,
-        );
-        setClutchHistory(
-          (chosen.clutchHistory ?? []).map((record) => ({
-            ...record,
-            dam: normalizeSnake(record.dam),
-            sire: normalizeSnake(record.sire),
-            offspring: record.offspring.map(normalizeSnake),
-            holdbackIds: record.holdbackIds ?? [],
-          })),
-        );
-        setHoldbacks(chosen.holdbacks ?? []);
-        setSeason(chosen.season ?? 1);
-        setSales(chosen.sales ?? []);
-        setTransfers(chosen.transfers ?? []);
-        setEnclosures(chosen.enclosures ?? { "Chondro Dojo Bin": 0, "PVC Arboreal": 0 });
-        setPurchasedStoreIds(chosen.purchasedStoreIds ?? []);
-        setCareerReputation(Number(chosen.careerReputation ?? 0));
-        setFacilityRooms(chosen.facilityRooms ?? { "starter-room": 1 });
-        setFacilityConstruction(chosen.facilityConstruction ?? null);
-        const savedCycle = chosen.breedingCycle ?? null;
-        if (savedCycle) {
-          const legacyStage = String(savedCycle.stage);
-          const migratedStage: BreedingStage =
-            legacyStage === "cycling" || legacyStage === "pairing" || legacyStage === "incubation"
-              ? legacyStage as BreedingStage
-              : legacyStage === "hatch-day"
-                ? "incubation"
-                : "development";
-          setBreedingCycle({ ...savedCycle, stage: migratedStage });
-        } else {
-          setBreedingCycle(null);
-        }
-        setGeneticTestsPending(chosen.geneticTestsPending ?? []);
-        setFemaleRecovery(chosen.femaleRecovery ?? {});
-        setSeasonCarePaid(Number(chosen.seasonCarePaid ?? 0));
-        setBreedingMessage(chosen.breedingMessage ?? "");
-        // Grandfather already-hatched clutches from older saves so players do not lose progress.
-        setClutchEstablished(chosen.clutchEstablished ?? Boolean(chosen.clutch));
-      }
+      if (!cancelled && chosen) applySave(chosen);
       if (!cancelled) setHydrated(true);
     }
     void load();
@@ -913,7 +921,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [applySave]);
 
   useEffect(() => {
     cloudSaveRef.current = cloudSave;
@@ -921,6 +929,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
 
   useEffect(() => {
     if (!hydrated) return;
+    const updatedAt = Date.now();
     const save: GameSave = {
       started,
       cash,
@@ -945,9 +954,10 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       seasonCarePaid,
       breedingMessage,
       clutchEstablished,
-      updatedAt: Date.now(),
+      updatedAt,
     };
     latestSaveRef.current = save;
+    lastSelfWriteAt.current = updatedAt;
     try {
       window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(save));
       window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
@@ -984,7 +994,29 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       window.removeEventListener("pagehide", flushLatestSave);
       flushLatestSave();
     };
-  }, []);
+  }, [hydrated, applySave]);
+
+  // Adopt saves written by other parts of the app (standalone store,
+  // pairing planner, shows panel, etc.) so the core game reflects purchases
+  // without a reload. Own writes are echoed through the same event, so they
+  // are ignored via lastSelfWriteAt.
+  useEffect(() => {
+    if (!hydrated) return;
+    const adoptExternalSave = () => {
+      let parsed: unknown = null;
+      try {
+        const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+        parsed = raw ? JSON.parse(raw) : null;
+      } catch {
+        return;
+      }
+      if (!isGameSave(parsed)) return;
+      if (Number(parsed.updatedAt ?? 0) <= lastSelfWriteAt.current) return;
+      applySave(parsed);
+    };
+    window.addEventListener("arboreal-chondro-breeder-save-change", adoptExternalSave);
+    return () => window.removeEventListener("arboreal-chondro-breeder-save-change", adoptExternalSave);
+  }, [hydrated, applySave]);
 
   useEffect(() => {
     if (!hydrated) return;

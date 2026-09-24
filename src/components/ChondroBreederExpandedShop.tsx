@@ -588,8 +588,7 @@ export function ChondroBreederExpandedShop() {
     try {
       await persistStandaloneShopSave(next, authenticated);
       setSave(next);
-      setStatus(`${offer.name} purchased. Updating your colony…`);
-      window.setTimeout(() => window.location.reload(), 250);
+      setStatus(`${offer.name} purchased. It is now in your colony.`);
     } catch {
       setStatus("That purchase could not be saved.");
     } finally {
@@ -603,6 +602,7 @@ export function ChondroBreederExpandedShop() {
 
   return (
     <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
+      {process.env.NODE_ENV !== "production" ? (
       <section className="mb-4 overflow-hidden rounded-[26px] border border-violet-300/15 bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,.08),transparent_38%),#0a0810] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -650,6 +650,7 @@ export function ChondroBreederExpandedShop() {
           ))}
         </div>
       </section>
+      ) : null}
 
       <section className="mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">

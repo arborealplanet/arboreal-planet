@@ -306,8 +306,8 @@ function GameScreenGuide({ view }: { view: CoreView }) {
     <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
       <details className="rounded-[22px] border border-emerald-300/12 bg-emerald-300/[.025] p-4" open={view === "colony"}>
         <summary className="cursor-pointer list-none text-sm font-semibold text-emerald-100/78">
-          How this screen works
-          <span className="ml-2 text-[10px] font-normal text-white/35">tap to show/hide</span>
+          How this screen works{" "}
+          <span className="text-[10px] font-normal text-white/35">tap to show/hide</span>
         </summary>
         <div className="mt-4 grid gap-2 md:grid-cols-3">
           {guides[view].map((item) => (

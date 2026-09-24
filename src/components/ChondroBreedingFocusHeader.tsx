@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 
 type Animal = { id?: string; name?: string; sex?: string; lifeStage?: string };
 type Cycle = { damId?: string; sireId?: string; stage?: string; completesAt?: number };
@@ -87,9 +88,8 @@ export function ChondroBreedingFocusHeader() {
     let active = true;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (active && response.ok) setSave(data.save?.state ?? {});
+        const { state } = await loadChondroSaveState();
+        if (active && state) setSave(state);
       } catch {}
     }
     void load();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Subspecies = "Morelia azurea azurea" | "Morelia azurea pulcher" | "Morelia azurea utaraensis" | "Morelia viridis";
@@ -109,9 +110,8 @@ export function ChondroClutchOutcomeExplainer() {
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) setSave((data.save?.state ?? {}) as Save);
+        const { state } = await loadChondroSaveState();
+        if (!cancelled && state) setSave(state as Save);
       } catch {}
     }
     void load();

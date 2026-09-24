@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
 type CoreView = "breeding" | "colony" | "clutches" | "market" | "conservation";
@@ -64,18 +65,15 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
   useEffect(() => {
     let active = true;
     async function load() {
-      const [saveResult, marketResult, conservationResult] = await Promise.allSettled([
-        fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" }),
-        fetch("/api/hatchery/chondro-breeder/player-market", { cache: "no-store" }),
-        fetch("/api/hatchery/chondro-breeder/conservation", { cache: "no-store" }),
+      const [saveState, marketResult, conservationResult] = await Promise.all([
+        loadChondroSaveState(),
+        fetch("/api/hatchery/chondro-breeder/player-market", { cache: "no-store" }).catch(() => null),
+        fetch("/api/hatchery/chondro-breeder/conservation", { cache: "no-store" }).catch(() => null),
       ]);
       if (!active) return;
-      if (saveResult.status === "fulfilled" && saveResult.value.ok) {
-        const data = await saveResult.value.json();
-        setSave(data.save?.state ?? {});
-      }
-      if (marketResult.status === "fulfilled" && marketResult.value.ok) setMarket(await marketResult.value.json());
-      if (conservationResult.status === "fulfilled" && conservationResult.value.ok) setConservation(await conservationResult.value.json());
+      if (saveState.state) setSave(saveState.state as Save);
+      if (marketResult && marketResult.ok) setMarket(await marketResult.json());
+      if (conservationResult && conservationResult.ok) setConservation(await conservationResult.json());
     }
     void load();
     const tick = () => setNow(Date.now());

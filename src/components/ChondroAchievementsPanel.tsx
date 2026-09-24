@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 import {
   CHONDRO_ACHIEVEMENTS,
   achievementReputation,
@@ -24,10 +25,9 @@ export function ChondroAchievementsPanel() {
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" });
-        const data = await response.json();
-        if (!cancelled && response.ok) {
-          const state = (data.save?.state ?? {}) as AchievementPanelSave;
+        const { state: loaded } = await loadChondroSaveState();
+        if (!cancelled && loaded) {
+          const state = loaded as AchievementPanelSave;
           setSave({ ...state, legacyBadges: normalizeLegacyBadges(state.legacyBadges) });
           setSelectedTitle(typeof state.selectedBreederTitle === "string" ? state.selectedBreederTitle : "");
         }

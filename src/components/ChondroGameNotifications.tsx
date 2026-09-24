@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { loadChondroSaveState } from "@/lib/chondro-save";
 
 type SaveState = {
   breedingCycle?: { stage?: string } | null;
@@ -47,13 +48,12 @@ export function ChondroGameNotifications() {
 
     async function check() {
       try {
-        const [saveResponse, marketResponse] = await Promise.all([
-          fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" }),
+        const [{ state: saveState }, marketResponse] = await Promise.all([
+          loadChondroSaveState(),
           fetch("/api/hatchery/chondro-breeder/player-market", { cache: "no-store" }),
         ]);
-        const saveData = saveResponse.ok ? await saveResponse.json() : null;
         const marketData = marketResponse.ok ? await marketResponse.json() as MarketState : null;
-        const save = (saveData?.save?.state ?? {}) as SaveState;
+        const save = (saveState ?? {}) as SaveState;
         const snapshot: Snapshot = {
           stage: save.breedingCycle?.stage ?? "",
           clutchCount: Array.isArray(save.clutch?.offspring) ? save.clutch!.offspring!.length : 0,
