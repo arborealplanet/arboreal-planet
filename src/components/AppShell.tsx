@@ -92,12 +92,12 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <nav aria-label="Browse" className="hide-scrollbar mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/[.04] px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[.08em] text-white/50 xl:hidden sm:px-6">
         <Link href="/search" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Search</Link>
         {signedIn&&<Link href="/saved" className="shrink-0 rounded-xl border border-emerald-300/10 bg-emerald-300/[.025] px-3 py-2.5 text-emerald-100/60 transition active:bg-emerald-300/[.06]">Saved</Link>}
+        <Link href="/animals" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Animals</Link>
         <Link href="/learn" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Learn</Link>
         <Link href="/news" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">News</Link>
         <Link href="/events" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Events</Link>
         <Link href="/plants" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Plants</Link>
         <Link href="/genetics" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Genetics</Link>
-        {nav.slice(0,1).map(([label,href])=><Link key={href} href={href} className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">{label}</Link>)}
       </nav>
     </header>
   );
