@@ -99,7 +99,7 @@ Ambiguous terms such as CH / Captive Hatched / F1 / F2 or unfamiliar abbreviatio
 Use this as the Arboreal Planet market grouping, not as a claim of universal taxonomic consensus.
 
 - **Morelia azurea azurea** — Biak, Numfor
-- **Morelia azurea pulcher** — Timika, Sorong, Manokwari, Kofiau; Batanta is currently flagged for review
+- **Morelia azurea pulcher** — Timika, Sorong, Manokwari, Kofiau, Salawati, Batanta
 - **Morelia azurea utaraensis** — Jayapura, Cyclops, Wamena, Lereh / Highland
 - **Morelia viridis** — Aru, Merauke
 - **Designer / hybrid / line projects** — designers, crosses, blue lines, calico and other project categories
