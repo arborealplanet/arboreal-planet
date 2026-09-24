@@ -353,3 +353,5 @@ footer{display:flex;align-items:center;gap:1rem;padding:2rem clamp(1.25rem,6vw,6
 .topbar .planet-return:hover,.topbar .planet-return:focus-visible{background:#203625;outline:2px solid #d9c784;outline-offset:-3px;transform:none}
 .topbar .planet-return img{width:52px;height:52px;object-fit:contain;border-radius:0}
 @media(max-width:850px){.topbar .planet-return{position:static;min-height:72px;padding:.5rem 1rem;font-size:.98rem}.topbar .planet-return img{width:54px;height:54px}}
+
+.topbar .planet-return{min-height:92px;background:#09170f}.topbar .planet-return img{width:76px;height:76px;object-fit:contain}@media(max-width:850px){.topbar .planet-return{min-height:88px}.topbar .planet-return img{width:72px;height:72px}}
