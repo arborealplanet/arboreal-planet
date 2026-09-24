@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type SubjectType = "ANIMAL" | "PLANT" | "TOPIC";
+type SubjectType = "ANIMAL" | "PLANT" | "TOPIC" | "SECTION";
 
 export function SubjectFollowButton({ type, id = "", subjectKey, label = "Follow" }: { type: SubjectType; id?: string; subjectKey: string; label?: string }) {
   const router = useRouter();
