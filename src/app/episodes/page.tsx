@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PageIntro } from "@/components/AppShell";
 import { EpisodePlayer, formatDuration } from "@/components/EpisodePlayer";
-import { EpisodeSubmitForm, EPISODE_SUBMISSIONS_EMAIL } from "@/components/EpisodeSubmitForm";
+import { EpisodeSubmitForm } from "@/components/EpisodeSubmitForm";
+import { EPISODE_SUBMISSIONS_EMAIL } from "@/lib/episode-submissions";
 import { HankScaleIntroButton } from "@/components/HankScaleIntroButton";
 import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 

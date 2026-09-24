@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-export const EPISODE_SUBMISSIONS_EMAIL = "arborealplanet@gmail.com";
+import { EPISODE_SUBMISSIONS_EMAIL } from "@/lib/episode-submissions";
 
 export function EpisodeSubmitForm() {
   const [keeperName, setKeeperName] = useState("");
