@@ -98,8 +98,6 @@ export function ArborealKeeperReptiShop() {
     };
   }, [qaOpen]);
 
-  const active = VIEWS.find((v) => v.id === view) ?? VIEWS[0];
-
   return (
     <div className="mx-auto flex h-[calc(100dvh-164px-env(safe-area-inset-bottom))] w-full max-w-5xl flex-col overflow-hidden px-4 py-3 sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))] sm:px-6">
       {/* Bunn's tip — slim row above the store, tap for another tip */}
@@ -115,18 +113,16 @@ export function ArborealKeeperReptiShop() {
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
 
-      {/* Bunn's animated store — as large as possible, nothing big covering it */}
-      <div className="relative min-h-0 w-full flex-[1.75] overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+      {/* Bunn's animated store — as large as possible, completely clean */}
+      <div className="relative min-h-0 w-full flex-[1.6] overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
         <div className="absolute inset-0">
           <ShopLoopVideo />
         </div>
+      </div>
 
-        <div className="pointer-events-none absolute right-2.5 top-2.5 rounded-full border border-white/15 bg-black/60 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-white/75 backdrop-blur">
-          Bunn&apos;s Repti-Shop
-        </div>
-
-        {/* Small view buttons tucked along the bottom edge */}
-        <div className="absolute inset-x-0 bottom-2 flex justify-center gap-1.5 px-3">
+      {/* View buttons — small, below the animation, Sprite QA kept quiet */}
+      <div className="mt-2 flex flex-none items-center justify-between gap-2">
+        <div className="flex min-w-0 gap-1.5">
           {VIEWS.map((v) => {
             const selected = v.id === view;
             return (
@@ -135,10 +131,10 @@ export function ArborealKeeperReptiShop() {
                 type="button"
                 onClick={() => setView(v.id)}
                 aria-current={selected ? "true" : undefined}
-                className={`rounded-full border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[.08em] backdrop-blur transition ${
+                className={`truncate rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] transition ${
                   selected
                     ? "border-emerald-200/60 bg-emerald-300 text-[#06100c]"
-                    : "border-white/20 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
+                    : "border-white/15 bg-white/[.04] text-white/60 hover:bg-white/[.08] hover:text-white"
                 }`}
               >
                 {v.label}
@@ -146,25 +142,18 @@ export function ArborealKeeperReptiShop() {
             );
           })}
         </div>
+        <button
+          type="button"
+          onClick={() => setQaOpen(true)}
+          className="shrink-0 text-[11px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
+        >
+          Sprite QA
+        </button>
       </div>
 
-      {/* Current-view carousel — fills the remaining space, never scrolls the page */}
-      <div className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="flex items-baseline justify-between gap-3">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <span className="text-[9px] font-black uppercase tracking-[.17em] text-white/35">Now viewing</span>
-            <h2 className="truncate text-sm font-bold text-white">{active.label}</h2>
-            <p className="hidden truncate text-xs text-white/40 sm:block">{active.blurb}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setQaOpen(true)}
-            className="shrink-0 text-[11px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
-          >
-            Sprite QA
-          </button>
-        </div>
-        <div key={view} className="pb-2">
+      {/* Current-view inventory — horizontal carousel, never scrolls vertically */}
+      <div className="mt-2 min-h-0 flex-1 overflow-hidden">
+        <div key={view} className="h-full">
           {view === "animals" ? (
             <ChondroBreederExpandedShop section="snakes" layout="carousel" />
           ) : view === "enclosures" ? (

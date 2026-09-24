@@ -169,7 +169,14 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
   }
 
   const body = (
-    <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5">
+    <div className={layout === "carousel" ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.022] p-3" : "overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5"}>
+        {layout === "carousel" ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="truncate text-[10px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · {available.length} available</div>
+            <button type="button" onClick={() => void refresh()} aria-label="Refresh player market" className="shrink-0 rounded-lg border border-white/[.08] px-2 py-1 text-[10px] font-bold text-white/52">↻</button>
+          </div>
+        ) : (
+        <>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · Virtual animals</div>
@@ -186,19 +193,23 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
           <span className="rounded-full border border-amber-200/10 px-2.5 py-1 text-amber-100/48">{mine.length} your listing{mine.length === 1 ? "" : "s"}</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{available.length} from other breeders</span>
         </div>
+        </>
+        )}
 
         {status ? <div role="status" className="mt-4 rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-xs text-white/55">{status}</div> : null}
 
         {mine.length ? (
-          <div className="mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4">
+          <div className={layout === "carousel" ? "mt-3" : "mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4"}>
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-amber-100/55">Your active listings</div>
+            {layout === "carousel" ? null : (
             <p className="mt-1 text-xs leading-5 text-white/34">These snakes are still listed. They are intentionally kept visible here so selling an animal never makes it look lost.</p>
-            <div className={layout === "carousel" ? "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin]" : "mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
+            )}
+            <div className={layout === "carousel" ? "mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" : "mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
               {mine.map((listing) => {
                 const animal = listing.snake;
                 return (
-                  <article key={listing.id} className={`rounded-[22px] border border-amber-200/10 bg-black/14 p-3 ${layout === "carousel" ? "w-[85%] shrink-0 snap-start sm:w-[55%]" : ""}`}>
-                    <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
+                  <article key={listing.id} className={layout === "carousel" ? "w-[66%] shrink-0 snap-start rounded-2xl border border-amber-200/10 bg-black/14 p-2.5 sm:w-[230px]" : "rounded-[22px] border border-amber-200/10 bg-black/14 p-3"}>
+                    <div className={layout === "carousel" ? "" : "rounded-[18px] border border-white/[.045] bg-black/15 p-2"}>
                       <ChondroSnakeIcon
                         subspecies={animal.subspecies as never}
                         name={animal.name}
@@ -218,8 +229,19 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                         phenotypeScore={animal.phenotypeScore}
                         spriteSeed={animal.id}
                         compact
+                        tiny={layout === "carousel"}
                       />
                     </div>
+                    {layout === "carousel" ? (
+                    <>
+                    <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
+                    <div className="mt-0.5 flex items-center justify-between gap-2">
+                      <span className="truncate text-[10px] text-amber-100/58">Listed by you</span>
+                      <span className="shrink-0 text-sm font-semibold text-amber-100/72">{money(listing.price)}</span>
+                    </div>
+                    </>
+                    ) : (
+                    <>
                     <div className="mt-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-bold text-white/78">{animal.name}</div>
@@ -228,6 +250,8 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                       <div className="shrink-0 text-base font-semibold text-amber-100/72">{money(listing.price)}</div>
                     </div>
                     <div className="mt-3 rounded-xl border border-amber-200/10 bg-amber-200/[.025] px-3 py-2 text-[10px] font-semibold text-amber-100/58">Listed by you · visible to other players</div>
+                    </>
+                    )}
                   </article>
                 );
               })}
@@ -235,16 +259,16 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
           </div>
         ) : null}
 
-        <div className="mt-5">
+        <div className={layout === "carousel" ? "mt-3" : "mt-5"}>
           <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Other breeders</div>
         </div>
-        <div className={layout === "carousel" ? "mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin]" : "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
+        <div className={layout === "carousel" ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" : "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
           {available.map((listing) => {
             const animal = listing.snake;
             const cannotBuy = busy !== null || cash < listing.price || openSlots <= 0;
             return (
-              <article key={listing.id} className={`rounded-[22px] border border-white/[.06] bg-black/12 p-3 ${layout === "carousel" ? "w-[85%] shrink-0 snap-start sm:w-[55%]" : ""}`}>
-                <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
+              <article key={listing.id} className={layout === "carousel" ? "w-[66%] shrink-0 snap-start rounded-2xl border border-white/[.06] bg-black/12 p-2.5 sm:w-[230px]" : "rounded-[22px] border border-white/[.06] bg-black/12 p-3"}>
+                <div className={layout === "carousel" ? "" : "rounded-[18px] border border-white/[.045] bg-black/15 p-2"}>
                   <ChondroSnakeIcon
                     subspecies={animal.subspecies as never}
                     name={animal.name}
@@ -264,8 +288,27 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                     phenotypeScore={animal.phenotypeScore}
                     spriteSeed={animal.id}
                     compact
+                    tiny={layout === "carousel"}
                   />
                 </div>
+                {layout === "carousel" ? (
+                <>
+                <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
+                <div className="mt-0.5 truncate text-[10px] text-white/34">{animal.sex ?? "Unknown sex"} · {animal.lifeStage ?? "Unknown stage"}</div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-emerald-200/76">{money(listing.price)}</span>
+                  <button
+                    type="button"
+                    disabled={cannotBuy}
+                    onClick={() => void buy(listing)}
+                    className="rounded-lg bg-emerald-300 px-2.5 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30"
+                  >
+                    {busy === listing.id ? "…" : openSlots <= 0 ? "Need space" : cash < listing.price ? "Need cash" : "Buy"}
+                  </button>
+                </div>
+                </>
+                ) : (
+                <>
                 <div className="mt-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -285,6 +328,8 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                 >
                   {busy === listing.id ? "Claiming…" : openSlots <= 0 ? "Need enclosure" : cash < listing.price ? "Not enough cash" : "Buy virtual snake"}
                 </button>
+                </>
+                )}
               </article>
             );
           })}
