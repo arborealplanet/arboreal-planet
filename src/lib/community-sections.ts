@@ -9,6 +9,7 @@ export const COMMUNITY_SECTION_GROUPS = [
       "Emerald Tree Boas",
       "Ball Pythons",
       "Corn Snakes & Rat Snakes",
+      "Geckos",
       "Other Reptiles & Amphibians",
     ],
   },
