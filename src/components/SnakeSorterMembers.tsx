@@ -26,6 +26,49 @@ type Summary = {
 const button = "rounded-xl border px-3 py-2 text-[9px] font-black transition disabled:opacity-35";
 const field = "w-full rounded-2xl border border-white/[.08] bg-black/15 px-4 py-3 text-sm text-white outline-none placeholder:text-white/18 focus:border-emerald-300/20";
 
+function AccessSwitch({ checked, disabled, onChange, label }: { checked: boolean; disabled: boolean; onChange: (next: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full border transition disabled:opacity-40 ${
+        checked ? "border-emerald-300/25 bg-emerald-300/20" : "border-white/[.1] bg-white/[.04]"
+      }`}
+    >
+      <span
+        className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full transition-all ${
+          checked ? "left-[22px] bg-emerald-200" : "left-[3px] bg-white/35"
+        }`}
+      />
+    </button>
+  );
+}
+
+function LevelToggle({ value, disabled, onChange }: { value: "scanner" | "reviewer"; disabled: boolean; onChange: (level: "scanner" | "reviewer") => void }) {
+  return (
+    <div className="flex shrink-0 rounded-xl border border-white/[.08] bg-black/20 p-0.5" role="group" aria-label="Access level">
+      {(["scanner", "reviewer"] as const).map((level) => (
+        <button
+          key={level}
+          type="button"
+          aria-pressed={value === level}
+          disabled={disabled}
+          onClick={() => onChange(level)}
+          className={`rounded-[10px] px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[.06em] transition disabled:opacity-40 ${
+            value === level ? "bg-white/[.12] text-white/75" : "text-white/28 hover:text-white/50"
+          }`}
+        >
+          {level === "scanner" ? "Scan" : "Review"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function SnakeSorterMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [summary, setSummary] = useState<Summary>({ arboreal_planet_members: 0, snake_sorter_members: 0 });
@@ -140,34 +183,30 @@ export function SnakeSorterMembers() {
                     {member.username && <span>@{member.username}</span>}
                     <span>{member.role || "user"}</span>
                     <span>Joined {new Date(member.created_at).toLocaleDateString()}</span>
+                    {!isOwner && member.snake_sorter?.approved_at && enabled && (
+                      <span>Sorter access since {new Date(member.snake_sorter.approved_at).toLocaleDateString()}</span>
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${enabled ? "border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/60" : "border-white/[.06] text-white/22"}`}>
                   {isOwner ? "Owner" : enabled ? (member.snake_sorter?.access_level === "reviewer" ? "Reviewer" : "Scanner") : "No access"}
                 </span>
                 {!isOwner && enabled && (
-                  <select
+                  <LevelToggle
                     value={member.snake_sorter?.access_level === "reviewer" ? "reviewer" : "scanner"}
                     disabled={busy === member.id}
-                    onChange={(event) => void setAccess(member, true, event.target.value as "scanner" | "reviewer")}
-                    className="rounded-xl border border-white/[.07] bg-black/20 px-2.5 py-2 text-[9px] font-bold text-white/48 outline-none"
-                    aria-label={`Snake Sorter access level for ${name}`}
-                  >
-                    <option value="scanner">Scanner</option>
-                    <option value="reviewer">Reviewer</option>
-                  </select>
+                    onChange={(level) => void setAccess(member, true, level)}
+                  />
                 )}
                 {!isOwner && (
-                  <button
-                    type="button"
+                  <AccessSwitch
+                    checked={enabled}
                     disabled={busy === member.id}
-                    onClick={() => void setAccess(member, !enabled, "scanner")}
-                    className={`${button} ${enabled ? "border-rose-300/12 bg-rose-300/[.025] text-rose-100/48" : "border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/60"}`}
-                  >
-                    {busy === member.id ? "Saving…" : enabled ? "Revoke" : "Approve"}
-                  </button>
+                    label={`Snake Sorter access for ${name}`}
+                    onChange={(next) => void setAccess(member, next, member.snake_sorter?.access_level === "reviewer" ? "reviewer" : "scanner")}
+                  />
                 )}
               </div>
             </div>

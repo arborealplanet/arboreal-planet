@@ -11,7 +11,7 @@ export type SnakeSorterColor = "red" | "yellow" | "not_applicable" | "unknown";
 
 export type TaxonScores = Record<SnakeSorterTaxon, number>;
 
-export type SnakeSorterScanMode = "quick" | "deep" | "live";
+export type SnakeSorterScanMode = "quick" | "deep";
 export type SnakeSorterViewType = "auto" | "full_body" | "head" | "dorsal" | "left_lateral" | "right_lateral" | "tail" | "other";
 
 export type SnakeSorterHints = {

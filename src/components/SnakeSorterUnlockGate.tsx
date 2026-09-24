@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { startAuthentication } from "@simplewebauthn/browser";
 
 export function SnakeSorterUnlockGate() {
   const [hasPin, setHasPin] = useState<boolean | null>(null);
@@ -9,6 +10,8 @@ export function SnakeSorterUnlockGate() {
   const [confirmPin, setConfirmPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [biometricReady, setBiometricReady] = useState(false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
 
   useEffect(() => {
     void fetch("/api/snake-sorter/security", { cache: "no-store" })
@@ -18,6 +21,17 @@ export function SnakeSorterUnlockGate() {
         setHasPin(data.hasPin === true);
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "Could not load lock status."));
+
+    // Fingerprint / Face ID is offered when this browser supports WebAuthn
+    // and the user has registered at least one device.
+    if (typeof window !== "undefined" && window.PublicKeyCredential) {
+      void fetch("/api/snake-sorter/biometric", { cache: "no-store" })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (response.ok && data.registered === true) setBiometricReady(true);
+        })
+        .catch(() => undefined);
+    }
   }, []);
 
   const title = hasPin === false ? "Create Snake Sorter PIN" : "Unlock Snake Sorter";
@@ -26,6 +40,39 @@ export function SnakeSorterUnlockGate() {
     : "Enter your Snake Sorter PIN to continue.";
 
   const valid = useMemo(() => /^\d{4,8}$/.test(pin) && (hasPin !== false || pin === confirmPin), [pin, confirmPin, hasPin]);
+
+  async function unlockWithBiometric() {
+    if (biometricBusy) return;
+    setBiometricBusy(true);
+    setMessage("");
+    try {
+      const optionsResponse = await fetch("/api/snake-sorter/biometric", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "auth-options" }),
+      });
+      const optionsData = await optionsResponse.json().catch(() => ({}));
+      if (!optionsResponse.ok) throw new Error(optionsData.error ?? "Fingerprint unlock is not available.");
+      const assertion = await startAuthentication({ optionsJSON: optionsData.options });
+      const verifyResponse = await fetch("/api/snake-sorter/biometric", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "auth-verify", response: assertion }),
+      });
+      const verifyData = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok) throw new Error(verifyData.error ?? "Could not unlock Snake Sorter.");
+      window.location.replace("/snake-sorter");
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      if (name === "NotAllowedError") {
+        setMessage("Fingerprint was cancelled. Try again when ready.");
+      } else {
+        setMessage(error instanceof Error ? error.message : "Could not unlock Snake Sorter.");
+      }
+    } finally {
+      setBiometricBusy(false);
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -121,6 +168,28 @@ export function SnakeSorterUnlockGate() {
                 Five failed attempts lock Snake Sorter for 15 minutes. Successful unlock lasts up to 12 hours.
               </p>
             </form>
+          )}
+
+          {biometricReady && hasPin !== null && (
+            <div className="mt-4">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-white/[.07]" />
+                <span className="text-[9px] font-black uppercase tracking-[.14em] text-white/28">or</span>
+                <div className="h-px flex-1 bg-white/[.07]" />
+              </div>
+              <button
+                type="button"
+                disabled={biometricBusy}
+                onClick={() => void unlockWithBiometric()}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-300/20 bg-sky-300/[.06] px-4 py-3 text-sm font-black text-sky-100/80 transition disabled:opacity-40"
+              >
+                <span aria-hidden>◉</span>
+                {biometricBusy ? "Waiting for fingerprint…" : "Use fingerprint / Face ID"}
+              </button>
+              <p className="mt-2 text-center text-[11px] leading-5 text-white/28">
+                Uses this device&apos;s built-in fingerprint or face unlock. Nothing biometric ever leaves your device.
+              </p>
+            </div>
           )}
         </div>
       </section>

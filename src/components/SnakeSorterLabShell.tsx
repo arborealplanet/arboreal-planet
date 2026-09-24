@@ -15,10 +15,14 @@ import { SnakeSorterModelStatus } from "@/components/SnakeSorterModelStatus";
 import { SnakeSorterMembers } from "@/components/SnakeSorterMembers";
 import { SnakeSorterBulkImport } from "@/components/SnakeSorterBulkImport";
 import { SnakeSorterOperations } from "@/components/SnakeSorterOperations";
+import { SnakeSorterSecurity } from "@/components/SnakeSorterSecurity";
 import { SnakeSorterInstallButton } from "@/components/SnakeSorterInstallButton";
 import { SnakeSorterDatasetDiagnostics } from "@/components/SnakeSorterDatasetDiagnostics";
 
-type View = "home" | "scan" | "candidates" | "references" | "history" | "more";
+import { SnakeSorterContributionReview } from "@/components/SnakeSorterContributionReview";
+import { SnakeSorterContribute } from "@/components/SnakeSorterContribute";
+
+type View = "home" | "scan" | "contribute" | "candidates" | "references" | "history" | "more";
 type AccessLevel = "owner" | "reviewer" | "scanner" | string | null;
 
 type CandidateStats = {
@@ -46,10 +50,11 @@ const emptyCandidateStats: CandidateStats = {
 const viewMeta: Record<View, { label: string; short: string; detail: string; icon: string }> = {
   home: { label: "Home", short: "Home", detail: "Snake Sorter command center", icon: "⌂" },
   scan: { label: "Scanner", short: "Scan", detail: "Photo, video and live-camera identification", icon: "◎" },
+  contribute: { label: "Contribute", short: "Share", detail: "Upload photos and videos for owner review", icon: "◈" },
   candidates: { label: "Candidates", short: "Review", detail: "Harvested listings and reference candidates", icon: "◇" },
   references: { label: "Reference Library", short: "Library", detail: "Curated animals and accepted reference media", icon: "▦" },
   history: { label: "Scan History", short: "History", detail: "Past analysis runs and feedback", icon: "↺" },
-  more: { label: "Laboratory", short: "More", detail: "Models, members, imports and system health", icon: "•••" },
+  more: { label: "Laboratory", short: "More", detail: "Models, members, imports, security and system health", icon: "•••" },
 };
 
 export function SnakeSorterLabShell({
@@ -65,7 +70,7 @@ export function SnakeSorterLabShell({
   const [animals, setAnimals] = useState<SnakeReferenceAnimal[]>([]);
   const [media, setMedia] = useState<SnakeReferenceMedia[]>([]);
   const [candidateStats, setCandidateStats] = useState<CandidateStats>(emptyCandidateStats);
-  const [moreTool, setMoreTool] = useState<"models" | "diagnostics" | "members" | "import" | "system">("diagnostics");
+  const [moreTool, setMoreTool] = useState<"models" | "diagnostics" | "members" | "import" | "system" | "security">("diagnostics");
 
   async function loadReferences() {
     if (!isOwner) return;
@@ -94,9 +99,9 @@ export function SnakeSorterLabShell({
   }, [isOwner, canReview]);
 
   const dockViews = useMemo<View[]>(() => {
-    if (isOwner) return ["home", "scan", "candidates", "references", "more"];
-    if (canReview) return ["home", "scan", "candidates", "history"];
-    return ["home", "scan", "history"];
+    if (isOwner) return ["home", "scan", "contribute", "candidates", "references", "more"];
+    if (canReview) return ["home", "scan", "contribute", "candidates", "history"];
+    return ["home", "scan", "contribute", "history"];
   }, [isOwner, canReview]);
 
   const active = viewMeta[view];
@@ -176,7 +181,20 @@ export function SnakeSorterLabShell({
 
         {view === "scan" && (
           <Screen title="Scan a snake" detail="Use photos, video, or the live camera. Scan media remains separate from the reference/training library.">
-            <SnakeSorterScanner canManageReferences={false} canViewReferenceMedia={false} />
+            <SnakeSorterScanner canManageReferences={isOwner} canViewReferenceMedia={isOwner} />
+          </Screen>
+        )}
+
+        {view === "contribute" && (
+          <Screen title="Contribute media" detail="Share photos and videos to improve Snake Sorter. Everything is owner-reviewed before it can enter the reference library.">
+            {isOwner ? (
+              <div className="space-y-4">
+                <SnakeSorterContributionReview animals={animals} onPromoted={loadReferences} />
+                <SnakeSorterContribute />
+              </div>
+            ) : (
+              <SnakeSorterContribute />
+            )}
           </Screen>
         )}
 
@@ -200,13 +218,14 @@ export function SnakeSorterLabShell({
 
         {view === "more" && isOwner && (
           <Screen title="Laboratory tools" detail="Keep the heavy administration out of the main workflow until you need it.">
-            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-6">
               {([
                 ["diagnostics", "Diagnostics", "Coverage gaps & dataset balance"],
                 ["models", "Models", "Model registry & snapshots"],
                 ["members", "Members", "Scanner/reviewer access"],
                 ["import", "Import", "Bulk reference intake"],
                 ["system", "System", "Inference health"],
+                ["security", "Security", "PIN & fingerprint lock"],
               ] as const).map(([id, label, detail]) => (
                 <button
                   key={id}
@@ -232,12 +251,13 @@ export function SnakeSorterLabShell({
             {moreTool === "members" && <SnakeSorterMembers />}
             {moreTool === "import" && <SnakeSorterBulkImport onImported={loadReferences} />}
             {moreTool === "system" && <SnakeSorterOperations />}
+            {moreTool === "security" && <SnakeSorterSecurity />}
           </Screen>
         )}
       </main>
 
       <nav
-        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(84px+env(safe-area-inset-bottom))] gap-1 border-t border-white/[.08] bg-[#020705]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-3 lg:bottom-4 lg:h-[84px] lg:max-w-[760px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${dockViews.length === 5 ? "grid-cols-5" : dockViews.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}
+        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(84px+env(safe-area-inset-bottom))] gap-1 border-t border-white/[.08] bg-[#020705]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-3 lg:bottom-4 lg:h-[84px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${dockViews.length === 6 ? "grid-cols-6 lg:max-w-[920px]" : dockViews.length === 5 ? "grid-cols-5 lg:max-w-[760px]" : dockViews.length === 4 ? "grid-cols-4 lg:max-w-[640px]" : "grid-cols-3 lg:max-w-[520px]"}`}
         aria-label="Snake Sorter navigation"
       >
         {dockViews.map((id) => {
@@ -336,6 +356,14 @@ function Home({
           <HomeCard title="Reference library" detail={`${approved} approved animals · ${media.length} images`} action="Open library" onClick={() => onOpen("references")} />
           <HomeCard title="Scanner" detail="Quick, deep and live-camera workflows" action="Start scan" onClick={() => onOpen("scan")} />
           <HomeCard title="Laboratory" detail="Models, members, imports and system health" action="Open tools" onClick={() => onOpen("more")} />
+        </section>
+      )}
+
+      {!isOwner && (
+        <section className="rounded-[24px] border border-emerald-300/10 bg-emerald-300/[.025] p-4">
+          <div className="text-sm font-semibold text-emerald-50/65">Help improve Snake Sorter</div>
+          <p className="mt-2 text-xs leading-5 text-white/35">Share photos and videos of your animals. Uploads are owner-reviewed before they can enter the reference library.</p>
+          <button type="button" onClick={() => onOpen("contribute")} className="mt-3 rounded-xl bg-emerald-300 px-4 py-2.5 text-[10px] font-black text-[#06100c]">Contribute media</button>
         </section>
       )}
 

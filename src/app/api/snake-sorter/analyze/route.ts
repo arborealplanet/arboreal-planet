@@ -22,7 +22,7 @@ async function sorterIdentity() {
 const allowedStages = new Set(["auto", "hatchling", "neonate", "juvenile", "subadult", "adult"]);
 const allowedColors = new Set(["auto", "red", "yellow", "not_applicable"]);
 const allowedSampling = new Set(["balanced", "dense", "keyframes"]);
-const allowedModes = new Set(["quick","deep","live"]);
+const allowedModes = new Set(["quick","deep"]);
 const allowedViews = new Set(["auto","full_body","head","dorsal","left_lateral","right_lateral","tail","other"]);
 
 export async function POST(request: NextRequest) {

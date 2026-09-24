@@ -183,6 +183,8 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   const [analysisRunId, setAnalysisRunId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [correctionTaxon, setCorrectionTaxon] = useState("Unknown / review");
+  const [correctionStage, setCorrectionStage] = useState("");
+  const [correctionColor, setCorrectionColor] = useState("");
   const [promotionOpen, setPromotionOpen] = useState(false);
   const [promotionSaving, setPromotionSaving] = useState(false);
   const [promotionMessage, setPromotionMessage] = useState("");
@@ -448,8 +450,8 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
         feedback_type: feedbackType,
         predicted_taxon: analysisResult.taxon,
         corrected_taxon: feedbackType === "corrected" ? correctionTaxon : null,
-        corrected_life_stage: null,
-        corrected_neonate_color: null,
+        corrected_life_stage: feedbackType === "corrected" && correctionStage ? correctionStage : null,
+        corrected_neonate_color: feedbackType === "corrected" && correctionColor ? correctionColor : null,
       }),
     });
     const data = await response.json().catch(() => ({}));
@@ -886,6 +888,14 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
               <select value={correctionTaxon} onChange={(e) => setCorrectionTaxon(e.target.value)} className="min-w-[220px] flex-1 rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[10px] text-white/48 outline-none">
                 <option value="Unknown / review">Correct answer: Unknown / review</option>
                 {SNAKE_SORTER_TAXA.map((taxon) => <option key={taxon} value={taxon}>{taxon}</option>)}
+              </select>
+              <select value={correctionStage} onChange={(e) => setCorrectionStage(e.target.value)} aria-label="Corrected life stage" className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[10px] text-white/48 outline-none">
+                <option value="">Stage: no change</option>
+                {["hatchling", "neonate", "juvenile", "subadult", "adult", "unknown"].map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+              </select>
+              <select value={correctionColor} onChange={(e) => setCorrectionColor(e.target.value)} aria-label="Corrected neonate color" className="rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-[10px] text-white/48 outline-none">
+                <option value="">Neonate color: no change</option>
+                {["red", "yellow", "not_applicable", "unknown"].map((color) => <option key={color} value={color}>{color}</option>)}
               </select>
               <button type="button" onClick={() => void submitFeedback("corrected")} className="rounded-xl border border-rose-300/12 bg-rose-300/[.035] px-3 py-2 text-[10px] font-black text-rose-100/55">Save correction</button>
             </div>

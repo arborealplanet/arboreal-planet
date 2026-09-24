@@ -20,13 +20,15 @@ export async function GET() {
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const headers = h(identity.token);
+  // Members see their own scan history; the owner sees everything.
+  const ownerScope = identity.access.isOwner ? "" : `&created_by=eq.${encodeURIComponent(identity.user.id)}`;
   const [runsResponse, feedbackResponse, modelsResponse] = await Promise.all([
     fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?select=id,model_version_id,evidence_frame_count,source_asset_count,source_image_count,source_video_count,life_stage_hint,color_hint,scan_mode,result_taxon,result_confidence,status,error_code,confirmed_by_owner,created_at&order=created_at.desc&limit=50`,
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?select=id,model_version_id,evidence_frame_count,source_asset_count,source_image_count,source_video_count,life_stage_hint,color_hint,scan_mode,result_taxon,result_confidence,status,error_code,confirmed_by_owner,created_at&order=created_at.desc&limit=50${ownerScope}`,
       { headers, cache: "no-store" },
     ),
     fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_scan_feedback?select=id,analysis_run_id,feedback_type,predicted_taxon,corrected_taxon,corrected_life_stage,corrected_neonate_color,notes,created_at&order=created_at.desc&limit=100`,
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_scan_feedback?select=id,analysis_run_id,feedback_type,predicted_taxon,corrected_taxon,corrected_life_stage,corrected_neonate_color,notes,created_at&order=created_at.desc&limit=100${ownerScope}`,
       { headers, cache: "no-store" },
     ),
     fetch(
