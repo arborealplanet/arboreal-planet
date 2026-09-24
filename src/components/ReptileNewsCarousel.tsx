@@ -24,8 +24,8 @@ export function ReptileNewsCarousel({ stories }: { stories: ReptileStory[] }) {
             <a href={story.url} target="_blank" rel="noopener noreferrer" className="mt-auto pt-7 text-sm font-bold text-emerald-200 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-300" aria-label={`Read ${story.title} at ${story.publisher} (opens in a new tab)`}>Read at {story.publisher} ↗</a>
           </article>)}
         </div>
-        <p className="mt-2 text-xs text-white/50">Headlines from the publisher’s feed. Select a story to read the original article. Updated as the feed changes; new stories are not guaranteed every day.</p>
-      </> : <div className="mt-8 rounded-3xl border border-white/10 bg-white/[.03] p-7 text-sm leading-7 text-white/65">The live headlines are unavailable right now. Visit the <Link href="/news" className="font-semibold text-emerald-200 underline">news desk</Link> or browse <a href="https://www.sciencedaily.com/news/plants_animals/frogs_and_reptiles/" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-200 underline">ScienceDaily’s reptile stories</a>.</div>}
+        <p className="mt-2 text-xs text-white/50">Headlines from Science Daily, REPTILES Magazine and Phys.org feeds. Select a story to read the original article. Feeds refresh every six hours when visited; new stories are not guaranteed every day.</p>
+      </> : <div className="mt-8 rounded-3xl border border-white/10 bg-white/[.03] p-7 text-sm leading-7 text-white/65">The live headlines are unavailable right now. Visit the <Link href="/news" className="font-semibold text-emerald-200 underline">news desk</Link> or browse <a href="https://www.sciencedaily.com/news/plants_animals/frogs_and_reptiles/" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-200 underline">Science Daily’s reptile stories</a>.</div>}
     </div>
   </section>;
 }
