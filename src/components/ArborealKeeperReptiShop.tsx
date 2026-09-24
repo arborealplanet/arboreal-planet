@@ -19,16 +19,14 @@ function ShopLoopVideo() {
   const refs = useRef<Array<HTMLVideoElement | null>>([]);
 
   const advance = () => {
-    setClip((current) => {
-      const next = (current + 1) % SHOP_CLIPS.length;
-      const upcoming = refs.current[next];
-      if (upcoming) {
-        upcoming.currentTime = 0;
-        void upcoming.play().catch(() => {});
-      }
-      refs.current[current]?.pause();
-      return next;
-    });
+    const next = (clip + 1) % SHOP_CLIPS.length;
+    const upcoming = refs.current[next];
+    if (upcoming) {
+      upcoming.currentTime = 0;
+      void upcoming.play().catch(() => {});
+    }
+    refs.current[clip]?.pause();
+    setClip(next);
   };
 
   return (
