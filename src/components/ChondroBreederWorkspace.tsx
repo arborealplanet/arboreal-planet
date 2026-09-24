@@ -157,6 +157,9 @@ export function ChondroBreederWorkspace() {
                   sizes="74px"
                   className="object-cover"
                 />
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent px-1 pb-1.5 pt-6 text-center text-[8px] font-black uppercase tracking-[.2em] text-white/95">
+                  {item.navLabel ?? item.label}
+                </span>
               </span>
             </button>
           );
