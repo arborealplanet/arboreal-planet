@@ -9,6 +9,7 @@ export function KeeperFollowAction({ username }: { username: string }) {
   const router = useRouter();
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
+  const [canInteract, setCanInteract] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -19,7 +20,16 @@ export function KeeperFollowAction({ username }: { username: string }) {
         if (!response.ok || !data) setState({ signedIn: false, following: false, canFollow: false, error: data?.error || "Follow unavailable" });
         else setState(data);
       });
-    return () => { active = false; };
+    fetch(`/api/keepers/${encodeURIComponent(username)}/block-status`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (active && d && d.canInteract === false) setCanInteract(false); })
+      .catch(() => {});
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { username?: string; blocked?: boolean } | undefined;
+      if (detail?.username === username && active) setCanInteract(!detail.blocked);
+    };
+    window.addEventListener("ap:block-changed", onChange);
+    return () => { active = false; window.removeEventListener("ap:block-changed", onChange); };
   }, [username]);
 
   async function toggle() {
@@ -43,7 +53,7 @@ export function KeeperFollowAction({ username }: { username: string }) {
     }
   }
 
-  if (!state || state.error || !state.canFollow) return null;
+  if (!state || state.error || !state.canFollow || !canInteract) return null;
 
   return <button type="button" onClick={() => void toggle()} disabled={busy} className={`rounded-xl border px-4 py-2.5 text-xs font-black transition disabled:opacity-45 ${state.following ? "border-white/[.08] bg-white/[.025] text-white/55 hover:border-red-200/15 hover:text-red-100/60" : "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/72 hover:bg-emerald-300/[.08]"}`}>{busy ? "Working…" : state.following ? "Following" : state.signedIn ? "Follow keeper" : "Sign in to follow"}</button>;
 }

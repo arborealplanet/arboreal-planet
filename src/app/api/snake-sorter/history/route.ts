@@ -15,6 +15,45 @@ async function sorterIdentity() {
   return { ...identity, access };
 }
 
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function DELETE(request: Request) {
+  const identity = await sorterIdentity();
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const url = new URL(request.url);
+  const rawId = url.searchParams.get("id");
+  let id = rawId && uuid.test(rawId) ? rawId : null;
+  if (!id) {
+    const body = await request.json().catch(() => null) as { id?: unknown } | null;
+    const candidate = typeof body?.id === "string" ? body.id : "";
+    if (uuid.test(candidate)) id = candidate;
+  }
+  if (!id) return NextResponse.json({ error: "Invalid scan id" }, { status: 400 });
+
+  // Users can only delete their own scans; the check rides on created_by.
+  const ownerScope = `&created_by=eq.${encodeURIComponent(identity.user.id)}`;
+  const headers = h(identity.token);
+  const runResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(id)}${ownerScope}`,
+    {
+      method: "DELETE",
+      headers: { ...headers, Prefer: "return=representation" },
+      cache: "no-store",
+    },
+  );
+  if (!runResponse.ok) return NextResponse.json({ error: "Could not delete scan" }, { status: 502 });
+  const rows = (await runResponse.json().catch(() => [])) as Array<{ id: string }>;
+  if (!rows.length) return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+
+  await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_scan_feedback?analysis_run_id=eq.${encodeURIComponent(id)}${ownerScope}`,
+    { method: "DELETE", headers, cache: "no-store" },
+  ).catch(() => null);
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function GET() {
   const identity = await sorterIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });

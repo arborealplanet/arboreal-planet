@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { blockBetween } from "@/lib/blocks";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 type TargetProfile = { id: string; username: string; display_name: string | null };
@@ -40,6 +41,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ us
   const target = await targetProfile(username);
   if (!target) return NextResponse.json({ error: "Keeper not found" }, { status: 404 });
   if (identity.user.id === target.id) return NextResponse.json({ error: "You cannot follow yourself" }, { status: 400 });
+  if (await blockBetween(identity.token, identity.user.id, target.id)) return NextResponse.json({ error: "You cannot interact with this keeper right now." }, { status: 403 });
 
   const existingResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/user_follows?follower_id=eq.${encodeURIComponent(identity.user.id)}&following_id=eq.${encodeURIComponent(target.id)}&select=following_id&limit=1`, {
     headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${identity.token}`, Accept: "application/json" },

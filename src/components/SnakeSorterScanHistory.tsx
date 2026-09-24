@@ -70,6 +70,10 @@ export function SnakeSorterScanHistory() {
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "confirmed" | "corrected" | "needs_review">("all");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   async function load() {
     const response = await fetch("/api/snake-sorter/history", { cache: "no-store" });
@@ -79,6 +83,44 @@ export function SnakeSorterScanHistory() {
       setSummary(data.summary ?? emptySummary);
     }
     setLoading(false);
+  }
+
+  async function removeRun(id: string) {
+    setDeleting(id);
+    setActionError("");
+    try {
+      const response = await fetch(`/api/snake-sorter/history?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!response.ok) {
+        setActionError("Could not delete that scan.");
+        return;
+      }
+      await load();
+    } finally {
+      setDeleting(null);
+      setConfirmDelete(null);
+    }
+  }
+
+  async function exportScans() {
+    setExporting(true);
+    setActionError("");
+    try {
+      const response = await fetch("/api/snake-sorter/history/export", { cache: "no-store" });
+      if (!response.ok) throw new Error("export failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `snake-sorter-scans-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setActionError("Could not export scan history.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   useEffect(() => {
@@ -114,8 +156,12 @@ export function SnakeSorterScanHistory() {
           <h2 className="mt-2 text-2xl font-semibold">Recent scans</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/30">Review real-world identification performance without storing the original scan media.</p>
         </div>
-        <button type="button" onClick={() => void load()} className="rounded-xl border border-white/[.07] bg-black/[.08] px-3 py-2 text-[10px] font-black text-white/40 transition hover:text-white/65">Refresh</button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => void exportScans()} disabled={exporting} className="rounded-xl border border-white/[.07] bg-black/[.08] px-3 py-2 text-[10px] font-black text-white/40 transition hover:text-white/65 disabled:opacity-50">{exporting ? "Exporting…" : "Export my scans"}</button>
+          <button type="button" onClick={() => void load()} className="rounded-xl border border-white/[.07] bg-black/[.08] px-3 py-2 text-[10px] font-black text-white/40 transition hover:text-white/65">Refresh</button>
+        </div>
       </div>
+      {actionError && <div className="mt-3 rounded-xl border border-rose-300/15 bg-rose-300/[.04] px-3 py-2 text-[11px] text-rose-100/65">{actionError}</div>}
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
@@ -172,9 +218,17 @@ export function SnakeSorterScanHistory() {
                       <span>{new Date(run.created_at).toLocaleString()}</span>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${badge(run.status)}`}>{run.status}</span>
                     {feedback && <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${badge(feedback)}`}>{feedback.replace("_"," ")}</span>}
+                    {confirmDelete === run.id ? (
+                      <>
+                        <button type="button" onClick={() => void removeRun(run.id)} disabled={deleting === run.id} className="rounded-full border border-rose-300/25 bg-rose-300/[.08] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] text-rose-100/75 transition hover:bg-rose-300/[.14] disabled:opacity-50">{deleting === run.id ? "Deleting…" : "Confirm delete"}</button>
+                        <button type="button" onClick={() => setConfirmDelete(null)} disabled={deleting === run.id} className="rounded-full border border-white/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] text-white/40 transition hover:text-white/65 disabled:opacity-50">Cancel</button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmDelete(run.id)} className="rounded-full border border-white/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] text-white/28 transition hover:border-rose-300/20 hover:text-rose-100/60">Delete</button>
+                    )}
                   </div>
                 </div>
 

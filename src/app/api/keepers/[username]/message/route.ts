@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { blockBetween } from "@/lib/blocks";
+import { createMessageRequest, relationshipExists } from "@/lib/message-requests";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 type Target = { id: string; username: string; display_name: string | null };
@@ -23,6 +25,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ us
   const target = await getTarget(username);
   if (!target) return NextResponse.json({ error: "Keeper not found" }, { status: 404 });
   if (target.id === identity.user.id) return NextResponse.json({ error: "You cannot message yourself" }, { status: 400 });
+  if (await blockBetween(identity.token, identity.user.id, target.id)) return NextResponse.json({ error: "You cannot message this keeper right now." }, { status: 403 });
 
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/create_direct_conversation`, {
     method: "POST",
@@ -32,5 +35,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ us
   });
   const payload = await response.json().catch(() => null) as string | { message?: string } | null;
   if (!response.ok || typeof payload !== "string") return NextResponse.json({ error: "Could not start conversation" }, { status: response.status || 400 });
-  return NextResponse.json({ conversationId: payload });
+  let requestPending = false;
+  if (!(await relationshipExists(identity.token, identity.user.id, target.id))) {
+    await createMessageRequest(identity.token, payload, identity.user.id, target.id);
+    requestPending = true;
+  }
+  return NextResponse.json({ conversationId: payload, requestPending });
 }

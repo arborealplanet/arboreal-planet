@@ -175,6 +175,7 @@ async function sampleVideo(file: File, mode: string, sourceIndex: number) {
 export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = true, canViewReferenceMedia = true }: { onReferenceAdded?: () => void; canManageReferences?: boolean; canViewReferenceMedia?: boolean }) {
   const [assets, setAssets] = useState<ScanAsset[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraExpanded, setCameraExpanded] = useState(false);
   const [recording, setRecording] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
@@ -214,6 +215,17 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
       assetsRef.current.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
     };
   }, []);
+
+  useEffect(() => {
+    if (!cameraExpanded) return;
+    document.documentElement.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setCameraExpanded(false); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.documentElement.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [cameraExpanded]);
 
   useEffect(() => {
     if (!cameraOpen) return;
@@ -328,6 +340,7 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setLiveQuality(null);
+    setCameraExpanded(false);
     setCameraOpen(false);
   }
 
@@ -528,16 +541,26 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
         {cameraError && <div className="mt-4 rounded-2xl border border-rose-300/15 bg-rose-300/[.04] p-4 text-xs text-rose-100/65">{cameraError}</div>}
 
         {cameraOpen && (
-          <div className="mt-5 overflow-hidden rounded-[24px] border border-white/[.08] bg-black/30">
-            <div className="relative aspect-video bg-black">
-              <video ref={videoRef} muted playsInline className="h-full w-full object-contain" />
+          <div className={cameraExpanded
+            ? "fixed inset-0 z-[120] flex flex-col overflow-hidden border border-white/[.08] bg-[#04090b]"
+            : "mt-5 overflow-hidden rounded-[24px] border border-white/[.08] bg-black/30"}>
+            <div className={cameraExpanded ? "relative min-h-0 flex-1 bg-black" : "relative aspect-video bg-black"}>
+              <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full object-contain" />
               {recording && <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/65 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-rose-200"><span className="h-2 w-2 animate-pulse rounded-full bg-rose-400" /> Recording</div>}
               {liveQuality && <div className="absolute right-4 top-4 max-w-[220px] rounded-2xl border border-white/10 bg-black/70 px-3 py-2 backdrop-blur"><div className="flex items-center justify-between gap-3"><span className="text-[9px] font-black uppercase tracking-[.1em] text-white/55">{liveQuality.label}</span><span className="text-[10px] font-semibold text-white/45">{Math.round(liveQuality.score*100)}%</span></div><div className="mt-1 text-[9px] leading-4 text-white/30">{liveQuality.notes[0]}</div></div>}
               <div className="pointer-events-none absolute inset-6 rounded-[24px] border border-white/10">
                 <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-200/20" />
               </div>
+              <button
+                type="button"
+                onClick={() => setCameraExpanded((v) => !v)}
+                title={cameraExpanded ? "Exit full screen (Esc)" : "Full screen"}
+                className="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/65 text-lg text-white/80 backdrop-blur transition hover:bg-black/85 hover:text-white"
+              >
+                {cameraExpanded ? "⤡" : "⤢"}
+              </button>
             </div>
-            <div className="flex flex-wrap gap-3 border-t border-white/[.06] p-4">
+            <div className={`flex shrink-0 flex-wrap items-center gap-3 border-t border-white/[.06] p-4 ${cameraExpanded ? "bg-[#04090b]" : ""}`}>
               <button type="button" onClick={() => void captureStill()} className={`${buttonBase} border-sky-300/15 bg-sky-300/[.05] text-sky-100/70`}>Capture photo</button>
               {!recording ? (
                 <button type="button" onClick={startRecording} className={`${buttonBase} border-rose-300/15 bg-rose-300/[.05] text-rose-100/70`}>Start recording</button>
@@ -545,6 +568,9 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
                 <button type="button" onClick={stopRecording} className={`${buttonBase} border-rose-300/25 bg-rose-300/[.12] text-rose-100`}>Stop recording</button>
               )}
               <span className="ml-auto self-center text-[10px] text-white/24">Camera footage stays local; Analyze sends sampled evidence frames only.</span>
+              {cameraExpanded && (
+                <button type="button" onClick={() => setCameraExpanded(false)} className={`${buttonBase} border-white/15 bg-white/[.05] text-white/70`}>Exit full screen</button>
+              )}
             </div>
           </div>
         )}

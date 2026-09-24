@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListingOwnerControls } from "@/components/ListingOwnerControls";
+import { ListingViewTracker } from "@/components/ListingViewTracker";
 import { MessageSellerButton } from "@/components/MessageSellerButton";
 import { SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL,getServerIdentity } from "@/lib/supabase-auth";
 
@@ -34,6 +35,7 @@ export default async function ListingPage({params}:{params:Promise<{id:string}>}
   const animalDetails=[["Species",listing.species?`${listing.species.common_name} · ${listing.species.scientific_name}`:null],["Locality",listing.localities?.name??null],["Morph / trait",listing.morph],["Sex",listing.sex],["Age / birth year",listing.age_or_year],["Seller location",listing.seller_location]];
 
   return <main className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
+    <ListingViewTracker listingId={listing.id} isOwner={isOwner}/>
     <Link href={isOwner?"/marketplace/mine":"/marketplace"} className="text-xs font-bold text-emerald-200/70">← {isOwner?"My Listings":"Marketplace"}</Link>
     <div className="mt-5 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
       <section className="panel overflow-hidden rounded-3xl">

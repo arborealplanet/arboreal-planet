@@ -10,5 +10,5 @@ export async function GET(){
   if(!s.ok||!l.ok)return NextResponse.json({error:"Animal catalog unavailable"},{status:502});
   const rows=await s.json();
   const localities=await l.json();
-  return NextResponse.json({rows,species:rows.filter((x:{published:boolean})=>x.published).map((x:{id:string;common_name:string;scientific_name:string})=>({id:x.id,common_name:x.common_name,scientific_name:x.scientific_name})),localities});
+  return NextResponse.json({rows,species:rows.filter((x:{published:boolean})=>x.published).map((x:{id:string;common_name:string;scientific_name:string;animal_group:string})=>({id:x.id,common_name:x.common_name,scientific_name:x.scientific_name,animal_group:x.animal_group})),localities});
 }

@@ -45,7 +45,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   let items: SearchItem[] = [];
 
   if (term) {
-    const [animals, plants, profiles, listings, posts, pedigrees, events, journal] = await Promise.all([
+    const [animals, plants, profiles, listings, posts, pedigrees, events, journal, episodes] = await Promise.all([
       publicRows("species?published=eq.true&select=slug,common_name,scientific_name,animal_group,description,tags&limit=100"),
       publicRows("plant_collections?select=slug,name,scientific_name,plant_group,description,tags,status&limit=100"),
       publicRows("profiles?profile_visibility=eq.public&select=username,display_name,bio,location,seller_enabled,seller_verification_status&limit=100"),
@@ -54,6 +54,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       publicRows("gtp_pedigree_animals?visibility=eq.public&select=id,registry_code,name,sex,locality_label,breeder_animal_id,hatch_year,record_status&order=updated_at.desc&limit=300"),
       publicRows("events?status=eq.PUBLISHED&select=slug,title,organizer,event_type,description,starts_at,venue_name,city,state_region,country&order=starts_at.asc&limit=200"),
       publicRows("journal_articles?status=eq.PUBLISHED&select=slug,title,excerpt,content_type,category,author_display,tags,published_at&order=published_at.desc&limit=200"),
+      publicRows("episodes?status=eq.PUBLISHED&select=slug,title,description,episode_number,submitted_by,published_at&order=published_at.desc&limit=200"),
     ]);
 
     items = [
@@ -65,6 +66,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       ...filterText(pedigrees, term, ["registry_code", "name", "locality_label", "breeder_animal_id", "record_status"]).map((row) => ({ kind: "Registered GTP", title: String(row.name ?? "Registered animal"), subtitle: [row.registry_code, row.locality_label].filter(Boolean).join(" · "), href: `/genetics/database/${row.id}`, detail: [row.sex, row.hatch_year ? `Hatched ${row.hatch_year}` : null, row.breeder_animal_id ? `Breeder ID ${row.breeder_animal_id}` : null].filter(Boolean).join(" · "), badge: String(row.record_status ?? "keeper_reported").replaceAll("_", " ").toUpperCase() })),
       ...filterText(events, term, ["title", "organizer", "event_type", "description", "venue_name", "city", "state_region", "country"]).map((row) => ({ kind: "Shows & Events", title: String(row.title ?? "Event"), subtitle: `${eventDate(row.starts_at)} · ${[row.city,row.state_region].filter(Boolean).join(", ")}`, href: `/events/${row.slug}`, detail: [row.venue_name,row.organizer].filter(Boolean).join(" · "), badge: "PUBLISHED EVENT" })),
       ...filterText(journal, term, ["title", "excerpt", "content_type", "category", "author_display", "tags"]).map((row) => ({ kind: "Learn", title: String(row.title ?? "Journal article"), subtitle: `${String(row.content_type ?? "ARTICLE").replaceAll("_"," ")} · ${String(row.category ?? "GENERAL").replaceAll("_"," ")}`, href: `/learn/${row.slug}`, detail: String(row.excerpt ?? row.author_display ?? ""), badge: "JOURNAL" })),
+      ...filterText(episodes, term, ["title", "description", "submitted_by"]).map((row) => ({ kind: "Arboreal Planet TV", title: String(row.title ?? "Episode"), subtitle: [row.episode_number != null ? `Episode ${row.episode_number}` : null, row.submitted_by ? `by ${row.submitted_by}` : null].filter(Boolean).join(" · ") || "Episode", href: `/episodes/${row.slug}`, detail: String(row.description ?? ""), badge: "EPISODE" })),
     ];
   }
 
@@ -76,7 +78,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return <main className="mx-auto max-w-7xl px-5 py-10 pb-20 sm:px-6 lg:py-14">
     <div className="section-kicker">Global discovery</div>
     <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-.04em] sm:text-5xl">Search across Arboreal Planet.</h1>
-    <p className="mt-4 max-w-3xl text-sm leading-7 text-white/48">Find reference records, Journal pieces, plants, keepers, active marketplace listings, community posts, published GTP pedigrees and source-linked events from one place. Private records stay private.</p>
+    <p className="mt-4 max-w-3xl text-sm leading-7 text-white/48">Find reference records, Journal pieces, Arboreal Planet TV episodes, plants, keepers, active marketplace listings, community posts, published GTP pedigrees and source-linked events from one place. Private records stay private.</p>
 
     <form action="/search" method="get" className="panel mt-7 flex flex-col gap-3 rounded-[26px] p-4 sm:flex-row">
       <input name="q" defaultValue={term} autoFocus placeholder="Try Green Tree Python, Nepenthes, husbandry, Jayapura, a show, AP-GTP…, or a keeper" className="min-w-0 flex-1 rounded-2xl border border-white/[.08] bg-black/15 px-4 py-3.5 text-sm text-white/75 outline-none placeholder:text-white/22 focus:border-emerald-300/20" />
