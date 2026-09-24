@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { normalizeCommunitySection } from "@/lib/community-sections";
 
-type SubjectType = "ANIMAL" | "PLANT" | "TOPIC";
-const TYPES = new Set<SubjectType>(["ANIMAL","PLANT","TOPIC"]);
+type SubjectType = "ANIMAL" | "PLANT" | "TOPIC" | "SECTION";
+const TYPES = new Set<SubjectType>(["ANIMAL","PLANT","TOPIC","SECTION"]);
 const TOPICS = new Map([
   ["green tree python","Green Tree Python"],
   ["green tree pythons","Green Tree Python"],
@@ -25,6 +26,10 @@ function authHeaders(token: string, prefer?: string) {
 }
 
 async function resolveSubject(type: SubjectType, rawId: string, rawKey: string) {
+  if (type === "SECTION") {
+    const key = normalizeCommunitySection(rawKey);
+    return key ? { id: null as string | null, key } : null;
+  }
   if (type === "TOPIC") {
     const key = TOPICS.get(rawKey.trim().toLowerCase());
     return key ? { id: null as string | null, key } : null;
@@ -48,11 +53,14 @@ function requestSubject(request: NextRequest) {
   const type = String(request.nextUrl.searchParams.get("type") ?? "").toUpperCase() as SubjectType;
   const id = String(request.nextUrl.searchParams.get("id") ?? "").trim();
   const key = String(request.nextUrl.searchParams.get("key") ?? "").trim().slice(0, 120);
-  return TYPES.has(type) && (type === "TOPIC" ? Boolean(key) : Boolean(id)) ? { type, id, key } : null;
+  const usesKey = type === "TOPIC" || type === "SECTION";
+  return TYPES.has(type) && (usesKey ? Boolean(key) : Boolean(id)) ? { type, id, key } : null;
 }
 
 function followQuery(userId:string,type:SubjectType,resolved:{id:string|null;key:string}){
-  const identityFilter=type==="TOPIC"?`subject_key=eq.${encodeURIComponent(resolved.key)}`:`subject_id=eq.${encodeURIComponent(resolved.id??"")}`;
+  const identityFilter=type==="TOPIC"||type==="SECTION"
+    ?`subject_key=eq.${encodeURIComponent(resolved.key)}`
+    :`subject_id=eq.${encodeURIComponent(resolved.id??"")}`;
   return `${SUPABASE_AUTH_URL}/rest/v1/user_subject_follows?user_id=eq.${encodeURIComponent(userId)}&subject_type=eq.${type}&${identityFilter}`;
 }
 
