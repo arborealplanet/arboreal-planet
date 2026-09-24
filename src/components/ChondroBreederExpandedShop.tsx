@@ -682,7 +682,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
               <article key={type} className={carousel ? "w-[66%] shrink-0 snap-start overflow-hidden rounded-[20px] border border-white/[.07] bg-black/15 sm:w-[230px]" : "overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15"}>
                 <div className={carousel ? "relative h-24 overflow-hidden border-b border-white/[.06] bg-black/25" : "relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25"}>
                   {type === "Chondro Dojo Bin" ? (
-                    <Image src="/hatchery/game/chondro-dojo-2-stack.webp" alt="Chondro Dojo 2 Stack — tall clear tub enclosure in a wooden rack with perches and a green tree python neonate" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center opacity-95" />
+                    <Image src="/hatchery/game/chondro-dojo-2-stack.webp" alt="Chondro Dojo 2 Stack — clear 64-quart tub enclosure in a wooden rack with a PVC pipe perch frame, water dish, mulch, and a red green tree python neonate" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center opacity-95" />
                   ) : (
                     <Image src="/hatchery/game/pvc-arboreal-enclosure.webp" alt="PVC Arboreal Enclosure — tall black PVC enclosure with perches and an adult green tree python" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center opacity-95" />
                   )}
