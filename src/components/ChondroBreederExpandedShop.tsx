@@ -404,7 +404,8 @@ async function persistStandaloneShopSave(save: GameSave, authenticated: boolean)
   if (!response.ok) throw new Error("save failed");
 }
 
-export function ChondroBreederExpandedShop({ section }: { section?: "qa" | "enclosures" | "snakes" }) {
+export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa" | "enclosures" | "snakes"; layout?: "stack" | "carousel" }) {
+  const carousel = layout === "carousel";
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [conservation, setConservation] = useState<ConservationRow[]>([]);
@@ -665,13 +666,13 @@ export function ChondroBreederExpandedShop({ section }: { section?: "qa" | "encl
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className={carousel ? "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
           {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
             const price = enclosurePrices[type];
             const owned = Number(save.enclosures?.[type] ?? 0);
             const unavailable = busy !== null || roomEnclosureSlots <= 0 || save.cash < price;
             return (
-              <article key={type} className="overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15">
+              <article key={type} className={`overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15 ${carousel ? "w-[85%] shrink-0 snap-start sm:w-[55%]" : ""}`}>
                 <div className="relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25">
                   {type === "Chondro Dojo Bin" ? (
                     <Image src="/hatchery/game/pvc-enclosure.webp" alt="Illustrated Chondro Dojo enclosure with white PVC perches" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-[center_64%] opacity-90" />

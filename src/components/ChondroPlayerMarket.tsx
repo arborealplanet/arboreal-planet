@@ -77,7 +77,7 @@ function traitSummary(animal: SnakeLite) {
   return `Top tested trait · ${best[0]} ${best[1]}%`;
 }
 
-export function ChondroPlayerMarket({ bare }: { bare?: boolean }) {
+export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?: "stack" | "carousel" }) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [save, setSave] = useState<SaveState>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -193,11 +193,11 @@ export function ChondroPlayerMarket({ bare }: { bare?: boolean }) {
           <div className="mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4">
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-amber-100/55">Your active listings</div>
             <p className="mt-1 text-xs leading-5 text-white/34">These snakes are still listed. They are intentionally kept visible here so selling an animal never makes it look lost.</p>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className={layout === "carousel" ? "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin]" : "mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
               {mine.map((listing) => {
                 const animal = listing.snake;
                 return (
-                  <article key={listing.id} className="rounded-[22px] border border-amber-200/10 bg-black/14 p-3">
+                  <article key={listing.id} className={`rounded-[22px] border border-amber-200/10 bg-black/14 p-3 ${layout === "carousel" ? "w-[85%] shrink-0 snap-start sm:w-[55%]" : ""}`}>
                     <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
                       <ChondroSnakeIcon
                         subspecies={animal.subspecies as never}
@@ -238,12 +238,12 @@ export function ChondroPlayerMarket({ bare }: { bare?: boolean }) {
         <div className="mt-5">
           <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Other breeders</div>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className={layout === "carousel" ? "mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin]" : "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
           {available.map((listing) => {
             const animal = listing.snake;
             const cannotBuy = busy !== null || cash < listing.price || openSlots <= 0;
             return (
-              <article key={listing.id} className="rounded-[22px] border border-white/[.06] bg-black/12 p-3">
+              <article key={listing.id} className={`rounded-[22px] border border-white/[.06] bg-black/12 p-3 ${layout === "carousel" ? "w-[85%] shrink-0 snap-start sm:w-[55%]" : ""}`}>
                 <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
                   <ChondroSnakeIcon
                     subspecies={animal.subspecies as never}
