@@ -24,17 +24,17 @@ export default async function Home() {
   const stories = await getReptileNews();
   return <main>
     <section className="noise-surface relative overflow-hidden border-b border-white/10 bg-[radial-gradient(ellipse_at_50%_20%,rgba(67,137,69,.14),transparent_58%),#050b08]">
-      <div className="relative mx-auto flex max-w-7xl flex-col items-center px-5 pb-16 pt-6 text-center sm:px-6 sm:pb-24 sm:pt-12">
+      <div className="relative mx-auto flex max-w-7xl flex-col items-center px-5 pb-12 pt-6 text-center sm:px-6 sm:pb-16 sm:pt-10">
         <HomeLogoAnimation />
         <Link href="/arboreals-by-bunn" aria-label="Visit the Arboreals By Bunn website" className="group mt-4 flex w-full max-w-md items-center gap-4 rounded-2xl border border-amber-200/30 bg-black/85 p-3 text-left shadow-xl transition hover:-translate-y-1 hover:border-amber-200/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200">
           <Image src="/abb-site/assets/abb-logo-masthead.jpg" alt="Arboreals By Bunn logo with a Green Tree Python" width={160} height={102} className="h-20 w-32 shrink-0 rounded-lg object-contain sm:h-24 sm:w-40" />
           <span><span className="block text-base font-bold text-white sm:text-lg">Arboreals By Bunn</span><span className="mt-1 block text-sm font-semibold text-amber-100/80 group-hover:text-amber-100">Visit the website ↗</span></span>
         </Link>
-        <div className="mt-14 max-w-4xl sm:mt-20">
-          <p className="text-xs font-black uppercase tracking-[.3em] text-emerald-300/75">Welcome to Arboreal Planet</p>
-          <h1 className="mt-5 text-5xl font-semibold leading-[.98] tracking-[-.06em] text-white sm:text-7xl">A whole world for <span className="text-emerald-300">reptile people.</span></h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-white/65 sm:text-lg">Come for the animals. Stay for the keepers, stories, plants and unexpected discoveries. Explore freely, then join the conversation when you&apos;re ready.</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3"><Link href="/animals" className="primary-action">Start exploring →</Link><Link href="/community" className="secondary-action">Meet the community</Link></div>
+        <div className="mt-10 max-w-4xl sm:mt-12">
+          <p className="section-kicker">Welcome to Arboreal Planet</p>
+          <h1 className="mt-4 text-5xl font-semibold leading-[.98] tracking-[-.06em] text-white sm:text-7xl">A whole world for <span className="text-emerald-300">reptile people.</span></h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">Explore animals, plants and stories, then follow keepers and join the conversations that make the hobby feel alive.</p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3"><Link href="/animals" className="primary-action">Start exploring →</Link><Link href="/community" className="secondary-action">Meet the community</Link><Link href="/login?mode=signup" className="secondary-action">Join the planet</Link></div>
         </div>
       </div>
     </section>
@@ -57,15 +57,11 @@ export default async function Home() {
       </div>
     </section>
 
-    <section className="mx-auto grid max-w-7xl gap-5 px-5 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_.95fr]" aria-labelledby="play-title">
+    <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20" aria-labelledby="play-title">
       <div className="relative flex min-h-[400px] flex-col justify-end overflow-hidden rounded-[30px] border border-emerald-300/15 bg-[#101b13] p-7 sm:p-10">
-        <Image src="/hatchery/snakes/localities/manokwari/yellow-adult.webp" alt="Illustrated Green Tree Python" fill sizes="(max-width:1024px) 100vw, 55vw" className="object-contain object-center opacity-80" />
+        <Image src="/hatchery/snakes/localities/manokwari/yellow-adult.webp" alt="Illustrated Green Tree Python" fill sizes="100vw" className="object-contain object-center opacity-80" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#07110a] via-[#07110a]/55 to-transparent" />
-        <div className="relative z-10"><p className="section-kicker">Arboreal Arcade</p><h2 id="play-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white">Learn by playing.</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/75">Build a virtual keeper program, follow lineages, and see where your decisions lead. Virtual animals and game values stay inside the game.</p><Link href="/arcade/enter?next=%2Farcade" className="primary-action mt-6">Explore the Arcade →</Link></div>
-      </div>
-      <div className="flex flex-col justify-between gap-5 rounded-[30px] border border-white/10 bg-gradient-to-br from-[#172b1c] to-[#0c1712] p-7 sm:p-10">
-        <div><p className="section-kicker">Find your people</p><h2 className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white">There&apos;s more to see together.</h2><p className="mt-5 max-w-lg text-sm leading-7 text-white/70">Follow keepers, swap stories, and find the conversations that make this hobby feel alive. Browsing is open to everyone.</p></div>
-        <div className="flex flex-wrap gap-3"><Link href="/community" className="primary-action">Explore the community →</Link><Link href="/login?mode=signup" className="secondary-action">Join the planet</Link></div>
+        <div className="relative z-10 max-w-xl"><p className="section-kicker">Arboreal Arcade</p><h2 id="play-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white">Learn by playing.</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/75">Build a virtual keeper program, follow lineages, and see where your decisions lead. Virtual animals and game values stay inside the game.</p><Link href="/arcade/enter?next=%2Farcade" className="primary-action mt-6">Explore the Arcade →</Link></div>
       </div>
     </section>
 
