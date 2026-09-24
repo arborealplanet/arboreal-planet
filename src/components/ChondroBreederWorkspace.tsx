@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
+import { ArborealKeeperAdHero } from "@/components/ArborealKeeperAdHero";
 import { ArborealKeeperFacilityOverview } from "@/components/ArborealKeeperFacilityOverview";
 import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
@@ -62,6 +63,9 @@ const coreViews = new Set<WorkspaceView>(["breeding", "colony", "clutches", "mar
 
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
+  // Intro advertisement layer: the first thing seen on the Arboreal Keeper
+  // entry routes. Dismissing it reveals the game underneath, untouched.
+  const [showAd, setShowAd] = useState(true);
   const active = views.find((item) => item.id === view) ?? views[0];
 
   function openView(next: WorkspaceView) {
@@ -71,6 +75,7 @@ export function ChondroBreederWorkspace() {
 
   return (
     <div className="min-h-[100dvh] bg-[#030806] pb-[calc(104px+env(safe-area-inset-bottom))] text-white">
+      {showAd ? <ArborealKeeperAdHero onEnter={() => setShowAd(false)} /> : null}
       <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#030806]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[60px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[66px] sm:px-5">
           <Link
