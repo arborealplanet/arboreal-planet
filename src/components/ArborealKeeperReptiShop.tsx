@@ -1,9 +1,65 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
+
+// Three blink variants of Bunn's idle loop. Every clip opens and closes on
+// the same eyes-open pose, so cutting between them is as invisible as each
+// clip's own loop point — the store never visibly repeats.
+const SHOP_CLIPS = [
+  "/hatchery/game/bunn-shop-loop-a.mp4",
+  "/hatchery/game/bunn-shop-loop-b.mp4",
+  "/hatchery/game/bunn-shop-loop-c.mp4",
+];
+
+function ShopLoopVideo() {
+  const [clip, setClip] = useState(0);
+  const refs = useRef<Array<HTMLVideoElement | null>>([]);
+
+  const advance = () => {
+    setClip((current) => {
+      const next = (current + 1) % SHOP_CLIPS.length;
+      const upcoming = refs.current[next];
+      if (upcoming) {
+        upcoming.currentTime = 0;
+        void upcoming.play().catch(() => {});
+      }
+      refs.current[current]?.pause();
+      return next;
+    });
+  };
+
+  return (
+    <>
+      {SHOP_CLIPS.map((src, i) => {
+        const active = i === clip;
+        return (
+          <video
+            key={src}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            autoPlay={i === 0}
+            muted
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            aria-hidden={!active}
+            poster="/hatchery/game/bunn-shop-counter.webp"
+            onEnded={active ? advance : undefined}
+            className={`absolute inset-0 h-full w-full object-cover [object-position:center_35%] transition-opacity duration-150 ${
+              active ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            <source src={src} type="video/mp4" />
+          </video>
+        );
+      })}
+    </>
+  );
+}
 
 const BUNN_TIPS = [
   "Howdy! Bunn here. Buy your housing before your snakes — every chondro needs a home.",
@@ -58,18 +114,7 @@ export function ArborealKeeperReptiShop() {
           aria-label="Ask Bunn for a tip"
           className="absolute inset-0 block h-full w-full cursor-pointer"
         >
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-            poster="/hatchery/game/bunn-shop-counter.webp"
-            className="h-full w-full object-cover [object-position:center_35%]"
-          >
-            <source src="/hatchery/game/bunn-shop-loop.mp4" type="video/mp4" />
-          </video>
+          <ShopLoopVideo />
         </button>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/55 via-black/10 to-transparent p-3 pb-8 sm:p-4 sm:pb-10">
