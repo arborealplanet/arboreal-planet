@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { ReptileStory } from "@/lib/reptile-news";
 
 export function ReptileNewsCarousel({ stories }: { stories: ReptileStory[] }) {
@@ -18,10 +19,16 @@ export function ReptileNewsCarousel({ stories }: { stories: ReptileStory[] }) {
           <button type="button" aria-label="Next news stories" onClick={() => track.current?.scrollBy({ left: 340, behavior: "smooth" })} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-emerald-300">→</button>
         </div>
         <div ref={track} role="region" aria-label="Reptile news stories" tabIndex={0} className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 focus-visible:outline-2 focus-visible:outline-emerald-300">
-          {stories.map((story) => <article key={story.url} className="flex min-h-64 w-[min(82vw,340px)] shrink-0 snap-start flex-col rounded-3xl border border-white/10 bg-gradient-to-br from-[#1b3023] to-[#101b16] p-6 sm:p-7">
-            <div className="flex flex-wrap justify-between gap-2 text-xs font-semibold text-emerald-200/75"><span>{story.publisher}</span><time dateTime={story.publishedAt}>{new Date(story.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</time></div>
-            <h3 className="mt-6 text-xl font-semibold leading-snug text-white">{story.title}</h3>
-            <a href={story.url} target="_blank" rel="noopener noreferrer" className="mt-auto pt-7 text-sm font-bold text-emerald-200 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-300" aria-label={`Read ${story.title} at ${story.publisher} (opens in a new tab)`}>Read at {story.publisher} ↗</a>
+          {stories.map((story) => <article key={story.url} className="flex min-h-[390px] w-[min(82vw,340px)] shrink-0 snap-start flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#1b3023] to-[#101b16]">
+            <div className="relative h-36 overflow-hidden bg-[#14251a]">
+              <Image src="/abb-site/assets/animals.png" alt="" fill sizes="340px" className="object-cover object-center opacity-80" />
+              <span className="absolute bottom-2 left-3 rounded-full bg-black/75 px-2.5 py-1 text-[10px] font-medium text-white/85">Arboreal Planet illustration</span>
+            </div>
+            <div className="flex flex-1 flex-col p-6">
+              <div className="flex flex-wrap justify-between gap-2 text-xs font-semibold text-emerald-200/75"><span>{story.publisher}</span><time dateTime={story.publishedAt}>{new Date(story.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</time></div>
+              <h3 className="mt-5 text-xl font-semibold leading-snug text-white">{story.title}</h3>
+              <a href={story.url} target="_blank" rel="noopener noreferrer" className="mt-auto pt-7 text-sm font-bold text-emerald-200 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-300" aria-label={`Read ${story.title} at ${story.publisher} (opens in a new tab)`}>Read original at {story.publisher} ↗</a>
+            </div>
           </article>)}
         </div>
         <p className="mt-2 text-xs text-white/50">Headlines from Science Daily, REPTILES Magazine, Phys.org, Mongabay and USARK. Select a story to read the original article. Feeds refresh every six hours when visited; new stories are not guaranteed every day.</p>
