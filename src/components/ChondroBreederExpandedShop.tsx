@@ -404,7 +404,7 @@ async function persistStandaloneShopSave(save: GameSave, authenticated: boolean)
   if (!response.ok) throw new Error("save failed");
 }
 
-export function ChondroBreederExpandedShop() {
+export function ChondroBreederExpandedShop({ section }: { section?: "qa" | "enclosures" | "snakes" }) {
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [conservation, setConservation] = useState<ConservationRow[]>([]);
@@ -601,19 +601,8 @@ export function ChondroBreederExpandedShop() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
-      <section className="mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,.09),transparent_44%),#07110d] p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative h-44 w-32 shrink-0 sm:h-56 sm:w-40">
-            <Image src="/branding/shopkeeper-bunn-portrait.png" alt="Bunn, the Arboreal Keeper shopkeeper, holding a green tree python" fill sizes="(max-width: 640px) 128px, 160px" className="object-contain object-bottom" />
-          </div>
-          <div className="min-w-0 flex-1 basis-64">
-            <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Shopkeeper</div>
-            <h3 className="mt-2 text-xl font-semibold text-white/85">Howdy! Bunn here.</h3>
-            <p className="mt-1 max-w-xl text-xs leading-5 text-white/40">Buy your housing before your snakes — every chondro needs a home. The Dojo 2 Stack is where the neonates start out.</p>
-          </div>
-        </div>
-      </section>
+    <div className={section ? undefined : "mx-auto max-w-7xl px-5 pt-5 sm:px-6"}>
+      {(!section || section === "qa") ? (
       <section className="mb-4 overflow-hidden rounded-[26px] border border-violet-300/15 bg-[radial-gradient(circle_at_top_left,rgba(196,181,253,.08),transparent_38%),#0a0810] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -661,7 +650,8 @@ export function ChondroBreederExpandedShop() {
           ))}
         </div>
       </section>
-
+      ) : null}
+      {(!section || section === "enclosures") ? (
       <section className="mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -717,7 +707,8 @@ export function ChondroBreederExpandedShop() {
           })}
         </div>
       </section>
-
+      ) : null}
+      {(!section || section === "snakes") ? (
       <section className="rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -788,6 +779,7 @@ export function ChondroBreederExpandedShop() {
 
         {status ? <div role="status" className="mt-3 text-xs text-sky-100/65">{status}</div> : null}
       </section>
+      ) : null}
     </div>
   );
 }
