@@ -108,7 +108,7 @@ export function ArborealKeeperReptiShop() {
         className="mb-2 flex w-full flex-none items-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.96] px-3 py-2 text-left shadow-[0_10px_30px_rgba(0,0,0,.35)]"
       >
         <span className="min-w-0 flex-1 text-[11px] leading-4 text-[#0a120d] sm:text-[12px]">
-          <span className="font-semibold">Bunn says:</span> {BUNN_TIPS[tip]}
+          <span className="font-semibold">Hank says:</span> {BUNN_TIPS[tip]}
         </span>
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
