@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
 
 // Full-screen intro advertisement for Arboreal Keeper. Shown as the first
 // thing a visitor sees on the Arboreal Keeper entry routes; the CTA dismisses
 // the layer and reveals the game underneath, which stays fully intact.
+// The strike-sting bumper plays full-bleed behind the copy (muted loop).
 export function ArborealKeeperAdHero({ onEnter }: { onEnter: () => void }) {
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -23,32 +23,33 @@ export function ArborealKeeperAdHero({ onEnter }: { onEnter: () => void }) {
       aria-label="Arboreal Keeper advertisement"
       className="fixed inset-0 z-[90] overflow-y-auto bg-[#020604]"
     >
-      {/* Jungle-at-night backdrop */}
+      {/* Strike-sting bumper, full-bleed behind the copy */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          className="h-full w-full object-cover"
+        >
+          <source src="/branding/arboreal-planet-strike-sting.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      {/* Legibility grade over the video */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="absolute inset-0 bg-black/45" />
         <div className="absolute inset-0 bg-[radial-gradient(1100px_520px_at_50%_-8%,rgba(57,230,125,.14),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(700px_420px_at_8%_108%,rgba(20,120,70,.16),transparent_62%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(700px_420px_at_94%_108%,rgba(20,120,70,.12),transparent_62%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,4,.2)_0%,transparent_30%,transparent_70%,rgba(2,6,4,.85)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,4,.45)_0%,transparent_30%,transparent_60%,rgba(2,6,4,.9)_100%)]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col items-center justify-center gap-8 px-5 py-10 sm:px-8 lg:grid lg:grid-cols-[minmax(0,46%)_minmax(0,1fr)] lg:gap-12">
-        {/* Ad poster — the white-background artwork framed as a print ad */}
-        <div className="w-full max-w-[430px] shrink-0 lg:max-w-none">
-          <div className="overflow-hidden rounded-[26px] border-[6px] border-[#0a1510] bg-white shadow-[0_40px_120px_rgba(0,0,0,.65),0_0_80px_rgba(57,230,125,.10)] ring-1 ring-white/20">
-            <Image
-              src="/hatchery/game/arboreal-keeper-ad-hero.webp"
-              alt="Arboreals by Bunn shopkeeper holding a red neonate green tree python — Rare spawn alert! Red neonate hatched. Ready to start your collection."
-              width={1600}
-              height={1600}
-              priority
-              sizes="(max-width: 1024px) 92vw, 42vw"
-              className="h-auto w-full"
-            />
-          </div>
-        </div>
-
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col items-center justify-center px-5 py-10 text-center sm:px-8">
         {/* Ad copy */}
-        <div className="flex w-full max-w-xl flex-col items-center text-center lg:items-start lg:text-left">
+        <div className="flex w-full max-w-xl flex-col items-center text-center">
           <div className="text-[10px] font-black uppercase tracking-[.24em] text-emerald-300/70 sm:text-[11px]">
             The green tree python breeding simulator
           </div>
@@ -62,7 +63,7 @@ export function ArborealKeeperAdHero({ onEnter }: { onEnter: () => void }) {
             start your collection today.
           </p>
 
-          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <button
               type="button"
               onClick={onEnter}

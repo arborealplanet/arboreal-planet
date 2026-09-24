@@ -114,7 +114,7 @@ export function ArborealKeeperReptiShop() {
       </button>
 
       {/* Bunn's animated store — as large as possible, completely clean */}
-      <div className="relative min-h-0 w-full flex-[1.25] overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+      <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
         <div className="absolute inset-0">
           <ShopLoopVideo />
         </div>

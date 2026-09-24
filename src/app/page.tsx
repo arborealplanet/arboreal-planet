@@ -39,6 +39,26 @@ export default async function Home() {
       </div>
     </section>
 
+    <section className="border-b border-white/10 bg-black" aria-label="Arboreal Planet intro film">
+      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6 sm:py-14">
+        <div className="overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.6)]">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="/branding/arboreal-planet-strike-sting-poster.jpg"
+            className="aspect-video w-full object-cover"
+            aria-label="Arboreal Planet intro: a blue-phase green tree python strikes and the view dives down its throat into darkness"
+          >
+            <source src="/branding/arboreal-planet-strike-sting.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <p className="mt-4 text-center text-[11px] font-bold uppercase tracking-[.24em] text-white/35">Arboreal Planet &middot; The intro</p>
+      </div>
+    </section>
+
     <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-24" aria-labelledby="trails-title">
       <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="section-kicker">Pick a path</p><h2 id="trails-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white sm:text-5xl">Where will you wander?</h2></div><Link href="/search" className="text-sm font-semibold text-emerald-300 hover:text-emerald-100">Search the whole planet →</Link></div>
       <div className="mt-8 grid gap-4 lg:grid-cols-3">{trails.map((trail) => <Link key={trail.href} href={trail.href} className={`group relative flex min-h-[340px] flex-col overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br ${trail.tone} p-7 transition hover:-translate-y-1 hover:border-emerald-300/35 sm:p-9`}>
