@@ -1,5 +1,6 @@
 import { NextRequest,NextResponse } from "next/server";
 import { getServerIdentity,SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { normalizeCommunitySection } from "@/lib/community-sections";
 
 const base={apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${SUPABASE_AUTH_KEY}`};
 const MAX_IMAGES=10;
@@ -41,9 +42,11 @@ export async function POST(request:NextRequest){
   const body=String(bodyData.body??"").trim();
   const types=new Set(["POST","QUESTION","BREEDING_UPDATE"]);
   const type=String(bodyData.type??"POST");
+  const section=normalizeCommunitySection(bodyData.section);
   const tags=Array.isArray(bodyData.tags)?bodyData.tags.map(String).map((value:string)=>value.trim()).filter(Boolean).slice(0,4):[];
   const media=Array.isArray(bodyData.media_urls)?bodyData.media_urls.filter((value:unknown):value is string=>typeof value==="string").slice(0,MAX_IMAGES):[];
   const prefix=`${SUPABASE_AUTH_URL}/storage/v1/object/public/community/${identity.user.id}/`;
+  if(!section)return NextResponse.json({error:"Choose a valid community section"},{status:400});
   if(media.some((url:string)=>!url.startsWith(prefix)))return NextResponse.json({error:"Invalid community image"},{status:400});
   const video=cleanVideo(bodyData.video_url);
   if(video===false)return NextResponse.json({error:"Video link must be a valid HTTPS URL"},{status:400});
@@ -59,7 +62,7 @@ export async function POST(request:NextRequest){
   const response=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/community_posts`,{
     method:"POST",
     headers:{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,"Content-Type":"application/json",Prefer:"return=representation"},
-    body:JSON.stringify({author_id:identity.user.id,type,body,tags,media_urls:media,video_url:video,species_id:speciesId,plant_id:plantId}),
+    body:JSON.stringify({author_id:identity.user.id,type,section,body,tags,media_urls:media,video_url:video,species_id:speciesId,plant_id:plantId}),
     cache:"no-store",
   });
   return response.ok?NextResponse.json({post:(await response.json())[0]},{status:201}):NextResponse.json({error:"Could not publish post"},{status:400});
