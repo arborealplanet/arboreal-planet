@@ -69,7 +69,12 @@ export function ChondroRetiredBreedersPanel() {
       }
     }
     void load();
-    return () => { cancelled = true; };
+    const refresh = () => void load();
+    window.addEventListener("arboreal-chondro-breeder-save-change", refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("arboreal-chondro-breeder-save-change", refresh);
+    };
   }, []);
 
   const adults = useMemo(
@@ -99,6 +104,7 @@ export function ChondroRetiredBreedersPanel() {
     delete nextRecovery[animal.id];
     const next: SaveState = {
       ...save,
+      updatedAt: Date.now(),
       colony: (save.colony ?? []).filter((item) => item.id !== animal.id),
       damId: save.damId === animal.id ? "" : save.damId,
       sireId: save.sireId === animal.id ? "" : save.sireId,
@@ -116,13 +122,20 @@ export function ChondroRetiredBreedersPanel() {
     };
 
     try {
-      const response = await fetch("/api/hatchery/chondro-breeder/save", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      if (!response.ok) throw new Error("save failed");
+      // Local-first: guests have no cloud save, so a 401 must not block the
+      // retirement. The cloud PUT below is best-effort sync.
       window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
+      try {
+        const response = await fetch("/api/hatchery/chondro-breeder/save", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next),
+        });
+        if (!response.ok && response.status !== 401) throw new Error("save failed");
+      } catch {
+        // Cloud sync is best-effort; the local save above already applied.
+      }
       setSave(next);
       setStatus(`${animal.name || animal.id} retired. The enclosure slot is now open and the breeder remains in your legacy archive.`);
     } catch {

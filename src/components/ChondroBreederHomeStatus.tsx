@@ -120,6 +120,16 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
     return { view: "breeding" as CoreView, eyebrow: "Ready to breed", title: "Select your next pair", detail: "Your virtual colony has the basic pieces needed to begin another cycle." };
   }, [activeClutch, capacity, colony, cycle, now, save.clutchEstablished, save.season, save.seasonCarePaid]);
 
+  // Don't flash "0/0 · Buy your first chondros" before the save has loaded.
+  if (!loaded) {
+    return (
+      <section className="mt-4 grid gap-3 lg:grid-cols-[1.35fr_.65fr]">
+        <div className="rounded-[24px] border border-white/[.06] bg-black/18 p-5 text-sm text-white/40 sm:p-6">Loading your keeper overview…</div>
+        <div className="rounded-[24px] border border-white/[.06] bg-black/18 p-5 text-sm text-white/40 sm:p-6">Loading your keeper overview…</div>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-4 grid gap-3 lg:grid-cols-[1.35fr_.65fr]">
       <button
