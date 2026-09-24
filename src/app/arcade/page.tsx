@@ -17,7 +17,7 @@ export default function ArcadePage() {
       <PageIntro
         eyebrow="Arcade"
         title="Keeper games built around long-term progression."
-        description="Arboreal Planet's Arcade features Arboreal Keeper, a Green Tree Python breeding and facility game built around long-term progression, locality projects, lineages and keeper management. Additional arboreal species are being developed behind the scenes."
+        description="Arboreal Planet's Arcade is home to Arboreal Keeper — a Green Tree Python breeding and keeper game built around animals, locality projects, lineages, enclosures, offspring and long-term progression."
         aside={<div className="rounded-full border border-amber-200/15 bg-amber-200/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">Virtual animals only</div>}
       />
 
@@ -29,8 +29,8 @@ export default function ArcadePage() {
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-100/55">Featured game</div>
               <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em]">Arboreal Keeper</h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Build a Green Tree Python program around breeding, locality projects, housing, market decisions, progression and records. Emerald Tree Boa systems and additional species are in development and will join the same Arboreal Keeper facility later.</p>
-              <div className="mt-7 flex flex-wrap gap-2">{["Pair", "Incubation", "Gestation", "Litters", "Lineage", "Enclosures", "Facilities", "Conservation"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/42">Build a Green Tree Python program around breeding, locality projects, housing, offspring, market decisions, progression and records. Start small, build your collection and develop your own keeper program over time.</p>
+              <div className="mt-7 flex flex-wrap gap-2">{["Pairing", "Incubation", "Offspring", "Lineage", "Enclosures", "Facilities", "Collection", "Market"].map((item) => <span key={item} className="rounded-full border border-white/[.07] bg-white/[.02] px-3 py-1.5 text-xs text-white/38">{item}</span>)}</div>
               <Link href="/arcade/arboreal-keeper" className="mt-8 inline-flex rounded-xl bg-amber-200 px-5 py-3 text-sm font-bold text-[#17130a]">Enter Arboreal Keeper</Link>
             </div>
 
@@ -83,7 +83,7 @@ export default function ArcadePage() {
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-300/50">Species systems</div>
                 <h3 className="mt-3 text-xl font-semibold text-white/65">Breeding & Genetics</h3>
-                <p className="mt-2 text-sm leading-6 text-white/32">Green Tree Pythons use the live egg and incubation flow today. Emerald Tree Boa pairing, ovulation, gestation and litter systems are being built as the next species expansion.</p>
+                <p className="mt-2 text-sm leading-6 text-white/32">Pair animals, produce clutches, incubate eggs, raise offspring and develop locality and lineage projects across generations.</p>
               </div>
             </div>
           </div>
