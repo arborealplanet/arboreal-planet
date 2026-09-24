@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { storeScreenshotCapture } from "@/lib/snake-sorter/capture-store";
 
 async function ownerIdentity() {
   const identity = await getServerIdentity();
@@ -10,18 +10,21 @@ async function ownerIdentity() {
   return identity;
 }
 
-function storagePath(path: string) {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
-
-function safeFileName(value: string) {
-  const cleaned = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/-+/g, "-").slice(-120);
-  return cleaned || "rendered-capture.png";
-}
-
+/**
+ * Capture-job result ingestion. Each image goes through the shared capture
+ * pipeline (same dedup, same rollback guarantees as media-upload); the job
+ * row tracks completion. Partial success is reported honestly — successfully
+ * stored images are kept, and the job is marked failed only for the images
+ * that did not make it.
+ */
 export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
-  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!identity) {
+    return NextResponse.json(
+      { error: "Owner session expired or missing. Sign in again, then retry." },
+      { status: 401 },
+    );
+  }
 
   const form = await request.formData();
   const jobId = String(form.get("job_id") ?? "").trim();
@@ -62,142 +65,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Capture job is already ${job.status}.` }, { status: 409 });
   }
 
-  const orderResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=eq.${encodeURIComponent(job.candidate_id)}&select=media_order&order=media_order.desc&limit=1`,
-    { headers: h, cache: "no-store" },
-  );
-  const orderRows = orderResponse.ok ? await orderResponse.json() as Array<{media_order:number}> : [];
-  let mediaOrder = Number(orderRows[0]?.media_order ?? -1) + 1;
-
   const createdIds: string[] = [];
-  const createdPaths: string[] = [];
+  const failures: string[] = [];
 
-  try {
-    for (const file of files) {
-      const bytes = Buffer.from(await file.arrayBuffer());
-      const sha = createHash("sha256").update(bytes).digest("hex");
-
-      const duplicateResponse = await fetch(
-        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?staged_content_sha256=eq.${sha}&select=id,candidate_id&limit=1`,
-        { headers: h, cache: "no-store" },
-      );
-      const duplicates = duplicateResponse.ok ? await duplicateResponse.json() as Array<{id:string;candidate_id:string}> : [];
-      if (duplicates.length) continue;
-
-      const path = `${job.candidate_id}/capture-${String(mediaOrder).padStart(2,"0")}-${randomUUID()}-${safeFileName(file.name)}`;
-      const upload = await fetch(
-        `${SUPABASE_AUTH_URL}/storage/v1/object/snake-sorter-acquisition/${storagePath(path)}`,
-        {
-          method: "POST",
-          headers: {
-            apikey: SUPABASE_AUTH_KEY,
-            Authorization: `Bearer ${identity.token}`,
-            "Content-Type": file.type,
-            "x-upsert": "false",
-          },
-          body: bytes,
-          cache: "no-store",
-        },
-      );
-      if (!upload.ok) throw new Error("Could not store a rendered capture.");
-      createdPaths.push(path);
-
-      const insert = await fetch(
-        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media`,
-        {
-          method: "POST",
-          headers: {
-            ...h,
-            "Content-Type": "application/json",
-            Prefer: "return=representation",
-          },
-          body: JSON.stringify({
-            candidate_id: job.candidate_id,
-            source_page_url: job.source_url,
-            media_order: mediaOrder,
-            capture_method: "rendered_capture",
-            rights_status: "metadata_only",
-            review_status: "pending",
-            quality_status: "unreviewed",
-            staged_storage_path: path,
-            staged_content_sha256: sha,
-            staged_mime_type: file.type,
-            staged_bytes: bytes.length,
-            staged_at: new Date().toISOString(),
-            source_metadata: {
-              capture_job_id: job.id,
-              rendered_capture: true,
-              original_name: file.name,
-            },
-          }),
-          cache: "no-store",
-        },
-      );
-      if (!insert.ok) throw new Error("Could not attach a rendered capture to the candidate.");
-
-      const rows = await insert.json() as Array<{id:string}>;
-      if (rows[0]?.id) createdIds.push(rows[0].id);
-      mediaOrder += 1;
+  for (const file of files) {
+    const outcome = await storeScreenshotCapture(
+    { supabaseUrl: SUPABASE_AUTH_URL, supabaseKey: SUPABASE_AUTH_KEY },
+    identity.token,
+    identity.user.id,
+    {
+      candidateId: job.candidate_id,
+      bytes: Buffer.from(await file.arrayBuffer()),
+      mimeType: file.type,
+      fileName: file.name,
+      imageSubject: "uncertain",
+      sourcePageUrl: job.source_url,
+      sourceCaptureKind: "capture_job",
+      captureMethod: "rendered_capture",
+      extraMetadata: { capture_job_id: job.id, rendered_capture: true },
+    });
+    if (outcome.status === "stored" || (outcome.status === "duplicate" && outcome.linked)) {
+      createdIds.push(outcome.mediaId);
+    } else if (outcome.status === "duplicate") {
+      failures.push(`${file.name}: ${outcome.message}`);
+    } else {
+      failures.push(`${file.name}: ${outcome.error}`);
     }
-
-    const newCapturedCount = Number(job.captured_media_count ?? 0) + createdIds.length;
-    await fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_capture_jobs?id=eq.${encodeURIComponent(job.id)}`,
-      {
-        method: "PATCH",
-        headers: { ...h, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({
-          status: "completed",
-          captured_media_count: newCapturedCount,
-          discovered_media_count: Math.max(Number(job.discovered_media_count ?? 0), newCapturedCount),
-          finished_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }),
-        cache: "no-store",
-      },
-    );
-
-    await fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(job.candidate_id)}`,
-      {
-        method: "PATCH",
-        headers: { ...h, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ acquisition_stage: "media_collected" }),
-        cache: "no-store",
-      },
-    );
-
-    return NextResponse.json({
-      ok: true,
-      candidate_id: job.candidate_id,
-      attached: createdIds.length,
-      media_ids: createdIds,
-    }, { status: 201 });
-  } catch (error) {
-    for (const path of createdPaths) {
-      await fetch(
-        `${SUPABASE_AUTH_URL}/storage/v1/object/snake-sorter-acquisition/${storagePath(path)}`,
-        { method: "DELETE", headers: h, cache: "no-store" },
-      ).catch(() => undefined);
-    }
-
-    await fetch(
-      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_capture_jobs?id=eq.${encodeURIComponent(job.id)}`,
-      {
-        method: "PATCH",
-        headers: { ...h, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({
-          status: "failed",
-          last_error: error instanceof Error ? error.message.slice(0, 1000) : "Capture ingestion failed.",
-          finished_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }),
-        cache: "no-store",
-      },
-    ).catch(() => undefined);
-
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : "Capture ingestion failed.",
-    }, { status: 500 });
   }
+
+  const newCapturedCount = Number(job.captured_media_count ?? 0) + createdIds.length;
+  const jobFailed = failures.length > 0;
+  await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_capture_jobs?id=eq.${encodeURIComponent(job.id)}`,
+    {
+      method: "PATCH",
+      headers: { ...h, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({
+        status: jobFailed ? "failed" : "completed",
+        captured_media_count: newCapturedCount,
+        discovered_media_count: Math.max(Number(job.discovered_media_count ?? 0), newCapturedCount),
+        last_error: jobFailed ? failures.join(" | ").slice(0, 1000) : null,
+        finished_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+      cache: "no-store",
+    },
+  ).catch(() => undefined);
+
+  return NextResponse.json({
+    ok: !jobFailed,
+    candidate_id: job.candidate_id,
+    attached: createdIds.length,
+    failed: failures.length,
+    failures: failures.length ? failures : undefined,
+    media_ids: createdIds,
+  }, { status: jobFailed ? 207 : 201 });
 }

@@ -65,27 +65,65 @@ async function appJson(tabId, path, payload) {
   return result;
 }
 
+function browserHelperHarvestId() {
+  const now = new Date();
+  const stamp = now.getFullYear().toString()
+    + String(now.getMonth() + 1).padStart(2, "0")
+    + String(now.getDate()).padStart(2, "0");
+  const seq = String(Math.floor(Math.random() * 900) + 100);
+  return `HARVEST_MM_GTP_${stamp}_${seq}`;
+}
+
 async function importListing(payload, activeAfter = true) {
-  if (!payload?.source_url || !Array.isArray(payload?.image_urls)) {
+  if (!payload?.source_url) {
     throw new Error("Browser helper payload is incomplete.");
   }
 
   const appTab = await ensureAppTab(false);
+
+  // Canonical pipeline: the listing record goes through the harvest import
+  // first (taxonomy, Snake Stocks dating, dedup). Screenshots follow through
+  // the media upload endpoints — never CDN image URLs.
   const result = await appJson(
     appTab.id,
-    "/api/snake-sorter/acquisition/browser-import",
-    payload,
+    "/api/gtp-harvest/import",
+    {
+      harvest_id: browserHelperHarvestId(),
+      captured_at: new Date().toISOString(),
+      items: [
+        {
+          source_url: payload.source_url,
+          title: payload.title || payload.source_url,
+        },
+      ],
+    },
   );
 
   if (!result?.ok) {
-    throw new Error(result?.error || "Snake Sorter rejected the browser import.");
+    if (result?.status === 410) {
+      throw new Error("Snake Sorter retired that import path. Update the browser helper.");
+    }
+    throw new Error(result?.error || "Snake Sorter rejected the listing import.");
+  }
+
+  const listing = result.results?.[0];
+  const candidateId = listing?.candidate_id;
+  if (!candidateId) {
+    throw new Error("Snake Sorter did not return a candidate id.");
   }
 
   if (activeAfter) {
     await chrome.tabs.update(appTab.id, { active: true });
   }
 
-  return { ...result, app_tab_id: appTab.id };
+  return {
+    ok: true,
+    app_tab_id: appTab.id,
+    candidate_id: candidateId,
+    candidate_created: listing?.candidate_created ?? false,
+    snake_sorter_eligible: listing?.snake_sorter_eligible ?? false,
+    title: payload.title,
+  };
 }
 
 function bytesToBase64(bytes) {
@@ -218,7 +256,6 @@ async function captureGallery(sourceTab, payload) {
     candidate_id: candidateId,
     title: imported.title,
     candidate_created: imported.candidate_created,
-    live_references: imported.attached ?? 0,
     captured,
     duplicates,
     blocked,

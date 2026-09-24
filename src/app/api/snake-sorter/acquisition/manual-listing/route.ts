@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { classifyGtpListing, normalizeAgeClass, normalizeLocalityLabel, normalizeNeonateColor } from "@/lib/gtp-harvest";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
-const MM_LISTING_RE = /^https:\/\/(?:www\.)?morphmarket\.com\/(?:us|eu|za|mx)\/c\/reptiles\/pythons\/green-tree-pythons\/(\d+)\/?(?:\?.*)?$/i;
+// Same listing-URL shape the harvest import accepts (any MorphMarket region).
+const MM_LISTING_RE = /^https:\/\/(?:www\.)?morphmarket\.com\/[a-z]{2}\/c\/reptiles\/pythons\/green-tree-pythons\/(\d+)\/?(?:\?.*)?$/i;
 
 async function ownerIdentity() {
   const identity = await getServerIdentity();
@@ -13,45 +15,53 @@ async function ownerIdentity() {
 
 export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
-  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!identity) {
+    return NextResponse.json(
+      { error: "Owner session expired or missing. Sign in again, then retry." },
+      { status: 401 },
+    );
+  }
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const sourceUrl = String(body.source_url ?? "").trim();
   const title = String(body.title ?? "").trim().slice(0, 255);
-  const locality = String(body.locality ?? "").trim().slice(0, 120) || null;
-  const lifeStage = String(body.life_stage ?? "").trim().slice(0, 40) || null;
-  const color = String(body.neonate_color ?? "").trim().slice(0, 40) || null;
   const match = sourceUrl.match(MM_LISTING_RE);
 
   if (!match) {
     return NextResponse.json({ error: "Paste a Green Tree Python listing URL from MorphMarket." }, { status: 400 });
   }
 
+  // Run the same classifier the harvest import uses so manual listings get
+  // real taxonomy instead of free-text guesses.
+  const decision = classifyGtpListing(title, "");
+  const locality = normalizeLocalityLabel(body.locality) ?? decision.locality;
+  const lifeStageHint = (() => {
+    const normalized = normalizeAgeClass(body.life_stage);
+    return normalized === "UNKNOWN" ? (decision.life_stage_hint ?? null) : normalized.toLowerCase();
+  })();
+  const neonateColorHint = (() => {
+    const normalized = normalizeNeonateColor(body.neonate_color);
+    return normalized === "UNKNOWN" ? (decision.neonate_color_hint ?? null) : normalized.toLowerCase();
+  })();
+
   const sourceId = match[1];
   const sourceKey = `morphmarket:${sourceId}`;
+  const now = new Date().toISOString();
   const h = {
     apikey: SUPABASE_AUTH_KEY,
     Authorization: `Bearer ${identity.token}`,
     Accept: "application/json",
   };
 
-  const existingResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_key=eq.${encodeURIComponent(sourceKey)}&select=*&limit=1`,
-    { headers: h, cache: "no-store" },
-  );
-  const existing = existingResponse.ok ? await existingResponse.json() as Array<Record<string, unknown>> : [];
-  if (existing[0]) {
-    return NextResponse.json({ ok: true, candidate: existing[0], created: false });
-  }
-
-  const createResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates`,
+  // Upsert on source_key: idempotent, no check-then-insert race.
+  const upsertResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?on_conflict=source_key`,
     {
       method: "POST",
       headers: {
         ...h,
         "Content-Type": "application/json",
-        Prefer: "return=representation",
+        Prefer: "resolution=merge-duplicates,return=representation",
       },
       body: JSON.stringify({
         source_type: "morphmarket",
@@ -61,27 +71,42 @@ export async function POST(request: NextRequest) {
         title: title || `MorphMarket listing ${sourceId}`,
         taxon_raw: "Green Tree Python",
         locality_raw: locality,
+        provisional_taxon: decision.taxon,
         provisional_locality: locality,
-        life_stage_hint: lifeStage,
-        neonate_color_hint: color,
+        life_stage_hint: lifeStageHint,
+        neonate_color_hint: neonateColorHint,
         rights_status: "metadata_only",
         review_status: "pending",
         source_metadata: {
           discovery_method: "owner_manual_listing",
           media_downloaded: false,
-          browser_helper_import: false,
+          ancestry_class: decision.ancestry_class,
+          pure_locality: decision.pure_locality,
+          pure_subspecies: decision.pure_subspecies,
+          locality_mentions: decision.localities,
         },
         created_by: identity.user.id,
         acquisition_stage: "discovered",
+        last_seen_at: now,
+        updated_at: now,
       }),
       cache: "no-store",
     },
   );
 
-  const rows = createResponse.ok ? await createResponse.json() as Array<Record<string, unknown>> : [];
-  if (!createResponse.ok || !rows[0]) {
+  const rows = upsertResponse.ok ? await upsertResponse.json() as Array<Record<string, unknown>> : [];
+  if (!upsertResponse.ok || !rows[0]) {
     return NextResponse.json({ error: "Could not add MorphMarket listing." }, { status: 502 });
   }
 
-  return NextResponse.json({ ok: true, candidate: rows[0], created: true }, { status: 201 });
+  return NextResponse.json(
+    {
+      ok: true,
+      candidate: rows[0],
+      created: true,
+      ancestry_class: decision.ancestry_class,
+      snake_sorter_eligible: decision.snake_sorter_eligible,
+    },
+    { status: 201 },
+  );
 }

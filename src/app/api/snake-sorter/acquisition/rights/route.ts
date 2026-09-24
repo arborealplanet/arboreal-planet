@@ -14,7 +14,12 @@ const mediaRights = new Set(["open_license","permission_required","permission_gr
 
 export async function PATCH(request: NextRequest) {
   const identity = await ownerIdentity();
-  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!identity) {
+    return NextResponse.json(
+      { error: "Owner session expired or missing. Sign in again, then retry." },
+      { status: 401 },
+    );
+  }
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const candidateId = String(body.candidate_id ?? "").trim();
@@ -45,15 +50,22 @@ export async function PATCH(request: NextRequest) {
       body: JSON.stringify({
         rights_review_status: rightsReviewStatus,
         rights_review_note: rightsNote || null,
-        acquisition_stage: rightsReviewStatus === "cleared" ? "rights_cleared" : "biologically_approved",
+        // Only the rights review moves the stage to rights_cleared. Other
+        // outcomes leave the stage alone — biological approval is a separate
+        // review's job.
+        ...(rightsReviewStatus === "cleared" ? { acquisition_stage: "rights_cleared" } : {}),
       }),
       cache: "no-store",
     },
   );
   if (!candidateUpdate.ok) return NextResponse.json({ error: "Could not update candidate rights review." }, { status: 400 });
 
+  // Apply the candidate-level rights decision only to media rows that have no
+  // per-image decision yet — rights can differ per image (a logo vs. the
+  // animal photo), and an individual review must not be clobbered by the bulk
+  // update.
   const mediaUpdate = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=eq.${encodeURIComponent(candidateId)}`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_media?candidate_id=eq.${encodeURIComponent(candidateId)}&review_status=eq.pending&rights_status=in.(metadata_only,unknown)`,
     {
       method: "PATCH",
       headers: { ...h, Prefer: "return=minimal" },

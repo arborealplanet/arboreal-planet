@@ -41,7 +41,7 @@ sendButton.addEventListener("click", async () => {
 
   try {
     const { payload } = await currentListing();
-    show("Found " + payload.image_urls.length + " exposed image reference(s). Sending to Snake Sorter…");
+    show("Sending the listing record to Snake Sorter…");
 
     const data = await chrome.runtime.sendMessage({
       type: "IMPORT_LISTING_TO_SNAKE_SORTER",
@@ -52,8 +52,9 @@ sendButton.addEventListener("click", async () => {
 
     show(
       (data.candidate_created ? "Created a new Snake Sorter candidate.\n" : "") +
-      "Attached " + (data.attached ?? 0) + " live reference(s) to " + (data.title || "the listing") + ".\n\n" +
-      "Snake Sorter is open so you can review them."
+      (data.snake_sorter_eligible === false ? "Flagged for review before media capture.\n\n" : "") +
+      "Recorded " + (data.title || "the listing") + ".\n\n" +
+      "Use Capture gallery to add screenshots, then review them in Snake Sorter."
     );
   } catch (error) {
     show(error instanceof Error ? error.message : "Import failed.");
@@ -79,9 +80,8 @@ captureButton.addEventListener("click", async () => {
 
     show(
       (data.candidate_created ? "Created a new Snake Sorter candidate.\n" : "") +
-      "Live refs: " + (data.live_references ?? 0) + "\n" +
-      "Rendered gallery captures: " + (data.captured ?? 0) + "\n" +
-      (data.duplicates ? "Duplicates skipped: " + data.duplicates + "\n" : "") +
+      "Gallery screenshots captured: " + (data.captured ?? 0) + "\n" +
+      (data.duplicates ? "Duplicates linked: " + data.duplicates + "\n" : "") +
       (data.blocked ? "Stopped because an access-control page appeared.\n" : "") +
       "\nSnake Sorter is open so you can review the results."
     );

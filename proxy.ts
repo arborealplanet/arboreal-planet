@@ -61,6 +61,16 @@ async function snakeSorterUnlocked(accessToken: string, unlockToken: string | un
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Standalone-host redirect, moved from src/middleware.ts: the
+  // snake-sorter host serves the sorter at its root.
+  const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
+  if (pathname === "/" && (host === "snake-sorter.vercel.app" || host.startsWith("snake-sorter-"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/snake-sorter";
+    return NextResponse.redirect(url);
+  }
+
   let access = request.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
   let refreshedSession: Awaited<ReturnType<typeof refreshAuthSession>> = null;
@@ -103,6 +113,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/profile/:path*",
     "/admin/:path*",
     "/marketplace/:path*",

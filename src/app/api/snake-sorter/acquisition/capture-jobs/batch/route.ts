@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { capturePriorityScore } from "@/lib/snake-sorter/capture-priority";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 async function ownerIdentity() {
@@ -93,14 +94,7 @@ export async function POST(request: NextRequest) {
 
   const priorityScore = (candidate: (typeof available)[number]) => {
     const locality = candidate.provisional_locality || candidate.locality_raw || "Unknown";
-    const rarity = localityFrequency.get(locality) ?? available.length;
-    let score = 0;
-    if (candidate.review_status === "approved") score += 1000;
-    if (candidate.neonate_color_hint === "red") score += 300;
-    if (candidate.life_stage_hint === "hatchling" || candidate.life_stage_hint === "neonate") score += 180;
-    if (locality !== "Unknown") score += 120;
-    score += Math.max(0, 100 - rarity);
-    return score;
+    return capturePriorityScore(candidate, localityFrequency.get(locality) ?? available.length);
   };
 
   const chosen = [...available]

@@ -55,6 +55,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Compiled test output (tsc -> node --test); never linted.
+    ".test-dist/**",
   ]),
 ]);
 

@@ -47,7 +47,7 @@ jobs:
             fi
 
             git add public/downloads/snake-sorter-browser-helper.zip
-            git commit -m "Package Snake Sorter browser helper"
+            git commit -m "Package Snake Sorter browser helper [skip ci]"
 
             if git push origin HEAD:main; then
               exit 0
