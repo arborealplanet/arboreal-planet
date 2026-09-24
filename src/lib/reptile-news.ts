@@ -10,6 +10,8 @@ const FEEDS: FeedSource[] = [
   { url: "https://www.sciencedaily.com/rss/plants_animals/frogs_and_reptiles.xml", publisher: "Science Daily", hosts: ["www.sciencedaily.com", "sciencedaily.com"] },
   { url: "https://reptilesmagazine.com/feed/", publisher: "REPTILES Magazine", hosts: ["reptilesmagazine.com", "www.reptilesmagazine.com"] },
   { url: "https://phys.org/rss-feed/biology-news/plants-animals/", publisher: "Phys.org", hosts: ["phys.org", "www.phys.org"] },
+  { url: "https://news.mongabay.com/feed/?post_type=post&feedtype=bulletpoints&topic=reptiles", publisher: "Mongabay", hosts: ["news.mongabay.com"] },
+  { url: "https://usark.org/feed/", publisher: "USARK", hosts: ["usark.org", "www.usark.org"] },
 ];
 const REPTILE = /\b(reptile|snake|python|boa|viper|cobra|lizard|gecko|iguana|chameleon|skink|turtle|tortoise|crocodile|alligator|serpent|dinosaur|anole|monitor lizard|chondro|herpetolog)\w*\b/i;
 
@@ -66,5 +68,5 @@ export async function getReptileNews(): Promise<ReptileStory[]> {
   }));
   const unique = new Map<string, ReptileStory>();
   for (const story of results.flat()) unique.set(story.url, story);
-  return [...unique.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).slice(0, 12);
+  return [...unique.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).slice(0, 16);
 }
