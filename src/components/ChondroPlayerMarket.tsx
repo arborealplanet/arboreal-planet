@@ -92,7 +92,23 @@ export function ChondroPlayerMarket() {
       const market = await marketResponse.json();
       const saved = await saveResponse.json();
       if (marketResponse.ok) setListings(Array.isArray(market.listings) ? market.listings : []);
-      if (saveResponse.ok) setSave(saved.save?.state ?? {});
+      if (saveResponse.ok) {
+        const apiState = saved.save?.state;
+        if (apiState && typeof apiState === "object" && !Array.isArray(apiState)) {
+          setSave(apiState as SaveState);
+        } else {
+          // Guests have no cloud save: the API returns no state, but the
+          // player's cash/colony live in localStorage. Fall back to it so the
+          // panel shows real values instead of $0 cash and 0 open spaces.
+          try {
+            const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+            const parsed: unknown = raw ? JSON.parse(raw) : null;
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              setSave(parsed as SaveState);
+            }
+          } catch {}
+        }
+      }
       if (marketResponse.status === 401) setStatus("Sign in to browse and buy from the shared player market.");
     } catch {
       setStatus("The player market could not be refreshed.");

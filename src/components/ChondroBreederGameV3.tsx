@@ -746,6 +746,8 @@ function CollapsibleGameSection({
 
 export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameScreen } = {}) {
   const [resetMenuOpen, setResetMenuOpen] = useState(false);
+  const [resetArmed, setResetArmed] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
   const [started, setStarted] = useState(false);
   const [cash, setCash] = useState(STARTING_CASH);
   const [colony, setColony] = useState<Snake[]>([]);
@@ -1513,11 +1515,12 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   }
 
   function resetGame() {
-    const confirmation = window.prompt(
-      "This permanently erases your Arboreal Keeper save on this device and account.\n\nType RESET ARBOREAL KEEPER exactly to continue.",
-    );
-    if (confirmation !== "RESET ARBOREAL KEEPER") return;
+    // The inline form already collected the exact confirmation phrase, so this
+    // just performs the reset. (A native window.prompt was used here before;
+    // it is unreliable in embedded/automated browsers and poor UX.)
     setResetMenuOpen(false);
+    setResetArmed(false);
+    setResetConfirmText("");
     setStarted(false);
     setCash(STARTING_CASH);
     setColony([]);
@@ -1600,7 +1603,10 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         <div className="relative">
           <button
             type="button"
-            onClick={() => setResetMenuOpen((value) => !value)}
+            onClick={() => {
+              if (resetMenuOpen) { setResetArmed(false); setResetConfirmText(""); }
+              setResetMenuOpen(!resetMenuOpen);
+            }}
             aria-expanded={resetMenuOpen}
             aria-haspopup="menu"
             aria-label="Open game options"
@@ -1614,14 +1620,47 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
               <div className="text-[9px] font-black uppercase tracking-[.14em] text-white/30">Game options</div>
               <div className="mt-2 text-sm font-semibold text-white/68">Save controls</div>
               <p className="mt-1 text-xs leading-5 text-white/34">Reset is intentionally buried here because it permanently clears your breeder progress.</p>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={resetGame}
-                className="mt-3 rounded-xl border border-red-300/15 bg-red-300/[.025] px-3 py-2 text-[10px] font-bold text-red-100/55 transition hover:border-red-300/28 hover:text-red-100/78"
-              >
-                Reset breeder save…
-              </button>
+              {resetArmed ? (
+                <div className="mt-3 rounded-xl border border-red-300/15 bg-red-300/[.03] p-3">
+                  <label htmlFor="reset-confirm-input" className="text-[10px] font-bold uppercase tracking-[.08em] text-red-100/60">
+                    Type RESET ARBOREAL KEEPER to erase your save
+                  </label>
+                  <input
+                    id="reset-confirm-input"
+                    value={resetConfirmText}
+                    onChange={(event) => setResetConfirmText(event.target.value)}
+                    placeholder="RESET ARBOREAL KEEPER"
+                    autoComplete="off"
+                    className="mt-2 w-full rounded-lg border border-red-300/20 bg-black/30 px-3 py-2 text-xs text-white/80 outline-none placeholder:text-white/25 focus:border-red-300/40"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={resetConfirmText !== "RESET ARBOREAL KEEPER"}
+                      onClick={resetGame}
+                      className="rounded-xl border border-red-300/25 bg-red-300/[.08] px-3 py-2 text-[10px] font-bold text-red-100/80 transition hover:bg-red-300/[.14] disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      Erase my save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setResetArmed(false); setResetConfirmText(""); }}
+                      className="rounded-xl border border-white/[.08] px-3 py-2 text-[10px] font-bold text-white/50 transition hover:text-white/75"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => setResetArmed(true)}
+                  className="mt-3 rounded-xl border border-red-300/15 bg-red-300/[.025] px-3 py-2 text-[10px] font-bold text-red-100/55 transition hover:border-red-300/28 hover:text-red-100/78"
+                >
+                  Reset breeder save…
+                </button>
+              )}
             </div>
           ) : null}
         </div>

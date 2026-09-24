@@ -68,12 +68,17 @@ async function loadSave() {
 }
 
 async function persistSave(state: SaveState, authenticated: boolean) {
-  try { window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(state)); } catch {}
+  // Stamp updatedAt so the core game screen adopts this write through its
+  // save-change listener instead of treating it as stale and overwriting it
+  // with its own in-memory state (which silently reverted raises, renames,
+  // and other record edits).
+  const stamped = { ...state, updatedAt: Date.now() };
+  try { window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(stamped)); } catch {}
   if (authenticated) {
     const response = await fetch("/api/hatchery/chondro-breeder/save", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(state),
+      body: JSON.stringify(stamped),
     });
     if (!response.ok) throw new Error("Cloud save failed");
   }

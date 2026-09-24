@@ -563,11 +563,11 @@ export function ChondroBreederExpandedShop() {
       },
     };
     setBusy(`enclosure:${type}`);
-    setStatus(`Buying ${type}…`);
+    setStatus(`Buying ${enclosureDisplay[type].label}…`);
     try {
       await persistStandaloneShopSave(next, authenticated);
       setSave(next);
-      setStatus(`${type} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
+      setStatus(`${enclosureDisplay[type].label} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
     } catch {
       setStatus("That enclosure purchase could not be saved.");
     } finally {

@@ -58,6 +58,7 @@ function stageLabel(stage?: string) {
 
 export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) => void }) {
   const [save, setSave] = useState<Save>({});
+  const [loaded, setLoaded] = useState(false);
   const [market, setMarket] = useState<MarketPayload>({});
   const [conservation, setConservation] = useState<ConservationPayload>({});
   const [now, setNow] = useState(0);
@@ -72,6 +73,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
       ]);
       if (!active) return;
       if (saveState.state) setSave(saveState.state as Save);
+      setLoaded(true);
       if (marketResult && marketResult.ok) setMarket(await marketResult.json());
       if (conservationResult && conservationResult.ok) setConservation(await conservationResult.json());
     }
