@@ -102,9 +102,10 @@ export function ChondroRetiredBreedersPanel() {
     setStatus("");
     const nextRecovery = { ...(save.femaleRecovery ?? {}) };
     delete nextRecovery[animal.id];
+    const retiredAt = new Date();
     const next: SaveState = {
       ...save,
-      updatedAt: Date.now(),
+      updatedAt: retiredAt.getTime(),
       colony: (save.colony ?? []).filter((item) => item.id !== animal.id),
       damId: save.damId === animal.id ? "" : save.damId,
       sireId: save.sireId === animal.id ? "" : save.sireId,
@@ -115,7 +116,7 @@ export function ChondroRetiredBreedersPanel() {
         {
           animal,
           retiredSeason: Math.max(1, Number(save.season ?? 1)),
-          retiredAt: new Date().toISOString(),
+          retiredAt: retiredAt.toISOString(),
         },
         ...retired.filter((record) => record.animal.id !== animal.id),
       ].slice(0, 250),
