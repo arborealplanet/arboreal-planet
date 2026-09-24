@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
@@ -70,7 +71,7 @@ type View = "animals" | "enclosures" | "market";
 
 const VIEWS: Array<{ id: View; label: string; blurb: string; thumb: string }> = [
   { id: "animals", label: "Animals", blurb: "20 snakes, refreshed daily", thumb: "/hatchery/game/dock/animals.webp" },
-  { id: "enclosures", label: "Enclosures", blurb: "Housing before snakes", thumb: "/hatchery/game/pvc-enclosure.webp" },
+  { id: "enclosures", label: "Enclosures", blurb: "Housing before snakes", thumb: "/hatchery/game/chondro-dojo-2-stack.webp" },
   { id: "market", label: "Player Market", blurb: "Virtual animals from other players", thumb: "/hatchery/game/dock/breed.webp" },
 ];
 
@@ -120,9 +121,9 @@ export function ArborealKeeperReptiShop() {
         </div>
       </div>
 
-      {/* View buttons — small, below the animation, Sprite QA kept quiet */}
+      {/* View buttons — game-art pills below the animation, Sprite QA kept quiet */}
       <div className="mt-2 flex flex-none items-center gap-2">
-        <div className="flex gap-1.5">
+        <div className="flex min-w-0 flex-1 snap-x gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {VIEWS.map((v) => {
             const selected = v.id === view;
             return (
@@ -131,12 +132,13 @@ export function ArborealKeeperReptiShop() {
                 type="button"
                 onClick={() => setView(v.id)}
                 aria-current={selected ? "true" : undefined}
-                className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[.06em] transition ${
+                className={`flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[.05em] transition ${
                   selected
-                    ? "border-emerald-200/60 bg-emerald-300 text-[#06100c]"
-                    : "border-white/15 bg-white/[.04] text-white/60 hover:bg-white/[.08] hover:text-white"
+                    ? "border-emerald-200/70 bg-gradient-to-b from-emerald-300 to-emerald-400 text-[#04120a] shadow-[0_0_18px_rgba(52,211,153,.45)] ring-1 ring-inset ring-white/40"
+                    : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
                 }`}
               >
+                <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 rounded-full object-cover" />
                 {v.label}
               </button>
             );
@@ -145,7 +147,7 @@ export function ArborealKeeperReptiShop() {
         <button
           type="button"
           onClick={() => setQaOpen(true)}
-          className="ml-auto shrink-0 text-[10px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
+          className="shrink-0 text-[10px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
         >
           Sprite QA
         </button>
