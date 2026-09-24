@@ -130,10 +130,7 @@ export function ArborealKeeperReptiShop() {
     playHankScaleLine(next === "animals" && consumeStockRotated() ? 11 : VIEW_LINES[next]);
   }
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setTip((i) => (i + 1) % BUNN_TIPS.length), 9000);
-    return () => window.clearInterval(timer);
-  }, []);
+  // Tips only advance when the keeper taps the tip row — no auto-scroll.
 
   useEffect(() => {
     if (!qaOpen) return;
