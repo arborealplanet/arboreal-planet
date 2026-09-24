@@ -1,6 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
+import { ReptileNewsCarousel } from "@/components/ReptileNewsCarousel";
+import { getReptileNews } from "@/lib/reptile-news";
+
+export const dynamic = "force-dynamic";
 
 const trails = [
   { number: "01", label: "THE WILD SIDE", title: "Meet the animals", description: "Find species, discover localities, and follow the details that make every reptile different.", href: "/animals", action: "Explore animals", tone: "from-emerald-700/35 to-[#101d15]" },
@@ -16,7 +20,8 @@ const deeper = [
   { title: "Genetics & pedigrees", description: "Explore lineages, parentage and the bigger picture behind every animal.", href: "/genetics", label: "Explore lineages", icon: "⌘" },
 ] as const;
 
-export default function Home() {
+export default async function Home() {
+  const stories = await getReptileNews();
   return <main>
     <section className="noise-surface relative overflow-hidden border-b border-white/10 bg-[radial-gradient(ellipse_at_50%_20%,rgba(67,137,69,.14),transparent_58%),#050b08]">
       <div className="relative mx-auto flex max-w-7xl flex-col items-center px-5 pb-16 pt-6 text-center sm:px-6 sm:pb-24 sm:pt-12">
@@ -41,6 +46,8 @@ export default function Home() {
         <div className="mt-auto"><h3 className="text-3xl font-semibold tracking-[-.04em] text-white">{trail.title}</h3><p className="mt-3 max-w-sm text-sm leading-6 text-white/65">{trail.description}</p><span className="mt-7 inline-flex text-sm font-bold text-emerald-200 transition group-hover:translate-x-1">{trail.action} →</span></div>
       </Link>)}</div>
     </section>
+
+    <ReptileNewsCarousel stories={stories} />
 
     <section className="border-y border-white/10 bg-[#090f0c]" aria-labelledby="chondro-title">
       <div className="relative mx-auto flex min-h-[450px] max-w-[1600px] items-end overflow-hidden px-5 py-14 sm:px-10 lg:min-h-[560px] lg:items-center lg:px-20">
