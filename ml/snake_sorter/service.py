@@ -298,12 +298,10 @@ async def analyze(
     scores = dict(aggregate.scores)
     flags: list[str] = []
 
-    if stage_label == "neonate" and color_label == "red" and scores["Morelia viridis"] > 0:
-        flags.append("Red neonate evidence conflicts with the M. viridis neonate reference rule.")
-        scores["Morelia viridis"] = 0.0
-        total = sum(scores.values())
-        if total > 0:
-            scores = {key: value / total for key, value in scores.items()}
+    # Neonate color is supporting evidence only. Per the Snake Sorter
+    # biological canon (see src/lib/snake-sorter/rules.ts), color must never
+    # hard-exclude a taxon: red and yellow neonates occur across multiple GTP
+    # populations, so no color-based veto is applied here.
 
     ordered = sorted(scores.items(), key=lambda item: item[1], reverse=True)
     top_taxon, confidence = ordered[0]
