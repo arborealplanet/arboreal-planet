@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
+import { markStockRotated, playHankScaleLine } from "@/lib/hank-scale-voice";
 
 type Sex = "Male" | "Female";
 type Locality = "Biak" | "Numfor" | "Manokwari" | "Arfak" | "Sorong" | "Timika" | "Kofiau" | "Cyclops" | "Jayapura" | "Lereh" | "Wamena" | "Yapen" | "Aru" | "Merauke";
@@ -427,6 +428,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       const rotations = Math.floor((current - storedRefreshAt) / SHOP_REFRESH_MS) + 1;
       storedSeed += rotations;
       storedRefreshAt += rotations * SHOP_REFRESH_MS;
+      markStockRotated();
     }
 
     window.localStorage.setItem(SHOP_SEED_KEY, String(storedSeed));
@@ -461,6 +463,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       setSeed(nextSeed);
       setRefreshAt(nextDeadline);
       setStatus("The daily shop refreshed automatically. A new set of listings is available.");
+      markStockRotated();
     }, 1000);
 
     let cancelled = false;
@@ -553,8 +556,13 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
 
   async function buyEnclosure(type: EnclosureType) {
-    if (!save || busy || roomEnclosureSlots <= 0 || save.cash < enclosurePrices[type]) return;
+    if (!save || busy || roomEnclosureSlots <= 0) return;
     const price = enclosurePrices[type];
+    if (save.cash < price) {
+      setStatus(`Not enough cash for the ${enclosureDisplay[type].label} — come back when the funds are right.`);
+      playHankScaleLine(10);
+      return;
+    }
     const next: GameSave = {
       ...save,
       cash: save.cash - price,
@@ -569,6 +577,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       await persistStandaloneShopSave(next, authenticated);
       setSave(next);
       setStatus(`${enclosureDisplay[type].label} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
+      playHankScaleLine(12);
     } catch {
       setStatus("That enclosure purchase could not be saved.");
     } finally {
@@ -577,7 +586,12 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   }
 
   async function buy(offer: Offer) {
-    if (!save || busy || purchased.has(offer.id) || !housingAvailableFor(offer) || save.cash < offer.price) return;
+    if (!save || busy || purchased.has(offer.id) || !housingAvailableFor(offer)) return;
+    if (save.cash < offer.price) {
+      setStatus(`Not enough cash for ${offer.name} — come back when the funds are right.`);
+      playHankScaleLine(10);
+      return;
+    }
     setBusy(offer.id);
     setStatus("");
     const next: GameSave = {
@@ -590,6 +604,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       await persistStandaloneShopSave(next, authenticated);
       setSave(next);
       setStatus(`${offer.name} purchased. It is now in your colony.`);
+      playHankScaleLine(9);
     } catch {
       setStatus("That purchase could not be saved.");
     } finally {
@@ -677,7 +692,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
           {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
             const price = enclosurePrices[type];
             const owned = Number(save.enclosures?.[type] ?? 0);
-            const unavailable = busy !== null || roomEnclosureSlots <= 0 || save.cash < price;
+            const unavailable = busy !== null || roomEnclosureSlots <= 0;
             return (
               <article key={type} className={carousel ? "w-[66%] shrink-0 snap-start overflow-hidden rounded-[20px] border border-white/[.07] bg-black/15 sm:w-[230px]" : "overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15"}>
                 <div className={carousel ? "relative h-24 overflow-hidden border-b border-white/[.06] bg-black/25" : "relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25"}>
@@ -803,7 +818,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                  <button type="button" disabled={sold || busy !== null || !housingAvailableFor(offer)} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
                     {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
                   </button>
                 </div>

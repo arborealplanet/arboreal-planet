@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
-
-const ACCENTS = new Set(["arboreal", "emerald", "jungle", "blue", "purple", "red", "orange", "gold", "teal", "neutral"]);
+import { ACCENT_NAMES, normalizeCustomAccentHex } from "@/lib/profile-accent";
 const USERNAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{2,29}$/;
 const HANDLE_RE = /^@?[a-zA-Z0-9._-]{1,80}$/;
 
@@ -79,9 +78,12 @@ export async function PATCH(request: Request) {
     allowed.facebook_url = facebook;
   }
   if (has("accent_color")) {
-    const accent = String(body.accent_color ?? "emerald").toLowerCase();
-    if (!ACCENTS.has(accent)) return NextResponse.json({ error: "Invalid profile accent." }, { status: 400 });
-    allowed.accent_color = accent;
+    const raw = String(body.accent_color ?? "emerald");
+    const name = raw.trim().toLowerCase();
+    const hex = normalizeCustomAccentHex(raw);
+    if (ACCENT_NAMES.has(name)) allowed.accent_color = name;
+    else if (hex) allowed.accent_color = hex;
+    else return NextResponse.json({ error: "Invalid profile accent." }, { status: 400 });
   }
   if (has("profile_visibility")) allowed.profile_visibility = body.profile_visibility === "private" ? "private" : "public";
   if (has("seller_enabled")) allowed.seller_enabled = Boolean(body.seller_enabled);

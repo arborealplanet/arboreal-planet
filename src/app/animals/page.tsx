@@ -23,6 +23,9 @@ export default function AnimalsPage() {
       />
 
       <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
+        <div className="mb-6 overflow-hidden rounded-[26px] border border-white/[.07]">
+          <img src="/animals/index-banner.jpg" alt="Green tree python, emerald tree boa and tree monitor in a rainforest canopy" className="h-52 w-full object-cover sm:h-72" loading="lazy" />
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[["PUBLISHED", "1", "Green Tree Python reference"], ["PRIORITY", "5", "Core arboreal animal areas"], ["GROUPS", "9", "Supported database groups"], ["CONNECTED", "4", "Genetics · Pedigrees · Market · Community"]].map(([label, value, text]) => <div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
         </div>

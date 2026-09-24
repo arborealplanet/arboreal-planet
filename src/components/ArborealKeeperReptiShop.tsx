@@ -4,60 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
-
-// Three blink variants of Bunn's idle loop. Every clip opens and closes on
-// the same eyes-open pose, so cutting between them is as invisible as each
-// clip's own loop point — the store never visibly repeats.
-const SHOP_CLIPS = [
-  "/hatchery/game/bunn-shop-loop-a.mp4",
-  "/hatchery/game/bunn-shop-loop-b.mp4",
-  "/hatchery/game/bunn-shop-loop-c.mp4",
-];
-
-function ShopLoopVideo() {
-  const [clip, setClip] = useState(0);
-  const refs = useRef<Array<HTMLVideoElement | null>>([]);
-
-  const advance = () => {
-    const next = (clip + 1) % SHOP_CLIPS.length;
-    const upcoming = refs.current[next];
-    if (upcoming) {
-      upcoming.currentTime = 0;
-      void upcoming.play().catch(() => {});
-    }
-    refs.current[clip]?.pause();
-    setClip(next);
-  };
-
-  return (
-    <>
-      {SHOP_CLIPS.map((src, i) => {
-        const active = i === clip;
-        return (
-          <video
-            key={src}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            autoPlay={i === 0}
-            muted
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-            aria-hidden={!active}
-            poster="/hatchery/game/bunn-shop-counter.webp"
-            onEnded={active ? advance : undefined}
-            className={`absolute inset-0 h-full w-full object-cover [object-position:center_35%] transition-opacity duration-150 ${
-              active ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          >
-            <source src={src} type="video/mp4" />
-          </video>
-        );
-      })}
-    </>
-  );
-}
+import { consumeStockRotated, isHankScaleMuted, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
 
 const BUNN_TIPS = [
   "Howdy! Bunn here. Buy your housing before your snakes — every chondro needs a home.",
@@ -71,7 +18,7 @@ type View = "animals" | "enclosures" | "market";
 
 const VIEWS: Array<{ id: View; label: string; blurb: string; thumb: string }> = [
   { id: "animals", label: "Animals", blurb: "20 snakes, refreshed daily", thumb: "/hatchery/game/dock/animals.webp" },
-  { id: "enclosures", label: "Enclosures", blurb: "Housing before snakes", thumb: "/hatchery/game/chondro-dojo-2-stack.webp" },
+  { id: "enclosures", label: "Enclosures", blurb: "Housing before snakes", thumb: "/hatchery/game/pvc-enclosure.webp" },
   { id: "market", label: "Player Market", blurb: "Virtual animals from other players", thumb: "/hatchery/game/dock/breed.webp" },
 ];
 
@@ -79,6 +26,43 @@ export function ArborealKeeperReptiShop() {
   const [view, setView] = useState<View>("animals");
   const [tip, setTip] = useState(0);
   const [qaOpen, setQaOpen] = useState(false);
+  const [muted, setMuted] = useState(() => isHankScaleMuted());
+  const introducedRef = useRef(false);
+
+  // Hank Scale voice line per tip index (BUNN_TIPS order).
+  const TIP_LINES = [3, 4, 5, 6, 7];
+  const VIEW_LINES: Record<View, number> = { animals: 2, enclosures: 3, market: 6 };
+
+  useEffect(() => {
+    const onMuteChange = () => setMuted(isHankScaleMuted());
+    window.addEventListener("hank-scale-mute-changed", onMuteChange);
+    return () => window.removeEventListener("hank-scale-mute-changed", onMuteChange);
+  }, []);
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    setHankScaleMuted(next);
+  }
+
+  function handleTipClick() {
+    const next = (tip + 1) % BUNN_TIPS.length;
+    setTip(next);
+    if (!introducedRef.current) {
+      introducedRef.current = true;
+      playHankScaleLine(1);
+    } else {
+      playHankScaleLine(TIP_LINES[next]);
+    }
+  }
+
+  function selectView(next: View) {
+    if (next === view) return;
+    setView(next);
+    // After a daily stock rotation, the animals tab gets the fresh-stock
+    // greeting instead of the standard one — once.
+    playHankScaleLine(next === "animals" && consumeStockRotated() ? 11 : VIEW_LINES[next]);
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => setTip((i) => (i + 1) % BUNN_TIPS.length), 9000);
@@ -99,63 +83,122 @@ export function ArborealKeeperReptiShop() {
     };
   }, [qaOpen]);
 
+  const active = VIEWS.find((v) => v.id === view) ?? VIEWS[0];
+
   return (
     <div className="mx-auto flex h-[calc(100dvh-164px-env(safe-area-inset-bottom))] w-full max-w-5xl flex-col overflow-hidden px-4 py-3 sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))] sm:px-6">
-      {/* Bunn's tip — slim row above the store, tap for another tip */}
-      <button
-        type="button"
-        onClick={() => setTip((i) => (i + 1) % BUNN_TIPS.length)}
-        title="Ask Bunn for another tip"
-        className="mb-2 flex w-full flex-none items-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.96] px-3 py-2 text-left shadow-[0_10px_30px_rgba(0,0,0,.35)]"
-      >
-        <span className="min-w-0 flex-1 text-[11px] leading-4 text-[#0a120d] sm:text-[12px]">
-          <span className="font-semibold">Hank says:</span> {BUNN_TIPS[tip]}
-        </span>
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
-      </button>
+      {/* Bunn's animated store — fills its space, options on top of it */}
+      <div className="relative min-h-0 w-full flex-[1.25] overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+        <button
+          type="button"
+          onClick={handleTipClick}
+          title="Ask Bunn for a tip"
+          aria-label="Ask Bunn for a tip"
+          className="absolute inset-0 block h-full w-full cursor-pointer"
+        >
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            poster="/hatchery/game/bunn-shop-counter.webp"
+            className="h-full w-full object-cover [object-position:center_35%]"
+          >
+            <source src="/hatchery/game/bunn-shop-loop.mp4" type="video/mp4" />
+          </video>
+        </button>
 
-      {/* Bunn's animated store — as large as possible, completely clean */}
-      <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
-        <div className="absolute inset-0">
-          <ShopLoopVideo />
+        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/55 via-black/10 to-transparent p-3 pb-8 sm:p-4 sm:pb-10">
+          <div className="max-w-[82%] rounded-2xl border border-white/[.08] bg-white/[.96] p-2.5 text-[12px] leading-5 text-[#0a120d] shadow-[0_10px_30px_rgba(0,0,0,.35)] sm:max-w-[62%] sm:text-[13px]">
+            <span className="font-semibold">Bunn says:</span> {BUNN_TIPS[tip]}
+          </div>
         </div>
-      </div>
 
-      {/* View buttons — game-art pills below the animation, Sprite QA kept quiet */}
-      <div className="mt-2 flex flex-none items-center gap-2">
-        <div className="flex min-w-0 flex-1 snap-x gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="absolute right-3 top-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleMute}
+            title={muted ? "Unmute the shopkeeper's voice" : "Mute the shopkeeper's voice"}
+            aria-label={muted ? "Unmute the shopkeeper's voice" : "Mute the shopkeeper's voice"}
+            className="rounded-full border border-white/15 bg-black/60 px-2.5 py-1.5 text-[11px] text-white/75 backdrop-blur hover:bg-black/80"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+          <div className="pointer-events-none rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-[9px] font-black uppercase tracking-[.16em] text-white/75 backdrop-blur">
+            Bunn&apos;s Repti-Shop
+          </div>
+        </div>
+
+        {/* Options on top of the animation */}
+        <div className="absolute inset-x-0 bottom-3 flex justify-center gap-2 px-4">
           {VIEWS.map((v) => {
             const selected = v.id === view;
             return (
               <button
                 key={v.id}
                 type="button"
-                onClick={() => setView(v.id)}
+                onClick={() => selectView(v.id)}
                 aria-current={selected ? "true" : undefined}
-                className={`flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[.05em] transition ${
+                className={`rounded-full border px-3.5 py-2 text-[11px] font-black uppercase tracking-[.08em] backdrop-blur transition ${
                   selected
-                    ? "border-emerald-200/70 bg-gradient-to-b from-emerald-300 to-emerald-400 text-[#04120a] shadow-[0_0_18px_rgba(52,211,153,.45)] ring-1 ring-inset ring-white/40"
-                    : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
+                    ? "border-emerald-200/60 bg-emerald-300 text-[#06100c]"
+                    : "border-white/20 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
                 }`}
               >
-                <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 rounded-full object-cover" />
                 {v.label}
               </button>
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={() => setQaOpen(true)}
-          className="shrink-0 text-[10px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
-        >
-          Sprite QA
-        </button>
       </div>
 
-      {/* Current-view inventory — horizontal carousel, never scrolls vertically */}
-      <div className="mt-2 min-h-0 flex-1 overflow-hidden">
-        <div key={view} className="h-full">
+      {/* The one bottom bar with every store option */}
+      <nav
+        aria-label="Store sections"
+        className="mt-3 grid flex-none grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-black/70 p-2 shadow-[0_12px_40px_rgba(0,0,0,.5)] backdrop-blur"
+      >
+        {VIEWS.map((v) => {
+          const selected = v.id === view;
+          return (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => selectView(v.id)}
+              aria-current={selected ? "true" : undefined}
+              className={`flex items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-xs font-black transition ${
+                selected
+                  ? "bg-emerald-300 text-[#06100c]"
+                  : "border border-white/[.07] bg-white/[.03] text-white/60 hover:bg-white/[.07] hover:text-white/85"
+              }`}
+            >
+              <span className="relative hidden h-7 w-7 shrink-0 overflow-hidden rounded-lg sm:block">
+                <Image src={v.thumb} alt="" fill sizes="28px" className="object-cover" />
+              </span>
+              {v.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Current-view carousel — fills the remaining space, never scrolls the page */}
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="text-[9px] font-black uppercase tracking-[.17em] text-white/35">Now viewing</span>
+            <h2 className="truncate text-sm font-bold text-white">{active.label}</h2>
+            <p className="hidden truncate text-xs text-white/40 sm:block">{active.blurb}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setQaOpen(true)}
+            className="shrink-0 text-[11px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
+          >
+            Sprite QA
+          </button>
+        </div>
+        <div key={view} className="pb-2">
           {view === "animals" ? (
             <ChondroBreederExpandedShop section="snakes" layout="carousel" />
           ) : view === "enclosures" ? (

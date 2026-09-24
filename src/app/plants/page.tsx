@@ -20,6 +20,9 @@ export default function PlantsPage() {
     />
 
     <section className="mx-auto max-w-7xl px-5 pb-8 sm:px-6">
+      <div className="mb-6 overflow-hidden rounded-[26px] border border-white/[.07]">
+        <img src="/plants/index-banner.jpg" alt="Nepenthes pitcher plants hanging in a misty greenhouse" className="h-52 w-full object-cover sm:h-72" loading="lazy" />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[["REFERENCE","1","Nepenthes collection"],["ROADMAP","6","Structured plant groups"],["FOCUS","CARE","Identity · cultivation · use"],["CONNECTED","3","Marketplace · Community · Profiles"]].map(([label,value,text])=><div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
       </div>

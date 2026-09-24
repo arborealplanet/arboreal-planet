@@ -15,7 +15,11 @@ export function AuthPanel({ appName = "Arboreal Planet", destination }: { appNam
   const [status, setStatus] = useState<string | null>(null);
   const initialError = params.get("authError");
   const [error, setError] = useState<string | null>(initialError === "invalid_confirmation" ? "That email link is invalid or expired. Request a fresh one below." : null);
-  const next = destination || params.get("next") || "/profile";
+  function safeNext(value: string | null | undefined) {
+    if (!value || !value.startsWith("/") || value.startsWith("//")) return "/profile";
+    return value;
+  }
+  const next = safeNext(destination || params.get("next"));
 
   function resetMessages() {
     setError(null);

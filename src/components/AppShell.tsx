@@ -13,6 +13,7 @@ const nav = [
   ["News", "/news"],
   ["Marketplace", "/marketplace"],
   ["Learn", "/learn"],
+  ["Episodes", "/episodes"],
 ] as const;
 
 const footerProductLinks = [
@@ -20,6 +21,7 @@ const footerProductLinks = [
   ["Saved", "/saved"],
   ["Learn", "/learn"],
   ["News", "/news"],
+  ["Episodes", "/episodes"],
   ["Shows & Events", "/events"],
   ["Animals", "/animals"],
   ["Genetics", "/genetics"],
@@ -95,6 +97,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <Link href="/animals" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Animals</Link>
         <Link href="/learn" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Learn</Link>
         <Link href="/news" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">News</Link>
+        <Link href="/episodes" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Episodes</Link>
         <Link href="/events" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Events</Link>
         <Link href="/plants" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Plants</Link>
         <Link href="/genetics" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Genetics</Link>

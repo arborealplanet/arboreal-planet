@@ -10,7 +10,10 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 const description = "A keeper-first reptile platform for animal and plant reference data, Green Tree Python genetics and pedigrees, community, marketplace tools and the Arboreal Keeper arcade.";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://arboreal-planet.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: "Arboreal Planet", template: "%s · Arboreal Planet" },
   description,
   manifest: "/manifest.webmanifest",
@@ -20,11 +23,20 @@ export const metadata: Metadata = {
     description,
     siteName: "Arboreal Planet",
     type: "website",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Arboreal Planet — keeper-first reptile community",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Arboreal Planet",
     description,
+    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,

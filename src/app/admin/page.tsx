@@ -3,6 +3,7 @@ import { PageIntro } from "@/components/AppShell";
 import { AdminAccountDeletionReview } from "@/components/AdminAccountDeletionReview";
 import { AdminCommunityModeration } from "@/components/AdminCommunityModeration";
 import { AdminEventReview } from "@/components/AdminEventReview";
+import { AdminEpisodeEditor } from "@/components/AdminEpisodeEditor";
 import { AdminGtpPedigreeReports } from "@/components/AdminGtpPedigreeReports";
 import { AdminJournalEditor } from "@/components/AdminJournalEditor";
 import { AdminMemberDirectory } from "@/components/AdminMemberDirectory";
@@ -13,7 +14,7 @@ import { OwnerRoleManager } from "@/components/OwnerRoleManager";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
 const adminSections=[
-  ["Members","members"],["Journal","journal"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Accounts","accounts"],["Moderation","moderation"]
+  ["Members","members"],["Journal","journal"],["Episodes","episodes"],["Events","events"],["Sellers","sellers"],["Pedigrees","pedigrees"],["References","references"],["Accounts","accounts"],["Moderation","moderation"]
 ] as const;
 
 export default async function AdminPage(){
@@ -63,6 +64,15 @@ export default async function AdminPage(){
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Create drafts, preview editorial content, attach sources, connect pieces to animal or plant records, publish finished work and archive older pieces without touching the database directly.</p>
       </div>
       <AdminJournalEditor/>
+    </section>
+
+    <section id="episodes" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+      <div className="mb-5 panel rounded-3xl p-6">
+        <div className="section-kicker">Arboreal Planet TV</div>
+        <h2 className="mt-3 text-2xl font-semibold">Episode publishing</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Turn emailed submissions into station broadcasts. Paste the keeper&apos;s video link, credit the submitter, feature the premiere episode and publish when it&apos;s ready to air.</p>
+      </div>
+      <AdminEpisodeEditor/>
     </section>
 
     <section id="events" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">

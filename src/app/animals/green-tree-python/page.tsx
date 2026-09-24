@@ -39,8 +39,9 @@ export default function GreenTreePythonPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-5 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.03] p-4 text-xs leading-5 text-white/40">
-                Custom Green Tree Python hero artwork will live here without changing the reference structure around it.
+              <div className="mt-5 overflow-hidden rounded-2xl border border-white/[.07]">
+                <img src="/animals/green-tree-python-hero.jpg" alt="Green tree python coiled on a mossy branch" className="h-64 w-full object-cover sm:h-72" loading="lazy" />
+                <div className="border-t border-white/[.06] bg-black/30 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[.14em] text-emerald-200/50">Reference specimen · Morelia viridis complex</div>
               </div>
             </div>
           </div>
