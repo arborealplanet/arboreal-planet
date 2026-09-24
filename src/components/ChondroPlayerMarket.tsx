@@ -77,7 +77,7 @@ function traitSummary(animal: SnakeLite) {
   return `Top tested trait · ${best[0]} ${best[1]}%`;
 }
 
-export function ChondroPlayerMarket() {
+export function ChondroPlayerMarket({ bare }: { bare?: boolean }) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [save, setSave] = useState<SaveState>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -168,9 +168,8 @@ export function ChondroPlayerMarket() {
     }
   }
 
-  return (
-    <section className="mx-auto mt-5 max-w-7xl px-5 sm:px-6">
-      <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5">
+  const body = (
+    <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · Virtual animals</div>
@@ -292,6 +291,9 @@ export function ChondroPlayerMarket() {
           {!available.length ? <div className="rounded-2xl border border-dashed border-white/[.08] p-6 text-sm text-white/30 md:col-span-2 xl:col-span-3">No breeder-listed virtual snakes are available to you right now.</div> : null}
         </div>
       </div>
-    </section>
+  );
+
+  return bare ? body : (
+    <section className="mx-auto mt-5 max-w-7xl px-5 sm:px-6">{body}</section>
   );
 }
