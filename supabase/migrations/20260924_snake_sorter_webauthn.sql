@@ -6,7 +6,7 @@
 -- IMPORTANT - verify before applying:
 --   unlock_snake_sorter_webauthn() below mirrors the session creation of the
 --   existing unlock_snake_sorter(p_pin) RPC. Confirm the target table name and
---   columns (snake_sorter_unlock_sessions(user_id, session_token, expires_at))
+--   columns (snake_sorter_unlock_sessions(user_id, token_hash, expires_at))
 --   against the live unlock_snake_sorter definition before running
 --   `supabase db push`. Postgres DDL is transactional: if the names are wrong
 --   the migration fails cleanly and nothing is applied.
@@ -40,13 +40,17 @@ create policy "Users manage their own webauthn credentials"
 -- truth; if it stores sessions differently, stop here with a clear error
 -- instead of creating a broken RPC. DDL is transactional, so nothing is
 -- applied when this fails.
+--
+-- Live definition (verified 2026-09-24 on Arboreal-planet-2): sessions are
+-- stored as a SHA-256 hex digest in token_hash; the raw token is returned
+-- to the caller. This RPC mirrors that exactly.
 do $$
 declare
   v_missing text[];
 begin
   select array_agg(expected.c)
   into v_missing
-  from (values ('user_id'), ('session_token'), ('expires_at')) as expected(c)
+  from (values ('user_id'), ('token_hash'), ('expires_at')) as expected(c)
   where not exists (
     select 1
     from information_schema.columns
@@ -60,22 +64,33 @@ begin
 end $$;
 
 -- Mint an unlock session after a successful WebAuthn authentication ceremony.
--- Called only after the application server has verified the WebAuthn
--- assertion; the function itself performs no cryptographic checks.
+-- Mirrors unlock_snake_sorter(p_pin): clears prior/expired sessions for the
+-- user, stores encode(digest(token, 'sha256'), 'hex') in token_hash, and
+-- returns the raw token. Called only after the application server has
+-- verified the WebAuthn assertion; the function itself performs no
+-- cryptographic checks.
 create or replace function public.unlock_snake_sorter_webauthn()
 returns text
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 declare
-  v_token text := encode(gen_random_bytes(32), 'hex');
+  v_uid uuid := auth.uid();
+  v_token text;
 begin
-  if auth.uid() is null then
+  if v_uid is null then
     raise exception 'Not authenticated';
   end if;
-  insert into public.snake_sorter_unlock_sessions (user_id, session_token, expires_at)
-  values (auth.uid(), v_token, now() + interval '12 hours');
+
+  delete from public.snake_sorter_unlock_sessions
+  where user_id = v_uid or expires_at <= now();
+
+  v_token := encode(gen_random_bytes(32), 'hex');
+
+  insert into public.snake_sorter_unlock_sessions (user_id, token_hash, expires_at)
+  values (v_uid, encode(digest(v_token, 'sha256'), 'hex'), now() + interval '12 hours');
+
   return v_token;
 end;
 $$;
