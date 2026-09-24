@@ -107,7 +107,7 @@ export function ChondroSnakeIcon({
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${tiny ? "h-28 min-w-28" : compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${tiny ? "h-24 min-w-24" : compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
       {versionedSrc ? (
         <img
           key={versionedSrc}

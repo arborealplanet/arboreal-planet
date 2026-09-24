@@ -168,11 +168,72 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
     }
   }
 
-  const body = (
-    <div className={layout === "carousel" ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.022] p-3" : "overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5"}>
+  function marketIcon(animal: SnakeLite) {
+    return (
+      <ChondroSnakeIcon
+        subspecies={animal.subspecies as never}
+        name={animal.name}
+        traits={{
+          highBlack: Number(animal.highBlack ?? 0),
+          highWhite: Number(animal.highWhite ?? 0),
+          blueStripe: Number(animal.blueStripe ?? 0),
+          yellowRetention: Number(animal.yellowRetention ?? 0),
+          blotches: Number(animal.blotches ?? 0),
+        }}
+        lifeStage={(animal.lifeStage ?? "Adult") as never}
+        neonateColor={animal.neonateColor}
+        locality={animal.locality}
+        classification={animal.classification as never}
+        ancestry={animal.ancestry as never}
+        localityAncestry={animal.localityAncestry}
+        phenotypeScore={animal.phenotypeScore}
+        spriteSeed={animal.id}
+        compact
+        tiny
+      />
+    );
+  }
+
+  function mineCarouselCard(listing: Listing) {
+    const animal = listing.snake;
+    return (
+      <article key={listing.id} className="w-[66%] shrink-0 snap-start rounded-2xl border border-amber-200/10 bg-black/14 p-2.5 sm:w-[230px]">
+        {marketIcon(animal)}
+        <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className="truncate text-[10px] text-amber-100/58">Listed by you</span>
+          <span className="shrink-0 text-sm font-semibold text-amber-100/72">{money(listing.price)}</span>
+        </div>
+      </article>
+    );
+  }
+
+  function availableCarouselCard(listing: Listing) {
+    const animal = listing.snake;
+    const cannotBuy = busy !== null || cash < listing.price || openSlots <= 0;
+    return (
+      <article key={listing.id} className="w-[66%] shrink-0 snap-start rounded-2xl border border-white/[.06] bg-black/12 p-2.5 sm:w-[230px]">
+        {marketIcon(animal)}
+        <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-emerald-200/76">{money(listing.price)}</span>
+          <button
+            type="button"
+            disabled={cannotBuy}
+            onClick={() => void buy(listing)}
+            className="rounded-lg bg-emerald-300 px-2.5 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30"
+          >
+            {busy === listing.id ? "…" : openSlots <= 0 ? "Need space" : cash < listing.price ? "Need cash" : "Buy"}
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  const body = (    <div className={layout === "carousel" ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.022] p-2.5" : "overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5"}>
         {layout === "carousel" ? (
-          <div className="flex items-center justify-between gap-2">
-            <div className="truncate text-[10px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · {available.length} available</div>
+          <div className="flex flex-none items-center justify-between gap-2">
+            <div className="truncate text-[10px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · {mine.length + available.length} available</div>
             <button type="button" onClick={() => void refresh()} aria-label="Refresh player market" className="shrink-0 rounded-lg border border-white/[.08] px-2 py-1 text-[10px] font-bold text-white/52">↻</button>
           </div>
         ) : (
@@ -196,20 +257,28 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
         </>
         )}
 
-        {status ? <div role="status" className="mt-4 rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-xs text-white/55">{status}</div> : null}
+        {status ? <div role="status" className={layout === "carousel" ? "mt-2 truncate text-[11px] text-white/55" : "mt-4 rounded-xl border border-white/[.07] bg-black/15 px-3 py-2 text-xs text-white/55"}>{status}</div> : null}
 
+        {layout === "carousel" ? (
+          <div className="mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]">
+            {mine.map((listing) => mineCarouselCard(listing))}
+            {available.map((listing) => availableCarouselCard(listing))}
+            {!mine.length && !available.length ? (
+              <div className="w-full shrink-0 snap-start rounded-2xl border border-dashed border-white/[.08] p-4 text-xs text-white/30">No breeder-listed virtual snakes are available to you right now.</div>
+            ) : null}
+          </div>
+        ) : (
+        <>
         {mine.length ? (
-          <div className={layout === "carousel" ? "mt-3" : "mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4"}>
+          <div className="mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4">
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-amber-100/55">Your active listings</div>
-            {layout === "carousel" ? null : (
             <p className="mt-1 text-xs leading-5 text-white/34">These snakes are still listed. They are intentionally kept visible here so selling an animal never makes it look lost.</p>
-            )}
-            <div className={layout === "carousel" ? "mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" : "mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {mine.map((listing) => {
                 const animal = listing.snake;
                 return (
-                  <article key={listing.id} className={layout === "carousel" ? "w-[66%] shrink-0 snap-start rounded-2xl border border-amber-200/10 bg-black/14 p-2.5 sm:w-[230px]" : "rounded-[22px] border border-amber-200/10 bg-black/14 p-3"}>
-                    <div className={layout === "carousel" ? "" : "rounded-[18px] border border-white/[.045] bg-black/15 p-2"}>
+                  <article key={listing.id} className="rounded-[22px] border border-amber-200/10 bg-black/14 p-3">
+                    <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
                       <ChondroSnakeIcon
                         subspecies={animal.subspecies as never}
                         name={animal.name}
@@ -229,18 +298,9 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                         phenotypeScore={animal.phenotypeScore}
                         spriteSeed={animal.id}
                         compact
-                        tiny={layout === "carousel"}
+                        tiny={false}
                       />
                     </div>
-                    {layout === "carousel" ? (
-                    <>
-                    <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
-                    <div className="mt-0.5 flex items-center justify-between gap-2">
-                      <span className="truncate text-[10px] text-amber-100/58">Listed by you</span>
-                      <span className="shrink-0 text-sm font-semibold text-amber-100/72">{money(listing.price)}</span>
-                    </div>
-                    </>
-                    ) : (
                     <>
                     <div className="mt-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -251,7 +311,6 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                     </div>
                     <div className="mt-3 rounded-xl border border-amber-200/10 bg-amber-200/[.025] px-3 py-2 text-[10px] font-semibold text-amber-100/58">Listed by you · visible to other players</div>
                     </>
-                    )}
                   </article>
                 );
               })}
@@ -259,16 +318,16 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
           </div>
         ) : null}
 
-        <div className={layout === "carousel" ? "mt-3" : "mt-5"}>
+        <div className="mt-5">
           <div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-100/48">Other breeders</div>
         </div>
-        <div className={layout === "carousel" ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" : "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {available.map((listing) => {
             const animal = listing.snake;
             const cannotBuy = busy !== null || cash < listing.price || openSlots <= 0;
             return (
-              <article key={listing.id} className={layout === "carousel" ? "w-[66%] shrink-0 snap-start rounded-2xl border border-white/[.06] bg-black/12 p-2.5 sm:w-[230px]" : "rounded-[22px] border border-white/[.06] bg-black/12 p-3"}>
-                <div className={layout === "carousel" ? "" : "rounded-[18px] border border-white/[.045] bg-black/15 p-2"}>
+              <article key={listing.id} className="rounded-[22px] border border-white/[.06] bg-black/12 p-3">
+                <div className="rounded-[18px] border border-white/[.045] bg-black/15 p-2">
                   <ChondroSnakeIcon
                     subspecies={animal.subspecies as never}
                     name={animal.name}
@@ -288,26 +347,9 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                     phenotypeScore={animal.phenotypeScore}
                     spriteSeed={animal.id}
                     compact
-                    tiny={layout === "carousel"}
+                    tiny={false}
                   />
                 </div>
-                {layout === "carousel" ? (
-                <>
-                <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
-                <div className="mt-0.5 truncate text-[10px] text-white/34">{animal.sex ?? "Unknown sex"} · {animal.lifeStage ?? "Unknown stage"}</div>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-emerald-200/76">{money(listing.price)}</span>
-                  <button
-                    type="button"
-                    disabled={cannotBuy}
-                    onClick={() => void buy(listing)}
-                    className="rounded-lg bg-emerald-300 px-2.5 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30"
-                  >
-                    {busy === listing.id ? "…" : openSlots <= 0 ? "Need space" : cash < listing.price ? "Need cash" : "Buy"}
-                  </button>
-                </div>
-                </>
-                ) : (
                 <>
                 <div className="mt-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -329,12 +371,13 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
                   {busy === listing.id ? "Claiming…" : openSlots <= 0 ? "Need enclosure" : cash < listing.price ? "Not enough cash" : "Buy virtual snake"}
                 </button>
                 </>
-                )}
               </article>
             );
           })}
           {!available.length ? <div className="rounded-2xl border border-dashed border-white/[.08] p-6 text-sm text-white/30 md:col-span-2 xl:col-span-3">No breeder-listed virtual snakes are available to you right now.</div> : null}
         </div>
+        </>
+        )}
       </div>
   );
 

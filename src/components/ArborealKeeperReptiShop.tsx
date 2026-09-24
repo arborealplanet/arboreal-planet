@@ -114,15 +114,15 @@ export function ArborealKeeperReptiShop() {
       </button>
 
       {/* Bunn's animated store — as large as possible, completely clean */}
-      <div className="relative min-h-0 w-full flex-[1.6] overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+      <div className="relative min-h-0 w-full flex-[1.25] overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
         <div className="absolute inset-0">
           <ShopLoopVideo />
         </div>
       </div>
 
       {/* View buttons — small, below the animation, Sprite QA kept quiet */}
-      <div className="mt-2 flex flex-none items-center justify-between gap-2">
-        <div className="flex min-w-0 gap-1.5">
+      <div className="mt-2 flex flex-none items-center gap-2">
+        <div className="flex gap-1.5">
           {VIEWS.map((v) => {
             const selected = v.id === view;
             return (
@@ -131,7 +131,7 @@ export function ArborealKeeperReptiShop() {
                 type="button"
                 onClick={() => setView(v.id)}
                 aria-current={selected ? "true" : undefined}
-                className={`truncate rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[.08em] transition ${
+                className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[.06em] transition ${
                   selected
                     ? "border-emerald-200/60 bg-emerald-300 text-[#06100c]"
                     : "border-white/15 bg-white/[.04] text-white/60 hover:bg-white/[.08] hover:text-white"
@@ -145,7 +145,7 @@ export function ArborealKeeperReptiShop() {
         <button
           type="button"
           onClick={() => setQaOpen(true)}
-          className="shrink-0 text-[11px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
+          className="ml-auto shrink-0 text-[10px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
         >
           Sprite QA
         </button>

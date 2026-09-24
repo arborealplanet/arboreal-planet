@@ -653,9 +653,9 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       </section>
       ) : null}
       {(!section || section === "enclosures") ? (
-      <section className={carousel ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-3" : "mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5"}>
+      <section className={carousel ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-2.5" : "mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5"}>
         {carousel ? (
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
             <div className="shrink-0 text-[10px] text-emerald-100/45">{openSlots} open spaces</div>
           </div>
@@ -673,7 +673,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         </div>
         )}
 
-        <div className={carousel ? "mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
+        <div className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
           {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
             const price = enclosurePrices[type];
             const owned = Number(save.enclosures?.[type] ?? 0);
@@ -703,7 +703,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                     <span className="text-white/45">{owned} owned</span>
                     <span className="font-semibold text-emerald-200/78">{money(price)}</span>
                   </div>
-                  <button type="button" disabled={unavailable} onClick={() => buyEnclosure(type)} className="mt-2 w-full rounded-lg bg-emerald-300 px-3 py-2 text-[11px] font-black text-[#06100c] disabled:opacity-30">
+                  <button type="button" disabled={unavailable} onClick={() => buyEnclosure(type)} className="mt-2 w-full rounded-lg bg-emerald-300 px-3 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30">
                     {roomEnclosureSlots <= 0 ? "Need room" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "…" : "Buy"}
                   </button>
                 </div>
@@ -729,9 +729,9 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       </section>
       ) : null}
       {(!section || section === "snakes") ? (
-      <section className={carousel ? "h-full rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-3" : "rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5"}>
+      <section className={carousel ? "h-full overflow-hidden rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-2.5" : "rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5"}>
         {carousel ? (
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">{offers.length} snakes available</div>
             <div className="shrink-0 text-[10px] tabular-nums text-sky-100/45">refresh {formatCountdown(refreshRemaining)}</div>
           </div>
@@ -762,7 +762,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
 
         <div
           aria-label="Scrollable snake store listings"
-          className={carousel ? "mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]" : "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"}
+          className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]" : "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"}
         >
           {offers.map((offer) => {
             const sold = purchased.has(offer.id);
@@ -790,7 +790,6 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 {carousel ? (
                 <>
                 <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name}</div>
-                <div className="mt-0.5 truncate text-[10px] text-white/35">{offer.sex} · {offer.lifeStage} · {offer.locality}</div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-emerald-200/75">{money(offer.price)}</span>
                   <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} onClick={() => void buy(offer)} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
@@ -822,7 +821,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
           })}
         </div>
 
-        {status ? <div role="status" className="mt-3 text-xs text-sky-100/65">{status}</div> : null}
+        {status ? <div role="status" className={carousel ? "mt-1 truncate text-[11px] text-sky-100/65" : "mt-3 text-xs text-sky-100/65"}>{status}</div> : null}
       </section>
       ) : null}
     </div>
