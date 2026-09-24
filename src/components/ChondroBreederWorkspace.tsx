@@ -12,7 +12,6 @@ import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
-import { ChondroPatternBanner } from "@/components/ChondroPatternBanner";
 import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";
 import { ChondroGameNotifications } from "@/components/ChondroGameNotifications";
 import { ChondroRetiredBreedersPanel } from "@/components/ChondroRetiredBreedersPanel";
@@ -185,17 +184,19 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
     <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
         <div className="p-3 sm:p-5">
-          <ChondroPatternBanner compact />
+          <div className="relative min-h-44 overflow-hidden rounded-[26px] border border-white/[.08] bg-black shadow-2xl shadow-black/25 sm:min-h-56" role="img" aria-label="Arboreals by Bunn shopkeeper holding a red neonate green tree python">
+            <Image src="/hatchery/game/arboreal-keeper-ad-hero.webp" alt="" fill sizes="(max-width: 1500px) 100vw, 1500px" className="object-cover object-[center_22%]" priority />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/72 via-black/28 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent p-5 sm:p-7">
+              <div className="text-[10px] font-black uppercase tracking-[.2em] text-emerald-100/80">Arboreal Arcade</div>
+              <div className="mt-1 text-3xl font-black tracking-[-.04em] text-white sm:text-4xl">Arboreal Keeper</div>
+            </div>
+          </div>
 
           <section className="mt-4 overflow-hidden rounded-[30px] border border-emerald-300/12 bg-[#030806] shadow-[0_24px_70px_rgba(0,0,0,.28)]">
             <div className="grid lg:grid-cols-[minmax(330px,46%)_1fr]">
-              <div className="grid min-h-[260px] grid-cols-2 gap-px bg-white/[.06] lg:min-h-[360px]">
-                <div className="relative overflow-hidden bg-black/35">
-                  <Image src="/hatchery/game/hatching.webp" alt="Illustrated green tree python hatchlings emerging" fill sizes="(max-width: 1024px) 50vw, 23vw" className="object-cover" priority />
-                </div>
-                <div className="relative overflow-hidden bg-black/35">
-                  <Image src="/hatchery/game/neonates.webp" alt="Illustrated red and yellow green tree python neonates" fill sizes="(max-width: 1024px) 50vw, 23vw" className="object-cover" priority />
-                </div>
+              <div className="relative min-h-[260px] overflow-hidden bg-black/35 lg:min-h-[360px]">
+                <Image src="/hatchery/game/fresh-eggs.webp" alt="Illustrated green tree python eggs in the incubator" fill sizes="(max-width: 1024px) 100vw, 46vw" className="object-cover" priority />
               </div>
               <div className="relative flex items-center overflow-hidden p-5 sm:p-7 lg:p-9">
                 <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-emerald-300/[.06] blur-3xl" />
