@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
-import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
+import { animalHousingCapacity, canHouseAnimal, enclosureFootprint, openAnimalSlots, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
 import { markStockRotated, playHankScaleLine } from "@/lib/hank-scale-voice";
 
 type Sex = "Male" | "Female";
@@ -46,6 +47,37 @@ type Snake = {
 };
 
 type Offer = Snake & { price: number; featured?: boolean; specialLabel?: string };
+
+// Store search/filters/sort (snakes section). Persisted to localStorage so
+// filters survive tab switches and return visits.
+const STORE_FILTERS_KEY = "arboreal_keeper_store_filters_v1";
+type StoreSort = "featured" | "price-asc" | "price-desc" | "name";
+type StoreFilters = { query: string; locality: string; sex: string; priceBand: string; sort: StoreSort };
+const DEFAULT_STORE_FILTERS: StoreFilters = { query: "", locality: "All", sex: "All", priceBand: "any", sort: "featured" };
+function loadStoreFilters(): StoreFilters {
+  try {
+    const raw = window.localStorage.getItem(STORE_FILTERS_KEY);
+    if (!raw) return DEFAULT_STORE_FILTERS;
+    const parsed = JSON.parse(raw) as Partial<StoreFilters>;
+    return {
+      query: typeof parsed.query === "string" ? parsed.query : "",
+      locality: typeof parsed.locality === "string" ? parsed.locality : "All",
+      sex: typeof parsed.sex === "string" ? parsed.sex : "All",
+      priceBand: typeof parsed.priceBand === "string" ? parsed.priceBand : "any",
+      sort: parsed.sort === "price-asc" || parsed.sort === "price-desc" || parsed.sort === "name" ? parsed.sort : "featured",
+    };
+  } catch {
+    return DEFAULT_STORE_FILTERS;
+  }
+}
+// Offer prices: $500 floor, typically $500–$4,000 (see makeRandomOffer).
+const PRICE_BANDS: Array<{ id: string; label: string; test: (price: number) => boolean }> = [
+  { id: "any", label: "Any price", test: () => true },
+  { id: "under750", label: "Under $750", test: (p) => p < 750 },
+  { id: "750to1500", label: "$750 – $1,500", test: (p) => p >= 750 && p <= 1500 },
+  { id: "1500to3000", label: "$1,500 – $3,000", test: (p) => p > 1500 && p <= 3000 },
+  { id: "over3000", label: "Over $3,000", test: (p) => p > 3000 },
+];
 type EnclosureType = "Chondro Dojo Bin" | "PVC Arboreal";
 type GameSave = { cash: number; colony: Snake[]; enclosures: Record<string, number>; facilityRooms?: Record<string, number>; purchasedStoreIds?: string[]; [key: string]: unknown };
 
@@ -58,8 +90,8 @@ const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 // the old arboreal-chondro-enclosure-action event listener.
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
-  "Chondro Dojo Bin": { label: "Chondro Dojo 2 Stack", detail: "Two space-saving neonate enclosures sold as one stack. The stack uses one facility slot and provides two neonate spaces." },
-  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing required for adult Green Tree Pythons." },
+  "Chondro Dojo Bin": { label: "Chondro Dojo 2 Stack", detail: "Two space-saving enclosures sold as one stack. The stack uses one facility slot and houses Green Tree Pythons from hatchling to adult — two spaces." },
+  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing — the upgrade pick for larger adults and display setups." },
 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const subspeciesShort: Record<Subspecies, string> = {
@@ -421,6 +453,15 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   const [status, setStatus] = useState("");
   const [refreshAt, setRefreshAt] = useState(0);
   const [now, setNow] = useState(0);
+  // Store search / filters / sort — persisted across visits.
+  const [storeFilters, setStoreFilters] = useState<StoreFilters>(() => loadStoreFilters());
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORE_FILTERS_KEY, JSON.stringify(storeFilters));
+    } catch {}
+  }, [storeFilters]);
+  // Bulk-buy quantity per enclosure type (1 = single purchase).
+  const [enclosureQty, setEnclosureQty] = useState<Partial<Record<EnclosureType, number>>>({});
   // Detail popups: tapping a store card opens a bigger dossier for that
   // animal or enclosure. QA cards stay non-interactive (review only).
   const [detailOffer, setDetailOffer] = useState<Offer | null>(null);
@@ -517,7 +558,11 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         if (!cancelled && saveResponse.ok) {
           const isAuthenticated = Boolean(saveData.authenticated);
           const cloud = parseSave(saveData.save?.state);
-          const resolved = cloud ?? local ?? makeStarterSave();
+          // Compare updatedAt like the main game view: a rapid buy-then-navigate
+          // must not let a stale cloud save clobber newer local state.
+          const cloudUpdatedAt = Number(cloud?.updatedAt ?? 0);
+          const localUpdatedAt = Number(local?.updatedAt ?? 0);
+          const resolved = cloud && cloudUpdatedAt >= localUpdatedAt ? cloud : local ?? cloud ?? makeStarterSave();
           setAuthenticated(isAuthenticated);
           setSave(resolved);
           if (!cloud && !local) {
@@ -569,54 +614,77 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   }, []);
 
   const offers = useMemo(() => buildOffers(seed, conservation), [seed, conservation]);
+  const localityOptions = useMemo(() => Array.from(new Set(offers.map((offer) => offer.locality).filter(Boolean))).sort(), [offers]);
+  const sexOptions = useMemo(() => Array.from(new Set(offers.map((offer) => offer.sex).filter(Boolean))).sort(), [offers]);
+  const visibleOffers = useMemo(() => {
+    const q = storeFilters.query.trim().toLowerCase();
+    const band = PRICE_BANDS.find((entry) => entry.id === storeFilters.priceBand) ?? PRICE_BANDS[0];
+    const list = offers.filter(
+      (offer) =>
+        (!q || [offer.name, offer.locality, offer.subspecies].some((value) => String(value ?? "").toLowerCase().includes(q))) &&
+        (storeFilters.locality === "All" || offer.locality === storeFilters.locality) &&
+        (storeFilters.sex === "All" || offer.sex === storeFilters.sex) &&
+        band.test(offer.price)
+    );
+    const sorted = [...list];
+    if (storeFilters.sort === "price-asc") sorted.sort((a, b) => a.price - b.price);
+    else if (storeFilters.sort === "price-desc") sorted.sort((a, b) => b.price - a.price);
+    else if (storeFilters.sort === "name") sorted.sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    else sorted.sort((a, b) => Number(b.featured ?? false) - Number(a.featured ?? false));
+    return sorted;
+  }, [offers, storeFilters]);
+  const storeFiltersActive =
+    storeFilters.query.trim() !== "" || storeFilters.locality !== "All" || storeFilters.sex !== "All" || storeFilters.priceBand !== "any" || storeFilters.sort !== "featured";
+  function resetStoreFilters() {
+    setStoreFilters(DEFAULT_STORE_FILTERS);
+  }
   const purchased = useMemo(() => new Set(save?.purchasedStoreIds ?? []), [save?.purchasedStoreIds]);
   const installedFootprint = enclosureFootprint(save?.enclosures);
   const capacity = animalHousingCapacity(save?.enclosures);
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms: save?.facilityRooms });
   const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedFootprint);
   const colony = save?.colony ?? [];
-  const dojoCapacity = Math.max(0, Number(save?.enclosures?.["Chondro Dojo Bin"] ?? 0) || 0) * 2;
-  const pvcCapacity = Math.max(0, Number(save?.enclosures?.["PVC Arboreal"] ?? 0) || 0);
-  const olderAnimals = colony.filter((animal) => animal.lifeStage === "Adult").length;
-  const juvenileAnimals = Math.max(0, colony.length - olderAnimals);
-  const pvcAfterRequiredOlderHousing = Math.max(0, pvcCapacity - olderAnimals);
-  const juvenilesInDojo = Math.min(juvenileAnimals, dojoCapacity);
-  const juvenilesNeedingPvc = Math.max(0, juvenileAnimals - juvenilesInDojo);
-  const openPvcSlots = Math.max(0, pvcAfterRequiredOlderHousing - juvenilesNeedingPvc);
-  const openDojoSlots = Math.max(0, dojoCapacity - juvenilesInDojo);
-  const openSlots = openDojoSlots + openPvcSlots;
+  // Housing rule v2 (owner-confirmed): chondros of any life stage can live in
+  // a Chondro Dojo Bin — adults do NOT require PVC. Any open animal slot works.
+  const openSlots = openAnimalSlots(save?.enclosures, colony.length);
 
   function housingAvailableFor(offer: Offer) {
-    if (offer.lifeStage === "Adult") return openPvcSlots > 0;
-    return openSlots > 0;
+    // Species-aware by design: every offer in this shop is a chondro, so any
+    // open slot works, adult or not. canHouseAnimal is the shared rule with
+    // the save API's server-side enforcement.
+    return canHouseAnimal(save?.enclosures, colony.length, { species: "chondro", lifeStage: offer.lifeStage });
   }
 
   const refreshRemaining = refreshAt > 0 && now > 0 ? Math.max(0, refreshAt - now) : SHOP_REFRESH_MS;
   const refreshUrgent = refreshAt > 0 && now > 0 && refreshRemaining < 60 * 60 * 1000;
 
-  async function buyEnclosure(type: EnclosureType) {
+  async function buyEnclosure(type: EnclosureType, qty = 1) {
     if (!save || busy || roomEnclosureSlots <= 0) return;
+    // Bulk buy: clamp to open installation slots (each unit needs one).
+    const count = Math.max(1, Math.min(Math.floor(qty) || 1, roomEnclosureSlots));
     const price = enclosurePrices[type];
-    if (save.cash < price) {
-      setStatus(`Not enough cash for the ${enclosureDisplay[type].label} — come back when the funds are right.`);
+    const total = price * count;
+    if (save.cash < total) {
+      setStatus(`Not enough cash for ${count} × ${enclosureDisplay[type].label} (${money(total)}) — come back when the funds are right.`);
       playHankScaleLine(10);
       return;
     }
     const next: GameSave = {
       ...save,
-      cash: save.cash - price,
+      cash: save.cash - total,
       enclosures: {
         ...save.enclosures,
-        [type]: Number(save.enclosures?.[type] ?? 0) + 1,
+        [type]: Number(save.enclosures?.[type] ?? 0) + count,
       },
     };
     setBusy(`enclosure:${type}`);
-    setStatus(`Buying ${enclosureDisplay[type].label}…`);
+    setStatus(`Buying ${count} × ${enclosureDisplay[type].label}…`);
     try {
       await persistStandaloneShopSave(next, authenticated);
       setSave(next);
-      setStatus(`${enclosureDisplay[type].label} purchased. Your snake capacity increased by ${type === "Chondro Dojo Bin" ? 2 : 1}.`);
+      setStatus(`${count} × ${enclosureDisplay[type].label} purchased. Your snake capacity increased by ${count * (type === "Chondro Dojo Bin" ? 2 : 1)}.`);
       playHankScaleLine(12);
+      setEnclosureQty((prev) => ({ ...prev, [type]: 1 }));
     } catch {
       setStatus("That enclosure purchase could not be saved.");
     } finally {
@@ -724,14 +792,14 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         {carousel ? (
           <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
-            <div className="shrink-0 text-[10px] text-emerald-100/45">{openSlots} open spaces</div>
+            <div className="shrink-0 text-[10px] text-emerald-100/45">{openSlots} open animal spaces</div>
           </div>
         ) : (
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
             <h3 className="mt-2 text-xl font-semibold text-white/80">Buy housing before you buy snakes.</h3>
-            <p className="mt-1 text-xs leading-5 text-white/38">A PVC enclosure uses one facility slot for one snake and is required for adult Green Tree Pythons. A Chondro Dojo 2 Stack uses one facility slot and can house neonate or subadult Green Tree Pythons. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
+            <p className="mt-1 text-xs leading-5 text-white/38">A Chondro Dojo 2 Stack uses one facility slot and houses Green Tree Pythons from hatchling to adult — two spaces per stack. A PVC Arboreal enclosure uses one facility slot for one snake: the upgrade/alternative for larger adults and display setups. Your facility currently has {roomEnclosureSlots} installation slot{roomEnclosureSlots === 1 ? "" : "s"} open.</p>
           </div>
           <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
@@ -745,6 +813,22 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
             const price = enclosurePrices[type];
             const owned = Number(save.enclosures?.[type] ?? 0);
             const unavailable = busy !== null || roomEnclosureSlots <= 0;
+            // Bulk buy: each unit needs an installation slot, so the stepper
+            // caps at open slots. The confirm key includes the qty so changing
+            // it re-arms the two-tap confirm with the new total.
+            const maxQty = Math.max(1, Math.min(roomEnclosureSlots, 25));
+            const qty = Math.max(1, Math.min(enclosureQty[type] ?? 1, maxQty));
+            const confirmId = `enclosure:${type}:x${qty}`;
+            function bumpQty(delta: number) {
+              setEnclosureQty((prev) => ({ ...prev, [type]: Math.max(1, Math.min((prev[type] ?? 1) + delta, maxQty)) }));
+            }
+            const stepper = (
+              <div className="flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
+                <button type="button" aria-label="Decrease quantity" disabled={qty <= 1} onClick={(event) => { event.stopPropagation(); bumpQty(-1); }} className="grid h-6 w-6 place-items-center rounded-md border border-white/[.1] text-sm font-black leading-none text-white/60 disabled:opacity-25">−</button>
+                <span className="min-w-8 text-center text-[11px] font-black tabular-nums text-white/70">×{qty}</span>
+                <button type="button" aria-label="Increase quantity" disabled={qty >= maxQty} onClick={(event) => { event.stopPropagation(); bumpQty(1); }} className="grid h-6 w-6 place-items-center rounded-md border border-white/[.1] text-sm font-black leading-none text-white/60 disabled:opacity-25">+</button>
+              </div>
+            );
             return (
               <article
                 key={type}
@@ -753,7 +837,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 aria-label={`View details for ${enclosureDisplay[type].label}`}
                 onClick={() => setDetailEnclosure(type)}
                 onKeyDown={(event) => handleCardKeyDown(event, () => setDetailEnclosure(type))}
-                className={carousel ? "group w-[66%] shrink-0 cursor-pointer snap-start overflow-hidden rounded-[20px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300 sm:w-[230px]" : "group cursor-pointer overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300"}
+                className={carousel ? "group w-full shrink-0 cursor-pointer snap-start overflow-hidden rounded-[20px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300 sm:w-[230px]" : "group cursor-pointer overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300"}
               >
                 <div className={carousel ? "relative h-24 overflow-hidden border-b border-white/[.06] bg-black/25" : "relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25"}>
                   {type === "Chondro Dojo Bin" ? (
@@ -771,8 +855,12 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                     <span className="text-white/45">{owned} owned</span>
                     <span className="font-semibold text-emerald-200/78">{money(price)}</span>
                   </div>
-                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); confirmedTap(`enclosure:${type}`, () => void buyEnclosure(type)); }} className="mt-2 w-full rounded-lg bg-emerald-300 px-3 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30">
-                    {roomEnclosureSlots <= 0 ? "No room slots" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "…" : confirmKey === `enclosure:${type}` ? "Tap again to confirm" : "Buy"}
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    {stepper}
+                    <span className="text-[11px] font-semibold tabular-nums text-emerald-200/78">{money(price * qty)}</span>
+                  </div>
+                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); confirmedTap(confirmId, () => void buyEnclosure(type, qty)); }} className="mt-2 w-full rounded-lg bg-emerald-300 px-3 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30">
+                    {roomEnclosureSlots <= 0 ? "No room slots" : save.cash < price * qty ? `Need ${money(price * qty)}` : busy === `enclosure:${type}` ? "…" : confirmKey === confirmId ? `Confirm ${money(price * qty)}?` : qty > 1 ? `Buy ×${qty}` : "Buy"}
                   </button>
                 </div>
                 ) : (
@@ -785,8 +873,15 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                     </div>
                     <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
                   </div>
-                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); confirmedTap(`enclosure:${type}`, () => void buyEnclosure(type)); }} className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
-                    {roomEnclosureSlots <= 0 ? "No room slots — expand rooms on Home" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : confirmKey === `enclosure:${type}` ? `Tap again to confirm — ${money(price)}` : `Buy ${enclosureDisplay[type].label}`}
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[.12em] text-white/30">Qty</span>
+                      {stepper}
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums text-emerald-200/78">{money(price * qty)}</span>
+                  </div>
+                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); confirmedTap(confirmId, () => void buyEnclosure(type, qty)); }} className="mt-3 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
+                    {roomEnclosureSlots <= 0 ? "No room slots — expand rooms on Home" : save.cash < price * qty ? `Need ${money(price * qty)}` : busy === `enclosure:${type}` ? "Installing…" : confirmKey === confirmId ? `Tap again to confirm — ${money(price * qty)}` : qty > 1 ? `Buy ×${qty} ${enclosureDisplay[type].label}` : `Buy ${enclosureDisplay[type].label}`}
                   </button>
                 </div>
                 )}
@@ -797,10 +892,10 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       </section>
       ) : null}
       {(!section || section === "snakes") ? (
-      <section className={carousel ? "h-full overflow-hidden rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-2.5" : "rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5"}>
+      <section className={carousel ? "flex h-full flex-col overflow-hidden rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-2.5" : "rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5"}>
         {carousel ? (
           <div className="flex flex-none items-center justify-between gap-2">
-            <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">{offers.length} snakes available</div>
+            <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">{visibleOffers.length} of {offers.length} snakes</div>
             <div className={`shrink-0 text-[10px] tabular-nums ${refreshUrgent ? "anim-keeper-pulse-soft font-black text-amber-200/90" : "text-sky-100/45"}`}>refresh {formatCountdown(refreshRemaining)}</div>
           </div>
         ) : (
@@ -808,7 +903,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">Expanded daily listings</div>
-            <h3 className="mt-2 text-xl font-semibold text-white/80">20 snakes available now</h3>
+            <h3 className="mt-2 text-xl font-semibold text-white/80">{storeFiltersActive ? `${visibleOffers.length} of ${offers.length} match` : `${offers.length} snakes available now`}</h3>
             <p className="mt-1 text-xs text-white/35">Swipe left or right through the full store. Three snake cards display together when the screen has enough room.</p>
           </div>
           <div className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-right">
@@ -818,21 +913,64 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         </div>
 
         <div className="mt-3 rounded-xl border border-white/[.055] bg-black/10 px-3 py-2 text-[10px] leading-5 text-white/38">
-          Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return. Adults need a PVC Arboreal enclosure; younger snakes need any open animal space — buy housing in Enclosures above first.
+          Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return. Every snake needs an open animal space — buy housing in Enclosures above first.
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/32">
-          <span>Swipe to browse all {offers.length} listings</span>
-          <span>{openSlots} open animal space{openSlots === 1 ? "" : "s"} · {openPvcSlots} adult-ready · cash {money(save.cash)}</span>
+          <span>Swipe to browse all {visibleOffers.length} listing{visibleOffers.length === 1 ? "" : "s"}</span>
+          <span>{openSlots} open animal space{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</span>
         </div>
         </>
         )}
 
+        {/* Search / filters / sort — persisted across visits */}
+        <div className="mt-2 flex flex-none flex-wrap items-center gap-1.5">
+          <input
+            value={storeFilters.query}
+            onChange={(event) => setStoreFilters((prev) => ({ ...prev, query: event.target.value }))}
+            placeholder="Search name, locality…"
+            aria-label="Search snake listings"
+            className="min-w-0 flex-1 basis-24 rounded-lg border border-white/[.08] bg-black/20 px-2.5 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/25"
+          />
+          <select value={storeFilters.locality} onChange={(event) => setStoreFilters((prev) => ({ ...prev, locality: event.target.value }))} aria-label="Filter by locality" className="rounded-lg border border-white/[.08] bg-black/20 px-2 py-1.5 text-[11px] text-white/65">
+            <option value="All">All localities</option>
+            {localityOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <select value={storeFilters.sex} onChange={(event) => setStoreFilters((prev) => ({ ...prev, sex: event.target.value }))} aria-label="Filter by sex" className="rounded-lg border border-white/[.08] bg-black/20 px-2 py-1.5 text-[11px] text-white/65">
+            <option value="All">Both sexes</option>
+            {sexOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <select value={storeFilters.priceBand} onChange={(event) => setStoreFilters((prev) => ({ ...prev, priceBand: event.target.value }))} aria-label="Filter by price" className="rounded-lg border border-white/[.08] bg-black/20 px-2 py-1.5 text-[11px] text-white/65">
+            {PRICE_BANDS.map((band) => <option key={band.id} value={band.id}>{band.label}</option>)}
+          </select>
+          <select value={storeFilters.sort} onChange={(event) => setStoreFilters((prev) => ({ ...prev, sort: event.target.value as StoreSort }))} aria-label="Sort listings" className="rounded-lg border border-white/[.08] bg-black/20 px-2 py-1.5 text-[11px] text-white/65">
+            <option value="featured">Sort: Featured</option>
+            <option value="price-asc">Sort: Price ↑</option>
+            <option value="price-desc">Sort: Price ↓</option>
+            <option value="name">Sort: Name</option>
+          </select>
+          {storeFiltersActive ? <button type="button" onClick={resetStoreFilters} className="rounded-lg border border-white/[.1] px-2.5 py-1.5 text-[11px] font-bold text-white/55">Reset</button> : null}
+        </div>
+
+        {/* Upfront low-capacity banner */}
+        {openSlots <= 3 ? (
+          <div className="mt-2 flex-none rounded-xl border border-amber-200/20 bg-amber-200/[.05] px-3 py-2 text-[11px] leading-5 text-amber-100/75">
+            {openSlots <= 0
+              ? "No open animal spaces — buy housing in the Enclosures tab before bringing a snake home."
+              : `Only ${openSlots} open animal space${openSlots === 1 ? "" : "s"} left — buy housing in the Enclosures tab before it fills up.`}
+          </div>
+        ) : null}
+
         <div
           aria-label="Scrollable snake store listings"
-          className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]" : "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"}
+          className={carousel ? "mt-2 flex min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]" : "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"}
         >
-          {offers.map((offer) => {
+          {visibleOffers.length === 0 ? (
+            <div className="w-full shrink-0 rounded-2xl border border-white/[.06] bg-black/10 p-6 text-center text-xs text-white/40">
+              No snakes match these filters. <button type="button" onClick={resetStoreFilters} className="font-bold text-sky-200/70 underline">Reset filters</button>
+            </div>
+          ) : null}
+          {visibleOffers.map((offer) => {
             const sold = purchased.has(offer.id);
             const effect = conservation.find((row) => row.subspecies === offer.subspecies);
             return (
@@ -843,7 +981,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 aria-label={`View details for ${offer.name}`}
                 onClick={() => setDetailOffer(offer)}
                 onKeyDown={(event) => handleCardKeyDown(event, () => setDetailOffer(offer))}
-                className={carousel ? `group w-[66%] shrink-0 cursor-pointer snap-start rounded-2xl border p-2.5 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[230px] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}` : `group w-[82%] shrink-0 cursor-pointer snap-start rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}
+                className={carousel ? `group w-full shrink-0 cursor-pointer snap-start rounded-2xl border p-2.5 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[230px] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}` : `group w-[82%] shrink-0 cursor-pointer snap-start rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}
               >
                 <div className="transition-transform duration-300 group-hover:scale-[1.03]">
                 <ChondroSnakeIcon
@@ -867,8 +1005,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name || "Unnamed snake"}</div> <div className="mt-0.5 truncate text-[10px] text-white/38">{offer.lifeStage ?? "Unknown stage"} · {offer.sex ?? "Unknown sex"}</div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Adults need a PVC Arboreal enclosure — buy one in Enclosures above" : "No open animal space — add enclosures above") : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Owned" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : confirmKey === `offer:${offer.id}` ? "Confirm?" : "Buy"}
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? "No open animal space — add enclosures above" : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Owned" : !housingAvailableFor(offer) ? "Need space" : confirmKey === `offer:${offer.id}` ? "Confirm?" : "Buy"}
                   </button>
                 </div>
                 </>
@@ -885,8 +1023,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={busy !== null} title={sold ? undefined : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Adults need a PVC Arboreal enclosure — buy one in Enclosures above" : "No open animal space — add enclosures above") : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : confirmKey === `offer:${offer.id}` ? "Tap again to confirm" : "Buy"}
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? "No open animal space — add enclosures above" : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Purchased" : !housingAvailableFor(offer) ? "Need space" : confirmKey === `offer:${offer.id}` ? "Tap again to confirm" : "Buy"}
                   </button>
                 </div>
                 </>
@@ -900,10 +1038,15 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       </section>
       ) : null}
 
-      {/* Detail popup — tapping any animal or enclosure card opens its dossier. */}
-      {detailOpen ? (
-        <div
-          className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6"
+      {/* Detail popup — tapping any animal or enclosure card opens its dossier.
+          Portaled to document.body so it truly covers the viewport: the shop's
+          tab-switch animation leaves a transform on an ancestor, which would
+          otherwise trap this fixed layer inside the carousel area.
+          Full-screen takeover on mobile; centered card on larger screens. */}
+      {detailOpen && typeof document !== "undefined"
+        ? createPortal(
+          <div
+            className="fixed inset-0 z-[90] flex justify-center sm:items-center sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-label={detailOffer ? `Details for ${detailOffer.name}` : "Enclosure details"}
@@ -914,8 +1057,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
             onClick={closeDetail}
             className="anim-keeper-backdrop-in absolute inset-0 cursor-default bg-black/72 backdrop-blur-sm"
           />
-          <div className="anim-keeper-pop-in relative flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#071009] sm:rounded-[28px]">
-            <div className="flex items-start justify-between gap-3 border-b border-white/[.06] p-4 sm:p-5">
+          <div className="anim-keeper-pop-in relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#071009] sm:h-auto sm:max-h-[90dvh] sm:max-w-lg sm:rounded-[28px] sm:border sm:border-white/10">
+            <div className="flex items-start justify-between gap-3 border-b border-white/[.06] p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:p-5">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[.17em] text-sky-200/50">
                   {detailOffer ? "Animal dossier" : "Enclosure dossier"}
@@ -934,7 +1077,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
               </button>
             </div>
 
-            <div className="overflow-y-auto p-4 sm:p-5">
+            <div className="overflow-y-auto p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-5">
               {detailOffer ? (
                 <DetailOfferDossier
                   offer={detailOffer}
@@ -943,7 +1086,6 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                   buying={busy === detailOffer.id}
                   canAfford={save.cash >= detailOffer.price}
                   housingOk={housingAvailableFor(detailOffer)}
-                  needsPvc={detailOffer.lifeStage === "Adult"}
                   confirmArmed={confirmKey === `dossier:${detailOffer.id}`} onBuy={() => confirmedTap(`dossier:${detailOffer.id}`, () => void buy(detailOffer))}
                 />
               ) : detailEnclosure ? (
@@ -952,6 +1094,9 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                   const price = enclosurePrices[type];
                   const owned = Number(save.enclosures?.[type] ?? 0);
                   const unavailable = busy !== null || roomEnclosureSlots <= 0;
+                  const dossierMaxQty = Math.max(1, Math.min(roomEnclosureSlots, 25));
+                  const dossierQty = Math.max(1, Math.min(enclosureQty[type] ?? 1, dossierMaxQty));
+                  const dossierConfirmId = `dossier-enclosure:${type}:x${dossierQty}`;
                   return (
                     <div>
                       <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-white/[.07] bg-black/25">
@@ -984,13 +1129,24 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                         <span className="text-xl font-bold text-emerald-200/85">{money(price)}</span>
                         <span className="text-[11px] text-white/35">Hank installs it the moment you buy.</span>
                       </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-[.12em] text-white/30">Qty</span>
+                          <div className="flex items-center gap-1">
+                            <button type="button" aria-label="Decrease quantity" disabled={dossierQty <= 1} onClick={() => setEnclosureQty((prev) => ({ ...prev, [type]: dossierQty - 1 }))} className="grid h-7 w-7 place-items-center rounded-md border border-white/[.1] text-sm font-black leading-none text-white/60 disabled:opacity-25">−</button>
+                            <span className="min-w-8 text-center text-xs font-black tabular-nums text-white/70">×{dossierQty}</span>
+                            <button type="button" aria-label="Increase quantity" disabled={dossierQty >= dossierMaxQty} onClick={() => setEnclosureQty((prev) => ({ ...prev, [type]: dossierQty + 1 }))} className="grid h-7 w-7 place-items-center rounded-md border border-white/[.1] text-sm font-black leading-none text-white/60 disabled:opacity-25">+</button>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold tabular-nums text-emerald-200/78">{money(price * dossierQty)}</span>
+                      </div>
                       <button
                         type="button"
-                        disabled={unavailable || save.cash < price}
-                        onClick={() => confirmedTap(`dossier-enclosure:${type}`, () => void buyEnclosure(type))}
+                        disabled={unavailable || save.cash < price * dossierQty}
+                        onClick={() => confirmedTap(dossierConfirmId, () => void buyEnclosure(type, dossierQty))}
                         className="mt-3 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] transition hover:brightness-110 active:scale-[.98] disabled:opacity-30"
                       >
-                        {roomEnclosureSlots <= 0 ? "No room slots — expand rooms on Home" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : confirmKey === `dossier-enclosure:${type}` ? `Tap again to confirm — ${money(price)}` : `Buy ${enclosureDisplay[type].label}`}
+                        {roomEnclosureSlots <= 0 ? "No room slots — expand rooms on Home" : save.cash < price * dossierQty ? `Need ${money(price * dossierQty)}` : busy === `enclosure:${type}` ? "Installing…" : confirmKey === dossierConfirmId ? `Tap again to confirm — ${money(price * dossierQty)}` : dossierQty > 1 ? `Buy ×${dossierQty} ${enclosureDisplay[type].label}` : `Buy ${enclosureDisplay[type].label}`}
                       </button>
                     </div>
                   );
@@ -998,8 +1154,10 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
               ) : null}
             </div>
           </div>
-        </div>
-      ) : null}
+          </div>,
+          document.body
+        )
+        : null}
     </div>
   );
 }
@@ -1011,7 +1169,6 @@ function DetailOfferDossier({
   buying,
   canAfford,
   housingOk,
-  needsPvc,
   onBuy, confirmArmed,
 }: {
   offer: Offer;
@@ -1020,7 +1177,6 @@ function DetailOfferDossier({
   buying: boolean;
   canAfford: boolean;
   housingOk: boolean;
-  needsPvc: boolean;
   onBuy: () => void; confirmArmed: boolean;
 }) {
   const chips = [
@@ -1087,12 +1243,8 @@ function DetailOfferDossier({
 
       <div className={`mt-2.5 rounded-xl border p-3 text-[11px] leading-5 ${housingOk ? "border-emerald-300/15 bg-emerald-300/[.05] text-emerald-100/70" : "border-red-200/15 bg-red-300/[.05] text-red-100/70"}`}>
         {housingOk
-          ? needsPvc
-            ? "You have an open PVC Arboreal slot ready for this adult."
-            : "You have open animal space for this one."
-          : needsPvc
-            ? "This adult needs an open PVC Arboreal slot — buy the enclosure first."
-            : "This one needs a home first — grab an enclosure before bringing it home."}
+          ? "You have open animal space for this one."
+          : "This one needs a home first — grab an enclosure before bringing it home."}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
@@ -1105,7 +1257,7 @@ function DetailOfferDossier({
         onClick={onBuy}
         className="mt-3 w-full rounded-xl bg-amber-200 px-4 py-3 text-xs font-black text-[#17130a] transition hover:brightness-105 active:scale-[.98] disabled:opacity-30"
       >
-        {sold ? "Purchased — check your colony" : !housingOk ? (needsPvc ? "Need a PVC enclosure first" : "Need open animal space") : !canAfford ? `Need ${money(offer.price)}` : buying ? "…" : confirmArmed ? `Tap again to confirm — ${money(offer.price)}` : `Buy ${offer.name}`}
+        {sold ? "Purchased — check your colony" : !housingOk ? "Need open animal space" : !canAfford ? `Need ${money(offer.price)}` : buying ? "…" : confirmArmed ? `Tap again to confirm — ${money(offer.price)}` : `Buy ${offer.name}`}
       </button>
     </div>
   );

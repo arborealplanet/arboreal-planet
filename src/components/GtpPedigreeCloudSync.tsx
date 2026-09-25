@@ -76,14 +76,18 @@ async function deleteAnimalPhoto(animal: LocalAnimal) {
 
 export function GtpPedigreeCloudSync() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [cloudCount, setCloudCount] = useState(0);
   const [cloudAnimals, setCloudAnimals] = useState<LocalAnimal[]>([]);
   const [status, setStatus] = useState("Checking account sync…");
   const [busy, setBusy] = useState(false);
 
   async function inspectCloud() {
+    setCheckFailed(false);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     try {
-      const response = await fetch("/api/genetics/pedigree", { cache: "no-store" });
+      const response = await fetch("/api/genetics/pedigree", { cache: "no-store", signal: controller.signal });
       if (response.status === 401) {
         setSignedIn(false);
         setCloudCount(0);
@@ -100,7 +104,14 @@ export function GtpPedigreeCloudSync() {
       setStatus(next.length ? `${next.length} cloud animal${next.length === 1 ? "" : "s"} available.` : "No cloud pedigree saved yet.");
     } catch (error) {
       setSignedIn(null);
-      setStatus(error instanceof Error ? error.message : "Could not check cloud sync.");
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setStatus("The sign-in check timed out. Check your connection and try again.");
+      } else {
+        setStatus(error instanceof Error ? error.message : "Could not check cloud sync.");
+      }
+      setCheckFailed(true);
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -198,10 +209,18 @@ export function GtpPedigreeCloudSync() {
           <h2 className="mt-2 text-xl font-semibold text-white/80">Keep the family tree with your Arboreal Planet account.</h2>
           <p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Browser storage still works offline. Account sync keeps the pedigree and its animal photos with your account. Records stay private unless you explicitly publish an animal.</p>
         </div>
-        <span className={`rounded-full border px-3 py-1.5 text-[10px] font-bold ${signedIn ? "border-emerald-300/15 text-emerald-100/65" : "border-white/[.08] text-white/40"}`}>{signedIn ? `${cloudCount} CLOUD` : signedIn === false ? "SIGN IN REQUIRED" : "CHECKING"}</span>
+        <span className={`rounded-full border px-3 py-1.5 text-[10px] font-bold ${signedIn ? "border-emerald-300/15 text-emerald-100/65" : "border-white/[.08] text-white/40"}`}>{signedIn ? `${cloudCount} CLOUD` : signedIn === false ? "SIGN IN REQUIRED" : checkFailed ? "CHECK FAILED" : "CHECKING"}</span>
       </div>
 
-      <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      {checkFailed ? (
+        <div role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-500/[.07] p-3">
+          <p className="text-xs font-bold text-red-100/85">Couldn&apos;t check your sign-in status.</p>
+          <p className="mt-1 text-xs leading-5 text-white/45">{status}</p>
+          <button type="button" onClick={() => void inspectCloud()} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
+        </div>
+      ) : (
+        <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {signedIn === false ? (

@@ -54,9 +54,32 @@ export type SpeciesTraitProfile = {
   preferredByTaxon: Record<string, BreederTraitKey[]>;
 };
 
+/**
+ * Adult housing requirement tier (future-proofing documentation).
+ * - "dojo-or-bigger": the species' adults can live in a Chondro Dojo Bin (or
+ *   any larger enclosure). True for chondros — the Dojo is built to house a
+ *   green tree python from hatchling to adult.
+ * - "large": adults need a large enclosure (e.g. carpet pythons, emerald tree
+ *   boas). A "Large Arboreal" enclosure type ships when those species do;
+ *   until then this is documentation, not enforced logic.
+ */
+export type AdultHousingRequirement = "dojo-or-bigger" | "large";
+
+/**
+ * Documented adult-housing tiers for species that are not playable yet.
+ * Design record only — nothing enforces these today (canHouseAnimal only
+ * checks open slots). When a species ships it gets a full
+ * BreederSpeciesProfile with its own adultHousing instead of living here.
+ */
+export const DOCUMENTED_FUTURE_SPECIES_HOUSING: Record<string, AdultHousingRequirement> = {
+  "carpet python": "large",
+  "emerald tree boa": "large",
+};
+
 export type BreederSpeciesProfile = {
   id: string;
   displayName: string;
+  adultHousing: AdultHousingRequirement;
   growth: SpeciesGrowthProfile;
   reproduction: SpeciesReproductionProfile;
   neonates: SpeciesNeonateProfile;
@@ -66,6 +89,7 @@ export type BreederSpeciesProfile = {
 export const CHONDRO_SPECIES_PROFILE: BreederSpeciesProfile = {
   id: "chondro",
   displayName: "Green Tree Python Complex",
+  adultHousing: "dojo-or-bigger",
   growth: {
     hatchling: { next: "Neonate", feederUnits: 25, months: 6 },
     neonate: { next: "Subadult", feederUnits: 150, months: 36 },

@@ -23,14 +23,18 @@ export function GtpBreederConfirmations() {
   const [animalId, setAnimalId] = useState("");
   const [producerUsername, setProducerUsername] = useState("");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [status, setStatus] = useState("Checking producer confirmations…");
   const [busy, setBusy] = useState(false);
 
   async function load() {
+    setCheckFailed(false);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     try {
       const [animalsResponse, requestsResponse] = await Promise.all([
-        fetch("/api/genetics/pedigree", { cache: "no-store" }),
-        fetch("/api/genetics/pedigree/confirmations", { cache: "no-store" }),
+        fetch("/api/genetics/pedigree", { cache: "no-store", signal: controller.signal }),
+        fetch("/api/genetics/pedigree/confirmations", { cache: "no-store", signal: controller.signal }),
       ]);
       if (animalsResponse.status === 401 || requestsResponse.status === 401) {
         setSignedIn(false);
@@ -51,7 +55,14 @@ export function GtpBreederConfirmations() {
       setStatus(pending ? `${pending} pending producer confirmation request${pending === 1 ? "" : "s"}.` : "No pending producer confirmations.");
     } catch (error) {
       setSignedIn(null);
-      setStatus(error instanceof Error ? error.message : "Could not load producer confirmations.");
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setStatus("The sign-in check timed out. Check your connection and try again.");
+      } else {
+        setStatus(error instanceof Error ? error.message : "Could not load producer confirmations.");
+      }
+      setCheckFailed(true);
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -104,8 +115,16 @@ export function GtpBreederConfirmations() {
   }
 
   return <section className="panel rounded-[26px] p-5 sm:p-6">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="section-kicker">Producer confirmation</div><h2 className="mt-2 text-xl font-semibold text-white/80">Ask a producer or co-producer to confirm the record.</h2><p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Each producer must actively confirm from their own Arboreal Planet account. An animal can have multiple confirmed producers for partnerships or co-produced clutches. Producer confirmation does not transfer ownership and does not independently prove geographic locality.</p></div><span className="rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold text-white/42">{signedIn ? "ACCOUNT LINKED" : signedIn === false ? "SIGN IN REQUIRED" : "CHECKING"}</span></div>
-    <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="section-kicker">Producer confirmation</div><h2 className="mt-2 text-xl font-semibold text-white/80">Ask a producer or co-producer to confirm the record.</h2><p className="mt-2 max-w-3xl text-xs leading-5 text-white/40">Each producer must actively confirm from their own Arboreal Planet account. An animal can have multiple confirmed producers for partnerships or co-produced clutches. Producer confirmation does not transfer ownership and does not independently prove geographic locality.</p></div><span className="rounded-full border border-white/[.08] px-3 py-1.5 text-[10px] font-bold text-white/42">{signedIn ? "ACCOUNT LINKED" : signedIn === false ? "SIGN IN REQUIRED" : checkFailed ? "CHECK FAILED" : "CHECKING"}</span></div>
+    {checkFailed ? (
+      <div role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-500/[.07] p-3">
+        <p className="text-xs font-bold text-red-100/85">Couldn&apos;t check your sign-in status.</p>
+        <p className="mt-1 text-xs leading-5 text-white/45">{status}</p>
+        <button type="button" onClick={() => void load()} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
+      </div>
+    ) : (
+      <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+    )}
 
     {signedIn === false ? <Link href="/login?next=/genetics" className="primary-action mt-4 inline-block !min-h-0 !px-4 !py-2.5 !text-xs">Sign in</Link> : signedIn ? <>
       <form onSubmit={createRequest} className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">

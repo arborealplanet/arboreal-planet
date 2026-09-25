@@ -88,7 +88,7 @@ export async function PATCH(request: Request) {
   if (has("profile_visibility")) allowed.profile_visibility = body.profile_visibility === "private" ? "private" : "public";
   if (has("seller_enabled")) allowed.seller_enabled = Boolean(body.seller_enabled);
 
-  if (Object.keys(allowed).length === 1) return NextResponse.json({ ok: true, profile: await fetchOwnProfile(identity.token, identity.user.id) });
+  if (Object.keys(allowed).length === 1) return NextResponse.json({ ok: true, unchanged: true, profile: await fetchOwnProfile(identity.token, identity.user.id) });
 
   const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(identity.user.id)}`, {
     method: "PATCH",
@@ -111,6 +111,23 @@ export async function PATCH(request: Request) {
   }
 
   if (!Array.isArray(data) || !data[0]) {
+    // The profile row may not exist yet (e.g. legacy accounts) — upsert
+    // instead of blindly PATCHing and reporting a false success.
+    const upsert = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_AUTH_KEY,
+        Authorization: `Bearer ${identity.token}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify({ id: identity.user.id, ...allowed }),
+      cache: "no-store",
+    });
+    const upserted = await upsert.json().catch(() => null);
+    if (upsert.ok && Array.isArray(upserted) && upserted[0]) {
+      return NextResponse.json({ ok: true, profile: upserted[0] });
+    }
     return NextResponse.json({ error: "Profile changes were not saved. Please sign in again and retry." }, { status: 409 });
   }
 

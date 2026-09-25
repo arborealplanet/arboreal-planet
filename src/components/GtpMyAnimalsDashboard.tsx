@@ -17,13 +17,18 @@ type Animal = {
 export function GtpMyAnimalsDashboard() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [status, setStatus] = useState("Loading your registered animals…");
 
   useEffect(() => {
     let active = true;
+    setCheckFailed(false);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     void (async () => {
       try {
-        const response = await fetch("/api/genetics/pedigree", { cache: "no-store" });
+        const response = await fetch("/api/genetics/pedigree", { cache: "no-store", signal: controller.signal });
         if (response.status === 401) {
           if (!active) return;
           setSignedIn(false);
@@ -40,11 +45,18 @@ export function GtpMyAnimalsDashboard() {
       } catch (error) {
         if (!active) return;
         setSignedIn(null);
-        setStatus(error instanceof Error ? error.message : "Could not load your animals.");
+        if (error instanceof DOMException && error.name === "AbortError") {
+          setStatus("The sign-in check timed out. Check your connection and try again.");
+        } else {
+          setStatus(error instanceof Error ? error.message : "Could not load your animals.");
+        }
+        setCheckFailed(true);
+      } finally {
+        window.clearTimeout(timeout);
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [reloadKey]);
 
   const stats = useMemo(() => {
     const published = animals.filter((animal) => animal.visibility === "public").length;
@@ -64,7 +76,15 @@ export function GtpMyAnimalsDashboard() {
         {signedIn === false ? <Link href="/login?next=%2Fgenetics%23animals" className="primary-action !min-h-0 !px-4 !py-2.5 !text-xs">Sign in</Link> : <Link href="#pedigrees" className="secondary-action !min-h-0 !px-4 !py-2.5 !text-xs">Open pedigree builder →</Link>}
       </div>
 
-      <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      {checkFailed ? (
+        <div role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-500/[.07] p-3">
+          <p className="text-xs font-bold text-red-100/85">Couldn&apos;t check your sign-in status.</p>
+          <p className="mt-1 text-xs leading-5 text-white/45">{status}</p>
+          <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
+        </div>
+      ) : (
+        <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      )}
 
       {signedIn && (
         <>

@@ -29,6 +29,7 @@ export function GtpPedigreeTransfers() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [animalId, setAnimalId] = useState("");
   const [username, setUsername] = useState("");
   const [historyPublic, setHistoryPublic] = useState(false);
@@ -36,10 +37,13 @@ export function GtpPedigreeTransfers() {
   const [status, setStatus] = useState("Checking transfer center…");
 
   async function load() {
+    setCheckFailed(false);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     try {
       const [animalsResponse, transfersResponse] = await Promise.all([
-        fetch("/api/genetics/pedigree", { cache: "no-store" }),
-        fetch("/api/genetics/pedigree/transfers", { cache: "no-store" }),
+        fetch("/api/genetics/pedigree", { cache: "no-store", signal: controller.signal }),
+        fetch("/api/genetics/pedigree/transfers", { cache: "no-store", signal: controller.signal }),
       ]);
       if (animalsResponse.status === 401 || transfersResponse.status === 401) {
         setSignedIn(false);
@@ -60,7 +64,14 @@ export function GtpPedigreeTransfers() {
       setStatus(pending ? `${pending} pending ownership transfer${pending === 1 ? "" : "s"}.` : "No pending ownership transfers.");
     } catch (error) {
       setSignedIn(null);
-      setStatus(error instanceof Error ? error.message : "Could not load transfer center.");
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setStatus("The sign-in check timed out. Check your connection and try again.");
+      } else {
+        setStatus(error instanceof Error ? error.message : "Could not load transfer center.");
+      }
+      setCheckFailed(true);
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -117,7 +128,15 @@ export function GtpPedigreeTransfers() {
         <span className="rounded-full border border-emerald-300/12 px-3 py-1.5 text-[10px] font-black text-emerald-100/55">PERMANENT REGISTRY ID</span>
       </div>
 
-      <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      {checkFailed ? (
+        <div role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-500/[.07] p-3">
+          <p className="text-xs font-bold text-red-100/85">Couldn&apos;t check your sign-in status.</p>
+          <p className="mt-1 text-xs leading-5 text-white/45">{status}</p>
+          <button type="button" onClick={() => void load()} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
+        </div>
+      ) : (
+        <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      )}
 
       {signedIn === false ? (
         <Link href="/login?next=/genetics" className="primary-action mt-4 !min-h-0 !px-4 !py-2.5 !text-xs">Sign in to manage transfers</Link>

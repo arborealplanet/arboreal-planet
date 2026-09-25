@@ -62,7 +62,7 @@ export default async function EpisodesPage() {
       eyebrow="Arboreal Planet TV"
       title="Episodes: television by keepers, for keepers."
       description="Husbandry walkthroughs, breeding projects, plant builds and field notes — filmed by the community and aired here. New episodes land after review."
-      aside={<div className="flex flex-wrap gap-2"><HankScaleIntroButton src="/audio/hank-scale/episodes-intro.mp3" label="Play Hank Scale's Arboreal Planet TV intro" /><a href="#submit" className="primary-action">Submit an episode</a></div>}
+      aside={<div className="flex flex-wrap gap-2"><HankScaleIntroButton src="/audio/hank-scale/episodes-intro.mp3" label="Play Hank Scale's Arboreal Planet TV intro" />{unavailable ? null : <a href="#submit" className="primary-action">Submit an episode</a>}</div>}
     />
 
     <div className="mx-auto max-w-7xl px-5 pb-16 sm:px-6">
@@ -110,6 +110,7 @@ export default async function EpisodesPage() {
           </div>
         </section>}
 
+      {unavailable ? null : (
       <section id="submit" className="panel mt-10 scroll-mt-28 rounded-[28px] p-6 sm:p-10">
         <div className="grid gap-8 lg:grid-cols-[.9fr_1.1fr]">
           <div>
@@ -125,6 +126,7 @@ export default async function EpisodesPage() {
           <div className="rounded-[22px] border border-white/[.06] bg-black/15 p-5 sm:p-6"><EpisodeSubmitForm /></div>
         </div>
       </section>
+      )}
     </div>
   </main>;
 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArborealPlanetMark } from "@/components/BrandVisuals"; import { playHankScaleLine } from "@/lib/hank-scale-voice";
 
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
@@ -61,7 +61,34 @@ export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
   // Intro advertisement layer: the first thing seen on the Arboreal Keeper
   // entry routes. Dismissing it reveals the game underneath, untouched.
-  const [showAd, setShowAd] = useState(true); const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
+  // First-time players only — skipped entirely when a save already exists.
+  const [showAd, setShowAd] = useState(true); const [adReady, setAdReady] = useState(false); const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
+  useEffect(() => {
+    let active = true;
+    // Fast synchronous path: a started local save (or a stocked colony)
+    // means a returning player — no ad.
+    try {
+      const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { started?: boolean; colony?: unknown[] };
+        if (parsed?.started === true || (Array.isArray(parsed?.colony) && parsed.colony.length > 0)) {
+          setShowAd(false);
+          setAdReady(true);
+          return () => { active = false; };
+        }
+      }
+    } catch {}
+    // Cloud check covers returning players on a fresh device.
+    void fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" })
+      .then((response) => response.json().catch(() => null))
+      .then((data) => {
+        if (!active) return;
+        if (data && data.save) setShowAd(false);
+        setAdReady(true);
+      })
+      .catch(() => { if (active) setAdReady(true); });
+    return () => { active = false; };
+  }, []);
   const active = views.find((item) => item.id === view) ?? views[0];
 
   function openView(next: WorkspaceView) { if (viewRef.current === "market" && next !== "market") playHankScaleLine(16); if (next === "breeding" && !bredLineRef.current) { bredLineRef.current = true; playHankScaleLine(14); } viewRef.current = next;
@@ -71,7 +98,7 @@ export function ChondroBreederWorkspace() {
 
   return (
     <div className="min-h-[100dvh] bg-[#030806] pb-[calc(104px+env(safe-area-inset-bottom))] text-white">
-      {showAd ? <ArborealKeeperAdHero onEnter={() => setShowAd(false)} /> : null}
+      {showAd && adReady ? <ArborealKeeperAdHero onEnter={() => setShowAd(false)} /> : null}
       <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#030806]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[60px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[66px] sm:px-5">
           <Link

@@ -63,7 +63,10 @@ export async function GET() {
   });
 
   const rows = await response.json().catch(() => null);
-  if (!response.ok) return NextResponse.json({ error: "Unable to load pedigree", detail: rows }, { status: response.status });
+  if (!response.ok) {
+    console.error("[api/genetics/pedigree] GET upstream error", response.status, rows);
+    return NextResponse.json({ error: "Unable to load pedigree", detail: rows }, { status: response.status });
+  }
 
   return NextResponse.json({
     animals: (Array.isArray(rows) ? rows : []).map((row: Record<string, unknown>) => ({
@@ -105,7 +108,10 @@ export async function PATCH(request: Request) {
   });
 
   const rows = await response.json().catch(() => null) as Array<Record<string, unknown>> | null;
-  if (!response.ok) return NextResponse.json({ error: "Unable to update pedigree visibility", detail: rows }, { status: response.status });
+  if (!response.ok) {
+    console.error("[api/genetics/pedigree] PATCH upstream error", response.status, rows);
+    return NextResponse.json({ error: "Unable to update pedigree visibility", detail: rows }, { status: response.status });
+  }
   if (!Array.isArray(rows) || rows.length === 0) return NextResponse.json({ error: "Animal not found" }, { status: 404 });
 
   return NextResponse.json({ ok: true, id, visibility });
@@ -128,7 +134,10 @@ export async function PUT(request: Request) {
     cache: "no-store",
   });
   const existingRows = await existingResponse.json().catch(() => null) as ExistingAnimal[] | null;
-  if (!existingResponse.ok) return NextResponse.json({ error: "Unable to inspect existing pedigree before sync", detail: existingRows }, { status: existingResponse.status });
+  if (!existingResponse.ok) {
+    console.error("[api/genetics/pedigree] PUT inspect upstream error", existingResponse.status, existingRows);
+    return NextResponse.json({ error: "Unable to inspect existing pedigree before sync", detail: existingRows }, { status: existingResponse.status });
+  }
 
   const existing = Array.isArray(existingRows) ? existingRows : [];
   const existingById = new Map(existing.map((row) => [String(row.id), row]));
@@ -198,6 +207,7 @@ export async function PUT(request: Request) {
     });
     if (!upsert.ok) {
       const detail = await upsert.json().catch(() => null);
+      console.error("[api/genetics/pedigree] PUT upsert upstream error", upsert.status, detail);
       return NextResponse.json({ error: "Unable to save pedigree", detail }, { status: upsert.status });
     }
   }
@@ -225,6 +235,7 @@ export async function PUT(request: Request) {
   });
   if (!remove.ok) {
     const detail = await remove.json().catch(() => null);
+    console.error("[api/genetics/pedigree] PUT delete upstream error", remove.status, detail);
     return NextResponse.json({ error: "Pedigree saved, but cleanup failed", detail }, { status: remove.status });
   }
 

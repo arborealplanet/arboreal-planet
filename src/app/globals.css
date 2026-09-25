@@ -230,6 +230,42 @@ button:disabled { cursor: not-allowed; }
 }
 .anim-keeper-float { animation: keeper-float 5.5s ease-in-out infinite; }
 .anim-keeper-pop-in { animation: keeper-pop-in .3s cubic-bezier(.2,.9,.25,1.15) both; }
+
+/* Arboreal Keeper intro cinematic — staged stills + CSS Ken Burns.
+   The design degrades gracefully: transitions are CSS gold-flash
+   cross-dissolves, and reduced-motion clients get static stills. */
+@keyframes cinematic-kb-push {
+  from { transform: scale(1.02); }
+  to { transform: scale(1.14); }
+}
+@keyframes cinematic-kb-drift {
+  from { transform: scale(1.1) translateX(-2.5%); }
+  to { transform: scale(1.1) translateX(2.5%); }
+}
+@keyframes cinematic-kb-package {
+  from { transform: scale(1.02) translate(0, 0); }
+  to { transform: scale(1.35) translate(10%, -12%); }
+}
+@keyframes cinematic-kb-rise {
+  from { transform: scale(1.14) translateY(2%); }
+  to { transform: scale(1.02) translateY(0); }
+}
+@keyframes cinematic-copy-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim-cinematic-kb-push { animation: cinematic-kb-push linear both; }
+.anim-cinematic-kb-drift { animation: cinematic-kb-drift linear both; }
+.anim-cinematic-kb-package { animation: cinematic-kb-package linear both; }
+.anim-cinematic-kb-rise { animation: cinematic-kb-rise linear both; }
+.anim-cinematic-copy-in { animation: cinematic-copy-in .6s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-cinematic-kb-push,
+  .anim-cinematic-kb-drift,
+  .anim-cinematic-kb-package,
+  .anim-cinematic-kb-rise,
+  .anim-cinematic-copy-in { animation: none; }
+}
 .anim-keeper-fade-up { animation: keeper-fade-up .45s ease both; }
 .anim-keeper-backdrop-in { animation: keeper-backdrop-in .2s ease both; }
 .anim-keeper-pulse-soft { animation: keeper-pulse-soft 1.6s ease-in-out infinite; }

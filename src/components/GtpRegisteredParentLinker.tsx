@@ -29,12 +29,16 @@ export function GtpRegisteredParentLinker() {
   const [status, setStatus] = useState("Loading registered animals…");
   const [busy, setBusy] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
 
   async function load() {
+    setCheckFailed(false);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     try {
       const [ownResponse, publicResponse] = await Promise.all([
-        fetch("/api/genetics/pedigree", { cache: "no-store" }),
-        fetch("/api/genetics/pedigree/public", { cache: "no-store" }),
+        fetch("/api/genetics/pedigree", { cache: "no-store", signal: controller.signal }),
+        fetch("/api/genetics/pedigree/public", { cache: "no-store", signal: controller.signal }),
       ]);
       if (ownResponse.status === 401) {
         setSignedIn(false);
@@ -53,7 +57,14 @@ export function GtpRegisteredParentLinker() {
       setChildId((current) => current || ownAnimals[0]?.id || "");
       setStatus(ownAnimals.length ? "Link a published registered animal as a parent without changing ownership." : "Add and cloud-sync an animal first.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not load registered animals.");
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setStatus("The sign-in check timed out. Check your connection and try again.");
+      } else {
+        setStatus(error instanceof Error ? error.message : "Could not load registered animals.");
+      }
+      setCheckFailed(true);
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -112,7 +123,15 @@ export function GtpRegisteredParentLinker() {
         <span className="rounded-full border border-emerald-300/12 px-3 py-1.5 text-[10px] font-bold text-emerald-100/55">OWNERSHIP STAYS SEPARATE</span>
       </div>
 
-      <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      {checkFailed ? (
+        <div role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-500/[.07] p-3">
+          <p className="text-xs font-bold text-red-100/85">Couldn&apos;t check your sign-in status.</p>
+          <p className="mt-1 text-xs leading-5 text-white/45">{status}</p>
+          <button type="button" onClick={() => void load()} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
+        </div>
+      ) : (
+        <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>
+      )}
 
       {own.length ? <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_.6fr_1.4fr]">
         <label className="text-[10px] font-black uppercase tracking-[.11em] text-white/28">Your offspring / animal

@@ -74,3 +74,42 @@ export function remainingFacilityEnclosureSlots(
   const cap = roomCapacityFromSave({ facilityId, facilityRooms });
   return Math.max(0, cap - enclosureFootprint(enclosures));
 }
+
+export type AnimalHousingSubject = {
+  species?: string | null;
+  lifeStage?: string | null;
+};
+
+/**
+ * HOUSING RULE v2 — single source of truth (owner-confirmed 2026-09-25).
+ *
+ * The Chondro Dojo is a real product built to house a green tree python from
+ * hatchling to adult, so in-game chondros of ANY life stage can live in a
+ * Chondro Dojo Bin. Adults do NOT require a PVC enclosure — PVC Arboreal is
+ * the upgrade/alternative (one snake per unit, display-ready), not the adult
+ * requirement.
+ *
+ * The rule is species-aware by design: the animal is threaded through so that
+ * larger species' adult-housing requirements (see `adultHousing` in
+ * breeder-species-profiles.ts — carpet python / emerald tree boa adults will
+ * need a "Large Arboreal" enclosure) can be enforced here when those species
+ * ship. Every species available today follows the chondro rule: any open
+ * animal slot works, adult or not.
+ *
+ * Used by the client (store cards, dossiers) and by the save API's server-side
+ * enforcement — both must agree.
+ */
+export function openAnimalSlots(
+  enclosures: Record<string, number> | null | undefined,
+  housedCount: number,
+): number {
+  return Math.max(0, animalHousingCapacity(enclosures) - Math.max(0, Math.floor(housedCount)));
+}
+
+export function canHouseAnimal(
+  enclosures: Record<string, number> | null | undefined,
+  housedCount: number,
+  _animal?: AnimalHousingSubject | null,
+): boolean {
+  return openAnimalSlots(enclosures, housedCount) > 0;
+}

@@ -70,18 +70,36 @@ const HANK_TIPS = [
 
 type View = "animals" | "enclosures" | "market";
 
-const VIEWS: Array<{ id: View; label: string; blurb: string; thumb: string }> = [
-  { id: "animals", label: "Animals", blurb: "20 snakes, refreshed daily", thumb: "/hatchery/game/dock/animals.webp" },
-  { id: "enclosures", label: "Enclosures", blurb: "Housing before snakes", thumb: "/hatchery/game/chondro-dojo-2-stack.webp" },
-  { id: "market", label: "Player Market", blurb: "Virtual animals from other players", thumb: "/hatchery/game/dock/breed.webp" },
+const VIEWS: Array<{ id: View; label: string; thumb: string }> = [
+  { id: "animals", label: "Animals", thumb: "/hatchery/game/dock/animals.webp" },
+  { id: "enclosures", label: "Enclosures", thumb: "/hatchery/game/chondro-dojo-2-stack.webp" },
+  { id: "market", label: "Player Market", thumb: "/hatchery/game/dock/breed.webp" },
 ];
 
 export function ArborealKeeperReptiShop() {
   const [view, setView] = useState<View>("animals");
+  // Keep visited tabs mounted (hidden) instead of remounting on every tab
+  // switch: remounting wiped carousel scroll position and re-ran the shop
+  // loader ("Loading snake store...") on each switch. Tabs mount lazily on
+  // first visit so the initial load stays light.
+  const [visited, setVisited] = useState<Set<View>>(() => new Set<View>(["animals"]));
   const [tip, setTip] = useState(0);
   const [qaOpen, setQaOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [muted, setMuted] = useState(() => isHankScaleMuted());
   const introducedRef = useRef(false);
+
+  // Sprite QA is a production tool — only admins ever see the button or panel.
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" })
+      .then((response) => response.json().catch(() => null))
+      .then((data) => {
+        if (active && data && (data.role === "admin" || data.role === "owner")) setIsAdmin(true);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // Hank Scale voice line per tip index (HANK_TIPS order).
   const TIP_LINES = [3, 4, 5, 6, 7];
@@ -125,6 +143,12 @@ export function ArborealKeeperReptiShop() {
   function selectView(next: View) {
     if (next === view) return;
     setView(next);
+    setVisited((prev) => {
+      if (prev.has(next)) return prev;
+      const copy = new Set(prev);
+      copy.add(next);
+      return copy;
+    });
     // After a daily stock rotation, the animals tab gets the fresh-stock
     // greeting instead of the standard one — once.
     playHankScaleLine(next === "animals" && consumeStockRotated() ? 11 : VIEW_LINES[next]);
@@ -148,7 +172,8 @@ export function ArborealKeeperReptiShop() {
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-164px-env(safe-area-inset-bottom))] w-full max-w-5xl flex-col overflow-hidden px-4 py-3 sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))] sm:px-6">
-      {/* Sprite QA — production tool, parked above the tip bar on the right */}
+      {/* Sprite QA — production tool, admins only, parked above the tip bar on the right */}
+      {isAdmin ? (
       <div className="mb-1 flex flex-none justify-end">
         <button
           type="button"
@@ -158,6 +183,7 @@ export function ArborealKeeperReptiShop() {
           Sprite QA
         </button>
       </div>
+      ) : null}
 
       {/* Hank's tip — slim row above the store, tap for another tip */}
       <button
@@ -188,45 +214,50 @@ export function ArborealKeeperReptiShop() {
         </button>
       </div>
 
-      {/* View buttons — game-art pills below the animation */}
-      <div className="mt-2 flex flex-none items-center gap-2">
-        <div className="flex min-w-0 flex-1 snap-x justify-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {VIEWS.map((v) => {
-            const selected = v.id === view;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => selectView(v.id)}
-                aria-current={selected ? "true" : undefined}
-                className={`flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border py-1 pl-1 pr-2.5 text-[9px] font-black uppercase tracking-[.05em] transition ${
-                  selected
-                    ? "border-emerald-200/70 bg-gradient-to-b from-emerald-300 to-emerald-400 text-[#04120a] shadow-[0_0_18px_rgba(52,211,153,.45)] ring-1 ring-inset ring-white/40"
-                    : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
-                }`}
+      {/* View buttons — three equal pills, always fully visible (no clipped labels) */}
+      <div className="mt-2 flex flex-none items-stretch gap-1.5">
+        {VIEWS.map((v) => {
+          const selected = v.id === view;
+          return (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => selectView(v.id)}
+              aria-current={selected ? "true" : undefined}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[9px] font-black uppercase tracking-[.05em] transition ${
+                selected
+                  ? "border-emerald-200/70 bg-gradient-to-b from-emerald-300 to-emerald-400 text-[#04120a] shadow-[0_0_18px_rgba(52,211,153,.45)] ring-1 ring-inset ring-white/40"
+                  : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
+              }`}
               >
-                <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 rounded-full object-cover" />
-                {v.label}
+                <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 shrink-0 rounded-full object-cover" />
+                <span className="truncate">{v.label}</span>
               </button>
             );
           })}
         </div>
-      </div>
 
-      {/* Current-view inventory — horizontal carousel, never scrolls vertically */}
+      {/* Current-view inventory — horizontal carousel, never scrolls vertically.
+          Tabs stay mounted once visited (inactive ones are hidden, not
+          unmounted) so carousel scroll position survives tab switches and the
+          shop loader only runs on first visit. */}
       <div className="mt-2 min-h-0 flex-1 overflow-hidden">
-        <div key={view} className="anim-keeper-fade-up h-full">
-          {view === "animals" ? (
-            <ChondroBreederExpandedShop section="snakes" layout="carousel" />
-          ) : view === "enclosures" ? (
-            <ChondroBreederExpandedShop section="enclosures" layout="carousel" />
-          ) : (
-            <ChondroPlayerMarket bare layout="carousel" />
-          )}
+        <div className={view === "animals" ? "h-full" : "hidden"}>
+          <ChondroBreederExpandedShop section="snakes" layout="carousel" />
         </div>
+        {visited.has("enclosures") ? (
+          <div className={view === "enclosures" ? "h-full" : "hidden"}>
+            <ChondroBreederExpandedShop section="enclosures" layout="carousel" />
+          </div>
+        ) : null}
+        {visited.has("market") ? (
+          <div className={view === "market" ? "h-full" : "hidden"}>
+            <ChondroPlayerMarket bare layout="carousel" />
+          </div>
+        ) : null}
       </div>
 
-      {qaOpen ? (
+      {qaOpen && isAdmin ? (
         <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Sprite QA">
           <button type="button" aria-label="Close sprite QA" onClick={() => setQaOpen(false)} className="absolute inset-0 cursor-default bg-black/72 backdrop-blur-sm" />
           <div className="relative flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#071009] sm:rounded-[28px]">

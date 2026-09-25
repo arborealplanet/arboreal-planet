@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { awardEligibleLegacyBadges, normalizeLegacyBadges } from "@/lib/chondro-badges";
+import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 const MAX_SAVE_BYTES = 250_000;
@@ -28,6 +29,9 @@ const EXTENSION_KEYS = [
   "retiredBreeders",
   "legacyBadges",
   "emeraldKeeper",
+  // Player-scoped intro cinematic flag — survives additional saves so the
+  // intro auto-plays exactly once per player, never per save slot.
+  "cinematicSeen",
 ] as const;
 
 const apiHeaders = (token: string) => ({
@@ -47,8 +51,19 @@ async function claimTargetedBonus(token: string) {
   } catch {}
 }
 
-async function readExistingState(userId: string, token: string) {
+async function fetchPlayerRole(userId: string, token: string): Promise<string | null> {
   try {
+    const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role&limit=1`, {
+      headers: { ...apiHeaders(token), Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const rows = (await response.json().catch(() => [])) as Array<{ role?: string }>;
+    return rows[0]?.role ?? null;
+  } catch { return null; }
+}
+
+async function readExistingState(userId: string, token: string) {  try {
     const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/chondro_game_saves?user_id=eq.${encodeURIComponent(userId)}&select=state&limit=1`, {
       headers: { ...apiHeaders(token), Accept: "application/json" },
       cache: "no-store",
@@ -79,7 +94,7 @@ export async function GET() {
   if (!response.ok) return NextResponse.json({ error: "Unable to load game save." }, { status: 502 });
   const rows = (await response.json()) as Array<{ state?: unknown; version?: number; updated_at?: string }>;
   const save = rows[0] ?? null;
-  if (!save) return NextResponse.json({ authenticated: true, save: null });
+  if (!save) return NextResponse.json({ authenticated: true, role: await fetchPlayerRole(identity.user.id, identity.token), save: null });
 
   const rawState = save.state && typeof save.state === "object" && !Array.isArray(save.state)
     ? save.state as Record<string, unknown>
@@ -90,6 +105,7 @@ export async function GET() {
   }
   return NextResponse.json({
     authenticated: true,
+    role: await fetchPlayerRole(identity.user.id, identity.token),
     save: {
       state: legacy.state,
       version: save.version ?? 1,
@@ -119,6 +135,20 @@ export async function PUT(request: NextRequest) {
   if (Array.isArray(state.geneticTestsPending)) state.geneticTestsPending = state.geneticTestsPending.slice(0, 50);
   if (Array.isArray(state.retiredBreeders)) state.retiredBreeders = state.retiredBreeders.slice(0, 250);
   state.legacyBadges = normalizeLegacyBadges(state.legacyBadges);
+
+  // Housing rule v2, enforced server-side with the same single source of
+  // truth the shop UI uses (@/lib/chondro-facility-limits): chondros of any
+  // life stage can live in a Chondro Dojo Bin, so the check is total colony
+  // size against total animal capacity — no adult-to-PVC assignment.
+  if (Array.isArray(state.colony) && state.enclosures && typeof state.enclosures === "object" && !Array.isArray(state.enclosures)) {
+    const capacity = animalHousingCapacity(state.enclosures as Record<string, number>);
+    if (state.colony.length > capacity) {
+      return NextResponse.json(
+        { error: `This save has more animals (${state.colony.length}) than your enclosures can house (${capacity}). Add enclosures or rehome animals before saving.` },
+        { status: 400 },
+      );
+    }
+  }
   if (state.projectTags && typeof state.projectTags === "object" && !Array.isArray(state.projectTags)) {
     const cleaned: Record<string, string[]> = {};
     for (const [snakeId, tags] of Object.entries(state.projectTags as Record<string, unknown>)) {

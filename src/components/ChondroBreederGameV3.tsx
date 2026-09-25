@@ -8,6 +8,20 @@ import { inheritTraitSet } from "@/lib/chondro-genetics";
 import { breedingReputationGain, marketDemandForSeason, marketMultiplierForAnimal } from "@/lib/chondro-progression";
 import { animalHousingCapacity, enclosureFootprint, geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor, needsExtraRecoveryYear, normalizeNeonateColorFor, randomNeonateColorFor } from "@/lib/breeder-species-profiles";
+import IntroCinematic from "@/components/IntroCinematic";
+
+/**
+ * Player-scoped intro-cinematic flag. Mirrored in localStorage so it survives
+ * even if a save write fails; also persisted inside the save (server + local
+ * save copy) and preserved across saves by the save API's EXTENSION_KEYS.
+ */
+const CINEMATIC_SEEN_KEY = "arboreal_keeper_cinematic_seen_v1";
+function readCinematicSeenMirror(): boolean {
+  try { return window.localStorage.getItem(CINEMATIC_SEEN_KEY) === "1"; } catch { return false; }
+}
+function writeCinematicSeenMirror(): void {
+  try { window.localStorage.setItem(CINEMATIC_SEEN_KEY, "1"); } catch {}
+}
 
 type Subspecies =
   | "Morelia azurea azurea"
@@ -116,6 +130,8 @@ type GameSave = {
   seasonCarePaid?: number;
   breedingMessage?: string;
   clutchEstablished?: boolean;
+  /** Intro cinematic seen — scoped to the player, not the save. Set once, never auto-plays again. */
+  cinematicSeen?: boolean;
   updatedAt?: number;
 };
 
@@ -772,6 +788,14 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [geneticTestsPending, setGeneticTestsPending] = useState<GeneticTestJob[]>([]);
   const [femaleRecovery, setFemaleRecovery] = useState<Record<string, number>>({});
   const [seasonCarePaid, setSeasonCarePaid] = useState(0);
+  const [cinematicSeen, setCinematicSeen] = useState(false);
+  const [replayingIntro, setReplayingIntro] = useState(false);
+  // Two-tap season-care confirmation: the first tap arms the button and shows
+  // the computed total, the second tap pays. Guards against an accidental tap
+  // spending a large season total.
+  const [seasonCareArmed, setSeasonCareArmed] = useState(false);
+  const seasonCareArmTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (seasonCareArmTimer.current !== null) window.clearTimeout(seasonCareArmTimer.current); }, []);
   const [breedingMessage, setBreedingMessage] = useState("");
   const [clutchEstablished, setClutchEstablished] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -852,6 +876,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setBreedingMessage(chosen.breedingMessage ?? "");
     // Grandfather already-hatched clutches from older saves so players do not lose progress.
     setClutchEstablished(chosen.clutchEstablished ?? Boolean(chosen.clutch));
+    // The cinematic flag is player-scoped: the save value wins, otherwise fall
+    // back to the local mirror (e.g. seen while signed out, now signed in).
+    setCinematicSeen(Boolean(chosen.cinematicSeen) || readCinematicSeenMirror());
   }, []);
 
   const storeEpoch = Math.floor(now / DAY_MS);
@@ -930,6 +957,17 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   }, [cloudSave]);
 
   useEffect(() => {
+    if (!selectedSnakeId && !initialsPrompt) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (initialsPrompt) setInitialsPrompt(false);
+      else setSelectedSnakeId(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedSnakeId, initialsPrompt]);
+
+  useEffect(() => {
     if (!hydrated) return;
     const updatedAt = Date.now();
     const save: GameSave = {
@@ -956,10 +994,12 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       seasonCarePaid,
       breedingMessage,
       clutchEstablished,
+      cinematicSeen,
       updatedAt,
     };
     latestSaveRef.current = save;
     lastSelfWriteAt.current = updatedAt;
+    if (cinematicSeen) writeCinematicSeenMirror();
     try {
       window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(save));
       window.dispatchEvent(new Event("arboreal-chondro-breeder-save-change"));
@@ -973,7 +1013,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       }).catch(() => undefined);
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage, clutchEstablished]);
+  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage, clutchEstablished, cinematicSeen]);
 
   useEffect(() => {
     const flushLatestSave = () => {
@@ -1177,83 +1217,6 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   }, [cash, roomEnclosureSlots]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
-  function buySnake(offer: StoreSnake) {
-    if (cash < offer.price || openSlots <= 0 || purchasedStoreIds.includes(offer.id)) return;
-    setCash((value) => value - offer.price);
-    setColony((current) => [...current, normalizeSnake(offer)]);
-    setPurchasedStoreIds((current) => [...current, offer.id]);
-  }
-
-  function geneticTest(id: string) {
-    if (!geneticsUnlocked || cash < GENETIC_TEST_COST) return;
-    const animal = colony.find((a) => a.id === id);
-    if (!animal || animal.geneticsTested || geneticTestsPending.some((job) => job.snakeId === id)) return;
-    setCash((value) => value - GENETIC_TEST_COST);
-    setGeneticTestsPending((current) => [...current, { snakeId: id, completesAt: Date.now() + GENETIC_TEST_HOURS * 3_600_000 }]);
-    setBreedingMessage(`${animal.name}'s genetic panel was submitted. Results in ${GENETIC_TEST_HOURS} hours.`);
-  }
-
-  async function toggleFavorite(id: string) {
-    const favorite = !favoriteIds.includes(id);
-    setFavoriteIds((current) => favorite ? [...current, id] : current.filter((item) => item !== id));
-    try {
-      const response = await fetch("/api/hatchery/chondro-breeder/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ snakeId: id, favorite }),
-      });
-      if (!response.ok) throw new Error("favorite failed");
-      const data = await response.json();
-      if (Array.isArray(data.favoriteIds)) setFavoriteIds(data.favoriteIds.map((item: unknown) => String(item)));
-    } catch {
-      setFavoriteIds((current) => favorite ? current.filter((item) => item !== id) : [...current, id]);
-    }
-  }
-
-  function toggleAnimalDetails(id: string) {
-    setCollapsedAnimalIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  }
-
-  function nidoTest(id: string) {
-    if (tested.includes(id) || cash < NIDO_TEST_COST) return;
-    setCash((value) => value - NIDO_TEST_COST);
-    setTested((current) => [...current, id]);
-    setColony((current) =>
-      current.map((a) =>
-        a.id !== id
-          ? a
-          : {
-              ...a,
-              nidoStatus:
-                Math.random() < (a.source === "Import" ? 0.12 : 0.018)
-                  ? "Positive"
-                  : "Negative",
-            },
-      ),
-    );
-  }
-
-  function ageSnake(a: Snake) {
-    const req = agingRequirement(a);
-    const cost = agingCost(a);
-    if (!req || cash < cost) return;
-    setCash((value) => value - cost);
-    setColony((current) =>
-      current.map((item) =>
-        item.id === a.id
-          ? { ...item, lifeStage: req.next, condition: item.condition === "Fair" ? "Good" : item.condition }
-          : item,
-      ),
-    );
-  }
-
-  function updateSnakeDetails(id: string, field: "name" | "notes", value: string) {
-    const limit = field === "name" ? 60 : 1000;
-    setColony((current) =>
-      current.map((a) => (a.id === id ? { ...a, [field]: value.slice(0, limit) } : a)),
-    );
-  }
-
   async function refreshPlayerMarket() {
     const response = await fetch("/api/hatchery/chondro-breeder/player-market", { cache: "no-store" });
     const data = await response.json();
@@ -1261,34 +1224,6 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       setPlayerMarket(
         (data.listings ?? []).map((listing: PlayerMarketListing) => ({ ...listing, snake: normalizeSnake(listing.snake) })),
       );
-  }
-
-  async function sellSnake(a: Snake) {
-    if (a.nidoStatus === "Positive" || marketBusy) return;
-    const value = saleValue(a, season);
-    setMarketBusy(a.id);
-    setMarketStatus("");
-    try {
-      const response = await fetch("/api/hatchery/chondro-breeder/player-market", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "list", snakeId: a.id, price: value }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setMarketStatus(data.error ?? "This snake could not be listed.");
-        return;
-      }
-      setColony((current) => current.filter((item) => item.id !== a.id));
-      if (damId === a.id) setDamId("");
-      if (sireId === a.id) setSireId("");
-      setMarketStatus(`${a.name} is listed for ${money(value)}. You will be paid after another player buys it.`);
-      void refreshPlayerMarket();
-    } catch {
-      setMarketStatus("The player market is temporarily unavailable.");
-    } finally {
-      setMarketBusy(null);
-    }
   }
 
   async function buyPlayerSnake(listing: PlayerMarketListing) {
@@ -1329,14 +1264,6 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     return () => window.removeEventListener("arboreal-chondro-market-action", handleMarketAction);
   }, [cash, openSlots, marketBusy]);
   /* eslint-enable react-hooks/exhaustive-deps */
-
-  function transferPositive(a: Snake) {
-    if (a.nidoStatus !== "Positive") return;
-    setTransfers((current) => [{ id: a.id, name: a.name, season }, ...current]);
-    setColony((current) => current.filter((item) => item.id !== a.id));
-    if (damId === a.id) setDamId("");
-    if (sireId === a.id) setSireId("");
-  }
 
   function startBreedingCycle() {
     if (!dam || !sire || clutch || breedingCycle) return;
@@ -1381,8 +1308,28 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   }, [hydrated, breederIdentityLoaded, breederInitials, breedingCycle, clutch, breedingMessage, colony, damId, sireId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function paySeasonCare() {
-    if (seasonCarePaid === season || cash < seasonCareCost) return;
+  /**
+   * Intro cinematic completion (end, CTA, or skip). The $30,000 credit grant
+   * is idempotent: it only tops cash up to STARTING_CASH, and the
+   * cinematicSeen flag guarantees it never runs twice — skipping never
+   * forfeits the credit, and replaying never re-grants it.
+   */
+  function handleFirstCinematicDone() {
+    setCinematicSeen(true);
+    writeCinematicSeenMirror();
+    setCash((value) => Math.max(value, STARTING_CASH));
+    setStarted(true);
+  }
+
+  function paySeasonCare() {    if (seasonCarePaid === season || cash < seasonCareCost) return;
+    if (!seasonCareArmed) {
+      setSeasonCareArmed(true);
+      if (seasonCareArmTimer.current !== null) window.clearTimeout(seasonCareArmTimer.current);
+      seasonCareArmTimer.current = window.setTimeout(() => setSeasonCareArmed(false), 5000);
+      return;
+    }
+    if (seasonCareArmTimer.current !== null) { window.clearTimeout(seasonCareArmTimer.current); seasonCareArmTimer.current = null; }
+    setSeasonCareArmed(false);
     setCash((value) => value - seasonCareCost);
     setSeasonCarePaid(season);
     setBreedingMessage(`Season ${season} food and care provided for ${money(seasonCareCost)}.`);
@@ -1559,14 +1506,27 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       </div>
     );
 
+  if (replayingIntro)
+    return (
+      <IntroCinematic onDone={() => setReplayingIntro(false)} />
+    );
+
+  // The intro cinematic auto-plays exactly once per player — gated on
+  // cinematicSeen, not on started, so store-only buyers who open a breeder
+  // tab later still get their one viewing.
+  if (!started && !cinematicSeen)
+    return (
+      <IntroCinematic onDone={handleFirstCinematicDone} />
+    );
+
   if (!started)
     return (
       <div className="mx-auto max-w-5xl px-5 py-10 sm:px-6">
         <section className="panel rounded-[32px] p-7 sm:p-10">
-          <div className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/55">Start Your Dream Sweepstakes</div>
-          <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">You won {money(STARTING_CASH)}.</h1>
+          <div className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/55">Arboreal Keeper</div>
+          <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Start your collection.</h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-white/45">
-            Build a trait program, a pure locality program, or both. Most snakes now begin with little or no expression, high percentages are genuinely rare, and each subspecies has traits it is naturally more likely to express.
+            Your $30,000 credit at Hank Scale&rsquo;s Reptiles is loaded. Build a trait program, a pure locality program, or both. Most snakes now begin with little or no expression, high percentages are genuinely rare, and each subspecies has traits it is naturally more likely to express.
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/[.06] p-4 text-sm text-white/40">
@@ -1579,7 +1539,12 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
             </div>
           </div>
           <div className="mt-5 text-xs text-white/32">Progress autosaves to this browser{cloudSave ? " and your Arboreal Planet account" : ""}.</div>
-          <button onClick={() => setStarted(true)} className="mt-8 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a]">Start with $30K</button>
+          <button onClick={() => setStarted(true)} className="mt-8 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a]">Start your collection</button>
+          {cinematicSeen ? (
+            <div className="mt-4">
+              <button onClick={() => setReplayingIntro(true)} className="text-xs text-white/35 underline decoration-white/20 underline-offset-4 transition hover:text-white/60">Replay the intro</button>
+            </div>
+          ) : null}
         </section>
       </div>
     );
@@ -1677,71 +1642,6 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         </div>
       ) : null}
 
-      <CollapsibleGameSection label="Genetics & locality guide" detail="Subspecies tendencies · testing · phenotype grades" defaultOpen>
-        <section className="panel rounded-[28px] p-6">
-          <div className="section-kicker">How the new genetics work</div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {Object.entries(preferredTraits).map(([subspecies, traits]) => (
-              <div key={subspecies} className="rounded-2xl border border-white/[.06] p-4">
-                <div className="text-sm font-semibold text-white/70">{subspecies}</div>
-                <div className="mt-2 text-xs leading-5 text-white/35">Higher natural odds: {traits.map((key) => traitRows.find((row) => row[1] === key)?.[0]).join(" + ")}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-emerald-100/65">Most animals are ordinary.</strong><br />Zeros and single-digit traits are common. 76–100% rolls are rare even in a favored trait.</div>
-            <div className="rounded-2xl border border-sky-300/10 bg-sky-300/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-sky-100/65">Genetic testing unlocks later.</strong><br />Reach 1,500 breeder reputation or build the Research & Conservation Wing. Once unlocked, a panel costs {money(GENETIC_TEST_COST)} and takes {GENETIC_TEST_HOURS} real hours.</div>
-            <div className="rounded-2xl border border-amber-200/10 bg-amber-200/[.025] p-4 text-xs leading-5 text-white/40"><strong className="text-amber-100/65">Pure locality is its own chase.</strong><br />Same-locality pure pairings preserve a named phenotype grade. Mixing localities creates a Pure · Mixed Locality animal with no named-locality grade.</div>
-          </div>
-        </section>
-      </CollapsibleGameSection>
-
-      <CollapsibleGameSection label="Daily snake store" detail={`Offer ${storeIndex + 1} of ${store.length} · refreshes in ~${Math.max(1, Math.ceil((nextRefresh - now) / 3_600_000))}h`} defaultOpen>
-        <section className="panel rounded-[28px] p-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="section-kicker">Daily snake store</div>
-              <h2 className="mt-2 text-2xl font-semibold">Most are ordinary. The special ones matter.</h2>
-              <p className="mt-2 max-w-2xl text-sm text-white/34">Buy by eye, phenotype grade, or tested genetics. The market no longer hands out high-expression animals constantly.</p>
-            </div>
-            <div className="text-xs text-white/30">Refreshes in ~{Math.max(1, Math.ceil((nextRefresh - now) / 3_600_000))}h</div>
-          </div>
-          <div className="mx-auto mt-6 max-w-2xl">
-            {(() => {
-              const offer = store[storeIndex];
-              const sold = purchasedStoreIds.includes(offer.id);
-              return (
-                <article className="rounded-3xl border border-white/[.06] bg-white/[.015] p-4">
-                  <ChondroSnakeIcon subspecies={offer.subspecies} name={offer.name} traits={portraitTraits(offer)} compact lifeStage={offer.lifeStage} neonateColor={offer.neonateColor} locality={offer.locality} classification={offer.classification} ancestry={offer.ancestry} localityAncestry={offer.localityAncestry} phenotypeScore={offer.phenotypeScore} spriteSeed={offer.id} />
-                  <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-white/75">{offer.name}</div>
-                      <div className="mt-1 text-[10px] text-white/30">{offer.sex} · {offer.source} · {offer.lifeStage} · {offer.locality}</div>
-                      <div className="mt-1 text-[10px] font-semibold text-amber-100/55">Neonate color: {offer.neonateColor}</div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <PhenotypeBadge animal={offer} />
-                      <span className="rounded-full border border-white/[.08] px-2 py-1 text-[9px] uppercase text-white/40">{offer.classification}</span>
-                    </div>
-                  </div>
-                  <div className={`mt-3 rounded-xl border p-3 text-xs ${offer.geneticsTested ? "border-emerald-300/10 bg-emerald-300/[.025] text-emerald-100/60" : "border-white/[.06] text-white/34"}`}>{traitSummary(offer)}</div>
-                  <div className="mt-2 text-[10px] text-white/34">Nido: <span className={offer.pretested ? "text-emerald-200/70" : "text-white/45"}>{offer.pretested ? "Pretested negative" : "Untested"}</span></div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="text-lg font-semibold text-emerald-200/75">{money(offer.price)}</div>
-                    <button disabled={sold || cash < offer.price || openSlots <= 0} onClick={() => buySnake(offer)} className="rounded-xl bg-amber-200 px-4 py-2 text-xs font-black text-[#17130a] disabled:opacity-30">{sold ? "Purchased" : openSlots <= 0 ? "Need enclosure" : cash < offer.price ? "Not enough cash" : "Buy"}</button>
-                  </div>
-                </article>
-              );
-            })()}
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <button type="button" onClick={() => setStoreIndex((current) => (current - 1 + store.length) % store.length)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">← Previous</button>
-              <div className="flex gap-1.5">{store.map((offer, index) => <button key={offer.id} type="button" aria-label={`Show offer ${index + 1}`} onClick={() => setStoreIndex(index)} className={`h-2 rounded-full transition ${index === storeIndex ? "w-6 bg-amber-200/75" : "w-2 bg-white/15"}`} />)}</div>
-              <button type="button" onClick={() => setStoreIndex((current) => (current + 1) % store.length)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Next →</button>
-            </div>
-          </div>
-        </section>
-      </CollapsibleGameSection>
-
       <CollapsibleGameSection label="Breeding room" detail={`${females.length} adult female${females.length === 1 ? "" : "s"} · ${males.length} adult male${males.length === 1 ? "" : "s"}`} defaultOpen>
         <section className="panel rounded-[28px] p-6">
           <div className="section-kicker">Breeding room</div>
@@ -1769,7 +1669,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
             </div>
           ) : null}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {seasonCarePaid === season ? <span className="rounded-full border border-emerald-300/15 px-3 py-2 text-[10px] font-bold text-emerald-100/60">Season {season} care paid</span> : <button disabled={cash < seasonCareCost} onClick={paySeasonCare} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-4 py-2 text-xs font-bold text-emerald-100/65 disabled:opacity-30">Food & care · {money(seasonCareCost)}</button>}
+            {seasonCarePaid === season ? <span className="rounded-full border border-emerald-300/15 px-3 py-2 text-[10px] font-bold text-emerald-100/60">Season {season} care paid</span> : <button disabled={cash < seasonCareCost} onClick={paySeasonCare} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.04] px-4 py-2 text-xs font-bold text-emerald-100/65 disabled:opacity-30">{seasonCareArmed ? `Tap again to confirm — ${money(seasonCareCost)}` : <>Food & care · {money(seasonCareCost)}</>}</button>}
             {breedingCycle ? <span className="rounded-full border border-amber-200/15 px-3 py-2 text-[10px] font-black text-amber-100/70">{BREEDING_STAGES.find((stage) => stage.id === breedingCycle.stage)?.label} · {remainingTime(breedingCycle.completesAt - now)}</span> : null}
           </div>
           {breedingMessage ? <div role="status" className="mt-3 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{breedingMessage}</div> : null}
@@ -1777,157 +1677,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         </section>
       </CollapsibleGameSection>
 
-      {clutch ? (
-        <CollapsibleGameSection label={`Active clutch · ${clutch.id}`} detail={clutchEstablished ? `${clutch.offspring.length} established neonates · ${holdbacks.length} holdback${holdbacks.length === 1 ? "" : "s"} selected` : `${clutch.offspring.length} hatchlings · establishment required`} defaultOpen>
-          <section className="panel rounded-[28px] p-6">
-            <div className="section-kicker">{clutch.id}</div>
-            <h2 className="mt-2 text-2xl font-semibold">{clutchEstablished ? "Neonates established" : "Clutch hatched"} · {clutch.offspring.length} offspring</h2>
-            <p className="mt-2 text-sm text-white/34">{clutchEstablished ? "The clutch has been established. You can now choose holdbacks and move unheld neonates to the player market." : "Raise this clutch together through the establishment period before interacting with individual hatchlings. One payment covers feeders, tubs, cleaning and establishment care for the whole clutch."}</p>
-            {!clutchEstablished ? (
-              <div className="mt-4 rounded-2xl border border-amber-200/15 bg-amber-200/[.035] p-4">
-                <div className="text-[10px] font-black uppercase tracking-[.14em] text-amber-100/55">Establish entire clutch</div>
-                <div className="mt-2 text-sm text-white/45">Base care {money(CLUTCH_ESTABLISH_BASE_COST)} + {clutch.offspring.length} hatchlings × {money(CLUTCH_ESTABLISH_PER_HATCHLING)} = <span className="font-bold text-amber-100/75">{money(clutchEstablishmentCost)}</span></div>
-                <button disabled={cash < clutchEstablishmentCost} onClick={payClutchEstablishment} className="mt-3 rounded-xl bg-amber-200 px-4 py-2 text-xs font-black text-[#17130a] disabled:opacity-30">{cash < clutchEstablishmentCost ? "Not enough cash" : `Establish clutch · ${money(clutchEstablishmentCost)}`}</button>
-              </div>
-            ) : null}
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {clutch.offspring.map((baby) => {
-                const kept = holdbacks.includes(baby.id);
-                return (
-                  <button key={baby.id} disabled={!clutchEstablished} onClick={() => toggleHoldback(baby.id)} className={`rounded-3xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-55 ${kept ? "border-amber-200/35 bg-amber-200/[.05]" : "border-white/[.06] bg-white/[.015]"}`}>
-                    <ChondroSnakeIcon subspecies={baby.subspecies} name={baby.name} traits={portraitTraits(baby)} compact lifeStage={clutchEstablished ? "Neonate" : "Hatchling"} neonateColor={baby.neonateColor} locality={baby.locality} classification={baby.classification} ancestry={baby.ancestry} localityAncestry={baby.localityAncestry} phenotypeScore={baby.phenotypeScore} spriteSeed={baby.id} />
-                    <div className="mt-3 flex flex-wrap items-center gap-2"><span className="font-semibold text-white/75">{baby.name}</span><PhenotypeBadge animal={baby} /></div>
-                    <div className="mt-1 text-[10px] text-white/30">{baby.sex} · {clutchEstablished ? "Neonate" : "Hatchling"} · {baby.classification} · {baby.locality}</div>
-                    <div className="mt-3 text-[10px] text-white/35">Genetics untested · percentages hidden</div>
-                    <div className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-amber-100/50">{!clutchEstablished ? "Establishing with clutch · individual actions locked" : kept ? "Holdback selected" : `Will list · ${money(saleValue(baby, season))}`}</div>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs text-white/38">{clutchEstablished ? `${holdbacks.length} held back · ${clutch.offspring.length - holdbacks.length} going to market` : "The clutch must be established before individual offspring can be kept or sold."}</div>
-              <button disabled={!clutchEstablished || !!marketBusy} onClick={() => void finishClutch()} className="rounded-2xl bg-emerald-300 px-6 py-3 text-sm font-black text-[#06100c] disabled:opacity-40">{!clutchEstablished ? "Establish clutch first" : marketBusy === "clutch" ? "Listing offspring…" : "List unheld & advance season"}</button>
-            </div>
-          </section>
-        </CollapsibleGameSection>
-      ) : null}
-
-      <CollapsibleGameSection label="Your colony" detail={`${colony.length} animal${colony.length === 1 ? "" : "s"} · ${openSlots} open enclosure${openSlots === 1 ? "" : "s"}`} defaultOpen>
-        <section>
-          <div className="section-kicker">Your colony</div>
-          <h2 className="mt-2 text-2xl font-semibold">Animals and project material</h2>
-          <p className="mt-2 text-sm text-white/32">Phenotype grades stay visible by eye. Exact trait percentages require the genetic-testing unlock, {money(GENETIC_TEST_COST)}, and a {GENETIC_TEST_HOURS}-hour lab timer.</p>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            {colony.map((animal) => {
-              const req = agingRequirement(animal);
-              const growCost = agingCost(animal);
-              const sell = saleValue(animal, season);
-              const collapsed = collapsedAnimalIds.includes(animal.id);
-              const favorite = favoriteIds.includes(animal.id);
-              const pendingTest = geneticTestsPending.find((job) => job.snakeId === animal.id);
-              const recoverySeason = Number(femaleRecovery[animal.id] ?? 0);
-              return (
-                <article key={animal.id} className="panel rounded-[28px] p-5">
-                  <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} lifeStage={animal.lifeStage} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification} ancestry={animal.ancestry} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} />
-                  <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xl font-semibold">{animal.name || "Unnamed snake"}</div>
-                      <div className="mt-1 text-xs text-white/30">{animal.id} · {animal.sex} · {animal.classification} · Gen {animal.generation}</div>
-                    </div>
-                    <div className="flex flex-wrap gap-2"><PhenotypeBadge animal={animal} /><span className="rounded-full border border-white/[.08] px-3 py-1 text-[10px] uppercase text-white/45">{animal.lifeStage}</span><button type="button" onClick={() => void toggleFavorite(animal.id)} className={`rounded-full border px-3 py-1 text-[10px] font-black ${favorite ? "border-amber-200/30 bg-amber-200/[.07] text-amber-100" : "border-white/[.08] text-white/45"}`}>{favorite ? "★ Favorite" : "☆ Favorite"}</button><button type="button" onClick={() => toggleAnimalDetails(animal.id)} className="rounded-full border border-white/[.08] px-3 py-1 text-[10px] font-bold text-white/45">{collapsed ? "Show details" : "Hide details"}</button></div>
-                  </div>
-                  {!collapsed ? <>
-                  <div className="mt-3 text-xs text-white/35">{animal.subspecies} · {animal.locality}{isNamedLocality(animal.locality) ? ` · ${localityPurity(animal)}% locality pedigree` : ""}</div>
-                  <div className="mt-1 text-xs font-semibold text-amber-100/55">Neonate color: {animal.neonateColor}</div>
-                  <div className="mt-4"><TraitGrid animal={animal} /></div>
-                  {!animal.geneticsTested ? <div className="mt-3 rounded-xl border border-sky-300/10 bg-sky-300/[.025] p-3 text-xs text-sky-100/55">Exact percentages are hidden. You can keep breeding by appearance, or test this animal when the numbers matter.</div> : null}
-                  <div className="mt-4 grid gap-3 rounded-2xl border border-white/[.06] bg-black/10 p-4">
-                    <label className="text-[10px] font-bold uppercase tracking-[.12em] text-white/35">Snake name<input value={animal.name} onChange={(event) => updateSnakeDetails(animal.id, "name", event.target.value)} maxLength={60} className="mt-2 h-11 w-full rounded-xl border border-white/[.08] bg-black/25 px-3 text-sm font-medium normal-case tracking-normal text-white/75 outline-none" /></label>
-                    <label className="text-[10px] font-bold uppercase tracking-[.12em] text-white/35">Private notes<textarea value={animal.notes} onChange={(event) => updateSnakeDetails(animal.id, "notes", event.target.value)} maxLength={1000} placeholder="Lineage plans, phenotype notes, pairing ideas…" className="mt-2 min-h-20 w-full resize-y rounded-xl border border-white/[.08] bg-black/25 p-3 text-sm font-normal normal-case leading-6 tracking-normal text-white/65 outline-none" /></label>
-                  </div>
-                  <div className="mt-4 rounded-2xl border border-white/[.05] p-3 text-xs text-white/38">
-                    Nido: <span className={animal.nidoStatus === "Positive" ? "font-semibold text-red-200/75" : animal.nidoStatus === "Negative" ? "font-semibold text-emerald-200/70" : "text-white/45"}>{animal.nidoStatus}</span>
-                    {req ? <div className="mt-2">Next stage: {req.next} · {req.mice} mice · {req.months} months · Total care/food {money(growCost)}</div> : <div className="mt-2 text-emerald-200/60">Adult · breeding eligible</div>}
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {!animal.geneticsTested ? pendingTest ? <span className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65">Testing · {remainingTime(pendingTest.completesAt - now)}</span> : <button disabled={!geneticsUnlocked || cash < GENETIC_TEST_COST} onClick={() => geneticTest(animal.id)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65 disabled:opacity-30">{!geneticsUnlocked ? "Genetic testing locked" : `Genetic test · ${money(GENETIC_TEST_COST)}`}</button> : <span className="rounded-xl border border-emerald-300/10 bg-emerald-300/[.03] px-4 py-2 text-xs font-bold text-emerald-100/55">Genetics tested</span>}
-                    {animal.nidoStatus === "Unknown" ? <button disabled={cash < NIDO_TEST_COST} onClick={() => nidoTest(animal.id)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55 disabled:opacity-30">Nido test · {money(NIDO_TEST_COST)}</button> : null}
-                    {req ? <button disabled={cash < growCost} onClick={() => ageSnake(animal)} className="rounded-xl border border-amber-200/15 bg-amber-200/[.04] px-4 py-2 text-xs font-bold text-amber-100/65 disabled:opacity-30">Raise to {req.next} · {money(growCost)}</button> : null}
-                    <button onClick={() => setSelectedSnakeId(animal.id)} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Pedigree</button>
-                    {animal.sex === "Female" && recoverySeason > season ? <span className="rounded-xl border border-amber-200/10 px-4 py-2 text-xs font-bold text-amber-100/55">Recovering · eligible season {recoverySeason}</span> : null}
-                    {animal.nidoStatus === "Positive" ? <button onClick={() => transferPositive(animal)} className="rounded-xl border border-sky-300/15 bg-sky-300/[.04] px-4 py-2 text-xs font-bold text-sky-100/65">Send to specialty snake care</button> : favorite ? <span className="rounded-xl border border-amber-200/15 bg-amber-200/[.04] px-4 py-2 text-xs font-bold text-amber-100/65">Favorite · sale protected</span> : <button disabled={!!marketBusy} onClick={() => void sellSnake(animal)} className="rounded-xl border border-emerald-300/20 bg-emerald-300/[.06] px-4 py-2 text-xs font-bold text-emerald-200/75 disabled:opacity-30">Sell · {money(sell)}</button>}
-                  </div>
-                  </> : null}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      </CollapsibleGameSection>
-
-      <CollapsibleGameSection label="Player snake market" detail={`${playerMarket.length} snake${playerMarket.length === 1 ? "" : "s"} available from players`}>
-        <section className="overflow-hidden rounded-[30px] border border-emerald-300/10 bg-emerald-300/[.025] p-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div><div className="section-kicker">Player snake market</div><h2 className="mt-2 text-2xl font-semibold">Snakes sold by real players</h2><p className="mt-2 text-sm text-white/38">Testing status and pure-locality phenotype grades travel with the animal.</p></div>
-            <button onClick={() => void refreshPlayerMarket()} className="rounded-xl border border-white/[.08] px-4 py-2 text-xs font-bold text-white/55">Refresh market</button>
-          </div>
-          {marketStatus ? <div role="status" className="mt-4 rounded-xl border border-amber-200/10 bg-amber-200/[.03] p-3 text-xs text-amber-100/65">{marketStatus}</div> : null}
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {playerMarket.map((listing) => {
-              const animal = listing.snake;
-              return (
-                <article key={listing.id} className="rounded-3xl border border-white/[.06] bg-black/10 p-4">
-                  <ChondroSnakeIcon subspecies={animal.subspecies} name={animal.name} traits={portraitTraits(animal)} compact lifeStage={animal.lifeStage} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification} ancestry={animal.ancestry} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} />
-                  <div className="mt-3 flex flex-wrap items-start justify-between gap-2"><div><div className="font-semibold text-white/75">{animal.name}</div><div className="mt-1 text-[10px] text-white/30">{animal.sex} · {animal.lifeStage} · Gen {animal.generation}</div></div><PhenotypeBadge animal={animal} /></div>
-                  <div className="mt-3 text-[10px] text-white/34">{traitSummary(animal)}</div>
-                  <div className="mt-2 text-[10px] text-white/30">{animal.subspecies} · {animal.locality} · Nido {animal.nidoStatus}</div>
-                  <div className="mt-4 flex items-center justify-between gap-3"><div className="text-lg font-semibold text-emerald-200/75">{money(listing.price)}</div><button disabled={!!marketBusy || cash < listing.price || openSlots <= 0} onClick={() => void buyPlayerSnake(listing)} className="rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-[#06100c] disabled:opacity-30">{marketBusy === listing.id ? "Claiming…" : openSlots <= 0 ? "Need enclosure" : cash < listing.price ? "Not enough cash" : "Buy snake"}</button></div>
-                </article>
-              );
-            })}
-            {!playerMarket.length ? <div className="rounded-2xl border border-dashed border-white/[.08] p-6 text-sm text-white/30 md:col-span-2 xl:col-span-3">No player-listed snakes are available yet.</div> : null}
-          </div>
-        </section>
-      </CollapsibleGameSection>
-
-      <CollapsibleGameSection label="Program records" detail={`${clutchHistory.length} completed clutch${clutchHistory.length === 1 ? "" : "es"}`}>
-        <section className="panel rounded-[28px] p-6">
-          <div className="section-kicker">Program records</div>
-          <h2 className="mt-2 text-2xl font-semibold">Track progress across generations.</h2>
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {clutchHistory.map((record) => {
-              const graded = record.offspring.filter((baby) => phenotypeLabel(baby));
-              const topPhenotype = graded.length ? Math.max(...graded.map((baby) => baby.phenotypeScore)) : 0;
-              const testedBabies = record.offspring.filter((baby) => baby.geneticsTested);
-              const strongestTested = testedBabies.length ? Math.max(...testedBabies.flatMap((baby) => [baby.highBlack, baby.highWhite, baby.blueStripe, baby.yellowRetention, baby.blotches])) : null;
-              return (
-                <article key={record.id} className="rounded-2xl border border-white/[.06] bg-black/10 p-4">
-                  <div className="font-semibold text-white/72">{record.dam.name} × {record.sire.name}</div>
-                  <div className="mt-1 text-[10px] text-white/30">Season {record.season} · {record.id} · {record.offspring.length} hatched</div>
-                  <div className="mt-3 text-xs text-white/38">{record.holdbackIds.length} held back{topPhenotype ? ` · best locality grade ${phenotypeGrade(topPhenotype)}` : ""}{strongestTested != null ? ` · strongest tested trait ${strongestTested}%` : ""}</div>
-                </article>
-              );
-            })}
-            {!clutchHistory.length ? <div className="rounded-2xl border border-dashed border-white/[.07] p-5 text-sm text-white/28 md:col-span-2">Complete a clutch to start building your program history.</div> : null}
-          </div>
-        </section>
-      </CollapsibleGameSection>
-
-      {sales.length > 0 || transfers.length > 0 ? (
-        <CollapsibleGameSection label="Activity" detail={`${sales.length} sale${sales.length === 1 ? "" : "s"} · ${transfers.length} transfer${transfers.length === 1 ? "" : "s"}`}>
-          <section className="panel-soft rounded-[28px] p-5">
-            <div className="section-kicker">Activity</div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {sales.slice(0, 4).map((sale) => <div key={`${sale.id}-${sale.season}`} className="rounded-2xl border border-white/[.06] p-3 text-sm text-white/50">Sold {sale.name} · <span className="text-emerald-200/70">+{money(sale.value)}</span></div>)}
-              {transfers.slice(0, 4).map((item) => <div key={`${item.id}-${item.season}`} className="rounded-2xl border border-sky-300/10 p-3 text-sm text-white/50">Transferred {item.name} to specialty snake care</div>)}
-            </div>
-            <div className="mt-3 text-xs text-white/28">Total snake sales: {money(saleIncome)}</div>
-          </section>
-        </CollapsibleGameSection>
-      ) : null}
-
       {selectedAnimal ? (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
+        <div role="dialog" aria-modal="true" aria-label={`Snake record · ${selectedAnimal.name || "Unnamed snake"}`} onClick={(event) => { if (event.target === event.currentTarget) setSelectedSnakeId(null); }} className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
           <div className="mx-auto max-w-4xl rounded-[30px] border border-white/[.09] bg-[#09120e] p-5 shadow-2xl sm:p-7">
             <div className="flex items-center justify-between gap-4"><div><div className="section-kicker">Snake record · {selectedAnimal.id}</div><h2 className="mt-2 text-3xl font-semibold">{selectedAnimal.name || "Unnamed snake"}</h2></div><button onClick={() => setSelectedSnakeId(null)} className="rounded-xl border border-white/[.09] px-4 py-2 text-sm font-bold text-white/60">Close</button></div>
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -1957,7 +1708,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       ) : null}
 
       {initialsPrompt ? (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] grid place-items-center bg-black/85 p-4 backdrop-blur-sm">
+        <div role="dialog" aria-modal="true" aria-label="Choose your breeder initials" onClick={(event) => { if (event.target === event.currentTarget) setInitialsPrompt(false); }} className="fixed inset-0 z-[60] grid place-items-center bg-black/85 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[28px] border border-amber-200/15 bg-[#0a130f] p-6 shadow-2xl">
             <div className="section-kicker">Your first clutch</div>
             <h2 className="mt-3 text-3xl font-semibold">Choose your breeder initials</h2>
@@ -1966,6 +1717,12 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
             {initialsStatus ? <div role="status" className="mt-3 text-sm text-amber-100/70">{initialsStatus}</div> : null}
             <div className="mt-6 flex justify-end gap-2"><button onClick={() => setInitialsPrompt(false)} className="rounded-xl border border-white/[.08] px-4 py-3 text-xs font-bold text-white/50">Cancel</button><button onClick={() => void claimBreederInitials()} className="rounded-xl bg-amber-200 px-5 py-3 text-xs font-black text-[#17130a]">Claim initials & start cycle</button></div>
           </div>
+        </div>
+      ) : null}
+
+      {cinematicSeen ? (
+        <div className="mt-10 pb-2 text-center">
+          <button onClick={() => setReplayingIntro(true)} className="text-[11px] text-white/28 underline decoration-white/15 underline-offset-4 transition hover:text-white/55">Replay the intro</button>
         </div>
       ) : null}
     </div>
