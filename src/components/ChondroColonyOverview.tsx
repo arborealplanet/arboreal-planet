@@ -93,7 +93,7 @@ export function ChondroColonyOverview() {
       <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-[#06100c] shadow-[0_18px_60px_rgba(0,0,0,.18)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-white/[.055] px-4 py-3 sm:px-5">
           <span className="rounded-full border border-emerald-300/14 bg-emerald-300/[.035] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/62">Virtual colony</span>
-          <span className="text-[10px] text-white/32">Every animal shown here exists only inside the Chondro Breeder game.</span>
+          <span className="text-[10px] text-white/32">Every animal shown here exists only inside the Arboreal Keeper game.</span>
         </div>
         <div className="grid gap-3 border-b border-white/[.055] p-4 sm:grid-cols-2 lg:grid-cols-5 sm:p-5">
           <Metric label="Virtual colony" value={colony.length} detail={`${adults.length} virtual adult${adults.length === 1 ? "" : "s"}`} />

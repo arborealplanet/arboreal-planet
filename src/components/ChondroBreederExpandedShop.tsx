@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { animalHousingCapacity, enclosureFootprint, roomCapacityFromSave } from "@/lib/chondro-facility-limits";
 import { markStockRotated, playHankScaleLine } from "@/lib/hank-scale-voice";
@@ -59,7 +59,7 @@ const SHOP_REFRESH_MS = 24 * 60 * 60 * 1000;
 const enclosurePrices: Record<EnclosureType, number> = { "Chondro Dojo Bin": 250, "PVC Arboreal": 650 };
 const enclosureDisplay: Record<EnclosureType, { label: string; detail: string }> = {
   "Chondro Dojo Bin": { label: "Chondro Dojo 2 Stack", detail: "Two space-saving neonate enclosures sold as one stack. The stack uses one facility slot and provides two neonate spaces." },
-  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing required for adult Green Tree Pythons and older Emerald Tree Boas." },
+  "PVC Arboreal": { label: "PVC Arboreal Enclosure", detail: "Permanent front-opening arboreal housing required for adult Green Tree Pythons." },
 };
 const subspeciesList: Subspecies[] = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis"];
 const subspeciesShort: Record<Subspecies, string> = {
@@ -425,7 +425,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   // animal or enclosure. QA cards stay non-interactive (review only).
   const [detailOffer, setDetailOffer] = useState<Offer | null>(null);
   const [detailEnclosure, setDetailEnclosure] = useState<EnclosureType | null>(null);
-  const detailOpen = detailOffer !== null || detailEnclosure !== null;
+  const detailOpen = detailOffer !== null || detailEnclosure !== null; /* Two-tap purchase confirmation: the first tap arms the button, the second tap (within a few seconds) executes the purchase. Prevents expensive misclicks on Buy buttons that move real in-game cash. */ const [confirmKey, setConfirmKey] = useState<string | null>(null); const confirmTimer = useRef<number | null>(null); function clearConfirm() { if (confirmTimer.current !== null) { window.clearTimeout(confirmTimer.current); confirmTimer.current = null; } setConfirmKey(null); } useEffect(() => clearConfirm, []); useEffect(() => { if (busy !== null) clearConfirm(); }, [busy]); function confirmedTap(key: string, action: () => void) { if (confirmKey === key) { clearConfirm(); action(); return; } setConfirmKey(key); if (confirmTimer.current !== null) window.clearTimeout(confirmTimer.current); confirmTimer.current = window.setTimeout(() => setConfirmKey(null), 5000); } /* Hank Scale idle-browse line: after 45s without interaction in the shop, play line 15 once per shop visit. */ useEffect(() => { let idleTimer: number | null = null; let played = false; function armIdle() { if (played) return; if (idleTimer !== null) window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => { played = true; playHankScaleLine(15); }, 45_000); } armIdle(); window.addEventListener("pointerdown", armIdle); window.addEventListener("keydown", armIdle); return () => { if (idleTimer !== null) window.clearTimeout(idleTimer); window.removeEventListener("pointerdown", armIdle); window.removeEventListener("keydown", armIdle); }; }, []); /* Hank Scale accessories line when an enclosure dossier opens (60s cooldown). */ const lastAccessoriesLine = useRef(0); useEffect(() => { if (!detailEnclosure) return; const now = Date.now(); if (now - lastAccessoriesLine.current < 60_000) return; lastAccessoriesLine.current = now; playHankScaleLine(13); }, [detailEnclosure]);
+  
 
   function closeDetail() {
     setDetailOffer(null);
@@ -739,7 +740,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         </div>
         )}
 
-        <div className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
+        {roomEnclosureSlots <= 0 ? (<div className="mb-3 rounded-xl border border-amber-200/20 bg-amber-200/[.05] px-3 py-2 text-[11px] leading-5 text-amber-100/75">No installation slots left. Expand your rooms on the <strong>Home</strong> screen (Rooms &amp; Facility Expansion), then come back to install more enclosures.</div>) : null} <div className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
           {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
             const price = enclosurePrices[type];
             const owned = Number(save.enclosures?.[type] ?? 0);
@@ -770,8 +771,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                     <span className="text-white/45">{owned} owned</span>
                     <span className="font-semibold text-emerald-200/78">{money(price)}</span>
                   </div>
-                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); void buyEnclosure(type); }} className="mt-2 w-full rounded-lg bg-emerald-300 px-3 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30">
-                    {roomEnclosureSlots <= 0 ? "Need room" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "…" : "Buy"}
+                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); confirmedTap(`enclosure:${type}`, () => void buyEnclosure(type)); }} className="mt-2 w-full rounded-lg bg-emerald-300 px-3 py-1.5 text-[10px] font-black text-[#06100c] disabled:opacity-30">
+                    {roomEnclosureSlots <= 0 ? "No room slots" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "…" : confirmKey === `enclosure:${type}` ? "Tap again to confirm" : "Buy"}
                   </button>
                 </div>
                 ) : (
@@ -784,8 +785,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                     </div>
                     <div className="text-lg font-semibold text-emerald-200/78">{money(price)}</div>
                   </div>
-                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); void buyEnclosure(type); }} className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
-                    {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : `Buy ${enclosureDisplay[type].label}`}
+                  <button type="button" disabled={unavailable} onClick={(event) => { event.stopPropagation(); confirmedTap(`enclosure:${type}`, () => void buyEnclosure(type)); }} className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] disabled:opacity-30">
+                    {roomEnclosureSlots <= 0 ? "No room slots — expand rooms on Home" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : confirmKey === `enclosure:${type}` ? `Tap again to confirm — ${money(price)}` : `Buy ${enclosureDisplay[type].label}`}
                   </button>
                 </div>
                 )}
@@ -817,7 +818,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         </div>
 
         <div className="mt-3 rounded-xl border border-white/[.055] bg-black/10 px-3 py-2 text-[10px] leading-5 text-white/38">
-          Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return.
+          Inventory rotates automatically every 24 hours. Closing the game does not reset the timer; overdue rotations are applied when you return. Adults need a PVC Arboreal enclosure; younger snakes need any open animal space — buy housing in Enclosures above first.
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/32">
@@ -863,11 +864,11 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 </div>
                 {carousel ? (
                 <>
-                <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name}</div>
+                <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name || "Unnamed snake"}</div> <div className="mt-0.5 truncate text-[10px] text-white/38">{offer.lifeStage ?? "Unknown stage"} · {offer.sex ?? "Unknown sex"}</div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} onClick={(event) => { event.stopPropagation(); void buy(offer); }} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Owned" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Adults need a PVC Arboreal enclosure — buy one in Enclosures above" : "No open animal space — add enclosures above") : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Owned" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : confirmKey === `offer:${offer.id}` ? "Confirm?" : "Buy"}
                   </button>
                 </div>
                 </>
@@ -884,8 +885,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="font-semibold text-emerald-200/75">{money(offer.price)}</span>
-                  <button type="button" disabled={busy !== null} onClick={(event) => { event.stopPropagation(); void buy(offer); }} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
-                    {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : "Buy"}
+                  <button type="button" disabled={busy !== null} title={sold ? undefined : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Adults need a PVC Arboreal enclosure — buy one in Enclosures above" : "No open animal space — add enclosures above") : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-3 py-2 text-[10px] font-black text-[#17130a] disabled:opacity-30">
+                    {sold ? "Purchased" : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Need PVC" : "Need space") : confirmKey === `offer:${offer.id}` ? "Tap again to confirm" : "Buy"}
                   </button>
                 </div>
                 </>
@@ -943,7 +944,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                   canAfford={save.cash >= detailOffer.price}
                   housingOk={housingAvailableFor(detailOffer)}
                   needsPvc={detailOffer.lifeStage === "Adult"}
-                  onBuy={() => void buy(detailOffer)}
+                  confirmArmed={confirmKey === `dossier:${detailOffer.id}`} onBuy={() => confirmedTap(`dossier:${detailOffer.id}`, () => void buy(detailOffer))}
                 />
               ) : detailEnclosure ? (
                 (() => {
@@ -986,10 +987,10 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                       <button
                         type="button"
                         disabled={unavailable || save.cash < price}
-                        onClick={() => void buyEnclosure(type)}
+                        onClick={() => confirmedTap(`dossier-enclosure:${type}`, () => void buyEnclosure(type))}
                         className="mt-3 w-full rounded-xl bg-emerald-300 px-4 py-3 text-xs font-black text-[#06100c] transition hover:brightness-110 active:scale-[.98] disabled:opacity-30"
                       >
-                        {roomEnclosureSlots <= 0 ? "Need another facility room" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : `Buy ${enclosureDisplay[type].label}`}
+                        {roomEnclosureSlots <= 0 ? "No room slots — expand rooms on Home" : save.cash < price ? `Need ${money(price)}` : busy === `enclosure:${type}` ? "Installing…" : confirmKey === `dossier-enclosure:${type}` ? `Tap again to confirm — ${money(price)}` : `Buy ${enclosureDisplay[type].label}`}
                       </button>
                     </div>
                   );
@@ -1011,7 +1012,7 @@ function DetailOfferDossier({
   canAfford,
   housingOk,
   needsPvc,
-  onBuy,
+  onBuy, confirmArmed,
 }: {
   offer: Offer;
   sold: boolean;
@@ -1020,7 +1021,7 @@ function DetailOfferDossier({
   canAfford: boolean;
   housingOk: boolean;
   needsPvc: boolean;
-  onBuy: () => void;
+  onBuy: () => void; confirmArmed: boolean;
 }) {
   const chips = [
     offer.sex,
@@ -1104,7 +1105,7 @@ function DetailOfferDossier({
         onClick={onBuy}
         className="mt-3 w-full rounded-xl bg-amber-200 px-4 py-3 text-xs font-black text-[#17130a] transition hover:brightness-105 active:scale-[.98] disabled:opacity-30"
       >
-        {sold ? "Purchased — check your colony" : !housingOk ? (needsPvc ? "Need a PVC enclosure first" : "Need open animal space") : !canAfford ? `Need ${money(offer.price)}` : buying ? "…" : `Buy ${offer.name}`}
+        {sold ? "Purchased — check your colony" : !housingOk ? (needsPvc ? "Need a PVC enclosure first" : "Need open animal space") : !canAfford ? `Need ${money(offer.price)}` : buying ? "…" : confirmArmed ? `Tap again to confirm — ${money(offer.price)}` : `Buy ${offer.name}`}
       </button>
     </div>
   );

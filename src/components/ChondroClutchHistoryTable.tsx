@@ -52,7 +52,7 @@ export function ChondroClutchHistoryTable() {
     const q = query.trim().toLowerCase();
     return [...(save.clutchHistory ?? [])]
       .filter((record) => season === "All" || String(record.season) === season)
-      .filter((record) => !q || [record.id, record.dam.name, record.sire.name, record.dam.locality, record.sire.locality].some((value) => String(value).toLowerCase().includes(q)))
+      .filter((record) => !q || [record.id, record.dam?.name, record.sire?.name, record.dam?.locality, record.sire?.locality].some((value) => String(value ?? "").toLowerCase().includes(q)))
       .sort((a, b) => b.season - a.season);
   }, [save, query, season]);
 
@@ -145,8 +145,8 @@ function ClutchDetail({ record, sales, favoriteSet }: { record: ClutchRecord; sa
   );
 }
 
-function ParentCard({ role, animal, favorite }: { role: string; animal: Snake; favorite: boolean }) {
-  return <div className="rounded-2xl border border-white/[.07] bg-white/[.02] p-4"><div className="text-[9px] font-bold uppercase tracking-[.12em] text-white/34">{role}</div><div className="mt-2 text-lg font-semibold text-white/76">{favorite ? "★ " : ""}{animal.name}</div><div className="mt-1 text-xs text-white/42">{animal.subspecies}</div><div className="mt-1 text-xs text-white/38">{animal.locality} · Gen {animal.generation}</div></div>;
+function ParentCard({ role, animal, favorite }: { role: string; animal: Snake | undefined; favorite: boolean }) {     if (!animal) return <div className="rounded-2xl border border-white/[.07] bg-white/[.02] p-4"><div className="text-[9px] font-bold uppercase tracking-[.12em] text-white/34">{role}</div><div className="mt-2 text-lg font-semibold text-white/76">No longer in colony</div></div>;
+  return animal ? <div className="rounded-2xl border border-white/[.07] bg-white/[.02] p-4"><div className="text-[9px] font-bold uppercase tracking-[.12em] text-white/34">{role}</div><div className="mt-2 text-lg font-semibold text-white/76">{favorite ? "★ " : ""}{animal.name || "Unnamed animal"}</div><div className="mt-1 text-xs text-white/42">{animal.subspecies || "Unknown subspecies"}</div><div className="mt-1 text-xs text-white/38">{animal.locality || "Unknown locality"} · Gen {animal.generation ?? "—"}</div></div> : <div className="rounded-2xl border border-white/[.07] bg-white/[.02] p-4"><div className="text-[9px] font-bold uppercase tracking-[.12em] text-white/34">{role}</div><div className="mt-2 text-sm text-white/42">No longer in colony</div></div>;
 }
 
 function Metric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {

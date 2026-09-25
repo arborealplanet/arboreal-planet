@@ -155,7 +155,7 @@ export function ChondroShowsPanel() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] px-4 py-3 text-[10px] text-white/38">
         <span className="rounded-full border border-emerald-300/14 bg-emerald-300/[.04] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.1em] text-emerald-100/62">Virtual show circuit</span>
-        <span>Entries, prizes, reputation and animals in this section are part of the Chondro Breeder game.</span>
+        <span>Entries, prizes, reputation and animals in this section are part of the Arboreal Keeper game.</span>
       </div>
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <section className="rounded-2xl border border-white/[.07] bg-black/10 p-4">

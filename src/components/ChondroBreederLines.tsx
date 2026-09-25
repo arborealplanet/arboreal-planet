@@ -166,7 +166,7 @@ export function ChondroBreederLines() {
             <div className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
               <div className="rounded-2xl border border-white/[.06] p-4">
                 <div className="text-sm font-semibold text-white/70">Create a breeder line</div>
-                <input value={name} onChange={(event) => setName(event.target.value)} maxLength={60} placeholder="Bunn Blue Line" className="mt-4 h-11 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 text-sm text-white/75 outline-none" />
+                <input value={name} onChange={(event) => setName(event.target.value)} maxLength={60} placeholder="Hank Blue Line" className="mt-4 h-11 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 text-sm text-white/75 outline-none" />
                 <input value={focus} onChange={(event) => setFocus(event.target.value)} maxLength={160} placeholder="Focus: blue expression + Cyclops phenotype" className="mt-2 h-11 w-full rounded-xl border border-white/[.08] bg-black/20 px-3 text-sm text-white/75 outline-none" />
                 <select value={founderId} onChange={(event) => setFounderId(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/[.08] bg-black/30 px-3 text-sm text-white/70 outline-none">
                   <option value="">Choose founder animal</option>

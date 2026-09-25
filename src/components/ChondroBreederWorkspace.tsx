@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { ArborealPlanetMark } from "@/components/BrandVisuals";
+import { useRef, useState } from "react";
+import { ArborealPlanetMark } from "@/components/BrandVisuals"; import { playHankScaleLine } from "@/lib/hank-scale-voice";
+
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
 import { ArborealKeeperAdHero } from "@/components/ArborealKeeperAdHero";
 import { ArborealKeeperFacilityOverview } from "@/components/ArborealKeeperFacilityOverview";
 import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
 import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
-import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";
@@ -22,13 +22,10 @@ import { ChondroClutchHistoryTable } from "@/components/ChondroClutchHistoryTabl
 import { ChondroClutchStageArt } from "@/components/ChondroClutchStageArt";
 import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
-import { ChondroFavoritesMarketPanel } from "@/components/ChondroFavoritesMarketPanel";
 import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
-import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
 import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
-type CoreView = "breeding" | "colony" | "clutches" | "market";
 
 type ViewMeta = {
   label: string;
@@ -58,16 +55,16 @@ const dockIconByView: Record<(typeof dockViews)[number], string> = {
   clutches: "/hatchery/game/dock/offspring.webp",
   market: "/hatchery/game/dock/store.webp",
 };
-const coreViews = new Set<WorkspaceView>(["breeding", "colony", "clutches", "market"]);
+const coreViews = new Set<WorkspaceView>(["breeding", "colony", "clutches"]);
 
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
   // Intro advertisement layer: the first thing seen on the Arboreal Keeper
   // entry routes. Dismissing it reveals the game underneath, untouched.
-  const [showAd, setShowAd] = useState(true);
+  const [showAd, setShowAd] = useState(true); const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
   const active = views.find((item) => item.id === view) ?? views[0];
 
-  function openView(next: WorkspaceView) {
+  function openView(next: WorkspaceView) { if (viewRef.current === "market" && next !== "market") playHankScaleLine(16); if (next === "breeding" && !bredLineRef.current) { bredLineRef.current = true; playHankScaleLine(14); } viewRef.current = next;
     setView(next);
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   }
@@ -80,7 +77,7 @@ export function ChondroBreederWorkspace() {
           <Link
             href="/"
             aria-label="Exit Arboreal Keeper and return to Arboreal Planet"
-            title="Return to Arboreal Planet"
+            title="Return to Arboreal Planet" onClick={() => playHankScaleLine(8)}
             className="group grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/[.07] bg-white/[.025] transition hover:border-emerald-300/20 hover:bg-white/[.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
           >
             <ArborealPlanetMark className="h-9 w-9 transition group-hover:scale-[1.03]" />
@@ -99,7 +96,7 @@ export function ChondroBreederWorkspace() {
 
       <main>
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
-        {view === "market" ? <ArborealKeeperReptiShop /> : coreViews.has(view) ? <CoreGameScreen view={view as CoreView} /> : null}
+        {view === "market" ? <ArborealKeeperReptiShop /> : coreViews.has(view) ? <CoreGameScreen view={view as "breeding" | "colony" | "clutches"} /> : null}
         {view === "career" ? (
           <SecondaryScreen active={active} onBack={() => openView("home")}>
             <section className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">
@@ -187,7 +184,7 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
     <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
         <div className="p-3 sm:p-5">
-          <div className="relative min-h-44 overflow-hidden rounded-[26px] border border-white/[.08] bg-black shadow-2xl shadow-black/25 sm:min-h-56" role="img" aria-label="Arboreals by Bunn shopkeeper holding a red neonate green tree python">
+          <div className="relative min-h-44 overflow-hidden rounded-[26px] border border-white/[.08] bg-black shadow-2xl shadow-black/25 sm:min-h-56" role="img" aria-label="Arboreal Keeper shopkeeper Hank Scale holding a red neonate green tree python">
             <Image src="/hatchery/game/arboreal-keeper-ad-hero.webp" alt="" fill sizes="(max-width: 1500px) 100vw, 1500px" className="object-cover object-[center_22%]" priority />
             <div className="absolute inset-0 bg-gradient-to-r from-black/72 via-black/28 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent p-5 sm:p-7">
@@ -221,10 +218,10 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
             <div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/50">New player path</div>
             <h3 className="mt-2 text-lg font-semibold text-white/82">Follow these four steps and the game makes sense.</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <QuickAction title="1. Store" detail="Buy an enclosure first, then choose your first animal." icon="1" onClick={() => onOpen("market")} emphasized />
-              <QuickAction title="2. Animals" detail="Tap an animal to raise, test, name, sell or manage it." icon="2" onClick={() => onOpen("colony")} />
-              <QuickAction title="3. Breed" detail="Once animals are adults, choose a male and female and start a cycle." icon="3" onClick={() => onOpen("breeding")} />
-              <QuickAction title="4. Offspring" detail="Manage eggs and hatchlings, choose holdbacks and review results." icon="4" onClick={() => onOpen("clutches")} />
+              <QuickAction title="Store" detail="Buy an enclosure first, then choose your first animal." icon="1" onClick={() => onOpen("market")} emphasized />
+              <QuickAction title="Animals" detail="Tap an animal to raise, test, name, sell or manage it." icon="2" onClick={() => onOpen("colony")} />
+              <QuickAction title="Breed" detail="Once animals are adults, choose a male and female and start a cycle." icon="3" onClick={() => onOpen("breeding")} />
+              <QuickAction title="Offspring" detail="Manage eggs and hatchlings, choose holdbacks and review results." icon="4" onClick={() => onOpen("clutches")} />
             </div>
           </section>
 
@@ -245,41 +242,24 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
   );
 }
 
-function CoreGameScreen({ view }: { view: CoreView }) {
-  const config: Record<CoreView, { eyebrow: string; title: string; detail: string }> = {
+function CoreGameScreen({ view }: { view: "breeding" | "colony" | "clutches" }) {
+  const config: Record<"breeding" | "colony" | "clutches", { eyebrow: string; title: string; detail: string }> = {
     breeding: { eyebrow: "Reproduction", title: "Breed", detail: "Choose adult breeders, start a pairing and follow reproductive progress." },
     colony: { eyebrow: "Collection", title: "Animals", detail: "Tap any animal to raise its life stage, test it, rename it, add notes, sell it or manage its breeder record." },
     clutches: { eyebrow: "Offspring", title: "Offspring", detail: "Manage active eggs and hatchlings, choose holdbacks and review completed clutch history." },
-    market: { eyebrow: "Repti-Shop", title: "Store", detail: "Buy an enclosure first, then purchase animals from rotating game inventory or other players." },
-  };
+    
   const active = config[view];
 
   return (
     <>
       <ScreenHeading eyebrow={active.eyebrow} title={active.title} detail={active.detail} />
       <GameScreenGuide view={view} />
-      {view === "breeding" || view === "colony" || view === "market" ? <ChondroBreederScreenArt screen={view} /> : null}
+      {view === "breeding" || view === "colony" ? <ChondroBreederScreenArt screen={view} /> : null}
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
       {view === "clutches" ? <ChondroClutchStageArt /> : null}
-      {view === "colony" ? <ChondroColonyOverview /> : null}
-      {view === "market" ? (
-        <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-6">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[24px] border border-amber-200/15 bg-amber-200/[.035] px-4 py-3 text-sm text-amber-50/70">
-              <strong className="text-amber-100">Snake Store:</strong> rotating chondros are below. Purchases use your breeder cash and require an open enclosure.
-            </div>
-            <div className="rounded-[24px] border border-emerald-300/12 bg-emerald-300/[.03] px-4 py-3 text-xs leading-5 text-white/48">
-              <strong className="text-emerald-100/80">48-hour market fallback:</strong> player listings that remain unsold for two days are cleared automatically at 85% of their asking price. Pure subspecies animals are acquired by the conservation program and count toward the shared conservation goal, but the seller receives no personal conservation credit. Other animals are placed through the game&apos;s NPC pet market.
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {view === "market" ? <ChondroBreederExpandedShop /> : null}
-      {view === "market" ? <ChondroPlayerMarket /> : null}
       {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroCollectionManager /></div> : null}
       <ChondroBreederGameV3 screen={view} />
-      {view === "market" ? <ChondroFavoritesMarketPanel /> : null}
       {view === "clutches" ? <ChondroClutchOutcomeExplainer /> : null}
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroRetiredBreedersPanel /></div> : null}
       {view === "clutches" ? <section className="mx-auto max-w-7xl px-5 pt-5 sm:px-6"><div className="panel rounded-[28px] p-4 sm:p-5"><ChondroClutchHistoryTable /></div></section> : null}
@@ -287,13 +267,8 @@ function CoreGameScreen({ view }: { view: CoreView }) {
   );
 }
 
-function GameScreenGuide({ view }: { view: CoreView }) {
-  const guides: Record<CoreView, Array<{ step: string; title: string; detail: string }>> = {
-    market: [
-      { step: "1", title: "Buy housing", detail: "You need an open enclosure before you can bring home an animal." },
-      { step: "2", title: "Buy an animal", detail: "Choose from the rotating store or player listings." },
-      { step: "3", title: "Go to Animals", detail: "Raise and manage your new animal from its record." },
-    ],
+function GameScreenGuide({ view }: { view: "breeding" | "colony" | "clutches" }) {
+  const guides: Record<"breeding" | "colony" | "clutches", Array<{ step: string; title: string; detail: string }>> = {
     colony: [
       { step: "1", title: "Tap an animal", detail: "Its full management drawer opens." },
       { step: "2", title: "Raise or manage it", detail: "Life-stage growth, testing, notes, favorite and sale controls live there." },

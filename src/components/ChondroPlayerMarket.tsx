@@ -83,10 +83,10 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
   const [save, setSave] = useState<SaveState>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
-  const [marketLoaded, setMarketLoaded] = useState(false);
+  const [marketLoaded, setMarketLoaded] = useState(false); const [refreshing, setRefreshing] = useState(false);
   const emptyAnnouncedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async () => { setRefreshing(true);
     try {
       const [marketResponse, saveResponse] = await Promise.all([
         fetch("/api/hatchery/chondro-breeder/player-market", { cache: "no-store" }),
@@ -115,11 +115,11 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
           } catch {}
         }
       }
-      if (marketResponse.status === 401) setStatus("Sign in to browse and buy from the shared player market.");
+      if (marketResponse.status === 401) setStatus("Sign in to browse and buy from the shared player market."); if (marketResponse.ok) setStatus("");
     } catch {
       setStatus("The player market could not be refreshed.");
     }
-  }, []);
+    setRefreshing(false); }, []);
 
   useEffect(() => {
     const first = window.setTimeout(() => void refresh(), 0);
@@ -254,7 +254,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
         {layout === "carousel" ? (
           <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · {mine.length + available.length} available</div>
-            <button type="button" onClick={() => void refresh()} aria-label="Refresh player market" className="shrink-0 rounded-lg border border-white/[.08] px-2 py-1 text-[10px] font-bold text-white/52">↻</button>
+            <button type="button" onClick={() => void refresh()} disabled={refreshing} aria-label="Refresh player market" className="shrink-0 rounded-lg border border-white/[.08] px-2 py-1 text-[10px] font-bold text-white/52 disabled:opacity-50">{refreshing ? "…" : "↻"}</button>
           </div>
         ) : (
         <>
@@ -292,7 +292,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
         {mine.length ? (
           <div className="mt-5 rounded-[22px] border border-amber-200/10 bg-amber-200/[.025] p-4">
             <div className="text-[9px] font-black uppercase tracking-[.15em] text-amber-100/55">Your active listings</div>
-            <p className="mt-1 text-xs leading-5 text-white/34">These snakes are still listed. They are intentionally kept visible here so selling an animal never makes it look lost.</p>
+            <p className="mt-1 text-xs leading-5 text-white/34">These snakes are still listed. They are intentionally kept visible here so selling an animal never makes it look lost. Listings unsold after 48 hours are cleared automatically at 85% of asking price.</p>
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {mine.map((listing) => {
                 const animal = listing.snake;
