@@ -605,6 +605,7 @@ async function processFacebookPost(item: HarvestItem, ctx: FacebookContext): Pro
 
   let candidateId: string | null = null;
   let candidateCreated = false;
+  let candidateError: string | null = null;
   if (sorterEligible) {
     const existingCandidateResponse = await fetch(
       `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_key=eq.${encodeURIComponent(sourceKey)}&select=id,reviewed_at&limit=1`,
@@ -673,7 +674,17 @@ async function processFacebookPost(item: HarvestItem, ctx: FacebookContext): Pro
       });
       const candidateRows = candidateResponse.ok ? await candidateResponse.json() as Array<{ id: string }> : [];
       candidateId = candidateRows[0]?.id ?? null;
-      if (candidateId) candidateCreated = true;
+      if (candidateId) {
+        candidateCreated = true;
+      } else {
+        // Surface the upstream error so a failed candidate insert is
+        // diagnosable from the import response instead of silently null.
+        try {
+          candidateError = `status ${candidateResponse.status}: ` + (await candidateResponse.text()).slice(0, 500);
+        } catch {
+          candidateError = `status ${candidateResponse.status}`;
+        }
+      }
     }
   }
 
@@ -684,6 +695,7 @@ async function processFacebookPost(item: HarvestItem, ctx: FacebookContext): Pro
     master_animal_id: masterAnimalId,
     candidate_id: candidateId,
     candidate_created: candidateCreated,
+    candidate_error: candidateError,
     snake_sorter_eligible: sorterEligible,
     ancestry_class: ancestry.ancestry_class,
     possible_repost_of: possibleRepostOf,
