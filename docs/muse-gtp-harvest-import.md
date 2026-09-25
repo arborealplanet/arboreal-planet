@@ -1,6 +1,6 @@
 # Muse → GTP Harvest Import Contract
 
-This repository accepts one structured Green Tree Python harvest and routes it into both Snake Stocks and Snake Sorter.
+This repository accepts one structured Green Tree Python harvest and routes it into both Snake Stocks and Snake Sorter. Facebook harvests route into Snake Sorter only — no market data is ever collected from Facebook.
 
 ## 1. Metadata import
 
@@ -79,6 +79,43 @@ Each accepted market date automatically refreshes true monthly, quarterly, and y
 ### Relists and merges
 
 A listing that matches another listing from the same seller with the same normalized title sets `possible_relist_of` on the master animal for reviewer confirmation — imports never merge animals automatically. Reviewer-confirmed merges are recorded in `gtp_animal_merges` (from → into, reason, evidence, who/when) and can be reverted; they are never silent row surgery.
+
+### Facebook platform payloads
+
+The same endpoint also accepts Facebook harvests for Snake Sorter (no market data — prices are never collected from Facebook):
+
+```json
+{
+  "harvest_id": "HARVEST_FB_GTP_20260924_001",
+  "source_platform": "facebook",
+  "captured_at": "2026-09-24T14:00:00Z",
+  "items": [
+    {
+      "post_id": "2925426421144507",
+      "source_url": "https://facebook.com/groups/967131100307392/permalink/2925426421144507/",
+      "group_or_page": { "name": "Green Tree Pythons", "url": "https://facebook.com/groups/967131100307392" },
+      "poster_name": "Example Keeper",
+      "post_created_at": "2026-09-20T18:30:00Z",
+      "post_text": "Pure Biak female, captive bred",
+      "locality_claims_verbatim": "Biak",
+      "origin_claims_verbatim": "captive bred",
+      "localities_normalized": ["Biak"],
+      "pure_subspecies": true,
+      "ancestry_class": "pure_locality",
+      "facets": { "subspecies": "Morelia azurea utaraensis", "sex": "female" },
+      "photo_total": 7
+    }
+  ]
+}
+```
+
+`harvest_id` must match `HARVEST_FB_GTP_YYYYMMDD_NNN` and `source_platform` must be `"facebook"` (MorphMarket payloads keep `HARVEST_MM_GTP_…` with `source_platform: "morphmarket"`; id prefix and platform are cross-checked).
+
+Facebook items key on `facebook:<post_id>` — `post_id` explicit, else parsed from `/permalink/<id>`, `/posts/<id>`, `/posts/pfbid<id>`, or `/reel/<id>` URLs, never invented. They create/update `gtp_observed_animals` with `source_type: "facebook"`, preserving post metadata and verbatim claims. Eligible pure-locality / same-subspecies-locality-cross animals get Snake Sorter acquisition candidates (`review_status: pending`); cross-subspecies, hybrid, and designer animals are excluded; unknown ancestry goes to review. No market observations, import batches, prices, or snapshot refreshes are written for Facebook items.
+
+Possible reposts (same poster + same post text as a known Facebook animal) set `possible_repost_of` on the master animal for reviewer confirmation — never auto-merged.
+
+For screenshot uploads of Facebook records, `source_media_url` is the Facebook post permalink — never a CDN/image URL.
 
 ## 2. Screenshot upload
 
