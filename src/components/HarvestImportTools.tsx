@@ -430,7 +430,7 @@ export function StagedMediaBatchUpload() {
             ref={manifestFileRef}
             type="file"
             accept="application/json,.json"
-            className="hidden"
+            className="sr-only"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void f.text().then((t) => { setManifestText(t); setError(null); });
@@ -443,7 +443,7 @@ export function StagedMediaBatchUpload() {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple
-              className="hidden"
+              className="sr-only"
               onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
             />
           </label>
