@@ -151,7 +151,7 @@ export function ChondroRetiredBreedersPanel() {
   }
 
   if (!save) {
-    return <section className="panel rounded-[28px] p-6 text-sm text-white/40">Start a Chondro Breeder save before managing retired breeders.</section>;
+    return <section className="panel rounded-[28px] p-6 text-sm text-white/40">Start an Arboreal Keeper save before managing retired breeders.</section>;
   }
 
   return (
