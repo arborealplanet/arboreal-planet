@@ -211,7 +211,7 @@ export function ArborealKeeperReptiShop() {
 
       {/* Current-view inventory — horizontal carousel, never scrolls vertically */}
       <div className="mt-2 min-h-0 flex-1 overflow-hidden">
-        <div key={view} className="h-full">
+        <div key={view} className="anim-keeper-fade-up h-full">
           {view === "animals" ? (
             <ChondroBreederExpandedShop section="snakes" layout="carousel" />
           ) : view === "enclosures" ? (
