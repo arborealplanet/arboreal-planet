@@ -6,7 +6,7 @@ import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedS
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
 import { consumeStockRotated, isHankScaleMuted, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
 
-// Three blink variants of Bunn's idle loop. Every clip opens and closes on
+// Three blink variants of Hank's idle loop. Every clip opens and closes on
 // the same eyes-open pose, so cutting between them is as invisible as each
 // clip's own loop point — the store never visibly repeats.
 const SHOP_CLIPS = [
@@ -60,8 +60,8 @@ function ShopLoopVideo() {
   );
 }
 
-const BUNN_TIPS = [
-  "Howdy! Bunn here. Buy your housing before your snakes — every chondro needs a home.",
+const HANK_TIPS = [
+  "Howdy! Hank here. Buy your housing before your snakes — every chondro needs a home.",
   "The Dojo 2 Stack is where the neonates start out.",
   "Raise subadults to adults to unlock breeding.",
   "Check the Player Market for deals from other keepers.",
@@ -83,7 +83,7 @@ export function ArborealKeeperReptiShop() {
   const [muted, setMuted] = useState(() => isHankScaleMuted());
   const introducedRef = useRef(false);
 
-  // Hank Scale voice line per tip index (BUNN_TIPS order).
+  // Hank Scale voice line per tip index (HANK_TIPS order).
   const TIP_LINES = [3, 4, 5, 6, 7];
   const VIEW_LINES: Record<View, number> = { animals: 2, enclosures: 3, market: 6 };
 
@@ -111,7 +111,7 @@ export function ArborealKeeperReptiShop() {
   }
 
   function handleTipClick() {
-    const next = (tip + 1) % BUNN_TIPS.length;
+    const next = (tip + 1) % HANK_TIPS.length;
     setTip(next);
     if (!introducedRef.current) {
       introducedRef.current = true;
@@ -148,7 +148,18 @@ export function ArborealKeeperReptiShop() {
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-164px-env(safe-area-inset-bottom))] w-full max-w-5xl flex-col overflow-hidden px-4 py-3 sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))] sm:px-6">
-      {/* Bunn's tip — slim row above the store, tap for another tip */}
+      {/* Sprite QA — production tool, parked above the tip bar on the right */}
+      <div className="mb-1 flex flex-none justify-end">
+        <button
+          type="button"
+          onClick={() => setQaOpen(true)}
+          className="shrink-0 text-[10px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
+        >
+          Sprite QA
+        </button>
+      </div>
+
+      {/* Hank's tip — slim row above the store, tap for another tip */}
       <button
         type="button"
         onClick={handleTipClick}
@@ -156,21 +167,30 @@ export function ArborealKeeperReptiShop() {
         className="mb-2 flex w-full flex-none items-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.96] px-3 py-2 text-left shadow-[0_10px_30px_rgba(0,0,0,.35)]"
       >
         <span className="min-w-0 flex-1 text-[11px] leading-4 text-[#0a120d] sm:text-[12px]">
-          <span className="font-semibold">Hank says:</span> {BUNN_TIPS[tip]}
+          <span className="font-semibold">Hank says:</span> {HANK_TIPS[tip]}
         </span>
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
 
-      {/* Bunn's animated store — as large as possible, completely clean */}
+      {/* Hank's animated store — as large as possible, mute tucked into the bottom-right corner */}
       <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
         <div className="absolute inset-0">
           <ShopLoopVideo />
         </div>
+        <button
+          type="button"
+          onClick={toggleMute}
+          title={muted ? "Unmute Hank's voice" : "Mute Hank's voice"}
+          aria-label={muted ? "Unmute Hank's voice" : "Mute Hank's voice"}
+          className="absolute bottom-2 right-2 z-10 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur-sm hover:bg-black/75 hover:text-white"
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
 
-      {/* View buttons — game-art pills below the animation, Sprite QA kept quiet */}
+      {/* View buttons — game-art pills below the animation */}
       <div className="mt-2 flex flex-none items-center gap-2">
-        <div className="flex min-w-0 flex-1 snap-x gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-0 flex-1 snap-x justify-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {VIEWS.map((v) => {
             const selected = v.id === view;
             return (
@@ -191,22 +211,6 @@ export function ArborealKeeperReptiShop() {
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={toggleMute}
-          title={muted ? "Unmute Hank's voice" : "Mute Hank's voice"}
-          aria-label={muted ? "Unmute Hank's voice" : "Mute Hank's voice"}
-          className="shrink-0 rounded-full border border-white/12 bg-white/[.05] px-2.5 py-1 text-[11px] text-white/60 hover:bg-white/[.09] hover:text-white"
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setQaOpen(true)}
-          className="shrink-0 text-[10px] font-semibold text-white/30 underline decoration-white/15 underline-offset-4 hover:text-white/60"
-        >
-          Sprite QA
-        </button>
       </div>
 
       {/* Current-view inventory — horizontal carousel, never scrolls vertically */}
