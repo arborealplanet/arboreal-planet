@@ -983,6 +983,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 onKeyDown={(event) => handleCardKeyDown(event, () => setDetailOffer(offer))}
                 className={carousel ? `group w-full shrink-0 cursor-pointer snap-start rounded-2xl border p-2.5 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[230px] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}` : `group w-[82%] shrink-0 cursor-pointer snap-start rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}
               >
+                <div className="relative">
                 <div className="transition-transform duration-300 group-hover:scale-[1.03]">
                 <ChondroSnakeIcon
                   subspecies={offer.subspecies}
@@ -1001,9 +1002,18 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 />
                 </div>
                 {carousel ? (
+                <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-2 sm:hidden">
+                  <span className="rounded-lg bg-black/65 px-2 py-1 text-sm font-semibold text-emerald-200/90 backdrop-blur-sm">{money(offer.price)}</span>
+                  <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? "No open animal space — add enclosures above" : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-3 py-1.5 text-[10px] font-black text-[#17130a] shadow-lg disabled:opacity-30">
+                    {sold ? "Owned" : !housingAvailableFor(offer) ? "Need space" : confirmKey === `offer:${offer.id}` ? "Confirm?" : "Buy"}
+                  </button>
+                </div>
+                ) : null}
+                </div>
+                {carousel ? (
                 <>
                 <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name || "Unnamed snake"}</div> <div className="mt-0.5 truncate text-[10px] text-white/38">{offer.lifeStage ?? "Unknown stage"} · {offer.sex ?? "Unknown sex"}</div>
-                <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="mt-2 hidden items-center justify-between gap-2 sm:flex">
                   <span className="text-sm font-semibold text-emerald-200/75">{money(offer.price)}</span>
                   <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? "No open animal space — add enclosures above" : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
                     {sold ? "Owned" : !housingAvailableFor(offer) ? "Need space" : confirmKey === `offer:${offer.id}` ? "Confirm?" : "Buy"}
