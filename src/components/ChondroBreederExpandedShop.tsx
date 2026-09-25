@@ -788,7 +788,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       </section>
       ) : null}
       {(!section || section === "enclosures") ? (
-      <section className={carousel ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-2.5" : "mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5"}>
+      <section className={carousel ? "h-full overflow-x-hidden overflow-y-auto rounded-[22px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-2.5 sm:overflow-hidden" : "mb-4 overflow-hidden rounded-[26px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,.08),transparent_38%),#07110d] p-4 sm:p-5"}>
         {carousel ? (
           <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
@@ -892,7 +892,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
       </section>
       ) : null}
       {(!section || section === "snakes") ? (
-      <section className={carousel ? "flex h-full flex-col overflow-hidden rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-2.5" : "rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5"}>
+      <section className={carousel ? "flex h-full flex-col overflow-x-hidden overflow-y-auto rounded-[22px] border border-sky-300/15 bg-sky-300/[.025] p-2.5 sm:overflow-hidden" : "rounded-[24px] border border-sky-300/15 bg-sky-300/[.025] p-4 sm:p-5"}>
         {carousel ? (
           <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-sky-100/55">{visibleOffers.length} of {offers.length} snakes</div>
@@ -963,7 +963,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
 
         <div
           aria-label="Scrollable snake store listings"
-          className={carousel ? "mt-2 flex min-h-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]" : "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"}
+          className={carousel ? "mt-2 flex min-h-0 flex-none snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent] sm:grow-0 sm:shrink" : "mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(125,211,252,.28)_transparent]"}
         >
           {visibleOffers.length === 0 ? (
             <div className="w-full shrink-0 rounded-2xl border border-white/[.06] bg-black/10 p-6 text-center text-xs text-white/40">

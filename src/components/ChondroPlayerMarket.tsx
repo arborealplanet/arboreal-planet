@@ -250,7 +250,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
     );
   }
 
-  const body = (    <div className={layout === "carousel" ? "h-full overflow-hidden rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.022] p-2.5" : "overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5"}>
+  const body = (    <div className={layout === "carousel" ? "h-full overflow-x-hidden overflow-y-auto rounded-[22px] border border-emerald-300/10 bg-emerald-300/[.022] p-2.5 sm:overflow-hidden" : "overflow-hidden rounded-[28px] border border-emerald-300/10 bg-emerald-300/[.022] p-4 sm:p-5"}>
         {layout === "carousel" ? (
           <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.15em] text-emerald-100/48">Player market · {mine.length + available.length} available</div>

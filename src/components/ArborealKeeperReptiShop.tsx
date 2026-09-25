@@ -198,8 +198,10 @@ export function ArborealKeeperReptiShop() {
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
 
-      {/* Hank's animated store — as large as possible, mute tucked into the bottom-right corner */}
-      <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+      {/* Hank's animated store — compact banner on phones so the merchandise
+          gets the screen; as large as possible on larger screens.
+          Mute tucked into the bottom-right corner. */}
+      <div className="relative min-h-0 w-full h-36 flex-none overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)] sm:h-auto sm:flex-1">
         <div className="absolute inset-0">
           <ShopLoopVideo />
         </div>
