@@ -134,7 +134,7 @@ export function growthCostFor(
 
 
 
-  ); */ */
+  ); 
 }
 
 export function normalizeNeonateColorFor(
