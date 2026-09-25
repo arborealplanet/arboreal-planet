@@ -987,7 +987,7 @@ export function ChondroBreederGame() {
     }
   }
   function resetGame() {
-    if (!window.confirm("Reset Chondro Breeder and erase this save?")) return;
+    if (!window.confirm("Reset Arboreal Keeper and erase this save?")) return;
     setStarted(false);
     setCash(STARTING_CASH);
     setColony([]);
@@ -1012,7 +1012,7 @@ export function ChondroBreederGame() {
     return (
       <div className="mx-auto max-w-5xl px-5 py-16 sm:px-6">
         <div className="panel rounded-[30px] p-8 text-center text-sm text-white/45">
-          Loading your Chondro Breeder save…
+          Loading your Arboreal Keeper save…
         </div>
       </div>
     );
@@ -1272,7 +1272,7 @@ export function ChondroBreederGame() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="section-kicker">
-            Chondro Breeder · Season {season}
+            Arboreal Keeper · Season {season}
           </div>
           <h1 className="mt-2 text-3xl font-semibold">Build your program</h1>
           <p className="mt-2 text-sm text-white/34">
