@@ -257,6 +257,8 @@ function CoreGameScreen({ view }: { view: "breeding" | "colony" | "clutches" }) 
       {view === "breeding" || view === "colony" ? <ChondroBreederScreenArt screen={view} /> : null}
       {view === "breeding" ? <ChondroBreedingFocusHeader /> : null}
       {view === "clutches" ? <ChondroClutchStageArt /> : null}
+
+      {view === "colony" ? <ChondroColonyOverview /> : null}
       {view === "clutches" ? <ChondroActiveClutchShowcase /> : null}
       {view === "colony" ? <div className="mx-auto mt-5 max-w-7xl px-5 sm:px-6"><ChondroCollectionManager /></div> : null}
       <ChondroBreederGameV3 screen={view} />
