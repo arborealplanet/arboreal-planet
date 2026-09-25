@@ -70,10 +70,10 @@ const HANK_TIPS = [
 
 type View = "animals" | "enclosures" | "market";
 
-const VIEWS: Array<{ id: View; label: string; thumb: string }> = [
-  { id: "animals", label: "Animals", thumb: "/hatchery/game/dock/animals.webp" },
-  { id: "enclosures", label: "Enclosures", thumb: "/hatchery/game/chondro-dojo-2-stack.webp" },
-  { id: "market", label: "Player Market", thumb: "/hatchery/game/dock/breed.webp" },
+const VIEWS: Array<{ id: View; label: string; shortLabel: string; thumb: string }> = [
+  { id: "animals", label: "Animals", shortLabel: "Animals", thumb: "/hatchery/game/dock/animals.webp" },
+  { id: "enclosures", label: "Enclosures", shortLabel: "Enclosures", thumb: "/hatchery/game/chondro-dojo-2-stack.webp" },
+  { id: "market", label: "Player Market", shortLabel: "Market", thumb: "/hatchery/game/dock/breed.webp" },
 ];
 
 export function ArborealKeeperReptiShop() {
@@ -214,7 +214,9 @@ export function ArborealKeeperReptiShop() {
         </button>
       </div>
 
-      {/* View buttons — three equal pills, always fully visible (no clipped labels) */}
+      {/* View buttons — three equal pills with fully visible labels.
+          On phones the pills use compact labels ("Market") and slightly
+          smaller text so nothing truncates; sm+ shows the full labels. */}
       <div className="mt-2 flex flex-none items-stretch gap-1.5">
         {VIEWS.map((v) => {
           const selected = v.id === view;
@@ -224,14 +226,17 @@ export function ArborealKeeperReptiShop() {
               type="button"
               onClick={() => selectView(v.id)}
               aria-current={selected ? "true" : undefined}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[9px] font-black uppercase tracking-[.05em] transition ${
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[8px] font-black uppercase tracking-[.05em] transition sm:text-[9px] ${
                 selected
                   ? "border-emerald-200/70 bg-gradient-to-b from-emerald-300 to-emerald-400 text-[#04120a] shadow-[0_0_18px_rgba(52,211,153,.45)] ring-1 ring-inset ring-white/40"
                   : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
               }`}
               >
                 <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 shrink-0 rounded-full object-cover" />
-                <span className="truncate">{v.label}</span>
+                <span className="truncate">
+                  <span className="sm:hidden">{v.shortLabel}</span>
+                  <span className="hidden sm:inline">{v.label}</span>
+                </span>
               </button>
             );
           })}
