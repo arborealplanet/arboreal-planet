@@ -247,7 +247,8 @@ function CoreGameScreen({ view }: { view: "breeding" | "colony" | "clutches" }) 
     breeding: { eyebrow: "Reproduction", title: "Breed", detail: "Choose adult breeders, start a pairing and follow reproductive progress." },
     colony: { eyebrow: "Collection", title: "Animals", detail: "Tap any animal to raise its life stage, test it, rename it, add notes, sell it or manage its breeder record." },
     clutches: { eyebrow: "Offspring", title: "Offspring", detail: "Manage active eggs and hatchlings, choose holdbacks and review completed clutch history." },
-    
+  };
+
   const active = config[view];
 
   return (
