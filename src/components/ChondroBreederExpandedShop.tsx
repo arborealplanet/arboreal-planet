@@ -425,7 +425,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   // animal or enclosure. QA cards stay non-interactive (review only).
   const [detailOffer, setDetailOffer] = useState<Offer | null>(null);
   const [detailEnclosure, setDetailEnclosure] = useState<EnclosureType | null>(null);
-  const detailOpen = detailOffer !== null || detailEnclosure !== null;
+  const detailOpen = detailOffer !== null || detailEnclosure !== null; /* Two-tap purchase confirmation: the first tap arms the button, the second tap (within a few seconds) executes the purchase. Prevents expensive misclicks on Buy buttons that move real in-game cash. */ const [confirmKey, setConfirmKey] = useState<string | null>(null); const confirmTimer = useRef<number | null>(null); function clearConfirm() { if (confirmTimer.current !== null) { window.clearTimeout(confirmTimer.current); confirmTimer.current = null; } setConfirmKey(null); } useEffect(() => clearConfirm, []); useEffect(() => { if (busy !== null) clearConfirm(); }, [busy]); function confirmedTap(key: string, action: () => void) { if (confirmKey === key) { clearConfirm(); action(); return; } setConfirmKey(key); if (confirmTimer.current !== null) window.clearTimeout(confirmTimer.current); confirmTimer.current = window.setTimeout(() => setConfirmKey(null), 5000); } /* Hank Scale idle-browse line: after 45s without interaction in the shop, play line 15 once per shop visit. */ useEffect(() => { let idleTimer: number | null = null; let played = false; function armIdle() { if (played) return; if (idleTimer !== null) window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => { played = true; playHankScaleLine(15); }, 45_000); } armIdle(); window.addEventListener("pointerdown", armIdle); window.addEventListener("keydown", armIdle); return () => { if (idleTimer !== null) window.clearTimeout(idleTimer); window.removeEventListener("pointerdown", armIdle); window.removeEventListener("keydown", armIdle); }; }, []); /* Hank Scale accessories line when an enclosure dossier opens (60s cooldown). */ const lastAccessoriesLine = useRef(0); useEffect(() => { if (!detailEnclosure) return; const now = Date.now(); if (now - lastAccessoriesLine.current < 60_000) return; lastAccessoriesLine.current = now; playHankScaleLine(13); }, [detailEnclosure]);
   
 
   function closeDetail() {
@@ -740,7 +740,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         </div>
         )}
 
-        <div className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
+        {roomEnclosureSlots <= 0 ? (<div className="mb-3 rounded-xl border border-amber-200/20 bg-amber-200/[.05] px-3 py-2 text-[11px] leading-5 text-amber-100/75">No installation slots left. Expand your rooms on the <strong>Home</strong> screen (Rooms &amp; Facility Expansion), then come back to install more enclosures.</div>) : null} <div className={carousel ? "mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] [scrollbar-color:rgba(52,211,153,.3)_transparent]" : "mt-4 grid gap-3 md:grid-cols-2"}>
           {(["Chondro Dojo Bin", "PVC Arboreal"] as EnclosureType[]).map((type) => {
             const price = enclosurePrices[type];
             const owned = Number(save.enclosures?.[type] ?? 0);
