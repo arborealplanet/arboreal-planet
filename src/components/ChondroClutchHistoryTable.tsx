@@ -150,5 +150,5 @@ function ParentCard({ role, animal, favorite }: { role: string; animal: Snake | 
 }
 
 function Metric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
-  return <div className={`rounded-2xl border border-white/[.065] bg-white/[.02] ${compact ? "p-3" : "p-4"}`}><div className="text-[9px] font-bold uppercase tracking-[.11em] text-white/34">{label}</div><div className={`${compact ? "mt-1 text-lg" : "mt-2 text-xl"} font-semibold text-white/74`}>{value}</div></div> : <div>No longer in colony</div>;
+  return <div className={`rounded-2xl border border-white/[.065] bg-white/[.02] ${compact ? "p-3" : "p-4"}`}><div className="text-[9px] font-bold uppercase tracking-[.11em] text-white/34">{label}</div><div className={`${compact ? "mt-1 text-lg" : "mt-2 text-xl"} font-semibold text-white/74`}>{value}</div></div>;
 }
