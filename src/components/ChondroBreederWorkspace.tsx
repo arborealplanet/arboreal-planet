@@ -75,20 +75,12 @@ const coreViews = new Set<WorkspaceView>(["breeding", "colony", "clutches"]);
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
   // Bottom dock collapses left (mobile) to reveal more of the current view —
-  // e.g. extra store height. Persisted; desktop keeps the dock always visible.
-  const [navCollapsed, setNavCollapsed] = useState(() => {
-    try {
-      return typeof window !== "undefined" && window.localStorage.getItem("arboreal_keeper_nav_collapsed") === "1";
-    } catch {
-      return false;
-    }
-  });
+  // e.g. extra store height. Always starts open so players never log in to a
+  // missing nav; collapsing lasts only for the session. Desktop keeps the
+  // dock always visible.
+  const [navCollapsed, setNavCollapsed] = useState(false);
   function toggleNavCollapsed() {
-    const next = !navCollapsed;
-    setNavCollapsed(next);
-    try {
-      window.localStorage.setItem("arboreal_keeper_nav_collapsed", next ? "1" : "0");
-    } catch {}
+    setNavCollapsed((prev) => !prev);
   }
   // Intro advertisement layer: the first thing seen on the Arboreal Keeper
   // entry routes. Dismissing it reveals the game underneath, untouched.
