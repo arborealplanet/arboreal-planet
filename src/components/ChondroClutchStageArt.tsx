@@ -149,7 +149,7 @@ export function ChondroClutchStageArt() {
       <div className="overflow-hidden rounded-[28px] border border-emerald-300/10 bg-[radial-gradient(circle_at_left,rgba(16,185,129,.08),transparent_36%),#06100c] shadow-[0_18px_60px_rgba(0,0,0,.18)]">
         <div className="grid items-stretch lg:grid-cols-[minmax(260px,36%)_1fr]">
           <div className="relative min-h-[270px] overflow-hidden border-b border-white/[.06] bg-black/30 lg:min-h-[360px] lg:border-b-0 lg:border-r">
-            <Image src={art.src} alt="Chondro Breeder clutch progression illustration" fill sizes="(max-width: 1024px) 100vw, 36vw" className="object-cover" />
+            <Image src={art.src} alt="Arboreal Keeper clutch progression illustration" fill sizes="(max-width: 1024px) 100vw, 36vw" className="object-cover" />
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(3,8,6,.72)_100%)] lg:bg-[linear-gradient(90deg,transparent_58%,rgba(6,16,12,.62)_100%)]" />
           </div>
 
