@@ -4,6 +4,7 @@ import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PwaInstallButton } from "@/components/PwaInstallButton";
 import { AppShellRouteFrame } from "@/components/AppShellRouteFrame";
+import { ArborealRadioPlayer } from "@/components/ArborealRadioPlayer";
 import { fetchOwnProfile,getServerIdentity } from "@/lib/supabase-auth";
 
 const nav = [
@@ -66,6 +67,8 @@ export async function AppShell({ children }: { children: ReactNode }) {
             <div className="mt-0.5 hidden text-[8px] font-semibold tracking-[.22em] text-emerald-300/55 md:block sm:text-[9px]">DISCOVER · CONNECT · PLAY</div>
           </div>
         </Link>
+
+        <ArborealRadioPlayer />
 
         <nav aria-label="Primary" className="ml-auto hidden items-center gap-1 text-[13px] font-semibold text-white/60 xl:flex">
           {nav.map(([label, href]) => (

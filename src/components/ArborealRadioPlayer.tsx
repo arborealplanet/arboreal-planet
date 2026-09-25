@@ -75,18 +75,36 @@ export function ArborealRadioPlayer() {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playlistOpen, setPlaylistOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [srcLoaded, setSrcLoaded] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const trackIndexRef = useRef(persisted.trackIndex);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // Keep the ref mirror in sync outside of render.
   useEffect(() => {
     trackIndexRef.current = persisted.trackIndex;
   }, [persisted.trackIndex]);
+
+  // Close the dropdown on outside pointer-down or Escape.
+  useEffect(() => {
+    if (!expanded) return;
+    const onDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setExpanded(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [expanded]);
 
   const save = useCallback((next: Persisted) => {
     setPersisted(next);
@@ -248,14 +266,15 @@ export function ArborealRadioPlayer() {
 
   if (persisted.dismissed) {
     return (
-      <div className="fixed bottom-[calc(78px+env(safe-area-inset-bottom))] right-4 z-40 xl:bottom-6">
+      <div ref={rootRef} className="relative" role="region" aria-label="Arboreal Radio music player">
         <button
           type="button"
           onClick={() => save({ ...persisted, dismissed: false })}
-          className="rounded-full border-2 border-black bg-[#06100c]/95 px-4 py-2 text-[11px] font-black uppercase tracking-[.14em] text-emerald-200 shadow-[0_8px_24px_rgba(0,0,0,.45)] backdrop-blur transition hover:bg-emerald-300 hover:text-[#06100c]"
+          className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.07] bg-white/[.02] text-sm text-white/50 transition hover:border-emerald-300/20 hover:bg-emerald-300/[.03] hover:text-emerald-200"
           aria-label="Open Arboreal Radio player"
+          title="Arboreal Radio"
         >
-          ◉ Arboreal Radio
+          ◉
         </button>
       </div>
     );
@@ -265,53 +284,73 @@ export function ArborealRadioPlayer() {
     "grid place-items-center rounded-xl border border-white/[.08] bg-white/[.03] text-white/70 transition hover:bg-emerald-300/[.12] hover:text-emerald-200 focus-visible:outline-2 focus-visible:outline-emerald-300";
 
   return (
-    <div
-      className="fixed bottom-[calc(78px+env(safe-area-inset-bottom))] right-4 z-40 w-[calc(100vw-2rem)] max-w-[340px] xl:bottom-6"
-      role="region"
-      aria-label="Arboreal Radio music player"
-    >
-      <div className="overflow-hidden rounded-3xl border-[3px] border-black bg-[#06100c]/97 shadow-[0_18px_60px_rgba(0,0,0,.5)] backdrop-blur-xl">
-        {/* Header row */}
-        <div className="flex items-center gap-3 px-4 pt-3">
-          <img
-            src={RADIO_ARTWORK_URL}
-            alt=""
-            className="h-11 w-11 shrink-0 rounded-xl border border-white/10 object-cover"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-black uppercase tracking-[.18em] text-emerald-300/80">
-              Arboreal Radio
-            </div>
-            <div className="truncate text-sm font-semibold text-white/90" title={track.title}>
-              {track.title}
-            </div>
-          </div>
-          {playing && !minimized ? <EqBars /> : null}
-          <div className="flex shrink-0 gap-1">
-            <button
-              type="button"
-              className={`${btn} h-8 w-8 text-sm`}
-              onClick={() => setMinimized((v) => !v)}
-              aria-label={minimized ? "Expand player" : "Minimize player"}
-            >
-              {minimized ? "▴" : "▾"}
-            </button>
-            <button
-              type="button"
-              className={`${btn} h-8 w-8 text-sm`}
-              onClick={() => {
-                audioRef.current?.pause();
-                save({ ...persisted, dismissed: true });
-              }}
-              aria-label="Close Arboreal Radio player"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+    <div ref={rootRef} className="relative" role="region" aria-label="Arboreal Radio music player">
+      {/* Compact header chip */}
+      <div className="flex items-center gap-1 rounded-full border border-white/[.07] bg-white/[.02] py-1 pl-1 pr-1.5">
+        <button
+          type="button"
+          onClick={togglePlay}
+          aria-label={playing ? "Pause Arboreal Radio" : "Play Arboreal Radio"}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-300 text-sm text-[#06100c] transition hover:bg-emerald-200 focus-visible:outline-2 focus-visible:outline-white active:scale-95"
+        >
+          {playing ? "⏸" : "▶"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Hide radio controls" : "Show radio controls"}
+          className="flex min-w-0 items-center gap-2 rounded-full px-1.5 py-1 transition hover:bg-white/[.04] focus-visible:outline-2 focus-visible:outline-emerald-300"
+        >
+          {playing ? (
+            <EqBars />
+          ) : (
+            <span className="text-[10px] text-white/40" aria-hidden="true">
+              ◉
+            </span>
+          )}
+          <span
+            className="hidden w-24 truncate text-left text-xs text-white/70 min-[420px]:block xl:w-36"
+            title={track.title}
+          >
+            {track.title}
+          </span>
+          <span className="text-[10px] text-white/35" aria-hidden="true">
+            {expanded ? "▴" : "▾"}
+          </span>
+        </button>
+      </div>
 
-        {!minimized ? (
-          <div className="px-4 pb-4">
+      {expanded ? (
+        <div className="absolute left-0 top-[calc(100%+10px)] z-50 w-[min(340px,calc(100vw-2rem))]">
+          <div className="overflow-hidden rounded-3xl border-[3px] border-black bg-[#06100c]/97 shadow-[0_18px_60px_rgba(0,0,0,.5)] backdrop-blur-xl">
+            {/* Panel header row */}
+            <div className="flex items-center gap-3 px-4 pt-3">
+              <img
+                src={RADIO_ARTWORK_URL}
+                alt=""
+                className="h-11 w-11 shrink-0 rounded-xl border border-white/10 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-[9px] font-black uppercase tracking-[.18em] text-emerald-300/80">
+                  Arboreal Radio
+                </div>
+                <div className="truncate text-sm font-semibold text-white/90" title={track.title}>
+                  {track.title}
+                </div>
+              </div>
+              {playing ? <EqBars /> : null}
+              <button
+                type="button"
+                className={`${btn} h-8 w-8 shrink-0 text-sm`}
+                onClick={() => setExpanded(false)}
+                aria-label="Close radio controls"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-4 pb-4">
             {/* Seek bar */}
             <div className="mt-3 flex items-center gap-2 text-[10px] tabular-nums text-white/40">
               <span>{formatTime(currentTime)}</span>
@@ -435,23 +474,22 @@ export function ArborealRadioPlayer() {
                 {notice}
               </div>
             ) : null}
-          </div>
-        ) : (
-          /* Slim minimized bar */
-          <div className="flex items-center gap-2 px-4 pb-3">
+
             <button
               type="button"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-300 text-base text-[#06100c] transition hover:bg-emerald-200 focus-visible:outline-2 focus-visible:outline-white"
-              onClick={togglePlay}
-              aria-label={playing ? "Pause" : "Play"}
+              onClick={() => {
+                audioRef.current?.pause();
+                setExpanded(false);
+                save({ ...persisted, dismissed: true });
+              }}
+              className="mt-3 w-full rounded-xl border border-white/[.07] bg-white/[.02] py-2 text-[10px] font-bold uppercase tracking-[.14em] text-white/40 transition hover:bg-white/[.05] hover:text-white/60 focus-visible:outline-2 focus-visible:outline-emerald-300"
             >
-              {playing ? "⏸" : "▶"}
+              Hide player
             </button>
-            <div className="min-w-0 flex-1 truncate text-xs text-white/70">{track.title}</div>
-            {playing ? <EqBars /> : null}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
