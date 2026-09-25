@@ -129,12 +129,12 @@ export function growthCostFor(
   const requirement = growthRequirementFor(profile, lifeStage, sex);
   if (!requirement) return 0;
   /* Whole dollars: the rest of the game prices everything in whole dollars. */ return Math.round(requirement.feederUnits * profile.growth.feederUnitCost + (requirement.months / 12) * profile.growth.annualCareCost);
-    Math.round(
 
 
 
 
-  ); 
+
+
 }
 
 export function normalizeNeonateColorFor(
