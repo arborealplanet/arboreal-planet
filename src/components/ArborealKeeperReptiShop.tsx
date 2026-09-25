@@ -173,8 +173,18 @@ export function ArborealKeeperReptiShop() {
   return (
     <div className="mx-auto flex h-[calc(100dvh-164px-env(safe-area-inset-bottom))] w-full max-w-5xl flex-col overflow-hidden px-4 py-3 sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))] sm:px-6">
       {/* Sprite QA — production tool, admins only, parked above the tip bar on the right */}
-      {isAdmin ? (
-      <div className="mb-1 flex flex-none justify-end">
+      {isAdmin && !qaOpen ? (
+      <>
+      {/* Mobile: floating top-right pill — zero layout footprint, so the store
+          gets every pixel. Desktop keeps the quiet in-flow link (room to spare). */}
+      <button
+        type="button"
+        onClick={() => setQaOpen(true)}
+        className="fixed right-3 top-3 z-[80] rounded-full border border-white/10 bg-black/60 px-3 py-2 text-[10px] font-semibold text-white/40 backdrop-blur-md hover:text-white/70 sm:hidden"
+      >
+        Sprite QA
+      </button>
+      <div className="mb-1 hidden flex-none justify-end sm:flex">
         <button
           type="button"
           onClick={() => setQaOpen(true)}
@@ -183,6 +193,7 @@ export function ArborealKeeperReptiShop() {
           Sprite QA
         </button>
       </div>
+      </>
       ) : null}
 
       {/* Hank's tip — slim row above the store, tap for another tip */}

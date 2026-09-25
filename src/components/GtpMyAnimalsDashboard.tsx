@@ -23,7 +23,6 @@ export function GtpMyAnimalsDashboard() {
 
   useEffect(() => {
     let active = true;
-    setCheckFailed(false);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 10_000);
     void (async () => {
@@ -80,7 +79,7 @@ export function GtpMyAnimalsDashboard() {
         <div role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-500/[.07] p-3">
           <p className="text-xs font-bold text-red-100/85">Couldn&apos;t check your sign-in status.</p>
           <p className="mt-1 text-xs leading-5 text-white/45">{status}</p>
-          <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
+          <button type="button" onClick={() => { setCheckFailed(false); setReloadKey((key) => key + 1); }} className="mt-3 rounded-xl border border-white/[.12] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white">Retry</button>
         </div>
       ) : (
         <div role="status" className="mt-4 rounded-xl border border-white/[.06] bg-black/10 p-3 text-xs text-white/45">{status}</div>

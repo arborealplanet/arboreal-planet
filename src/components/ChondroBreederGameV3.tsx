@@ -1381,27 +1381,6 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     );
   }
 
-  /* eslint-disable react-hooks/exhaustive-deps */
-  useEffect(() => {
-    function handleClutchAction(event: Event) {
-      const detail = (event as CustomEvent<{ action?: string; snakeId?: string }>).detail ?? {};
-      if (detail.action === "establish") {
-        payClutchEstablishment();
-        return;
-      }
-      if (detail.action === "toggle-holdback" && typeof detail.snakeId === "string") {
-        toggleHoldback(detail.snakeId);
-        return;
-      }
-      if (detail.action === "finish") {
-        void finishClutch();
-      }
-    }
-    window.addEventListener("arboreal-chondro-clutch-action", handleClutchAction);
-    return () => window.removeEventListener("arboreal-chondro-clutch-action", handleClutchAction);
-  }, [clutch, clutchEstablished, cash, clutchEstablishmentCost, holdbacks, marketBusy, openSlots, season]);
-  /* eslint-enable react-hooks/exhaustive-deps */
-
   async function finishClutch() {
     if (!clutch || !clutchEstablished || marketBusy) return;
     const kept = clutch.offspring.filter((baby) => holdbacks.includes(baby.id));
@@ -1460,6 +1439,28 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       void refreshPlayerMarket();
     }
   }
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    function handleClutchAction(event: Event) {
+      const detail = (event as CustomEvent<{ action?: string; snakeId?: string }>).detail ?? {};
+      if (detail.action === "establish") {
+        payClutchEstablishment();
+        return;
+      }
+      if (detail.action === "toggle-holdback" && typeof detail.snakeId === "string") {
+        toggleHoldback(detail.snakeId);
+        return;
+      }
+      if (detail.action === "finish") {
+        void finishClutch();
+      }
+    }
+    window.addEventListener("arboreal-chondro-clutch-action", handleClutchAction);
+    return () => window.removeEventListener("arboreal-chondro-clutch-action", handleClutchAction);
+  }, [clutch, clutchEstablished, cash, clutchEstablishmentCost, holdbacks, marketBusy, openSlots, season]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
 
   function resetGame() {
     // The inline form already collected the exact confirmation phrase, so this

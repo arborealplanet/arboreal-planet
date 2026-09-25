@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type KenBurns = "push" | "drift" | "package" | "rise";
 
@@ -18,6 +18,23 @@ type CinematicScene = {
 };
 
 const CREDIT = 30000;
+
+function subscribeReducedMotion(onChange: () => void) {
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+// Reads the OS reduced-motion preference without an effect (and therefore
+// without a synchronous setState): server snapshot matches the old
+// useState(false) initial value, and it even follows live OS setting changes.
+function useReducedMotion() {
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
 
 /**
  * The "$30,000 win" intro cinematic: staged stills + CSS Ken Burns, stitched
@@ -89,11 +106,10 @@ const SCENES: CinematicScene[] = [
 export default function IntroCinematic({ onDone }: { onDone: () => void }) {
   const [index, setIndex] = useState(0);
   const [flashing, setFlashing] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
   const [count, setCount] = useState(0);
+  const reducedMotion = useReducedMotion();
   const busyRef = useRef(false);
   const timersRef = useRef<number[]>([]);
-  const reducedMotionRef = useRef(false);
 
   const scene = SCENES[index];
   const isLast = index === SCENES.length - 1;
@@ -103,10 +119,9 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
     timersRef.current = [];
   }, []);
 
+  // Reduced-motion preference is read via useSyncExternalStore above (no
+  // effect needed); this mount effect only preloads the stills.
   useEffect(() => {
-    const matches = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    reducedMotionRef.current = matches;
-    setReducedMotion(matches);
     // Preload every still so scenes never pop in blank mid-playback.
     SCENES.forEach((entry) => {
       const img = new Image();
@@ -130,7 +145,7 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
       }, 450);
       timersRef.current.push(timer);
     };
-    if (reducedMotionRef.current) {
+    if (reducedMotion) {
       // Reduced motion: instant cut, no flash, no timers.
       swap();
       return;
@@ -138,7 +153,7 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
     setFlashing(true);
     const timer = window.setTimeout(swap, 330);
     timersRef.current.push(timer);
-  }, [clearTimers]);
+  }, [clearTimers, reducedMotion]);
 
   const skip = useCallback(() => {
     clearTimers();
@@ -164,13 +179,10 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [skip]);
 
-  // $0 → $30,000 tick-up on the golden-ticket scene.
+  // $0 → $30,000 tick-up on the golden-ticket scene. Reduced-motion players
+  // see the final amount instantly via displayCount below — no animation.
   useEffect(() => {
-    if (!scene.counter) return;
-    if (reducedMotion) {
-      setCount(CREDIT);
-      return;
-    }
+    if (!scene.counter || reducedMotion) return;
     let frame = 0;
     const startedAt = performance.now();
     const tick = (now: number) => {
@@ -182,6 +194,9 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [index, reducedMotion, scene.counter]);
+
+  // Reduced motion: show the full credit instantly instead of ticking up.
+  const displayCount = reducedMotion && scene.counter ? CREDIT : count;
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Arboreal Keeper intro" className="fixed inset-0 z-[70] overflow-hidden bg-black">
@@ -226,7 +241,7 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
           ) : null}
           {scene.counter ? (
             <div className="mt-2 text-5xl font-black tabular-nums text-amber-200 drop-shadow-[0_2px_18px_rgba(255,190,80,.45)]">
-              ${count.toLocaleString("en-US")}
+              ${displayCount.toLocaleString("en-US")}
             </div>
           ) : null}
           {scene.body ? (

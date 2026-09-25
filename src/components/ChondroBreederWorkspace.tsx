@@ -27,6 +27,21 @@ import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
 
+// Fast path for returning players: a started local save (or a stocked
+// colony) means no ad. Read during render as initial state (never a
+// synchronous setState inside an effect); SSR-safe via the window guard.
+function readLocalReturningPlayer(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
+    if (raw) {
+      const parsed = JSON.parse(raw) as { started?: boolean; colony?: unknown[] };
+      if (parsed?.started === true || (Array.isArray(parsed?.colony) && parsed.colony.length > 0)) return true;
+    }
+  } catch {}
+  return false;
+}
+
 type ViewMeta = {
   label: string;
   navLabel?: string;
@@ -62,22 +77,12 @@ export function ChondroBreederWorkspace() {
   // Intro advertisement layer: the first thing seen on the Arboreal Keeper
   // entry routes. Dismissing it reveals the game underneath, untouched.
   // First-time players only — skipped entirely when a save already exists.
-  const [showAd, setShowAd] = useState(true); const [adReady, setAdReady] = useState(false); const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
+  const [returningPlayer] = useState(readLocalReturningPlayer);
+  const [showAd, setShowAd] = useState(!returningPlayer); const [adReady, setAdReady] = useState(returningPlayer); const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
   useEffect(() => {
+    // Returning players were resolved above during render — no ad, no fetch.
+    if (returningPlayer) return;
     let active = true;
-    // Fast synchronous path: a started local save (or a stocked colony)
-    // means a returning player — no ad.
-    try {
-      const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
-      if (raw) {
-        const parsed = JSON.parse(raw) as { started?: boolean; colony?: unknown[] };
-        if (parsed?.started === true || (Array.isArray(parsed?.colony) && parsed.colony.length > 0)) {
-          setShowAd(false);
-          setAdReady(true);
-          return () => { active = false; };
-        }
-      }
-    } catch {}
     // Cloud check covers returning players on a fresh device.
     void fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" })
       .then((response) => response.json().catch(() => null))
@@ -88,7 +93,7 @@ export function ChondroBreederWorkspace() {
       })
       .catch(() => { if (active) setAdReady(true); });
     return () => { active = false; };
-  }, []);
+  }, [returningPlayer]);
   const active = views.find((item) => item.id === view) ?? views[0];
 
   function openView(next: WorkspaceView) { if (viewRef.current === "market" && next !== "market") playHankScaleLine(16); if (next === "breeding" && !bredLineRef.current) { bredLineRef.current = true; playHankScaleLine(14); } viewRef.current = next;
