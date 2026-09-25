@@ -26,7 +26,12 @@ function validListingPageUrl(raw: string | null) {
   try {
     const url = new URL(raw);
     if (!["http:", "https:"].includes(url.protocol)) return false;
-    if (!url.hostname.toLowerCase().includes("morphmarket")) return false;
+    const host = url.hostname.toLowerCase();
+    // MorphMarket listing pages, or Facebook post/group permalinks for
+    // Facebook-sourced harvests. Either way: a page URL, never a CDN/image URL.
+    const isMorphMarket = host.includes("morphmarket");
+    const isFacebook = host === "facebook.com" || host.endsWith(".facebook.com");
+    if (!isMorphMarket && !isFacebook) return false;
     if (/\.(jpe?g|png|webp|gif|avif|bmp|svg)(\?|#|$)/i.test(url.pathname + url.search)) return false;
     return true;
   } catch {
@@ -78,7 +83,7 @@ export async function POST(request: NextRequest) {
   }
   if (!validListingPageUrl(sourceMediaUrl)) {
     return NextResponse.json(
-      { error: "source_media_url must be the MorphMarket listing page URL — never a CDN or image URL." },
+      { error: "source_media_url must be the source listing/post page URL — never a CDN or image URL." },
       { status: 400 },
     );
   }
