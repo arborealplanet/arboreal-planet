@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { PageIntro } from "@/components/AppShell";
-import { HarvestImportRunner, HarvestMediaUpload } from "@/components/HarvestImportTools";
+import { HarvestImportRunner, HarvestMediaUpload, StagedMediaBatchUpload } from "@/components/HarvestImportTools";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
 export default async function HarvestImportPage() {
@@ -25,6 +25,7 @@ export default async function HarvestImportPage() {
       <div className="mx-auto max-w-7xl px-5 pb-16 sm:px-6">
         <HarvestImportRunner />
         <HarvestMediaUpload />
+        <StagedMediaBatchUpload />
       </div>
     </main>
   );

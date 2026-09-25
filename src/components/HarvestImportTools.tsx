@@ -294,3 +294,204 @@ export function HarvestMediaUpload() {
     </div>
   );
 }
+
+type BatchManifestEntry = {
+  candidate_id?: string;
+  file_name?: string;
+  gallery_index?: number | string;
+  gallery_total?: number | string;
+  perceptual_hash?: string;
+  source_media_url?: string;
+  image_subject?: string;
+  source_capture_kind?: string;
+};
+
+type BatchResult = {
+  file_name: string;
+  ok: boolean;
+  status: number | null;
+  media_id: string | null;
+  detail: string;
+};
+
+/**
+ * Batch staged-media upload. Takes a JSON manifest (one entry per file, with
+ * the entry's file_name matched against the chosen files) plus the files
+ * themselves, then uploads them one at a time against the media-upload
+ * endpoint. Every per-file response is recorded, including 409 duplicate
+ * rejections. Uploads stay staged pending review — nothing here promotes media.
+ */
+export function StagedMediaBatchUpload() {
+  const [manifestText, setManifestText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [results, setResults] = useState<BatchResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const manifestFileRef = useRef<HTMLInputElement>(null);
+
+  async function runBatch() {
+    setError(null);
+    setResults([]);
+    setProgress("");
+    let entries: BatchManifestEntry[];
+    try {
+      const parsed = JSON.parse(manifestText) as unknown;
+      if (!Array.isArray(parsed)) throw new Error("Manifest must be a JSON array.");
+      entries = parsed as BatchManifestEntry[];
+    } catch (err) {
+      setError(err instanceof Error ? `Manifest is not valid JSON: ${err.message}` : "Manifest is not valid JSON.");
+      return;
+    }
+    const byName = new Map(files.map((f) => [f.name, f]));
+    setBusy(true);
+    const out: BatchResult[] = [];
+    try {
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const fileName = (entry.file_name ?? "").trim();
+        setProgress(`Uploading ${i + 1} of ${entries.length}: ${fileName || "(missing file_name)"}`);
+        if (!fileName || !entry.candidate_id) {
+          out.push({ file_name: fileName || `#${i + 1}`, ok: false, status: null, media_id: null, detail: "manifest entry is missing file_name or candidate_id" });
+          continue;
+        }
+        const file = byName.get(fileName);
+        if (!file) {
+          out.push({ file_name: fileName, ok: false, status: null, media_id: null, detail: "no chosen file matches this file_name" });
+          continue;
+        }
+        const form = new FormData();
+        form.set("candidate_id", String(entry.candidate_id).trim());
+        form.set("file", file);
+        if (entry.gallery_index !== undefined && String(entry.gallery_index).trim() !== "") form.set("gallery_index", String(entry.gallery_index).trim());
+        if (entry.gallery_total !== undefined && String(entry.gallery_total).trim() !== "") form.set("gallery_total", String(entry.gallery_total).trim());
+        form.set("perceptual_hash", String(entry.perceptual_hash ?? "").trim().toLowerCase());
+        form.set("image_subject", String(entry.image_subject ?? "").trim() || "listed_animal");
+        form.set("source_capture_kind", String(entry.source_capture_kind ?? "").trim() || "screenshot");
+        if (entry.source_media_url) form.set("source_media_url", String(entry.source_media_url).trim());
+        try {
+          const response = await fetch("/api/snake-sorter/acquisition/media-upload", { method: "POST", body: form });
+          const text = await response.text();
+          let mediaId: string | null = null;
+          let detail = `HTTP ${response.status}`;
+          try {
+            const parsed = JSON.parse(text) as { id?: string; media_id?: string; error?: string; message?: string };
+            mediaId = parsed.id ?? parsed.media_id ?? null;
+            detail = parsed.error ?? parsed.message ?? detail;
+            if (response.ok && !parsed.error) detail = mediaId ? `stored as ${mediaId}` : "stored";
+          } catch {
+            detail = text.slice(0, 200) || detail;
+          }
+          out.push({ file_name: fileName, ok: response.ok, status: response.status, media_id: mediaId, detail });
+        } catch (err) {
+          out.push({ file_name: fileName, ok: false, status: null, media_id: null, detail: err instanceof Error ? err.message : "upload request failed" });
+        }
+        setResults([...out]);
+      }
+    } finally {
+      setBusy(false);
+      setProgress("");
+    }
+  }
+
+  const field = "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/20 focus:border-emerald-300/40 focus:outline-none";
+  const okCount = results.filter((r) => r.ok).length;
+
+  return (
+    <div className="mt-6 rounded-3xl border border-white/[.07] bg-white/[.02] p-6">
+      <div className="text-[10px] font-black uppercase tracking-[.14em] text-white/45">Step 2 — Screenshots (batch)</div>
+      <h3 className="mt-2 text-xl font-semibold text-white">Upload staged media in batch</h3>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-white/40">
+        Paste a JSON manifest (one entry per file) and choose the matching image files. Entries are matched to files
+        by <span className="text-white/60">file_name</span>. Uploads run one at a time and stay{" "}
+        <span className="text-white/60">staged pending review</span> — nothing here promotes media.
+      </p>
+      <div className="mt-4 grid gap-4">
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-[.12em] text-white/40">manifest JSON *</span>
+          <textarea
+            value={manifestText}
+            onChange={(e) => setManifestText(e.target.value)}
+            placeholder='[{"candidate_id":"uuid","file_name":"photo-01.png","gallery_index":1,"gallery_total":2,"perceptual_hash":"381ada5a7a3a3a9a","source_media_url":"https://…","image_subject":"listed_animal","source_capture_kind":"screenshot"}]'
+            rows={6}
+            spellCheck={false}
+            className={`${field} font-mono text-xs`}
+          />
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => manifestFileRef.current?.click()}
+            className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2 text-xs font-bold uppercase tracking-[.08em] text-white/60 transition hover:bg-white/[.08]"
+          >
+            Load manifest .json file
+          </button>
+          <input
+            ref={manifestFileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void f.text().then((t) => { setManifestText(t); setError(null); });
+              e.target.value = "";
+            }}
+          />
+          <label className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2 text-xs font-bold uppercase tracking-[.08em] text-white/60 transition hover:bg-white/[.08]">
+            Choose image files ({files.length} chosen)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy || !manifestText.trim() || files.length === 0}
+            onClick={() => void runBatch()}
+            className="rounded-xl bg-emerald-400/90 px-5 py-2 text-xs font-black uppercase tracking-[.08em] text-emerald-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? "Uploading…" : "Upload batch"}
+          </button>
+        </div>
+      </div>
+      {error && (
+        <div className="mt-4 rounded-2xl border border-red-400/25 bg-red-400/[.06] p-4 text-sm text-red-200">{error}</div>
+      )}
+      {(busy || results.length > 0) && (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+          <div className="text-sm text-white/60">
+            {busy && progress ? <span>{progress}</span> : null}
+            {!busy && results.length > 0 && (
+              <span><span className="font-bold text-emerald-300">{okCount}</span> of {results.length} stored</span>
+            )}
+          </div>
+          {results.length > 0 && (
+            <div className="mt-3 max-h-96 overflow-auto">
+              <table className="w-full text-left font-mono text-[11px] leading-5 text-white/60">
+                <thead>
+                  <tr className="text-[10px] uppercase tracking-[.08em] text-white/35">
+                    <th className="py-1 pr-3">file</th>
+                    <th className="py-1 pr-3">status</th>
+                    <th className="py-1">detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((r, i) => (
+                    <tr key={`${r.file_name}-${i}`} className="border-t border-white/[.06]">
+                      <td className="py-1 pr-3">{r.file_name}</td>
+                      <td className={`py-1 pr-3 font-bold ${r.ok ? "text-emerald-300" : r.status === 409 ? "text-amber-300" : "text-red-300"}`}>{r.status ?? "—"}</td>
+                      <td className="py-1">{r.detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
