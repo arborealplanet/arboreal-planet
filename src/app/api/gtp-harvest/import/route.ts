@@ -586,7 +586,21 @@ async function processFacebookPost(item: HarvestItem, ctx: FacebookContext): Pro
   const masterRows = masterResponse.ok ? await masterResponse.json() as MasterRow[] : [];
   const masterAnimalId = masterRows[0]?.id ?? null;
   if (!masterAnimalId) {
-    return { ok: false, post_id: postId, error: "master animal upsert failed" };
+    // Surface the upstream PostgREST error so a failed upsert is diagnosable
+    // from the import response instead of a bare per-item failure.
+    let upstreamDetail: string | null = null;
+    try {
+      upstreamDetail = (await masterResponse.text()).slice(0, 500) || null;
+    } catch {
+      upstreamDetail = null;
+    }
+    return {
+      ok: false,
+      post_id: postId,
+      error: "master animal upsert failed",
+      upstream_status: masterResponse.status,
+      upstream_detail: upstreamDetail,
+    };
   }
 
   let candidateId: string | null = null;
