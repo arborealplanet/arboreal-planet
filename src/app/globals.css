@@ -203,6 +203,38 @@ button:disabled { cursor: not-allowed; }
   }
 }
 
+/* Arboreal Keeper store liveliness */
+@keyframes keeper-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes keeper-pop-in {
+  from { opacity: 0; transform: scale(.94) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes keeper-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes keeper-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes keeper-featured-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(252,211,77,0); }
+  50% { box-shadow: 0 0 26px rgba(252,211,77,.28); }
+}
+@keyframes keeper-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+.anim-keeper-float { animation: keeper-float 5.5s ease-in-out infinite; }
+.anim-keeper-pop-in { animation: keeper-pop-in .3s cubic-bezier(.2,.9,.25,1.15) both; }
+.anim-keeper-fade-up { animation: keeper-fade-up .45s ease both; }
+.anim-keeper-backdrop-in { animation: keeper-backdrop-in .2s ease both; }
+.anim-keeper-pulse-soft { animation: keeper-pulse-soft 1.6s ease-in-out infinite; }
+.keeper-featured { animation: keeper-featured-glow 3.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
