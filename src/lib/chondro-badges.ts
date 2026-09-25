@@ -14,7 +14,7 @@ export const OG_PLAYER_BADGE: ChondroLegacyBadgeDefinition = {
   id: "og-player",
   name: "OG Player",
   shortLabel: "OG",
-  description: "Awarded to players who started Chondro Breeder during the original early-access era.",
+  description: "Awarded to players who started Arboreal Keeper during the original early-access era.",
 };
 
 // Keep this true while all current/new players should receive the OG badge.
