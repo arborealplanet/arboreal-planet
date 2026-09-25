@@ -426,6 +426,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   const [detailOffer, setDetailOffer] = useState<Offer | null>(null);
   const [detailEnclosure, setDetailEnclosure] = useState<EnclosureType | null>(null);
   const detailOpen = detailOffer !== null || detailEnclosure !== null;
+  
 
   function closeDetail() {
     setDetailOffer(null);
@@ -863,7 +864,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 </div>
                 {carousel ? (
                 <>
-                <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name || "Unnamed snake"}</div>
+                <div className="mt-2 truncate text-[13px] font-semibold text-white/78">{offer.name || "Unnamed snake"}</div> <div className="mt-0.5 truncate text-[10px] text-white/38">{offer.lifeStage ?? "Unknown stage"} · {offer.sex ?? "Unknown sex"}</div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-emerald-200/75">{money(offer.price)}</span>
                   <button type="button" disabled={sold || busy !== null || save.cash < offer.price || !housingAvailableFor(offer)} title={sold ? undefined : !housingAvailableFor(offer) ? (offer.lifeStage === "Adult" ? "Adults need a PVC Arboreal enclosure — buy one in Enclosures above" : "No open animal space — add enclosures above") : undefined} onClick={(event) => { event.stopPropagation(); confirmedTap(`offer:${offer.id}`, () => void buy(offer)); }} className="rounded-lg bg-amber-200 px-2.5 py-1.5 text-[10px] font-black text-[#17130a] disabled:opacity-30">
@@ -1011,7 +1012,7 @@ function DetailOfferDossier({
   canAfford,
   housingOk,
   needsPvc,
-  onBuy,
+  onBuy, confirmArmed,
 }: {
   offer: Offer;
   sold: boolean;
@@ -1020,7 +1021,7 @@ function DetailOfferDossier({
   canAfford: boolean;
   housingOk: boolean;
   needsPvc: boolean;
-  onBuy: () => void;
+  onBuy: () => void; confirmArmed: boolean;
 }) {
   const chips = [
     offer.sex,
