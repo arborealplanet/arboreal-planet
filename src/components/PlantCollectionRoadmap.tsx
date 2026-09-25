@@ -26,6 +26,14 @@ const groupContext: Record<string, { title: string; context: string }> = {
     title: "Tropical foliage",
     context: "Climbing and foliage plants that can add structure, cover and visual depth to planted arboreal displays when their needs fit the enclosure.",
   },
+  Trailing: {
+    title: "Trailing plants",
+    context: "Fast cascading vines that soften enclosure walls, drape over backgrounds, and give arboreal snakes living cover within weeks.",
+  },
+  Upright: {
+    title: "Upright plants",
+    context: "Structural vertical growers that break up sightlines, anchor the background, and give shy species something to hide behind.",
+  },
 };
 
 function statusLabel(status: PlantCollection["status"]) {
