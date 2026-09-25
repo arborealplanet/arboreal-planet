@@ -7,6 +7,8 @@ export type ReptileStory = {
   imageUrl?: string;
 };
 
+import { curatedReptileNews } from "@/lib/curated-reptile-news";
+
 type FeedSource = { url: string; publisher: string; hosts: string[] };
 const FEEDS: FeedSource[] = [
   { url: "https://www.sciencedaily.com/rss/plants_animals/frogs_and_reptiles.xml", publisher: "Science Daily", hosts: ["www.sciencedaily.com", "sciencedaily.com"] },
@@ -162,6 +164,7 @@ export async function getReptileNews(): Promise<ReptileStory[]> {
   }));
   const unique = new Map<string, ReptileStory>();
   for (const story of results.flat()) unique.set(story.url, story);
+  for (const story of curatedReptileNews) unique.set(story.url, story);
   const stories = [...unique.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).slice(0, 16);
 
   // The homepage only shows five cards. Enrich a few extras so one slow publisher
