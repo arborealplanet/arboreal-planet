@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { ArborealRadioPlayer } from "@/components/ArborealRadioPlayer";
 
 type Props = {
   header: ReactNode;
@@ -30,6 +31,7 @@ export function AppShellRouteFrame({ header, mobileNav, footer, children }: Prop
       <div id="main-content" className={!immersive ? "min-h-[40vh] scroll-mt-28" : ""}>{children}</div>
       {!immersive ? mobileNav : null}
       {!immersive ? footer : null}
+      <ArborealRadioPlayer />
     </div>
   );
 }
