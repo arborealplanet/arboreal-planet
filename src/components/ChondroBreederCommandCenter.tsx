@@ -18,7 +18,7 @@ const meta: Record<BreederManagementSection, { eyebrow: string; title: string; d
   colony: { eyebrow: "Colony", title: "Animals", detail: "Search, inspect and manage your active breeding animals without mixing in clutch, market or career systems." },
   career: { eyebrow: "Career", title: "Facility & progression", detail: "Rooms, show circuit, contracts, season results and achievements." },
   projects: { eyebrow: "Projects", title: "Breeding projects", detail: "Project tags, breeder lines and phenotype goals in one focused workspace." },
-  community: { eyebrow: "Breeder network", title: "Community", detail: "Social features for the Chondro Breeder player network." },
+  community: { eyebrow: "Breeder network", title: "Community", detail: "Social features for the Arboreal Keeper player network." },
 };
 
 export function ChondroBreederManagementView({ section }: { section: BreederManagementSection }) {
