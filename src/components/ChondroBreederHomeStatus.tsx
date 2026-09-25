@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { loadChondroSaveState } from "@/lib/chondro-save";
-import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
+import { animalHousingCapacity } from "@/lib/chondro-facility-limits"; import { claimMarketProceeds } from "@/lib/chondro-claim";
 
 type CoreView = "breeding" | "colony" | "clutches" | "market" | "conservation";
 type Animal = { id?: string; name?: string; sex?: string; lifeStage?: string; condition?: string };
@@ -61,7 +61,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
   const [loaded, setLoaded] = useState(false);
   const [market, setMarket] = useState<MarketPayload>({});
   const [conservation, setConservation] = useState<ConservationPayload>({});
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(0); const [claiming, setClaiming] = useState(false); const [claimMessage, setClaimMessage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -160,7 +160,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
       <div className="rounded-[24px] border border-white/[.06] bg-black/18 p-4 lg:col-span-2">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] text-white/38">
           <button type="button" onClick={() => onOpen("market")} className="transition hover:text-white/70"><strong className="text-white/58">Player listings:</strong> {ownListings.length}{sweepRemaining !== null ? ` · next fallback in ${remaining(sweepRemaining)}` : ""}</button>
-          <button type="button" onClick={() => onOpen("market")} className="transition hover:text-white/70"><strong className="text-white/58">Unclaimed game sales:</strong> {market.pendingSaleCount ?? 0} · {money(Number(market.pendingProceeds ?? 0))}</button>
+          <button type="button" onClick={() => void claimMarketProceeds(claiming, market.pendingSaleCount ?? 0, market.pendingProceeds ?? 0, money, setClaiming, setClaimMessage, setMarket, () => onOpen("market"))} disabled={claiming} className="transition hover:text-white/70 disabled:opacity-60"><strong className="text-white/58">Unclaimed game sales:</strong> {market.pendingSaleCount ?? 0} · {money(Number(market.pendingProceeds ?? 0))}{Number(market.pendingSaleCount ?? 0) > 0 ? (claiming ? " · claiming…" : " · tap to claim") : ""}</button> {claimMessage ? <span className="text-emerald-100/70">{claimMessage}</span> : null}
           <button type="button" onClick={() => onOpen("conservation")} className="transition hover:text-white/70"><strong className="text-white/58">Conservation total:</strong> {conservationTotal} virtual animals</button>
           {activeClutch ? <button type="button" onClick={() => onOpen("clutches")} className="transition hover:text-white/70"><strong className="text-white/58">Active clutch:</strong> {activeClutch} virtual offspring</button> : null}
         </div>
