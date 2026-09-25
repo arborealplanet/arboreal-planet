@@ -74,6 +74,22 @@ const coreViews = new Set<WorkspaceView>(["breeding", "colony", "clutches"]);
 
 export function ChondroBreederWorkspace() {
   const [view, setView] = useState<WorkspaceView>("home");
+  // Bottom dock collapses left (mobile) to reveal more of the current view —
+  // e.g. extra store height. Persisted; desktop keeps the dock always visible.
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    try {
+      return typeof window !== "undefined" && window.localStorage.getItem("arboreal_keeper_nav_collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  function toggleNavCollapsed() {
+    const next = !navCollapsed;
+    setNavCollapsed(next);
+    try {
+      window.localStorage.setItem("arboreal_keeper_nav_collapsed", next ? "1" : "0");
+    } catch {}
+  }
   // Intro advertisement layer: the first thing seen on the Arboreal Keeper
   // entry routes. Dismissing it reveals the game underneath, untouched.
   // First-time players only — skipped entirely when a save already exists.
@@ -128,7 +144,7 @@ export function ChondroBreederWorkspace() {
 
       <main>
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
-        {view === "market" ? <ArborealKeeperReptiShop /> : coreViews.has(view) ? <CoreGameScreen view={view as "breeding" | "colony" | "clutches"} /> : null}
+        {view === "market" ? <ArborealKeeperReptiShop navCollapsed={navCollapsed} /> : coreViews.has(view) ? <CoreGameScreen view={view as "breeding" | "colony" | "clutches"} /> : null}
         {view === "career" ? (
           <SecondaryScreen active={active} onBack={() => openView("home")}>
             <section className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">
@@ -161,8 +177,19 @@ export function ChondroBreederWorkspace() {
 
       <ChondroGameNotifications />
 
+      {/* Dock collapse handle — mobile only. Tucks the nav left; tap again to bring it back. */}
+      <button
+        type="button"
+        onClick={toggleNavCollapsed}
+        aria-expanded={!navCollapsed}
+        aria-label={navCollapsed ? "Expand navigation bar" : "Collapse navigation bar"}
+        className="fixed bottom-[calc(25px+env(safe-area-inset-bottom))] left-0 z-[81] flex h-12 w-7 items-center justify-center rounded-r-xl border border-l-0 border-white/10 bg-black/70 text-sm text-white/50 backdrop-blur-md transition hover:text-white/80 lg:hidden"
+      >
+        {navCollapsed ? "›" : "‹"}
+      </button>
+
       <nav
-        className="fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(98px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-3 lg:bottom-4 lg:h-[98px] lg:max-w-[800px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2"
+        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(98px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl transition-transform duration-300 ease-out sm:px-3 lg:bottom-4 lg:h-[98px] lg:max-w-[800px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${navCollapsed ? "max-lg:-translate-x-[calc(100%-52px)]" : ""}`}
         aria-label="Arboreal Keeper navigation"
       >
         {dockViews.map((id) => {

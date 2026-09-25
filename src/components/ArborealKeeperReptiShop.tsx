@@ -76,7 +76,7 @@ const VIEWS: Array<{ id: View; label: string; shortLabel: string; thumb: string 
   { id: "market", label: "Player Market", shortLabel: "Market", thumb: "/hatchery/game/dock/breed.webp" },
 ];
 
-export function ArborealKeeperReptiShop() {
+export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed?: boolean }) {
   const [view, setView] = useState<View>("animals");
   // Keep visited tabs mounted (hidden) instead of remounting on every tab
   // switch: remounting wiped carousel scroll position and re-ran the shop
@@ -170,8 +170,10 @@ export function ArborealKeeperReptiShop() {
     };
   }, [qaOpen]);
 
+  // Height reserves header + dock space; when the dock is collapsed the store
+  // stretches to use the freed room. (Desktop never collapses.)
   return (
-    <div className="mx-auto flex h-[calc(100dvh-164px-env(safe-area-inset-bottom))] w-full max-w-5xl flex-col overflow-hidden px-4 py-3 sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))] sm:px-6">
+    <div className={`mx-auto flex ${navCollapsed ? "h-[calc(100dvh-66px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-72px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]" : "h-[calc(100dvh-164px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]"} w-full max-w-5xl flex-col overflow-hidden px-4 py-3 transition-[height] duration-300 sm:px-6`}>
       {/* Sprite QA — production tool, admins only, parked above the tip bar on the right */}
       {isAdmin && !qaOpen ? (
       <>
