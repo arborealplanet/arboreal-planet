@@ -24,9 +24,11 @@ type MasterRow = { id: string };
 type CandidateRow = { id: string; reviewed_at: string | null };
 type LocalityRow = { id: string; name: string; slug: string };
 
-const HARVEST_ID_RE = /^HARVEST_MM_GTP_\d{8}_\d{3}$/;
+const HARVEST_ID_RE = /^HARVEST_(MM|FB)_GTP_\d{8}_\d{3}$/;
 const IMPORT_CONCURRENCY = 8;
 const MAX_SANE_PRICE = 1000000;
+const VALID_PLATFORMS = ["morphmarket", "facebook"] as const;
+type SourcePlatform = (typeof VALID_PLATFORMS)[number];
 
 async function ownerIdentity() {
   const identity = await getServerIdentity();
@@ -73,7 +75,12 @@ function descriptionHashFor(description: string) {
     .digest("hex");
 }
 
-function ancestryFromItem(item: HarvestItem, title: string, description: string) {
+function ancestryFromItem(
+  item: HarvestItem,
+  title: string,
+  description: string,
+  overrides?: { taxon?: unknown; locality?: unknown },
+) {
   const supplied = text(item.ancestry_class, 80);
   if (["pure_locality","pure_subspecies_locality_cross","cross_subspecies","designer","hybrid","unknown"].includes(supplied)) {
     const eligible = supplied === "pure_locality" || supplied === "pure_subspecies_locality_cross";
@@ -83,8 +90,8 @@ function ancestryFromItem(item: HarvestItem, title: string, description: string)
       pure_subspecies: eligible,
       snake_sorter_eligible: eligible,
       exclusion_reason: eligible ? null : supplied,
-      taxon: optionalText(item.normalized_taxon ?? item.subspecies, 120),
-      locality: normalizeLocalityLabel(item.normalized_locality ?? item.locality),
+      taxon: optionalText(overrides?.taxon ?? item.normalized_taxon ?? item.subspecies, 120),
+      locality: normalizeLocalityLabel(overrides?.locality ?? item.normalized_locality ?? item.locality),
       localities: Array.isArray(item.localities) ? item.localities.map((v) => text(v, 120)).filter(Boolean) : [],
       life_stage_hint: optionalText(item.life_stage, 40),
       neonate_color_hint: optionalText(item.neonate_color, 40),
@@ -445,6 +452,230 @@ async function processListing(item: HarvestItem, ctx: ImportContext): Promise<Re
   };
 }
 
+type FacebookContext = {
+  h: Record<string, string>;
+  writeHeaders: Record<string, string>;
+  harvestId: string;
+  capturedAt: string;
+  speciesId: string;
+  ownerUserId: string;
+};
+
+// Facebook post identity: an explicit post_id wins; otherwise parse it from the
+// permalink (/permalink/<id>, /posts/<id>, /posts/pfbid<id>, /reel/<id>).
+// Never invent one — null means the item is rejected.
+function facebookPostId(item: HarvestItem, sourceUrl: string): string | null {
+  const explicit = text(item.post_id ?? item.source_post_id, 64);
+  if (/^[A-Za-z0-9]{1,64}$/.test(explicit)) return explicit;
+  const permalink = sourceUrl.match(/\/(?:permalink|posts|reel)\/(\d{1,32})(?:[/?#]|$)/);
+  if (permalink) return permalink[1];
+  const pfbid = sourceUrl.match(/\/posts\/(pfbid[A-Za-z0-9]+)(?:[/?#]|$)/);
+  return pfbid ? pfbid[1] : null;
+}
+
+function textOrNull(value: unknown, max = 4000) {
+  const valueText = text(value, max);
+  return valueText || null;
+}
+
+async function processFacebookPost(item: HarvestItem, ctx: FacebookContext): Promise<Record<string, unknown>> {
+  const { h, writeHeaders, harvestId, capturedAt, speciesId, ownerUserId } = ctx;
+
+  const sourceUrl = text(item.source_url, 1000);
+  if (!sourceUrl || !sourceUrl.startsWith("https://")) {
+    return { ok: false, post_id: null, error: "source_url is required and must be an https:// post permalink" };
+  }
+  const postId = facebookPostId(item, sourceUrl);
+  if (!postId) {
+    return { ok: false, post_id: null, error: "post_id could not be determined: supply post_id or a permalink containing it" };
+  }
+
+  // Facebook harvests are Snake Sorter only: no price fields are ever banked.
+  const sourceKey = `facebook:${postId}`;
+  const posterName = optionalText(item.poster_name, 255);
+  const postText = text(item.post_text, 12000);
+  const postCreatedAt = dateOrNull(item.post_created_at);
+  const title = textOrNull(postText.slice(0, 255), 255);
+  const facets = (item.facets ?? {}) as Record<string, unknown>;
+  const normalizedLocalities = Array.isArray(item.localities_normalized)
+    ? item.localities_normalized.map((v) => text(v, 120)).filter(Boolean)
+    : [];
+  const groupOrPage = (item.group_or_page ?? null) as { name?: unknown; url?: unknown } | null;
+
+  const ancestry = ancestryFromItem(item, title ?? "", postText, {
+    taxon: item.normalized_taxon ?? item.subspecies ?? facets.subspecies,
+    locality: item.normalized_locality ?? item.locality ?? normalizedLocalities[0] ?? facets.locality,
+  });
+  // A wrong ancestry_class is worse than omitting it: trust only valid values,
+  // otherwise fall back to the classifier (see ancestryFromItem).
+  const explicitEligibility = typeof item.snake_sorter_eligible === "boolean" ? item.snake_sorter_eligible : null;
+  const sorterEligible = explicitEligibility ?? ancestry.snake_sorter_eligible;
+
+  const sex = normalizeSex(item.sex ?? facets.sex);
+  const ageClass = normalizeAgeClass(item.life_stage ?? item.age_class ?? facets.age);
+  const neonateColor = normalizeNeonateColor(item.neonate_color ?? facets.neonate_color);
+  const origin = normalizeOrigin(item.origin_status ?? item.captive_status ?? facets.origin);
+  const photoTotal = numberOrNull(item.photo_total ?? item.gallery_total);
+  const observedAt = capturedAt;
+
+  // Repost detection: the same poster with the same normalized post text under
+  // a different post is flagged for review — imports never merge animals.
+  let possibleRepostOf: string | null = null;
+  if (posterName && title) {
+    const repostResponse = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/gtp_observed_animals?seller_name=eq.${encodeURIComponent(posterName)}&select=id,source_key,listing_title&limit=50`,
+      { headers: h, cache: "no-store" },
+    );
+    if (repostResponse.ok) {
+      const rows = await repostResponse.json() as Array<{ id: string; source_key: string; listing_title: string | null }>;
+      const normalizedTitle = title.toLowerCase();
+      const match = rows.find((row) => row.source_key !== sourceKey && (row.listing_title ?? "").toLowerCase() === normalizedTitle);
+      if (match) possibleRepostOf = match.id;
+    }
+  }
+
+  const masterResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/gtp_observed_animals?on_conflict=source_key`,
+    {
+      method: "POST",
+      headers: { ...writeHeaders, Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({
+        species_id: speciesId,
+        source_type: "facebook",
+        source_key: sourceKey,
+        source_id: postId,
+        source_url: sourceUrl,
+        seller_name: posterName,
+        listing_title: title,
+        normalized_taxon: ancestry.taxon ?? null,
+        normalized_locality: ancestry.locality ?? null,
+        ancestry_class: ancestry.ancestry_class,
+        pure_locality: bool(item.pure_locality, ancestry.pure_locality),
+        pure_subspecies: bool(item.pure_subspecies, ancestry.pure_subspecies),
+        possible_relist_of: possibleRepostOf,
+        sex: sex === "UNKNOWN" ? null : sex.toLowerCase(),
+        life_stage: ageClass === "UNKNOWN" ? null : optionalText(item.life_stage ?? item.age_class ?? facets.age, 40),
+        neonate_color: neonateColor === "UNKNOWN" ? null : neonateColor.toLowerCase(),
+        provenance_confidence: optionalText(item.provenance_confidence, 40),
+        classification_confidence: optionalText(item.classification_confidence, 40),
+        source_metadata: {
+          harvest_id: harvestId,
+          source_platform: "facebook",
+          import_method: "facebook_harvest",
+          group_or_page: groupOrPage ? { name: textOrNull(groupOrPage.name, 255), url: textOrNull(groupOrPage.url, 1000) } : null,
+          post_created_at: postCreatedAt,
+          poster_name: posterName,
+          photo_total: photoTotal,
+          ancestry_class: ancestry.ancestry_class,
+          pure_locality: bool(item.pure_locality, ancestry.pure_locality),
+          pure_subspecies: bool(item.pure_subspecies, ancestry.pure_subspecies),
+          origin: origin === "UNKNOWN" ? null : origin.toLowerCase(),
+          locality_claims_verbatim: optionalText(item.locality_claims_verbatim, 1000),
+          origin_claims_verbatim: optionalText(item.origin_claims_verbatim, 1000),
+          decision_reason: optionalText(item.decision_reason, 2000),
+          notes: optionalText(item.notes, 4000),
+          description: postText || null,
+          source_record: item,
+        },
+        last_seen_at: observedAt,
+        updated_at: new Date().toISOString(),
+      }),
+      cache: "no-store",
+    },
+  );
+  const masterRows = masterResponse.ok ? await masterResponse.json() as MasterRow[] : [];
+  const masterAnimalId = masterRows[0]?.id ?? null;
+  if (!masterAnimalId) {
+    return { ok: false, post_id: postId, error: "master animal upsert failed" };
+  }
+
+  let candidateId: string | null = null;
+  let candidateCreated = false;
+  if (sorterEligible) {
+    const existingCandidateResponse = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?source_key=eq.${encodeURIComponent(sourceKey)}&select=id,reviewed_at&limit=1`,
+      { headers: h, cache: "no-store" },
+    );
+    const existingCandidates = existingCandidateResponse.ok
+      ? await existingCandidateResponse.json() as CandidateRow[]
+      : [];
+    const existingCandidate = existingCandidates[0];
+
+    const candidatePayload: Record<string, unknown> = {
+      master_animal_id: masterAnimalId,
+      source_type: "facebook",
+      source_key: sourceKey,
+      source_id: postId,
+      source_url: sourceUrl,
+      title,
+      seller_or_observer: posterName,
+      taxon_raw: "Green Tree Python",
+      locality_raw: ancestry.locality ?? null,
+      provisional_taxon: ancestry.taxon ?? null,
+      provisional_locality: ancestry.locality ?? null,
+      life_stage_hint: ancestry.life_stage_hint && ancestry.life_stage_hint !== "unknown" ? ancestry.life_stage_hint : null,
+      neonate_color_hint: ancestry.neonate_color_hint && ancestry.neonate_color_hint !== "unknown" ? ancestry.neonate_color_hint : null,
+      rights_status: "metadata_only",
+      exclusion_reason: null,
+      source_metadata: {
+        harvest_id: harvestId,
+        source_platform: "facebook",
+        import_method: "facebook_harvest",
+        ancestry_class: ancestry.ancestry_class,
+        pure_locality: bool(item.pure_locality, ancestry.pure_locality),
+        pure_subspecies: bool(item.pure_subspecies, ancestry.pure_subspecies),
+        group_or_page: groupOrPage ? { name: textOrNull(groupOrPage.name, 255), url: textOrNull(groupOrPage.url, 1000) } : null,
+        post_created_at: postCreatedAt,
+        photo_total: photoTotal,
+        gallery_total: photoTotal,
+        description: postText || null,
+      },
+      acquisition_stage: "discovered",
+      last_seen_at: observedAt,
+    };
+
+    if (existingCandidate) {
+      candidateId = existingCandidate.id;
+      if (!existingCandidate.reviewed_at) candidatePayload.review_status = "pending";
+      await fetch(
+        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(candidateId)}`,
+        {
+          method: "PATCH",
+          headers: { ...writeHeaders, Prefer: "return=minimal" },
+          body: JSON.stringify(candidatePayload),
+          cache: "no-store",
+        },
+      );
+    } else {
+      const candidateResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates`, {
+        method: "POST",
+        headers: { ...writeHeaders, Prefer: "return=representation" },
+        body: JSON.stringify({
+          ...candidatePayload,
+          review_status: "pending",
+          created_by: ownerUserId,
+        }),
+        cache: "no-store",
+      });
+      const candidateRows = candidateResponse.ok ? await candidateResponse.json() as Array<{ id: string }> : [];
+      candidateId = candidateRows[0]?.id ?? null;
+      if (candidateId) candidateCreated = true;
+    }
+  }
+
+  return {
+    ok: true,
+    post_id: postId,
+    source_url: sourceUrl,
+    master_animal_id: masterAnimalId,
+    candidate_id: candidateId,
+    candidate_created: candidateCreated,
+    snake_sorter_eligible: sorterEligible,
+    ancestry_class: ancestry.ancestry_class,
+    possible_repost_of: possibleRepostOf,
+  };
+}
+
 export async function POST(request: NextRequest) {
   const identity = await ownerIdentity();
   if (!identity) {
@@ -458,10 +689,27 @@ export async function POST(request: NextRequest) {
   const harvestId = text(body.harvest_id, 160);
   const capturedAtRaw = text(body.captured_at, 40);
   const items = Array.isArray(body.items) ? body.items.filter((item): item is HarvestItem => Boolean(item) && typeof item === "object") : [];
+  const platformRaw = text(body.source_platform, 20).toLowerCase();
+  const platform: SourcePlatform = (platformRaw === "" ? "morphmarket" : platformRaw) as SourcePlatform;
 
+  if (!VALID_PLATFORMS.includes(platform)) {
+    return NextResponse.json(
+      { error: "source_platform must be \"morphmarket\" or \"facebook\"." },
+      { status: 400 },
+    );
+  }
   if (!harvestId || !HARVEST_ID_RE.test(harvestId)) {
     return NextResponse.json(
-      { error: "A stable harvest_id is required, in the form HARVEST_MM_GTP_YYYYMMDD_NNN (e.g. HARVEST_MM_GTP_20260924_001)." },
+      { error: "A stable harvest_id is required, in the form HARVEST_MM_GTP_YYYYMMDD_NNN or HARVEST_FB_GTP_YYYYMMDD_NNN (e.g. HARVEST_FB_GTP_20260924_001)." },
+      { status: 400 },
+    );
+  }
+  // The harvest_id prefix must match the declared platform so MorphMarket and
+  // Facebook runs can never land in each other's batch lineage.
+  const expectedPrefix = platform === "facebook" ? "HARVEST_FB_GTP_" : "HARVEST_MM_GTP_";
+  if (!harvestId.startsWith(expectedPrefix)) {
+    return NextResponse.json(
+      { error: `source_platform "${platform}" requires a harvest_id starting with ${expectedPrefix}.` },
       { status: 400 },
     );
   }
@@ -487,18 +735,45 @@ export async function POST(request: NextRequest) {
     "Content-Type": "application/json",
   };
 
-  const [sourceResponse, speciesResponse] = await Promise.all([
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/market_sources?name=eq.MorphMarket&select=id&limit=1`, { headers: h, cache: "no-store" }),
-    fetch(`${SUPABASE_AUTH_URL}/rest/v1/species?slug=eq.green-tree-python&select=id&limit=1`, { headers: h, cache: "no-store" }),
-  ]);
-
-  const sourceRows = sourceResponse.ok ? await sourceResponse.json() as Array<{ id: string }> : [];
+  const speciesResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/species?slug=eq.green-tree-python&select=id&limit=1`,
+    { headers: h, cache: "no-store" },
+  );
   const speciesRows = speciesResponse.ok ? await speciesResponse.json() as Array<{ id: string }> : [];
-  const sourceId = sourceRows[0]?.id;
   const speciesId = speciesRows[0]?.id;
+  if (!speciesId) {
+    return NextResponse.json({ error: "Green Tree Python species record is missing." }, { status: 502 });
+  }
 
-  if (!sourceId || !speciesId) {
-    return NextResponse.json({ error: "MorphMarket source or Green Tree Python species record is missing." }, { status: 502 });
+  // Facebook harvests are Snake Sorter only: they bank no market data, so they
+  // skip market sources, import batches, and snapshot refreshes entirely.
+  if (platform === "facebook") {
+    const fbCtx: FacebookContext = { h, writeHeaders, harvestId, capturedAt, speciesId, ownerUserId: identity.user.id };
+    const fbResults = await mapWithConcurrency(items, IMPORT_CONCURRENCY, (item) => processFacebookPost(item, fbCtx));
+    return NextResponse.json({
+      ok: true,
+      harvest_id: harvestId,
+      source_platform: "facebook",
+      batch_id: null,
+      received: items.length,
+      // Per-chunk counts (use these for per-chunk reconciliation):
+      stored_in_this_chunk: fbResults.filter((r) => r.ok).length,
+      failed_in_this_chunk: fbResults.filter((r) => !r.ok).length,
+      new_snake_sorter_candidates: fbResults.filter((r) => r.candidate_created).length,
+      possible_reposts_flagged: fbResults.filter((r) => r.possible_repost_of).length,
+      screenshot_upload_endpoint: "/api/snake-sorter/acquisition/media-upload",
+      results: fbResults,
+    });
+  }
+
+  const sourceResponse = await fetch(
+    `${SUPABASE_AUTH_URL}/rest/v1/market_sources?name=eq.MorphMarket&select=id&limit=1`,
+    { headers: h, cache: "no-store" },
+  );
+  const sourceRows = sourceResponse.ok ? await sourceResponse.json() as Array<{ id: string }> : [];
+  const sourceId = sourceRows[0]?.id;
+  if (!sourceId) {
+    return NextResponse.json({ error: "MorphMarket source record is missing." }, { status: 502 });
   }
 
   const localityResponse = await fetch(
