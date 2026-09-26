@@ -8,7 +8,14 @@ const keeperSteps = [
   { title: "4 · EXPAND", text: "Raise offspring, keep holdbacks, build lines, expand rooms and unlock rarer species and equipment." },
 ];
 
-const achievements = ["First Offspring", "First Clutch", "First Litter", "Three Generations", "Lineage Keeper", "Facility Builder"];
+const empireSteps = [
+  { title: "1 · COLLECT", text: "Buy, trade and chase animals while your available space disappears faster than your money." },
+  { title: "2 · BREED", text: "Push your luck through breeding seasons, clutches, holdbacks and market swings." },
+  { title: "3 · SURVIVE", text: "Deal with expos, lowballers, equipment failures, Fish & Game and whatever Randy has in the van." },
+  { title: "4 · BUILD", text: "Expand your facility, reputation and legacy without letting the hobby completely consume your life." },
+];
+
+const achievements = ["First Offspring", "First Clutch", "First Litter", "Three Generations", "Lineage Keeper", "Facility Builder", "Reptile Empire"];
 
 export default function ArcadePage() {
   return (
@@ -46,6 +53,15 @@ export default function ArcadePage() {
             title="Arboreal Keeper"
             description="Build a Green Tree Python program around breeding, locality projects, housing, offspring, market decisions and records — start small and grow your keeper program over time."
             steps={keeperSteps}
+          />
+          <GameCard
+            href="/arcade/reptile-empire"
+            imageSrc="/hatchery/snakes/localities/manokwari/yellow-adult.webp"
+            imageAlt="Illustrated Green Tree Python — Reptile Empire"
+            kicker="New playable prototype"
+            title="Reptile Empire"
+            description="A wild multiplayer-style reptile board game prototype about building a collection, breeding animals, expanding a facility, surviving the market and making increasingly questionable hobby decisions."
+            steps={empireSteps}
           />
           {/* Canopy Hunter is intentionally unlisted until launch — the route /arcade/canopy-hunter stays live for owner review. */}
         </div>
