@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";\nimport type { CSSProperties, TouchEvent } from "react";
 
 const COLS = 9;
 const ROWS = 12;
@@ -161,8 +161,8 @@ export default function CanopyCrossing() {
     raf=requestAnimationFrame(frame);return()=>cancelAnimationFrame(raf);
   },[resetPlayer]);
 
-  const onTouchStart=(e:React.TouchEvent)=>{const t=e.changedTouches[0];touchRef.current={x:t.clientX,y:t.clientY};};
-  const onTouchEnd=(e:React.TouchEvent)=>{const s=touchRef.current;if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);touchRef.current=null;};
+  const onTouchStart=(e:TouchEvent)=>{const t=e.changedTouches[0];touchRef.current={x:t.clientX,y:t.clientY};};
+  const onTouchEnd=(e:TouchEvent)=>{const s=touchRef.current;if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);touchRef.current=null;};
 
   return <main style={{minHeight:"100svh",background:"#030806",color:"#edf7e9",fontFamily:"system-ui,sans-serif",padding:"18px"}}>
     <div style={{maxWidth:760,margin:"0 auto"}}>
@@ -186,4 +186,4 @@ export default function CanopyCrossing() {
   </main>;
 }
 
-const btn:React.CSSProperties={height:46,borderRadius:12,border:"1px solid #315b3a",background:"#0d1c14",color:"#dcebd6",fontSize:18,fontWeight:900,cursor:"pointer"};
+const btn:CSSProperties={height:46,borderRadius:12,border:"1px solid #315b3a",background:"#0d1c14",color:"#dcebd6",fontSize:18,fontWeight:900,cursor:"pointer"};
