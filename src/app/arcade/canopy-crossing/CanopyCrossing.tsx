@@ -17,6 +17,8 @@ const STAGES = [
 
 type Pos = { x:number; y:number };
 type Mover = { row:number; x:number; width:number; speed:number; kind:"branch"|"hazard"|"vine" };
+type Firefly = {x:number;y:number;phase:number};
+const FIREFLIES:Firefly[] = Array.from({length:18},(_,i)=>({x:(i*47)%100,y:(i*73)%100,phase:i*.83}));
 
 const clamp = (n:number,min:number,max:number) => Math.max(min,Math.min(max,n));
 
@@ -134,6 +136,10 @@ export default function CanopyCrossing() {
       for(let i=0;i<18;i++){const x=((i*83+31)%Math.max(1,W+120))-60;const y=((i*137)%Math.max(1,H));ctx.beginPath();ctx.ellipse(x,y,42+(i%4)*10,14+(i%3)*5,(i%5)*.42,0,Math.PI*2);ctx.fill();}
       ctx.strokeStyle="rgba(55,105,62,.35)";ctx.lineWidth=5;
       for(let i=0;i<7;i++){const x=(i+.5)*W/7;ctx.beginPath();ctx.moveTo(x,-20);ctx.bezierCurveTo(x-35,H*.25,x+28,H*.55,x-15,H+20);ctx.stroke();}
+      const stageIndex=Math.min(levelRef.current-1,STAGES.length-1);
+      if(stageIndex===1){ctx.fillStyle="rgba(72,139,168,.12)";ctx.fillRect(0,H*.25,W,H*.55);}
+      if(stageIndex===3){ctx.fillStyle="rgba(0,8,20,.44)";ctx.fillRect(0,0,W,H);for(const f of FIREFLIES){const a=.25+.45*(.5+.5*Math.sin(t/420+f.phase));ctx.fillStyle=`rgba(213,238,109,${a})`;ctx.beginPath();ctx.arc(W*f.x/100,H*f.y/100,1.7,0,Math.PI*2);ctx.fill();}}
+      if(stageIndex===4){ctx.strokeStyle="rgba(190,220,235,.22)";ctx.lineWidth=1;for(let i=0;i<38;i++){const rx=(i*79+t*.08)%W,ry=(i*113+t*.18)%H;ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx-9,ry+20);ctx.stroke();}}
       for(let r=0;r<ROWS;r++){
         const y=r*rowH;
         if(r===0){ctx.fillStyle="rgba(175,224,95,.16)";ctx.fillRect(0,y,W,rowH);}
@@ -141,6 +147,7 @@ export default function CanopyCrossing() {
         ctx.strokeStyle="rgba(255,255,255,.025)";ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
       }
       ctx.font=`${Math.max(10,rowH*.22)}px system-ui`;ctx.fillStyle="rgba(220,255,225,.55)";ctx.fillText("CROWN",12,rowH*.55);
+      ctx.textAlign="center";ctx.font=`700 ${Math.max(10,rowH*.18)}px system-ui`;ctx.fillStyle="rgba(230,246,218,.72)";ctx.fillText(STAGES[stageIndex].subtitle.toUpperCase(),W/2,rowH*.55);ctx.textAlign="start";
 
       for(const m of moversRef.current){
         const x=m.x*colW,y=m.row*rowH+rowH*.28,w=m.width*colW,h=rowH*.44;
