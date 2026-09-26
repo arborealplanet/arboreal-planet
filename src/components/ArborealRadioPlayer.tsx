@@ -309,6 +309,9 @@ export function ArborealRadioPlayer() {
               ◉
             </span>
           )}
+          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">
+            Radio
+          </span>
           <span
             className="hidden w-24 truncate text-left text-xs text-white/70 min-[420px]:block xl:w-36"
             title={track.title}
