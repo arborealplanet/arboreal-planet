@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Full-screen intro advertisement for Arboreal Keeper. Shown as the first
 // thing a visitor sees on the Arboreal Keeper entry routes; the CTA dismisses
 // the layer and reveals the game underneath, which stays fully intact.
 // The strike-sting bumper plays full-bleed behind the copy (muted loop).
 export function ArborealKeeperAdHero({ onEnter, onReplayIntro }: { onEnter: () => void; onReplayIntro?: () => void }) {
+  const [showIntroVideo, setShowIntroVideo] = useState(false);
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -71,6 +72,16 @@ export function ArborealKeeperAdHero({ onEnter, onReplayIntro }: { onEnter: () =
             >
               Start your collection
             </button>
+            <button
+              type="button"
+              onClick={() => setShowIntroVideo(true)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[.03] px-6 py-4 text-sm font-semibold text-white/60 transition hover:border-white/25 hover:text-white/90 sm:w-auto"
+            >
+              <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                <path d="M4 2.5v11l9-5.5-9-5.5z" />
+              </svg>
+              Play intro
+            </button>
             <Link
               href="/"
               className="inline-flex items-center justify-center rounded-2xl border border-white/12 bg-white/[.03] px-6 py-4 text-sm font-semibold text-white/60 transition hover:border-white/25 hover:text-white/90"
@@ -94,6 +105,35 @@ export function ArborealKeeperAdHero({ onEnter, onReplayIntro }: { onEnter: () =
           ) : null}
         </div>
       </div>
+
+      {/* Full-screen player for the uploaded intro video */}
+      {showIntroVideo ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Arboreal Keeper intro video"
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-black/95 p-4"
+        >
+          <button
+            type="button"
+            onClick={() => setShowIntroVideo(false)}
+            aria-label="Close intro video"
+            className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[.06] text-xl font-bold text-white/70 transition hover:border-white/30 hover:text-white"
+          >
+            &times;
+          </button>
+          <video
+            key="keeper-intro"
+            autoPlay
+            controls
+            playsInline
+            preload="auto"
+            className="max-h-[92dvh] w-full max-w-5xl rounded-xl"
+          >
+            <source src="/hatchery/game/arboreal-keeper-intro.mp4" type="video/mp4" />
+          </video>
+        </div>
+      ) : null}
     </div>
   );
 }
