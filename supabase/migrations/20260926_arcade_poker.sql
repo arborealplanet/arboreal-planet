@@ -925,7 +925,8 @@ $$;
 REVOKE ALL ON FUNCTION public.hatchling_stakes_void(uuid, text) FROM public;
 GRANT EXECUTE ON FUNCTION public.hatchling_stakes_void(uuid, text) TO authenticated;
 
--- Wager history for the caller (receipts).CREATE OR REPLACE FUNCTION public.hatchling_stakes_history(p_limit int DEFAULT 20)
+-- Wager history for the caller (receipts).
+CREATE OR REPLACE FUNCTION public.hatchling_stakes_history(p_limit int DEFAULT 20)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
