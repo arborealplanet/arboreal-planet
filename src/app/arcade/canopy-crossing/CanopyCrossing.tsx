@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";\nimport type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 const COLS = 9;
 const ROWS = 12;
@@ -33,12 +34,14 @@ export default function CanopyCrossing() {
   const levelRef = useRef(1);
   const scoreRef = useRef(0);
   const livesRef = useRef(3);
-  const touchRef = useRef<{x:number;y:number}|null>(null);\n  const facingRef = useRef<"up"|"down"|"left"|"right">("up");
+  const touchRef = useRef<{x:number;y:number}|null>(null);
+  const facingRef = useRef<"up"|"down"|"left"|"right">("up");
   const [running,setRunning] = useState(false);
   const [score,setScore] = useState(0);
   const [lives,setLives] = useState(3);
   const [level,setLevel] = useState(1);
-  const [message,setMessage] = useState("Reach the crown. Avoid predators. Ride the moving canopy.");\n  const messageUntilRef = useRef(0);
+  const [message,setMessage] = useState("Reach the crown. Avoid predators. Ride the moving canopy.");
+  const messageUntilRef = useRef(0);
 
   const resetPlayer = useCallback(() => { playerRef.current={...START}; },[]);
 
@@ -80,7 +83,8 @@ export default function CanopyCrossing() {
       ctx.setTransform(dpr,0,0,dpr,0,0);
       const W=rect.width,H=rect.height,rowH=H/ROWS,colW=W/COLS;
       const dt=Math.min((t-lastRef.current)/1000||0,.04);lastRef.current=t;
-      if(messageUntilRef.current && t>messageUntilRef.current){ messageUntilRef.current=0; setMessage(""); }\n      if(runningRef.current){
+      if(messageUntilRef.current && t>messageUntilRef.current){ messageUntilRef.current=0; setMessage(""); }
+      if(runningRef.current){
         for(const m of moversRef.current){m.x+=m.speed*dt;if(m.speed>0&&m.x>COLS+1)m.x=-m.width-1;if(m.speed<0&&m.x+m.width<-1)m.x=COLS+1;}
         const p=playerRef.current;
         if(p.y===0){
@@ -103,7 +107,12 @@ export default function CanopyCrossing() {
         }
       }
 
-      const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,"#071b12");grad.addColorStop(.55,"#0b2a1d");grad.addColorStop(1,"#06110d");ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);\n      // Layered New Guinea canopy silhouettes: portable procedural art, no external dependency.\n      ctx.fillStyle="rgba(20,63,40,.42)";\n      for(let i=0;i<18;i++){const x=((i*83+31)%Math.max(1,W+120))-60;const y=((i*137)%Math.max(1,H));ctx.beginPath();ctx.ellipse(x,y,42+(i%4)*10,14+(i%3)*5,(i%5)*.42,0,Math.PI*2);ctx.fill();}\n      ctx.strokeStyle="rgba(55,105,62,.35)";ctx.lineWidth=5;\n      for(let i=0;i<7;i++){const x=(i+.5)*W/7;ctx.beginPath();ctx.moveTo(x,-20);ctx.bezierCurveTo(x-35,H*.25,x+28,H*.55,x-15,H+20);ctx.stroke();}
+      const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,"#071b12");grad.addColorStop(.55,"#0b2a1d");grad.addColorStop(1,"#06110d");ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+      // Layered New Guinea canopy silhouettes: portable procedural art, no external dependency.
+      ctx.fillStyle="rgba(20,63,40,.42)";
+      for(let i=0;i<18;i++){const x=((i*83+31)%Math.max(1,W+120))-60;const y=((i*137)%Math.max(1,H));ctx.beginPath();ctx.ellipse(x,y,42+(i%4)*10,14+(i%3)*5,(i%5)*.42,0,Math.PI*2);ctx.fill();}
+      ctx.strokeStyle="rgba(55,105,62,.35)";ctx.lineWidth=5;
+      for(let i=0;i<7;i++){const x=(i+.5)*W/7;ctx.beginPath();ctx.moveTo(x,-20);ctx.bezierCurveTo(x-35,H*.25,x+28,H*.55,x-15,H+20);ctx.stroke();}
       for(let r=0;r<ROWS;r++){
         const y=r*rowH;
         if(r===0){ctx.fillStyle="rgba(175,224,95,.16)";ctx.fillRect(0,y,W,rowH);}
