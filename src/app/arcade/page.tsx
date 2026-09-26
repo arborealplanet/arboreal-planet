@@ -51,6 +51,28 @@ export default function ArcadePage() {
               </div>
             </div>
           </Link>
+          <Link href="/arcade/canopy-hunter" className="panel group overflow-hidden rounded-[26px]">
+            <div className="grid sm:grid-cols-[240px_1fr]">
+              <div className="relative min-h-[240px] overflow-hidden bg-gradient-to-b from-[#0a2b1c] to-[#04120c]">
+                <svg viewBox="0 0 240 240" className="absolute inset-0 h-full w-full" aria-hidden="true">
+                  <ellipse cx="60" cy="150" rx="46" ry="40" fill="#1f7a45" stroke="#0b140e" strokeWidth="6" />
+                  <ellipse cx="180" cy="150" rx="46" ry="40" fill="#1f7a45" stroke="#0b140e" strokeWidth="6" />
+                  <ellipse cx="120" cy="110" rx="52" ry="44" fill="#2e9e5b" stroke="#0b140e" strokeWidth="6" />
+                  <rect x="52" y="170" width="16" height="70" rx="7" fill="#6b4a2f" stroke="#0b140e" strokeWidth="6" />
+                  <rect x="172" y="170" width="16" height="70" rx="7" fill="#6b4a2f" stroke="#0b140e" strokeWidth="6" />
+                  <path d="M120 128 C100 128 94 112 100 100 C106 88 124 88 129 100 C134 112 122 124 112 120" fill="none" stroke="#0b140e" strokeWidth="15" strokeLinecap="round" />
+                  <path d="M120 128 C100 128 94 112 100 100 C106 88 124 88 129 100 C134 112 122 124 112 120" fill="none" stroke="#3fae62" strokeWidth="9" strokeLinecap="round" />
+                  <ellipse cx="113" cy="120" rx="10" ry="8" fill="#46c06e" stroke="#0b140e" strokeWidth="4" />
+                </svg>
+              </div>
+              <div className="flex flex-col justify-center p-6 sm:p-7">
+                <div className="text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/55">Mini game</div>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-.02em]">Canopy Hunter</h2>
+                <p className="mt-3 text-sm leading-6 text-white/42">Search the night canopy for wild green tree pythons — catch what you find and send it home to your Arboreal Keeper collection.</p>
+                <span className="mt-5 inline-flex w-fit rounded-xl bg-emerald-300 px-5 py-3 text-sm font-bold text-[#06100c]">Play now</span>
+              </div>
+            </div>
+          </Link>
         </div>
       </section>
 
