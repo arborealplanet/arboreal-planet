@@ -11,7 +11,9 @@ import {
   generateWildSnake,
   importWildSnakesIntoSave,
   randomEscapeLine,
+  rollRegion,
   rollZoneCenter,
+  type CanopyRegion,
   type WildSnake,
 } from "@/lib/canopy-hunter";
 
@@ -91,6 +93,7 @@ function PythonArt() {
 
 export function CanopyHunter() {
   const [phase, setPhase] = useState<Phase>("briefing");
+  const [region, setRegion] = useState<CanopyRegion | null>(null);
   const [pythonTrees, setPythonTrees] = useState<number[]>([]);
   const [wilds, setWilds] = useState<Record<number, WildSnake>>({});
   const [searched, setSearched] = useState<boolean[]>(() => Array(EXPEDITION_TREES).fill(false));
@@ -143,11 +146,13 @@ export function CanopyHunter() {
   }, [phase, searchesLeft, resolvedCount]);
 
   function startExpedition() {
+    const expeditionRegion = rollRegion();
     const trees = createExpedition();
     const nextWilds: Record<number, WildSnake> = {};
     trees.forEach((treeIndex, i) => {
-      nextWilds[treeIndex] = generateWildSnake(i + 1);
+      nextWilds[treeIndex] = generateWildSnake(i + 1, expeditionRegion);
     });
+    setRegion(expeditionRegion);
     setPythonTrees(trees);
     setWilds(nextWilds);
     setSearched(Array(EXPEDITION_TREES).fill(false));
@@ -241,6 +246,7 @@ export function CanopyHunter() {
             <li>· {EXPEDITION_TREES} trees in tonight&apos;s patch of canopy.</li>
             <li>· You have {EXPEDITION_SEARCHES} searches — spend them wisely.</li>
             <li>· {EXPEDITION_PYTHONS} pythons are hiding up there. Spot one and grab it before it slips away.</li>
+            <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea.</li>
             <li>· Caught snakes can be sent straight to your Arboreal Keeper save.</li>
           </ul>
           <button
@@ -256,6 +262,15 @@ export function CanopyHunter() {
       {/* Canopy */}
       {phase === "canopy" && (
         <div className="mt-8">
+          {region && (
+            <div className="mb-3 text-center">
+              <div className="text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/60">
+                Tonight&apos;s region
+              </div>
+              <div className="mt-1 text-lg font-semibold text-white">{region.name}</div>
+              <p className="mt-0.5 text-xs text-white/40">{region.tagline}</p>
+            </div>
+          )}
           <div className="flex items-center justify-between rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3">
             <span className="text-xs font-semibold uppercase tracking-[.14em] text-white/50">
               Searches left · <span className="text-emerald-200">{searchesLeft}</span>
@@ -366,7 +381,7 @@ export function CanopyHunter() {
           <div className="rounded-[26px] border border-white/[.07] bg-white/[.02] p-6 sm:p-8">
             <h2 className="text-xl font-semibold text-white">Expedition complete</h2>
             <p className="mt-1 text-sm text-white/50">
-              {bag.length} caught · {escapedCount} escaped
+              {region ? `${region.name} · ` : ""}{bag.length} caught · {escapedCount} escaped
             </p>
 
             {bag.length > 0 ? (

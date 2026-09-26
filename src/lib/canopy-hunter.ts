@@ -150,9 +150,77 @@ export function createExpedition(random: RandomFn = Math.random): number[] {
   return indexes.slice(0, EXPEDITION_PYTHONS).sort((a, b) => a - b);
 }
 
+export type CanopyTraitKey = "highBlack" | "highWhite" | "blueStripe" | "yellowRetention" | "blotches";
+
+export interface CanopyRegion {
+  id: string;
+  name: string;
+  tagline: string;
+  localities: CanopyLocality[];
+  /** Traits this region's animals lean toward (mirrors the Keeper's preferredByTaxon). */
+  traitLean: [CanopyTraitKey, CanopyTraitKey];
+}
+
+/**
+ * One expedition = one region. Finds only come from that region's
+ * localities — no bagging an Aru and a Jayapura on the same night.
+ */
+export const CANOPY_REGIONS: CanopyRegion[] = [
+  {
+    id: "cenderawasih",
+    name: "Cenderawasih Islands",
+    tagline: "Island canopy off the north coast.",
+    localities: ["Biak", "Numfor", "Yapen"],
+    traitLean: ["highBlack", "yellowRetention"],
+  },
+  {
+    id: "birds-head",
+    name: "Bird's Head West",
+    tagline: "Vogelkop lowlands and the Raja Ampat isles.",
+    localities: ["Sorong", "Manokwari", "Arfak", "Kofiau"],
+    traitLean: ["yellowRetention", "blueStripe"],
+  },
+  {
+    id: "highlands",
+    name: "Highlands & North Coast",
+    tagline: "Moss forest, mountain valleys, and the Cyclops range.",
+    localities: ["Wamena", "Timika", "Jayapura", "Cyclops", "Lereh"],
+    traitLean: ["blueStripe", "highWhite"],
+  },
+  {
+    id: "southern",
+    name: "Southern Wilds",
+    tagline: "Trans-Fly lowlands and the Aru Isles — true Morelia viridis country.",
+    localities: ["Aru", "Merauke"],
+    traitLean: ["highWhite", "highBlack"],
+  },
+];
+
+/** Roll which region tonight's expedition heads to. */
+export function rollRegion(random: RandomFn = Math.random): CanopyRegion {
+  return CANOPY_REGIONS[Math.floor(random() * CANOPY_REGIONS.length)];
+}
+
 /* ------------------------------------------------------------------ */
 /* Wild-snake generation                                               */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Locality-driven neonate color. Aru and Merauke are true Morelia viridis
+ * (yellow babies only — the Keeper enforces this via allowedColorsByTaxon),
+ * and Kofiau famously throws yellow too. Every other northern locality
+ * throws both red and yellow babies.
+ */
+const YELLOW_NEONATE_LOCALITIES: ReadonlySet<CanopyLocality> = new Set([
+  "Aru",
+  "Kofiau",
+  "Merauke",
+]);
+
+function rollNeonateColor(locality: CanopyLocality, random: RandomFn): CanopyNeonateColor {
+  if (YELLOW_NEONATE_LOCALITIES.has(locality)) return "Yellow";
+  return random() < 0.5 ? "Red" : "Yellow";
+}
 
 function rollLifeStage(random: RandomFn): CanopyLifeStage {
   const r = random();
@@ -172,22 +240,26 @@ function rollCondition(random: RandomFn): CanopyCondition {
  * Generate one wild snake. `n` numbers the finds within the expedition
  * ("Wild Biak 1", "Wild Biak 2", …).
  */
-export function generateWildSnake(n: number, random: RandomFn = Math.random): WildSnake {
-  const locality = CANOPY_LOCALITIES[Math.floor(random() * CANOPY_LOCALITIES.length)];
+/**
+ * Generate one wild snake for a region. `n` numbers the finds within the
+ * expedition ("Wild Biak 1", "Wild Biak 2", …).
+ */
+export function generateWildSnake(n: number, region: CanopyRegion, random: RandomFn = Math.random): WildSnake {
+  const locality = region.localities[Math.floor(random() * region.localities.length)];
   const subspecies = CANOPY_LOCALITY_SUBSPECIES[locality];
   const sex: CanopySex = random() < 0.5 ? "Male" : "Female";
   const lifeStage = rollLifeStage(random);
-  // Game rule (mirrors normalizeChondroNeonateColor in ChondroBreederGameV3):
-  // Kofiau neonates are always Yellow.
-  const neonateColor: CanopyNeonateColor =
-    locality === "Kofiau" ? "Yellow" : random() < 0.5 ? "Red" : "Yellow";
+  const neonateColor = rollNeonateColor(locality, random);
 
   const exceptional = random() < 0.08;
+  // Regional trait lean: the region's signature traits roll higher.
+  const leaned = (key: CanopyTraitKey, min: number, max: number) =>
+    region.traitLean.includes(key) ? intBetween(random, min + 20, max + 20) : intBetween(random, min, max);
   const traits: CanopyTraits = {
-    highBlack: intBetween(random, 5, 40),
-    highWhite: intBetween(random, 5, 40),
-    blueStripe: exceptional ? intBetween(random, 65, 85) : intBetween(random, 0, 30),
-    yellowRetention: intBetween(random, 10, 60),
+    highBlack: leaned("highBlack", 5, 40),
+    highWhite: leaned("highWhite", 5, 40),
+    blueStripe: exceptional ? intBetween(random, 65, 85) : leaned("blueStripe", 0, 30),
+    yellowRetention: leaned("yellowRetention", 10, 60),
     blotches: intBetween(random, 0, 40),
   };
 
@@ -209,7 +281,7 @@ export function generateWildSnake(n: number, random: RandomFn = Math.random): Wi
     exceptionalTraitLabel: exceptional
       ? `Exceptional high-blue specimen (${traits.blueStripe}% blue)`
       : null,
-    notes: "Caught in a Canopy Hunter expedition.",
+    notes: `Caught in a Canopy Hunter ${region.name} expedition.`,
   };
 }
 
