@@ -24,6 +24,7 @@ import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
 import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
 import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
+import { requestExpeditionOpen, EXPEDITION_ENTRY_FEE, EXPEDITION_FREE_COOLDOWN_MS } from "@/lib/canopy-hunter";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
 
@@ -40,6 +41,33 @@ function readLocalReturningPlayer(): boolean {
     }
   } catch {}
   return false;
+}
+
+/** Seven-day window in ms — derived from the expedition free-cooldown so the
+ * Home card stays in sync with the entry model in src/lib/canopy-hunter.ts. */
+const DAY_MS = EXPEDITION_FREE_COOLDOWN_MS / 7;
+
+// Live cadence for the Canopy Hunter Home quick action: only a started save
+// gets the card, and it re-reads the save whenever the game persists (the
+// Home screen and the game never mount at the same time). SSR-safe via the
+// window guard.
+function readExpeditionCardState(): { started: boolean; freeReady: boolean; freeInDays: number } {
+  if (typeof window === "undefined") return { started: false, freeReady: false, freeInDays: 0 };
+  try {
+    const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
+    if (!raw) return { started: false, freeReady: false, freeInDays: 0 };
+    const parsed = JSON.parse(raw) as { started?: unknown; expeditionNextAt?: unknown };
+    if (parsed.started !== true) return { started: false, freeReady: false, freeInDays: 0 };
+    const nextAt = typeof parsed.expeditionNextAt === "number" ? parsed.expeditionNextAt : 0;
+    const freeReady = Date.now() >= nextAt;
+    return {
+      started: true,
+      freeReady,
+      freeInDays: freeReady ? 0 : Math.max(1, Math.ceil((nextAt - Date.now()) / DAY_MS)),
+    };
+  } catch {
+    return { started: false, freeReady: false, freeInDays: 0 };
+  }
 }
 
 type ViewMeta = {
@@ -231,6 +259,19 @@ function ScreenHeading({ eyebrow, title, detail }: { eyebrow: string; title: str
 
 function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
   const tools: WorkspaceView[] = ["career", "projects", "conservation", "community", "guide"];
+  const [expedition, setExpedition] = useState(readExpeditionCardState);
+  useEffect(() => {
+    const refresh = () => setExpedition(readExpeditionCardState());
+    window.addEventListener("arboreal-chondro-breeder-save-change", refresh);
+    return () => window.removeEventListener("arboreal-chondro-breeder-save-change", refresh);
+  }, []);
+  function openExpedition() {
+    // One-shot intent: the game is not mounted while Home is showing, so flag
+    // the request, then navigate to a core view where the game mounts and
+    // consumes it (falling back to the CustomEvent if already mounted).
+    requestExpeditionOpen();
+    onOpen("colony");
+  }
   return (
     <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
@@ -285,6 +326,21 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                 const item = views.find((entry) => entry.id === id)!;
                 return <ToolCard key={id} item={item} onClick={() => onOpen(id)} />;
               })}
+              {expedition.started ? (
+                <button
+                  type="button"
+                  onClick={openExpedition}
+                  className="group flex min-h-[112px] flex-col items-start rounded-[20px] border border-emerald-300/25 bg-emerald-300/[.05] p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/40 hover:bg-emerald-300/[.08]"
+                >
+                  <span className="grid h-10 w-10 place-items-center rounded-[14px] border border-emerald-300/25 bg-black/25 text-base text-emerald-200">✦</span>
+                  <span className="mt-auto pt-4 text-sm font-bold text-white/80">Canopy Hunter</span>
+                  <span className="mt-1 text-[11px] leading-4 text-emerald-100/60">
+                    {expedition.freeReady
+                      ? "Free expedition ready — tap to head out."
+                      : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`}
+                  </span>
+                </button>
+              ) : null}
             </div>
           </section>
         </div>

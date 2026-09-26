@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
 import {
   EXPEDITION_PYTHONS,
   EXPEDITION_SEARCHES,
   EXPEDITION_TREES,
-  KEEPER_SAVE_KEY,
   createExpedition,
   generateWildSnake,
-  importWildSnakesIntoSave,
   randomEscapeLine,
   rollRegion,
   rollZoneCenter,
@@ -91,7 +88,13 @@ function PythonArt() {
 /* Game                                                                */
 /* ------------------------------------------------------------------ */
 
-export function CanopyHunter() {
+export function CanopyHunter({
+  onCatch,
+  onClose,
+}: {
+  onCatch: (wilds: WildSnake[]) => void;
+  onClose: () => void;
+}) {
   const [phase, setPhase] = useState<Phase>("briefing");
   const [region, setRegion] = useState<CanopyRegion | null>(null);
   const [pythonTrees, setPythonTrees] = useState<number[]>([]);
@@ -105,8 +108,7 @@ export function CanopyHunter() {
   const [catchResolved, setCatchResolved] = useState(false);
   const [catchMessage, setCatchMessage] = useState<string | null>(null);
   const [catchSuccess, setCatchSuccess] = useState(false);
-  const [importState, setImportState] = useState<"idle" | "done" | "no-save">("idle");
-  const [importedCount, setImportedCount] = useState(0);
+  const [sent, setSent] = useState(false);
 
   const markerRef = useRef<HTMLDivElement>(null);
   const sweepStartRef = useRef(0);
@@ -162,8 +164,7 @@ export function CanopyHunter() {
     setCatchTree(null);
     setCatchResolved(false);
     setCatchMessage(null);
-    setImportState("idle");
-    setImportedCount(0);
+    setSent(false);
     setPhase("canopy");
   }
 
@@ -203,33 +204,32 @@ export function CanopyHunter() {
     setPhase("canopy");
   }
 
-  function sendToKeeper() {
-    if (bag.length === 0 || importState !== "idle") return;
-    try {
-      const raw = window.localStorage.getItem(KEEPER_SAVE_KEY);
-      const result = importWildSnakesIntoSave(raw, bag);
-      if (!result.ok) {
-        setImportState("no-save");
-        return;
-      }
-      window.localStorage.setItem(KEEPER_SAVE_KEY, result.saveJson);
-      setImportedCount(result.imported);
-      setImportState("done");
-    } catch {
-      setImportState("no-save");
-    }
+  function bringHome() {
+    if (bag.length === 0 || sent) return;
+    onCatch(bag);
+    setSent(true);
   }
 
   const currentWild = catchTree !== null ? wilds[catchTree] : undefined;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8 sm:px-6">
+    <div className="mx-auto w-full max-w-3xl">
       <style>{`@keyframes ch-sway { 0%,100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }`}</style>
 
       {/* Header */}
-      <div className="text-center">
+      <div className="relative text-center">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close expedition"
+          className="absolute right-0 top-0 rounded-full border border-white/10 bg-white/[.04] p-2 text-white/60 transition hover:bg-white/[.1] hover:text-white"
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
         <div className="inline-flex rounded-full border border-emerald-300/15 bg-emerald-300/[.06] px-4 py-2 text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/70">
-          Arboreal Arcade · Mini game
+          Arboreal Keeper · Special event
         </div>
         <h1 className="mt-4 text-4xl font-semibold tracking-[-.03em] text-white sm:text-5xl">Canopy Hunter</h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/55">
@@ -247,7 +247,7 @@ export function CanopyHunter() {
             <li>· You have {EXPEDITION_SEARCHES} searches — spend them wisely.</li>
             <li>· {EXPEDITION_PYTHONS} pythons are hiding up there. Spot one and grab it before it slips away.</li>
             <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea.</li>
-            <li>· Caught snakes can be sent straight to your Arboreal Keeper save.</li>
+            <li>· Caught snakes head straight into your Keeper colony.</li>
           </ul>
           <button
             type="button"
@@ -414,41 +414,28 @@ export function CanopyHunter() {
               </p>
             )}
 
-            {importState === "idle" && bag.length > 0 && (
+            {bag.length > 0 && !sent && (
               <button
                 type="button"
-                onClick={sendToKeeper}
+                onClick={bringHome}
                 className="mt-6 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
               >
-                Send {bag.length === 1 ? "it" : `all ${bag.length}`} to Arboreal Keeper
+                Bring {bag.length === 1 ? "it" : `all ${bag.length}`} home to the colony
               </button>
             )}
 
-            {importState === "done" && (
+            {sent && (
               <div className="mt-6 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.07] p-4 text-center">
                 <p className="text-sm font-bold text-emerald-200">
-                  {importedCount} {importedCount === 1 ? "snake" : "snakes"} added to your Keeper colony.
+                  {bag.length} {bag.length === 1 ? "snake" : "snakes"} added to your colony.
                 </p>
-                <Link
-                  href="/arcade/arboreal-keeper"
-                  className="mt-2 inline-block text-sm font-semibold text-emerald-100 underline decoration-emerald-200/30 underline-offset-4 hover:text-white"
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mt-2 text-sm font-semibold text-emerald-100 underline decoration-emerald-200/30 underline-offset-4 transition hover:text-white"
                 >
-                  Open Arboreal Keeper
-                </Link>
-              </div>
-            )}
-
-            {importState === "no-save" && (
-              <div className="mt-6 rounded-2xl border border-amber-200/20 bg-amber-200/[.05] p-4 text-center">
-                <p className="text-sm leading-6 text-amber-100/80">
-                  No Keeper save found on this device — your catch needs a home first.
-                </p>
-                <Link
-                  href="/arcade/arboreal-keeper"
-                  className="mt-3 inline-block rounded-xl bg-amber-200 px-5 py-2.5 text-sm font-bold text-[#17130a]"
-                >
-                  Start your Arboreal Keeper journey
-                </Link>
+                  Back to the game
+                </button>
               </div>
             )}
 

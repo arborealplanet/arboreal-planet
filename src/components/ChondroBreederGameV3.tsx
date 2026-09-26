@@ -9,6 +9,15 @@ import { breedingReputationGain, marketDemandForSeason, marketMultiplierForAnima
 import { animalHousingCapacity, enclosureFootprint, geneticTestingUnlocked, roomCapacityFromSave, ROOM_EXPANSIONS, type FacilityRoomState } from "@/lib/chondro-facility-limits";
 import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor, needsExtraRecoveryYear, normalizeNeonateColorFor, randomNeonateColorFor } from "@/lib/breeder-species-profiles";
 import IntroCinematic from "@/components/IntroCinematic";
+import { CanopyHunter } from "@/components/CanopyHunter";
+import {
+  EXPEDITION_ENTRY_FEE,
+  EXPEDITION_FREE_COOLDOWN_MS,
+  EXPEDITION_PYTHONS,
+  consumeExpeditionOpenRequest,
+  wildSnakeToKeeperSnake,
+  type WildSnake,
+} from "@/lib/canopy-hunter";
 
 /**
  * Player-scoped intro-cinematic flag. Mirrored in localStorage so it survives
@@ -133,6 +142,9 @@ type GameSave = {
   /** Intro cinematic seen — scoped to the player, not the save. Set once, never auto-plays again. */
   cinematicSeen?: boolean;
   updatedAt?: number;
+  // Canopy Hunter expedition cadence (saved): next timestamp when the free
+  // weekly expedition becomes available again.
+  expeditionNextAt?: number;
 };
 
 type RandomFn = () => number;
@@ -795,7 +807,24 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   // spending a large season total.
   const [seasonCareArmed, setSeasonCareArmed] = useState(false);
   const seasonCareArmTimer = useRef<number | null>(null);
-  useEffect(() => () => { if (seasonCareArmTimer.current !== null) window.clearTimeout(seasonCareArmTimer.current); }, []);
+
+  // Canopy Hunter expedition (in-game event): one free expedition per player
+  // per week; extra trips inside the week cost game cash. Cadence note: the
+  // entry model lives in src/lib/canopy-hunter.ts — tune the fee
+  // (EXPEDITION_ENTRY_FEE) and the free interval
+  // (EXPEDITION_FREE_COOLDOWN_MS) there. expeditionNextAt is persisted on the
+  // save; expeditionOpen tracks the modal; expeditionEntered tracks whether
+  // the player has paid/claimed entry for the current opening.
+  const [expeditionOpen, setExpeditionOpen] = useState(false);
+  const [expeditionEntered, setExpeditionEntered] = useState(false);
+  const [expeditionNextAt, setExpeditionNextAt] = useState(0);
+  const [expeditionFeeArmed, setExpeditionFeeArmed] = useState(false);
+  const expeditionFeeArmTimer = useRef<number | null>(null);
+  const [expeditionResult, setExpeditionResult] = useState<string | null>(null);
+  useEffect(() => () => {
+    if (seasonCareArmTimer.current !== null) window.clearTimeout(seasonCareArmTimer.current);
+    if (expeditionFeeArmTimer.current !== null) window.clearTimeout(expeditionFeeArmTimer.current);
+  }, []);
   const [breedingMessage, setBreedingMessage] = useState("");
   const [clutchEstablished, setClutchEstablished] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -879,6 +908,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     // The cinematic flag is player-scoped: the save value wins, otherwise fall
     // back to the local mirror (e.g. seen while signed out, now signed in).
     setCinematicSeen(Boolean(chosen.cinematicSeen) || readCinematicSeenMirror());
+    // Canopy Hunter expedition cadence. Older saves predate the field, so a
+    // missing value means "free expedition available now".
+    setExpeditionNextAt(typeof chosen.expeditionNextAt === "number" ? chosen.expeditionNextAt : 0);
   }, []);
 
   const storeEpoch = Math.floor(now / DAY_MS);
@@ -957,15 +989,44 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   }, [cloudSave]);
 
   useEffect(() => {
-    if (!selectedSnakeId && !initialsPrompt) return;
+    if (!selectedSnakeId && !initialsPrompt && !expeditionOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      // Order mirrors the visual stack: initials prompt on top, then the
+      // expedition modal, then the animal record. Inline setState calls keep
+      // this effect dependency-clean (setters are stable).
       if (initialsPrompt) setInitialsPrompt(false);
-      else setSelectedSnakeId(null);
+      else if (expeditionOpen) {
+        setExpeditionOpen(false);
+        setExpeditionEntered(false);
+        setExpeditionFeeArmed(false);
+      } else setSelectedSnakeId(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedSnakeId, initialsPrompt]);
+  }, [selectedSnakeId, initialsPrompt, expeditionOpen]);
+
+  // Opens the Canopy Hunter expedition modal from outside the game component
+  // (e.g. the Home quick action). A one-shot module flag covers the case where
+  // the game was not mounted when the request fired (Home navigates to a core
+  // view first); the CustomEvent covers the already-mounted case. Intent is
+  // consumed after hydration so the entry gate reads loaded capacity rather
+  // than empty defaults.
+  useEffect(() => {
+    function showExpedition() {
+      setExpeditionOpen(true);
+      setExpeditionEntered(false);
+      setExpeditionFeeArmed(false);
+      setExpeditionResult(null);
+    }
+    if (hydrated && consumeExpeditionOpenRequest()) showExpedition();
+    function handleExpeditionAction(event: Event) {
+      const detail = (event as CustomEvent<{ action?: string }>).detail ?? {};
+      if (detail.action === "open-expedition") showExpedition();
+    }
+    window.addEventListener("arboreal-chondro-expedition-action", handleExpeditionAction);
+    return () => window.removeEventListener("arboreal-chondro-expedition-action", handleExpeditionAction);
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -995,6 +1056,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       breedingMessage,
       clutchEstablished,
       cinematicSeen,
+      expeditionNextAt,
       updatedAt,
     };
     latestSaveRef.current = save;
@@ -1013,7 +1075,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       }).catch(() => undefined);
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage, clutchEstablished, cinematicSeen]);
+  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage, clutchEstablished, cinematicSeen, expeditionNextAt]);
 
   useEffect(() => {
     const flushLatestSave = () => {
@@ -1335,6 +1397,65 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setBreedingMessage(`Season ${season} food and care provided for ${money(seasonCareCost)}.`);
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Canopy Hunter expedition (in-game event)                            */
+  /* ------------------------------------------------------------------ */
+
+  // The free expedition is ready when the player has never gone (0) or the
+  // seven-day cooldown has elapsed. `now` ticks every 60s, so the Home quick
+  // action and this modal refresh their cadence text without a reload.
+  const expeditionFreeReady = now >= expeditionNextAt;
+  const expeditionFreeInDays = Math.max(1, Math.ceil((expeditionNextAt - now) / DAY_MS));
+
+  function closeExpedition() {
+    setExpeditionOpen(false);
+    setExpeditionEntered(false);
+    setExpeditionFeeArmed(false);
+  }
+
+  // An expedition can catch up to EXPEDITION_PYTHONS snakes, so it only
+  // opens when there is room for the maximum bag. Catches are never
+  // partially imported or silently dropped.
+  function enterExpeditionFree() {
+    if (!started || !expeditionFreeReady || openSlots < EXPEDITION_PYTHONS) return;
+    setExpeditionNextAt(Date.now() + EXPEDITION_FREE_COOLDOWN_MS);
+    setExpeditionEntered(true);
+  }
+
+  function enterExpeditionPaid() {
+    if (!started || expeditionFreeReady || openSlots < EXPEDITION_PYTHONS) return;
+    if (cash < EXPEDITION_ENTRY_FEE) return;
+    if (!expeditionFeeArmed) {
+      setExpeditionFeeArmed(true);
+      if (expeditionFeeArmTimer.current !== null) window.clearTimeout(expeditionFeeArmTimer.current);
+      expeditionFeeArmTimer.current = window.setTimeout(() => setExpeditionFeeArmed(false), 5000);
+      return;
+    }
+    setCash((c) => c - EXPEDITION_ENTRY_FEE);
+    setExpeditionFeeArmed(false);
+    setExpeditionEntered(true);
+  }
+
+  function handleExpeditionCatch(wilds: WildSnake[]) {
+    if (!started) return;
+    // Defensive re-check: the gate requires EXPEDITION_PYTHONS open slots,
+    // and this refuses to drop animals if capacity somehow shrank mid-run.
+    const freeSlots = Math.max(0, animalHousingCapacity(enclosures) - colony.length);
+    if (wilds.length > freeSlots) return;
+    const nowStamp = Date.now();
+    setColony((current) => [
+      ...current,
+      ...wilds.map((wild, i) =>
+        normalizeSnake(wildSnakeToKeeperSnake(wild, `canopy-${nowStamp}-${i}`)),
+      ),
+    ]);
+    setExpeditionOpen(false);
+    setExpeditionEntered(false);
+    setExpeditionResult(
+      `Expedition haul: ${wilds.length} ${wilds.length === 1 ? "snake" : "snakes"} brought home to the colony.`,
+    );
+  }
+
   async function claimBreederInitials() {
     const initials = initialsInput.trim().toUpperCase();
     if (!/^[A-Z]{2,5}$/.test(initials)) {
@@ -1495,6 +1616,11 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setFavoriteIds([]);
     setCollapsedAnimalIds([]);
     setSelectedSnakeId(null);
+    setExpeditionNextAt(0);
+    setExpeditionOpen(false);
+    setExpeditionEntered(false);
+    setExpeditionFeeArmed(false);
+    setExpeditionResult(null);
     try {
       window.localStorage.removeItem(LOCAL_SAVE_KEY);
     } catch {}
@@ -1553,6 +1679,18 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   return (
     <BreederGameScreenContext.Provider value={screen}>
     <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 sm:py-8">
+      {expeditionResult ? (
+        <div role="status" className="mb-4 flex items-center gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.06] p-4">
+          <p className="flex-1 text-sm font-semibold text-emerald-100/85">{expeditionResult}</p>
+          <button
+            type="button"
+            onClick={() => setExpeditionResult(null)}
+            className="shrink-0 rounded-xl border border-white/[.09] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:bg-white/[.06] hover:text-white/85"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[.06] bg-white/[.018] p-3 sm:gap-3 sm:p-4">
         <div className="mr-auto min-w-[150px]">
           <div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-200/38">Season {season}</div>
@@ -1704,6 +1842,71 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Canopy Hunter expedition (in-game event). Backdrop click and Escape
+          close it; the game inside reports catches via onCatch and closes
+          itself via onClose. Entry is gated on colony space before the game
+          starts, and the catch handler re-checks capacity before importing —
+          catches are never partially imported or dropped. */}
+      {expeditionOpen ? (
+        <div role="dialog" aria-modal="true" aria-label="Canopy Hunter expedition" onClick={(event) => { if (event.target === event.currentTarget) closeExpedition(); }} className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
+          <div className="mx-auto max-w-4xl rounded-[30px] border border-white/[.09] bg-[#09120e] p-5 shadow-2xl sm:p-7">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="section-kicker">Special event</div>
+                <h2 className="mt-2 text-3xl font-semibold">Canopy Hunter</h2>
+              </div>
+              <button onClick={closeExpedition} className="rounded-xl border border-white/[.09] px-4 py-2 text-sm font-bold text-white/60">Close</button>
+            </div>
+            {!expeditionEntered ? (
+              <div className="mt-6">
+                <p className="text-sm leading-7 text-white/55">
+                  Head into the night canopy for a field expedition. Search the trees, grab the
+                  green tree pythons you find, and bring them home to your colony.
+                </p>
+                {openSlots < EXPEDITION_PYTHONS ? (
+                  <div role="status" className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/[.06] p-4 text-sm leading-6 text-red-100/80">
+                    Not enough room for an expedition — it can catch up to {EXPEDITION_PYTHONS} snakes
+                    and you have space for {openSlots}. Free up housing first so no catch goes without a home.
+                  </div>
+                ) : expeditionFreeReady ? (
+                  <div className="mt-4">
+                    <div role="status" className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.06] p-4 text-sm leading-6 text-emerald-100/85">
+                      Your free weekly expedition is ready. There is room for the whole catch.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={enterExpeditionFree}
+                      className="mt-4 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
+                    >
+                      Head out — free
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <div role="status" className="rounded-2xl border border-white/[.07] bg-white/[.02] p-4 text-sm leading-6 text-white/55">
+                      Next free expedition in {expeditionFreeInDays} {expeditionFreeInDays === 1 ? "day" : "days"}.
+                      Can&apos;t wait? Fund an extra trip out of pocket.
+                    </div>
+                    <button
+                      type="button"
+                      disabled={cash < EXPEDITION_ENTRY_FEE}
+                      onClick={enterExpeditionPaid}
+                      className="mt-4 w-full rounded-2xl border border-amber-200/25 bg-amber-200/[.07] px-6 py-4 text-base font-bold text-amber-100 transition hover:bg-amber-200/[.12] disabled:opacity-30"
+                    >
+                      {expeditionFeeArmed ? `Tap again to confirm — ${money(EXPEDITION_ENTRY_FEE)}` : `Extra expedition · ${money(EXPEDITION_ENTRY_FEE)}`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4">
+                <CanopyHunter onCatch={handleExpeditionCatch} onClose={closeExpedition} />
+              </div>
+            )}
           </div>
         </div>
       ) : null}

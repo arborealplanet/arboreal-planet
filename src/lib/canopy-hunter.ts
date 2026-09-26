@@ -1,7 +1,8 @@
 /**
- * Canopy Hunter — expedition setup, wild-snake generation, and Keeper-save
- * import logic. All functions here are pure (randomness is injectable) so the
- * expedition rules can be tested without a browser.
+ * Canopy Hunter — expedition setup and wild-snake generation for the
+ * in-game expedition event inside Arboreal Keeper. Generation is pure
+ * (randomness is injectable) so the expedition rules can be tested without
+ * a browser; `wildSnakeToKeeperSnake` shapes catches for the Keeper colony.
  */
 
 /* ------------------------------------------------------------------ */
@@ -12,8 +13,35 @@ export const EXPEDITION_TREES = 12;
 export const EXPEDITION_SEARCHES = 8;
 export const EXPEDITION_PYTHONS = 4;
 
-/** localStorage key used by the Arboreal Keeper (Chondro Breeder) game. */
-export const KEEPER_SAVE_KEY = "arboreal_chondro_breeder_v2";
+/* ------------------------------------------------------------------ */
+/* Expedition entry (Arboreal Keeper in-game event)                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Entry model: one free expedition per player per week; extra expeditions
+ * inside the same week cost game cash. TUNABLE — the owner can veto the
+ * cadence, the fee, or swap the weekly model for random-chance drops.
+ */
+export const EXPEDITION_FREE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+export const EXPEDITION_ENTRY_FEE = 2500;
+
+/**
+ * One-shot intent: lets a screen outside the Keeper game (e.g. the home
+ * screen) ask for the expedition modal. The request is consumed exactly
+ * once by the game component, so there is no race between navigation and
+ * the event listener when the game is not mounted yet.
+ */
+let expeditionOpenRequested = false;
+
+export function requestExpeditionOpen(): void {
+  expeditionOpenRequested = true;
+}
+
+export function consumeExpeditionOpenRequest(): boolean {
+  if (!expeditionOpenRequested) return false;
+  expeditionOpenRequested = false;
+  return true;
+}
 
 export const CANOPY_LOCALITIES = [
   "Biak",
@@ -350,55 +378,4 @@ const ESCAPE_LINES = [
 /** Flavor text for a missed catch. */
 export function randomEscapeLine(random: RandomFn = Math.random): string {
   return ESCAPE_LINES[Math.floor(random() * ESCAPE_LINES.length)];
-}
-
-/* ------------------------------------------------------------------ */
-/* Keeper-save import                                                  */
-/* ------------------------------------------------------------------ */
-
-export type ImportResult =
-  | { ok: true; saveJson: string; imported: number }
-  | { ok: false; reason: "missing" | "invalid" };
-
-interface KeeperSaveShape {
-  colony: unknown;
-  cash: unknown;
-  [key: string]: unknown;
-}
-
-function isKeeperSaveShape(value: unknown): value is KeeperSaveShape {
-  if (typeof value !== "object" || value === null) return false;
-  const save = value as Record<string, unknown>;
-  return Array.isArray(save.colony) && typeof save.cash === "number";
-}
-
-/**
- * Append wild snakes to an existing Keeper save. Returns the updated save
- * JSON (the caller writes it to localStorage). Never fabricates a save:
- * returns `{ ok: false }` when there is no save or it fails validation.
- */
-export function importWildSnakesIntoSave(
-  rawSave: string | null,
-  wilds: WildSnake[],
-  now: number = Date.now(),
-): ImportResult {
-  if (!rawSave) return { ok: false, reason: "missing" };
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawSave);
-  } catch {
-    return { ok: false, reason: "invalid" };
-  }
-  if (!isKeeperSaveShape(parsed)) return { ok: false, reason: "invalid" };
-
-  const imported = wilds.map((wild, i) =>
-    wildSnakeToKeeperSnake(wild, `canopy-${now}-${i}`),
-  );
-  const updated = {
-    ...(parsed as Record<string, unknown>),
-    colony: [...(parsed.colony as unknown[]), ...imported],
-    // The game's loader prefers the save with the newest updatedAt.
-    updatedAt: now,
-  };
-  return { ok: true, saveJson: JSON.stringify(updated), imported: imported.length };
 }
