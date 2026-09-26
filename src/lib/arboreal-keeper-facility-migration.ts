@@ -84,11 +84,9 @@ export function mirrorLegacyGtpHousingIntoFacility(
   for (const animal of unassigned) {
     const compatibleEmpty = desired.filter((enclosure) => !enclosure.occupantId && canUse(enclosure, animal));
     if (!compatibleEmpty.length) continue;
-    const target = animal.lifeStage === "adult"
-      ? compatibleEmpty.find((enclosure) => enclosure.enclosureId === "pvc-arboreal-medium")
-      : animal.lifeStage === "neonate"
-        ? compatibleEmpty.find((enclosure) => enclosure.enclosureId === "chondro-dojo-bin")
-        : compatibleEmpty.find((enclosure) => enclosure.enclosureId === "chondro-dojo-bin") ?? compatibleEmpty[0];
+    // Chondros of ANY life stage can live in a Chondro Dojo — adults are not
+    // forced into PVC. Prefer the Dojo, fall back to any compatible enclosure.
+    const target = compatibleEmpty.find((enclosure) => enclosure.enclosureId === "chondro-dojo-bin") ?? compatibleEmpty[0];
     if (!target) continue;
     target.occupantId = animal.id;
     target.occupantSpeciesId = "green_tree_python";
