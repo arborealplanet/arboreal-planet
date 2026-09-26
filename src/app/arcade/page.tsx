@@ -17,6 +17,13 @@ const sorterSteps = [
   { title: "4 · NAME", text: "Name the serpent's home valley for a +50 homeland bonus, then earn your rank up to Chondro Master." },
 ];
 
+const triviaSteps = [
+  { title: "1 · PLAY", text: "Ten questions per round drawn from green tree pythons, snake biology, husbandry and Arboreal Planet lore." },
+  { title: "2 · BEAT THE CLOCK", text: "Fifteen seconds per question — faster correct answers score more, and streaks multiply your points." },
+  { title: "3 · LIFELINE", text: "One 50/50 lifeline per round knocks out two wrong answers when a question has you cornered." },
+  { title: "4 · RANK UP", text: "Climb from Hatchling to Chondro Master and chase your persisted best score." },
+];
+
 export default function ArcadePage() {
   return (
     <main className="bg-black">
@@ -63,6 +70,15 @@ export default function ArcadePage() {
             title="Snake Sorter"
             description="The Sorting Ceremony: you are the Sorting Hat. Probe each serpent's scales, crown and homeland, call its House among the four chondro taxa — and name its valley for a bonus."
             steps={sorterSteps}
+          />
+          <GameCard
+            href="/arcade/reptile-trivia"
+            imageSrc="/arcade/reptile-trivia/reptile-trivia-logo.webp"
+            imageAlt="Reptile Trivia — green tree python coiled around a golden question mark"
+            kicker="New game"
+            title="Reptile Trivia"
+            description="Ten-question rounds on green tree pythons, snake biology, husbandry and Arboreal Planet lore. Beat the clock, ride your streak, and climb from Hatchling to Chondro Master."
+            steps={triviaSteps}
           />
         </div>
       </section>
