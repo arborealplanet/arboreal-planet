@@ -91,9 +91,12 @@ function PythonArt() {
 export function CanopyHunter({
   onCatch,
   onClose,
+  region: regionProp,
 }: {
   onCatch: (wilds: WildSnake[]) => void;
   onClose: () => void;
+  /** Pre-rolled expedition region (the flight intro already picked one). Falls back to rolling. */
+  region?: CanopyRegion | null;
 }) {
   const [phase, setPhase] = useState<Phase>("briefing");
   const [region, setRegion] = useState<CanopyRegion | null>(null);
@@ -148,7 +151,7 @@ export function CanopyHunter({
   }, [phase, searchesLeft, resolvedCount]);
 
   function startExpedition() {
-    const expeditionRegion = rollRegion();
+    const expeditionRegion = regionProp ?? rollRegion();
     const trees = createExpedition();
     const nextWilds: Record<number, WildSnake> = {};
     trees.forEach((treeIndex, i) => {

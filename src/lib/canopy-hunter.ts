@@ -230,6 +230,48 @@ export function rollRegion(random: RandomFn = Math.random): CanopyRegion {
 }
 
 /* ------------------------------------------------------------------ */
+/* Expedition flight cinematics                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Silent conservation-map flight intro per subspecies. Played full-screen
+ * before the player heads out, matched to the expedition region's
+ * signature subspecies.
+ */
+export const CANOPY_FLIGHT_VIDEO: Record<CanopySubspecies, string> = {
+  "Morelia azurea azurea": "/videos/conservation-map-flight-orange.mp4",
+  "Morelia azurea pulcher": "/videos/conservation-map-flight-blue.mp4",
+  "Morelia azurea utaraensis": "/videos/conservation-map-flight-yellow.mp4",
+  "Morelia viridis": "/videos/conservation-map-flight-green.mp4",
+};
+
+/**
+ * A region's signature subspecies: the most common subspecies across its
+ * localities (ties resolve to the first one seen).
+ */
+export function primarySubspeciesForRegion(region: CanopyRegion): CanopySubspecies {
+  const counts = new Map<CanopySubspecies, number>();
+  for (const locality of region.localities) {
+    const sub = CANOPY_LOCALITY_SUBSPECIES[locality];
+    counts.set(sub, (counts.get(sub) ?? 0) + 1);
+  }
+  let best: CanopySubspecies = "Morelia viridis";
+  let bestCount = -1;
+  for (const [sub, count] of counts) {
+    if (count > bestCount) {
+      best = sub;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+/** Flight intro video for an expedition region, matched by name. */
+export function flightVideoForRegion(region: CanopyRegion): string {
+  return CANOPY_FLIGHT_VIDEO[primarySubspeciesForRegion(region)];
+}
+
+/* ------------------------------------------------------------------ */
 /* Wild-snake generation                                               */
 /* ------------------------------------------------------------------ */
 

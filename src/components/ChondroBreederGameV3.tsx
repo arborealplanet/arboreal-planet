@@ -15,7 +15,10 @@ import {
   EXPEDITION_FREE_COOLDOWN_MS,
   EXPEDITION_PYTHONS,
   consumeExpeditionOpenRequest,
+  flightVideoForRegion,
+  rollRegion,
   wildSnakeToKeeperSnake,
+  type CanopyRegion,
   type WildSnake,
 } from "@/lib/canopy-hunter";
 
@@ -821,6 +824,11 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [expeditionFeeArmed, setExpeditionFeeArmed] = useState(false);
   const expeditionFeeArmTimer = useRef<number | null>(null);
   const [expeditionResult, setExpeditionResult] = useState<string | null>(null);
+  // The rolled destination region and whether its flight intro has played.
+  // The flight video (matched to the region's signature subspecies) plays
+  // full-screen after entry, before the canopy search begins.
+  const [expeditionRegion, setExpeditionRegion] = useState<CanopyRegion | null>(null);
+  const [expeditionFlightDone, setExpeditionFlightDone] = useState(false);
   useEffect(() => () => {
     if (seasonCareArmTimer.current !== null) window.clearTimeout(seasonCareArmTimer.current);
     if (expeditionFeeArmTimer.current !== null) window.clearTimeout(expeditionFeeArmTimer.current);
@@ -1000,6 +1008,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         setExpeditionOpen(false);
         setExpeditionEntered(false);
         setExpeditionFeeArmed(false);
+        setExpeditionRegion(null);
+        setExpeditionFlightDone(false);
       } else setSelectedSnakeId(null);
     };
     window.addEventListener("keydown", onKeyDown);
@@ -1017,6 +1027,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       setExpeditionOpen(true);
       setExpeditionEntered(false);
       setExpeditionFeeArmed(false);
+      setExpeditionRegion(null);
+      setExpeditionFlightDone(false);
       setExpeditionResult(null);
     }
     if (hydrated && consumeExpeditionOpenRequest()) showExpedition();
@@ -1411,6 +1423,19 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setExpeditionOpen(false);
     setExpeditionEntered(false);
     setExpeditionFeeArmed(false);
+    setExpeditionRegion(null);
+    setExpeditionFlightDone(false);
+  }
+
+  // Rolls tonight's destination, queues its flight intro, and marks the
+  // player as entered. Reduced-motion players skip the flight video.
+  function beginExpeditionFlight() {
+    setExpeditionRegion(rollRegion());
+    const skipFlight =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setExpeditionFlightDone(skipFlight);
+    setExpeditionEntered(true);
   }
 
   // An expedition can catch up to EXPEDITION_PYTHONS snakes, so it only
@@ -1419,7 +1444,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   function enterExpeditionFree() {
     if (!started || !expeditionFreeReady || openSlots < EXPEDITION_PYTHONS) return;
     setExpeditionNextAt(Date.now() + EXPEDITION_FREE_COOLDOWN_MS);
-    setExpeditionEntered(true);
+    beginExpeditionFlight();
   }
 
   function enterExpeditionPaid() {
@@ -1433,7 +1458,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     }
     setCash((c) => c - EXPEDITION_ENTRY_FEE);
     setExpeditionFeeArmed(false);
-    setExpeditionEntered(true);
+    beginExpeditionFlight();
   }
 
   function handleExpeditionCatch(wilds: WildSnake[]) {
@@ -1451,6 +1476,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     ]);
     setExpeditionOpen(false);
     setExpeditionEntered(false);
+    setExpeditionRegion(null);
+    setExpeditionFlightDone(false);
     setExpeditionResult(
       `Expedition haul: ${wilds.length} ${wilds.length === 1 ? "snake" : "snakes"} brought home to the colony.`,
     );
@@ -1902,9 +1929,29 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   </div>
                 )}
               </div>
+            ) : expeditionEntered && expeditionRegion && !expeditionFlightDone ? (
+              <div role="dialog" aria-modal="true" aria-label={`Flying to ${expeditionRegion.name}`} className="fixed inset-0 z-[70] bg-black">
+                <video
+                  key={expeditionRegion.id}
+                  className="h-full w-full object-contain"
+                  src={flightVideoForRegion(expeditionRegion)}
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  onEnded={() => setExpeditionFlightDone(true)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setExpeditionFlightDone(true)}
+                  className="absolute bottom-5 right-5 rounded-xl border border-white/15 bg-black/60 px-4 py-2 text-sm font-bold text-white/70 backdrop-blur transition hover:bg-black/80"
+                >
+                  Skip flight
+                </button>
+              </div>
             ) : (
               <div className="mt-4">
-                <CanopyHunter onCatch={handleExpeditionCatch} onClose={closeExpedition} />
+                <CanopyHunter region={expeditionRegion} onCatch={handleExpeditionCatch} onClose={closeExpedition} />
               </div>
             )}
           </div>
