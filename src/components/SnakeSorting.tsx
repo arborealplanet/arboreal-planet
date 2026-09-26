@@ -14,6 +14,7 @@ import {
   HOUSE_POINTS,
   LOCALITY_POINTS,
   PROBE_META,
+  RANKS,
   SNAKES,
   rankFor,
   readBest,
@@ -59,8 +60,20 @@ function fillTemplate(t: string, vars: Record<string, string>): string {
 
 /* ------------------------------- sound ---------------------------------- */
 
-function useSynth(mutedRef: React.MutableRefObject<boolean>) {
-  const ctxRef = useRef<AudioContext | null>(null);
+/* Haptics: a gentle buzz on reveals for phones that support it. */
+function buzz(pattern: number | number[]) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  } catch {
+    /* no haptics — stay still */
+  }
+}
+
+const MUTE_KEY = "snake_sorter_muted_v1";
+
+function useSynth(mutedRef: React.MutableRefObject<boolean>) {  const ctxRef = useRef<AudioContext | null>(null);
 
   const tone = (
     freq: number,
@@ -276,6 +289,16 @@ interface Gain {
   locality: number;
 }
 
+interface RecapEntry {
+  snakeId: string;
+  name: string;
+  pickedHouse: HouseId;
+  house: HouseId;
+  houseCorrect: boolean;
+  locality: string | null;
+  localityCorrect: boolean | null;
+}
+
 /* Best-score store. useSyncExternalStore with a server snapshot of 0 keeps
    SSR HTML and the hydrated client in agreement for returning players —
    their stored best appears right after hydration, never as a mismatch. */
@@ -328,8 +351,15 @@ export function SnakeSorting() {
   const [isNewBest, setIsNewBest] = useState(false);
   const [bestCeremony, setBestCeremony] = useBestScore(BEST_CEREMONY_KEY);
   const [bestEndless, setBestEndless] = useBestScore(BEST_ENDLESS_KEY);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(() => {
+    try {
+      return window.localStorage.getItem(MUTE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [showHow, setShowHow] = useState(false);
+  const [recap, setRecap] = useState<RecapEntry[]>([]);
 
   const timeouts = useRef<number[]>([]);
   const sortElapsedMs = useRef(0);
@@ -346,6 +376,11 @@ export function SnakeSorting() {
 
   useEffect(() => {
     mutedRef.current = muted;
+    try {
+      window.localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+    } catch {
+      /* storage unavailable — mute lasts the session */
+    }
   }, [muted]);
 
   useEffect(
@@ -412,6 +447,7 @@ export function SnakeSorting() {
     setLocalitiesOffered(0);
     setStrikes(0);
     setIsNewBest(false);
+    setRecap([]);
     resetSnakeState();
     setPhase("arrive");
     setHatLine(pick(HAT_LINES.arrive));
@@ -516,6 +552,18 @@ export function SnakeSorting() {
     if (!snake) return;
     const correct = id === snake.house;
     setHouseAttempts((c) => c + 1);
+    setRecap((r) => [
+      ...r,
+      {
+        snakeId: snake.id,
+        name: snake.name,
+        pickedHouse: id,
+        house: snake.house,
+        houseCorrect: correct,
+        locality: null,
+        localityCorrect: null,
+      },
+    ]);
     if (correct) {
       const spd = speedBonus(elapsedMs);
       const sBonus = streak * 10;
@@ -535,6 +583,7 @@ export function SnakeSorting() {
       setHouseWasCorrect(true);
       setHatLine(`${HAT_LINES.correctHouse[snake.house]}`);
       synth.slam();
+      buzz(25);
       later(500, synth.chime);
       if (newStreak === 5) later(1400, () => setHatLine(HAT_LINES.streak5));
       else if (newStreak === 3) later(1400, () => setHatLine(HAT_LINES.streak3));
@@ -549,6 +598,7 @@ export function SnakeSorting() {
         }),
       );
       synth.buzz();
+      buzz([70, 50, 70]);
       if (mode === "endless") {
         setStrikes((s) => s + 1);
       }
@@ -575,12 +625,18 @@ export function SnakeSorting() {
     const correct = loc === snake.locality;
     setPickedLocality(loc);
     setLocalityWasCorrect(correct);
+    setRecap((r) =>
+      r.map((e, i) =>
+        i === r.length - 1 ? { ...e, locality: loc, localityCorrect: correct } : e,
+      ),
+    );
     if (correct) {
       setGain((g) => ({ ...g, locality: LOCALITY_POINTS }));
       addScore(LOCALITY_POINTS);
       setLocalitiesCorrect((c) => c + 1);
       setHatLine(fillTemplate(pick(HAT_LINES.localityCorrect), { locality: loc }));
       synth.sparkle();
+      buzz(20);
     } else {
       setHatLine(
         fillTemplate(pick(HAT_LINES.localityWrong), { locality: snake.locality }),
@@ -663,6 +719,7 @@ export function SnakeSorting() {
             localitiesOffered={localitiesOffered}
             isNewBest={isNewBest}
             hatLine={hatLine}
+            recap={recap}
             onRestart={startGame}
           />
         ) : (
@@ -1130,6 +1187,7 @@ function ResultsScreen({
   localitiesOffered,
   isNewBest,
   hatLine,
+  recap,
   onRestart,
 }: {
   score: number;
@@ -1142,9 +1200,12 @@ function ResultsScreen({
   localitiesOffered: number;
   isNewBest: boolean;
   hatLine: string;
+  recap: RecapEntry[];
   onRestart: (m: Mode) => void;
 }) {
   const rank = rankFor(score);
+  const nextRank = [...RANKS].reverse().find((r) => r.min > score);
+  const shortHouse = (h: HouseId) => HOUSE_BY_ID[h].name.replace("House ", "");
   return (
     <div className="ss-rise flex flex-col items-center pt-8 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-teal-200/80">
@@ -1158,6 +1219,11 @@ function ResultsScreen({
       />
       <h2 className="mt-4 font-serif text-4xl font-black text-amber-50">{rank.title}</h2>
       <p className="mt-1 text-[13px] italic text-white/55">{rank.blurb}</p>
+      {nextRank && (
+        <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-200/70">
+          {nextRank.min - score} pts to {nextRank.title}
+        </p>
+      )}
       <p className="mt-3 text-5xl font-black text-amber-200">{score}</p>
       {isNewBest && (
         <p className="ss-pop mt-2 rounded-full border border-amber-300/40 bg-amber-400/15 px-4 py-1 text-[12px] font-black uppercase tracking-widest text-amber-200">
@@ -1183,6 +1249,38 @@ function ResultsScreen({
           </div>
         ))}
       </div>
+
+      {recap.length > 0 && (
+        <div className="mt-5 w-full rounded-2xl border border-white/10 bg-black/55 p-3 text-left backdrop-blur-sm">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white/45">
+            {mode === "ceremony" ? "Ceremony recap" : "Night's tally"}
+          </p>
+          <ul className="space-y-1.5">
+            {recap.map((e, i) => (
+              <li key={i} className="flex items-center gap-2 text-[12px]">
+                <span
+                  className={`w-4 shrink-0 font-black ${e.houseCorrect ? "text-emerald-300" : "text-red-300"}`}
+                >
+                  {e.houseCorrect ? "✓" : "✗"}
+                </span>
+                <span className="shrink-0 font-semibold text-white/90">{e.name}</span>
+                <span className="truncate text-white/50">
+                  {e.houseCorrect
+                    ? shortHouse(e.house)
+                    : `called ${shortHouse(e.pickedHouse)}, was ${shortHouse(e.house)}`}
+                </span>
+                <span className="ml-auto shrink-0 text-white/50">
+                  {e.localityCorrect == null
+                    ? ""
+                    : e.localityCorrect
+                      ? `📍 ${e.locality} ✓`
+                      : `📍 ${e.locality} ✗`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-4 flex w-full items-start gap-2.5 text-left">
         {/* eslint-disable-next-line @next/next/no-img-element */}
