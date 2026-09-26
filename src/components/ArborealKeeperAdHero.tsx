@@ -7,7 +7,7 @@ import { useEffect } from "react";
 // thing a visitor sees on the Arboreal Keeper entry routes; the CTA dismisses
 // the layer and reveals the game underneath, which stays fully intact.
 // The strike-sting bumper plays full-bleed behind the copy (muted loop).
-export function ArborealKeeperAdHero({ onEnter }: { onEnter: () => void }) {
+export function ArborealKeeperAdHero({ onEnter, onReplayIntro }: { onEnter: () => void; onReplayIntro?: () => void }) {
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -82,6 +82,16 @@ export function ArborealKeeperAdHero({ onEnter }: { onEnter: () => void }) {
           <div className="mt-6 text-[10px] font-bold uppercase tracking-[.22em] text-white/30">
             Free to play &middot; Your program saves as you go
           </div>
+
+          {onReplayIntro ? (
+            <button
+              type="button"
+              onClick={onReplayIntro}
+              className="mt-5 text-xs text-white/35 underline decoration-white/20 underline-offset-4 transition hover:text-white/60"
+            >
+              Replay the intro
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

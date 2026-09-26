@@ -7,9 +7,10 @@ import { ArborealPlanetMark } from "@/components/BrandVisuals"; import { playHan
 
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
 import { ArborealKeeperAdHero } from "@/components/ArborealKeeperAdHero";
+import IntroCinematic from "@/components/IntroCinematic";
 import { ArborealKeeperFacilityOverview } from "@/components/ArborealKeeperFacilityOverview";
 import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
-import { ChondroBreederGameV3 } from "@/components/ChondroBreederGameV3";
+import { ChondroBreederGameV3, hasSeenIntroCinematic } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
 import { ChondroBreederHomeStatus } from "@/components/ChondroBreederHomeStatus";
@@ -27,21 +28,6 @@ import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
 import { requestExpeditionOpen, EXPEDITION_ENTRY_FEE, EXPEDITION_FREE_COOLDOWN_MS } from "@/lib/canopy-hunter";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
-
-// Fast path for returning players: a started local save (or a stocked
-// colony) means no ad. Read during render as initial state (never a
-// synchronous setState inside an effect); SSR-safe via the window guard.
-function readLocalReturningPlayer(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
-    if (raw) {
-      const parsed = JSON.parse(raw) as { started?: boolean; colony?: unknown[] };
-      if (parsed?.started === true || (Array.isArray(parsed?.colony) && parsed.colony.length > 0)) return true;
-    }
-  } catch {}
-  return false;
-}
 
 /** Seven-day window in ms — derived from the expedition free-cooldown so the
  * Home card stays in sync with the entry model in src/lib/canopy-hunter.ts. */
@@ -110,26 +96,14 @@ export function ChondroBreederWorkspace() {
   function toggleNavCollapsed() {
     setNavCollapsed((prev) => !prev);
   }
-  // Intro advertisement layer: the first thing seen on the Arboreal Keeper
-  // entry routes. Dismissing it reveals the game underneath, untouched.
-  // First-time players only — skipped entirely when a save already exists.
-  const [returningPlayer] = useState(readLocalReturningPlayer);
-  const [showAd, setShowAd] = useState(!returningPlayer); const [adReady, setAdReady] = useState(returningPlayer); const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
-  useEffect(() => {
-    // Returning players were resolved above during render — no ad, no fetch.
-    if (returningPlayer) return;
-    let active = true;
-    // Cloud check covers returning players on a fresh device.
-    void fetch("/api/hatchery/chondro-breeder/save", { cache: "no-store" })
-      .then((response) => response.json().catch(() => null))
-      .then((data) => {
-        if (!active) return;
-        if (data && data.save) setShowAd(false);
-        setAdReady(true);
-      })
-      .catch(() => { if (active) setAdReady(true); });
-    return () => { active = false; };
-  }, [returningPlayer]);
+  // Title-screen behavior: the splash shows on every visit to the Arboreal
+  // Keeper entry routes. Dismissing it reveals the game underneath, untouched.
+  const [showAd, setShowAd] = useState(true);
+  const [replayingIntro, setReplayingIntro] = useState(false);
+  // The replay option only appears once the player has actually seen the
+  // cinematic — read from the persisted mirror so it works on fresh devices.
+  const [canReplayIntro] = useState(hasSeenIntroCinematic);
+  const viewRef = useRef<WorkspaceView>("home"); const bredLineRef = useRef(false);
   const active = views.find((item) => item.id === view) ?? views[0];
 
   function openView(next: WorkspaceView) { if (viewRef.current === "market" && next !== "market") playHankScaleLine(16); if (next === "breeding" && !bredLineRef.current) { bredLineRef.current = true; playHankScaleLine(14); } viewRef.current = next;
@@ -139,7 +113,12 @@ export function ChondroBreederWorkspace() {
 
   return (
     <div className="min-h-[100dvh] bg-[#030806] pb-[calc(104px+env(safe-area-inset-bottom))] text-white">
-      {showAd && adReady ? <ArborealKeeperAdHero onEnter={() => setShowAd(false)} /> : null}
+      {showAd ? (
+        <ArborealKeeperAdHero
+          onEnter={() => setShowAd(false)}
+          onReplayIntro={canReplayIntro ? () => { setShowAd(false); setReplayingIntro(true); } : undefined}
+        />
+      ) : null}
       <header className="sticky top-0 z-[70] border-b border-white/[.055] bg-[#030806]/96 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[60px] max-w-[1500px] items-center gap-3 px-3 sm:min-h-[66px] sm:px-5">
           <Link
@@ -241,6 +220,13 @@ export function ChondroBreederWorkspace() {
           );
         })}
       </nav>
+
+      {/* Title-screen intro replay: full-screen above everything; never re-grants credit. */}
+      {replayingIntro ? (
+        <div className="fixed inset-0 z-[95]">
+          <IntroCinematic onDone={() => setReplayingIntro(false)} />
+        </div>
+      ) : null}
     </div>
   );
 }

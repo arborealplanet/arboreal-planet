@@ -35,6 +35,11 @@ function writeCinematicSeenMirror(): void {
   try { window.localStorage.setItem(CINEMATIC_SEEN_KEY, "1"); } catch {}
 }
 
+/** Exported for the workspace title screen: has the player seen the intro cinematic? */
+export function hasSeenIntroCinematic(): boolean {
+  return readCinematicSeenMirror();
+}
+
 type Subspecies =
   | "Morelia azurea azurea"
   | "Morelia azurea pulcher"
