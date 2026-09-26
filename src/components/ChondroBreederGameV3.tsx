@@ -35,9 +35,30 @@ function writeCinematicSeenMirror(): void {
   try { window.localStorage.setItem(CINEMATIC_SEEN_KEY, "1"); } catch {}
 }
 
+/**
+ * Fallback for players whose save predates the mirror key (or whose mirror was
+ * lost): the game writes a local save copy on every persist, and that copy
+ * carries cinematicSeen once the intro has played or been skipped.
+ * (LOCAL_SAVE_KEY is declared below; this only runs at call time.)
+ */
+function readCinematicSeenFromSave(): boolean {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+    if (!raw) return false;
+    const parsed: unknown = JSON.parse(raw);
+    return (
+      !!parsed &&
+      typeof parsed === "object" &&
+      (parsed as { cinematicSeen?: unknown }).cinematicSeen === true
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Exported for the workspace title screen: has the player seen the intro cinematic? */
 export function hasSeenIntroCinematic(): boolean {
-  return readCinematicSeenMirror();
+  return readCinematicSeenMirror() || readCinematicSeenFromSave();
 }
 
 type Subspecies =
