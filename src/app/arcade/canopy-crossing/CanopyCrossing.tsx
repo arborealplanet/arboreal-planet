@@ -381,13 +381,22 @@ export default function CanopyCrossing() {
         <div><div style={{fontSize:12,letterSpacing:3,color:"#8ebc77"}}>ARBOREAL PLANET ARCADE · PROTOTYPE</div><h1 style={{margin:"3px 0 0",fontSize:"clamp(28px,6vw,54px)",lineHeight:.95}}>CANOPY CROSSING</h1></div>
         <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score} · BEST {best} · 🪲 {bugs}<br/><span style={{color:"#e2605c"}}>{"♥".repeat(Math.max(0,lives))}</span><br/>{hudStage.name.toUpperCase()}<br/><span style={{fontSize:11,color:"#9dc98f",letterSpacing:1}}>{objectiveOf(hudStage)}</span></div>
       </header>
+      <div style={{position:"relative"}}>
       <section style={{position:"relative",height:narrow?"min(50svh,480px)":"min(72svh,760px)",minHeight:narrow?340:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}} aria-label="Canopy Crossing game"/>
-        {(!running||message)&&<div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:"min(82%,420px)",padding:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.88)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
-          <strong style={{fontSize:running?20:30}}>{running?message:"CLIMB THE CANOPY"}</strong>
-          {!running&&<><img src="/arcade/canopy-crossing/monitor-up.webp" alt="Baby blue tree monitor" style={{width:170,margin:"-6px auto 4px",display:"block",mixBlendMode:"screen"}}/><p style={{color:"#b9c9b7",lineHeight:1.5}}>Guide a baby blue tree monitor through five escalating New Guinea canopy stages. Some climbs end at the crown — others at the far bank. Ride branches and vines, grab insects, dodge predators.</p><button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button></>}
+        {(running&&message)&&<div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:"min(82%,420px)",padding:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.88)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
+          <strong style={{fontSize:20}}>{message}</strong>
         </div>}
       </section>
+      {!running&&<div style={{position:"absolute",inset:0,display:"flex",overflowY:"auto",padding:12,borderRadius:20}}>
+        <div style={{width:"min(88%,380px)",margin:"auto",padding:narrow?14:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.92)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
+          <strong style={{fontSize:narrow?22:30}}>CLIMB THE CANOPY</strong>
+          <img src="/arcade/canopy-crossing/monitor-up.webp" alt="Baby blue tree monitor" style={{width:narrow?104:170,margin:"-6px auto 4px",display:"block",mixBlendMode:"screen"}}/>
+          <p style={{color:"#b9c9b7",lineHeight:1.5,fontSize:narrow?13:16,margin:"6px 0 12px"}}>Guide a baby blue tree monitor through five escalating New Guinea canopy stages. Some climbs end at the crown — others at the far bank. Ride branches and vines, grab insects, dodge predators.</p>
+          <button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button>
+        </div>
+      </div>}
+      </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,maxWidth:300,margin:"14px auto 0",userSelect:"none"}}>
         <span/><button onClick={()=>move(0,-1)} style={btn}>▲</button><span/>
         <button onClick={()=>move(-1,0)} style={btn}>◀</button><button onClick={()=>move(0,1)} style={btn}>▼</button><button onClick={()=>move(1,0)} style={btn}>▶</button>
