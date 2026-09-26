@@ -20,6 +20,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/community",
     "/friends",
     "/arcade",
+    "/arcade/arboreal-keeper",
+    "/arcade/snake-sorting",
     "/search",
     "/privacy",
     "/terms",

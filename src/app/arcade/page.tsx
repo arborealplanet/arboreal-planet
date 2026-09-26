@@ -10,6 +10,13 @@ const keeperSteps = [
 
 const achievements = ["First Offspring", "First Clutch", "First Litter", "Three Generations", "Lineage Keeper", "Facility Builder"];
 
+const sorterSteps = [
+  { title: "1 · MEET", text: "Ten wild specimens step up to the sorting chamber, each hiding clues in its scales, crown and origin." },
+  { title: "2 · PROBE", text: "Probe each serpent's scales, crown and homeland — but every probe shrinks your swift-call bonus." },
+  { title: "3 · SORT", text: "Call its House: Azurea, Pulcher, Utaraensis or Viridis. Call early and blind for up to +75." },
+  { title: "4 · NAME", text: "Name the serpent's home valley for a +50 homeland bonus, then earn your rank up to Chondro Master." },
+];
+
 export default function ArcadePage() {
   return (
     <main className="bg-black">
@@ -48,6 +55,15 @@ export default function ArcadePage() {
             steps={keeperSteps}
           />
           {/* Canopy Hunter is intentionally unlisted until launch — the route /arcade/canopy-hunter stays live for owner review. */}
+          <GameCard
+            href="/arcade/snake-sorting"
+            imageSrc="/arcade/snake-sorting/snake-sorter-logo.webp"
+            imageAlt="Snake Sorter — The Sorting Ceremony"
+            kicker="New game"
+            title="Snake Sorter"
+            description="The Sorting Ceremony: you are the Sorting Hat. Probe each serpent's scales, crown and homeland, call its House among the four chondro taxa — and name its valley for a bonus."
+            steps={sorterSteps}
+          />
         </div>
       </section>
 
