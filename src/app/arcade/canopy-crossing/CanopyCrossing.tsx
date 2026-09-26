@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 
 const COLS = 9;
@@ -9,27 +9,44 @@ const START = { x: 4, y: 11 };
 const LANE_TYPES = ["goal","branch","hazard","branch","vine","rest","branch","hazard","vine","branch","rest","start"] as const;
 
 type Goal = { type: "top" } | { type: "side"; dir: "left" | "right"; row: number };
-type Stage = { name: string; subtitle: string; speed: number; bonus: number; goal: Goal };
+type Stage = { name: string; subtitle: string; bonus: number; goal: Goal };
 
 // Canopy Crossing's own identity: not every stage climbs. Some crossings
 // end at the crown (top row), others at the far bank (walk off the screen edge).
 const STAGES: Stage[] = [
-  { name: "Rainforest Edge", subtitle: "Learn the canopy · climb to the crown", speed: 1, bonus: 500, goal: { type: "top" } },
-  { name: "River Crossing", subtitle: "Fast wet limbs · cross to the far bank", speed: 1.12, bonus: 650, goal: { type: "side", dir: "right", row: 6 } },
-  { name: "Dense Canopy", subtitle: "Tighter safe windows · climb to the crown", speed: 1.25, bonus: 800, goal: { type: "top" } },
-  { name: "Night Canopy", subtitle: "Predators in the dark · slip out the far side", speed: 1.38, bonus: 1000, goal: { type: "side", dir: "left", row: 3 } },
-  { name: "Tropical Storm", subtitle: "Survive the crown · final ascent", speed: 1.55, bonus: 1500, goal: { type: "top" } },
+  { name: "Rainforest Edge", subtitle: "Learn the canopy · climb to the crown", bonus: 500, goal: { type: "top" } },
+  { name: "River Crossing", subtitle: "Fast wet limbs · cross to the far bank", bonus: 650, goal: { type: "side", dir: "right", row: 6 } },
+  { name: "Dense Canopy", subtitle: "Tighter safe windows · climb to the crown", bonus: 800, goal: { type: "top" } },
+  { name: "Night Canopy", subtitle: "Predators in the dark · slip out the far side", bonus: 1000, goal: { type: "side", dir: "left", row: 3 } },
+  { name: "Tropical Storm", subtitle: "Survive the crown · final ascent", bonus: 1500, goal: { type: "top" } },
 ];
 
 const stageOf = (level: number): Stage => STAGES[Math.min(Math.max(level, 1) - 1, STAGES.length - 1)];
 const objectiveOf = (s: Stage): string =>
   s.goal.type === "top" ? "↑ REACH THE CROWN" : s.goal.dir === "right" ? "→ CROSS TO THE FAR BANK" : "← CROSS TO THE FAR BANK";
 
+// Five-stage difficulty tuning. Stage 1 is gentle (wide limbs, slow, few
+// predators); stage 5 is a gauntlet (narrow limbs, fast, crowded lanes).
+type Tuning = { speed:number; branchW:number; vineW:number; hazW:number; movers:number; spacing:number; insects:number; hazSpeed:number };
+const TUNING: Tuning[] = [
+  { speed:1.00, branchW:3.0, vineW:1.70, hazW:1.10, movers:3, spacing:4.2, insects:6, hazSpeed:0.85 }, // Rainforest Edge — learn the ropes
+  { speed:1.12, branchW:2.7, vineW:1.60, hazW:1.05, movers:3, spacing:3.9, insects:6, hazSpeed:0.95 }, // River Crossing — first side exit
+  { speed:1.25, branchW:2.4, vineW:1.50, hazW:1.00, movers:3, spacing:3.6, insects:5, hazSpeed:1.05 }, // Dense Canopy — tighter windows
+  { speed:1.38, branchW:2.2, vineW:1.45, hazW:0.95, movers:4, spacing:3.4, insects:5, hazSpeed:1.15 }, // Night Canopy — crowded, dark
+  { speed:1.55, branchW:2.0, vineW:1.40, hazW:0.90, movers:4, spacing:3.1, insects:4, hazSpeed:1.25 }, // Tropical Storm — gauntlet
+];
+const tuningOf = (level: number): Tuning => TUNING[Math.min(Math.max(level, 1) - 1, TUNING.length - 1)];
+
 type Pos = { x:number; y:number };
 type Mover = { row:number; x:number; width:number; speed:number; kind:"branch"|"hazard"|"vine" };
 type Insect = { x:number; y:number };
 type Firefly = {x:number;y:number;phase:number};
 const FIREFLIES:Firefly[] = Array.from({length:18},(_,i)=>({x:(i*47)%100,y:(i*73)%100,phase:i*.83}));
+
+// Juice: floating score text + leaf/spark particles, stored in grid units
+// so they survive canvas resizes.
+type Floater={gx:number;gy:number;text:string;color:string;t0:number};
+type Particle={gx:number;gy:number;vx:number;vy:number;t0:number;life:number;color:string;size:number};
 
 // Production sprite art: generated in the locked Arboreal Planet style
 // (bold cartoon-vector, thick outlines, cel shading, black keyable bg).
@@ -49,30 +66,32 @@ const clamp = (n:number,min:number,max:number) => Math.max(min,Math.min(max,n));
 
 function makeMovers(level:number): Mover[] {
   const movers: Mover[] = [];
-  const goal = stageOf(level).goal;
+  const st = stageOf(level);
+  const tn = tuningOf(level);
   for (let row=1; row<=9; row++) {
     if (row===5) continue;
-    if (goal.type==="side" && row===goal.row) {
+    if (st.goal.type==="side" && row===st.goal.row) {
       // Exit limb: a safe perch patrolled by predators — time the walk to the edge.
-      for (let i=0;i<2;i++) movers.push({row,x:i*4.5,width:1.1,speed:(i%2?1:-1)*(0.85+level*0.07),kind:"hazard"});
+      for (let i=0;i<2;i++) movers.push({row,x:i*(COLS/2),width:tn.hazW,speed:(i%2?1:-1)*tn.hazSpeed,kind:"hazard"});
       continue;
     }
     const kind = LANE_TYPES[row] === "hazard" ? "hazard" : LANE_TYPES[row] === "vine" ? "vine" : "branch";
     const dir = row % 2 ? 1 : -1;
-    const stage=stageOf(level);
-    const base = (0.40 + level * 0.025 + row * 0.012) * stage.speed;
-    for (let i=0;i<3;i++) movers.push({row,x:i*3.6+(row%3)*0.45,width:kind==="branch"?2.25:kind==="vine"?1.55:1.1,speed:dir*base,kind});
+    const base = (0.40 + row * 0.012) * tn.speed;
+    for (let i=0;i<tn.movers;i++) movers.push({row,x:i*tn.spacing+(row%3)*0.45,width:kind==="branch"?tn.branchW:kind==="vine"?tn.vineW:tn.hazW,speed:dir*base,kind});
   }
   return movers;
 }
 
 function makeInsects(level:number): Insect[] {
-  const goal = stageOf(level).goal;
+  const st = stageOf(level);
+  const goal = st.goal;
   const rows = [1,2,3,4,6,7,8,9].filter(r=>!(goal.type==="side"&&r===goal.row));
   let seed = level*97+13;
   const rnd = () => (seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
   const spots: Insect[] = [];
-  for (let i=0;i<6;i++) spots.push({x:Math.floor(rnd()*COLS),y:rows[Math.floor(rnd()*rows.length)]});
+  const n = tuningOf(level).insects;
+  for (let i=0;i<n;i++) spots.push({x:Math.floor(rnd()*COLS),y:rows[Math.floor(rnd()*rows.length)]});
   return spots;
 }
 
@@ -95,15 +114,36 @@ export default function CanopyCrossing() {
   const [level,setLevel] = useState(1);
   const [bugs,setBugs] = useState(0);
   const [message,setMessage] = useState("Cross five wild canopy stages. Climb to the crown — or slip out the far bank. Ride branches and vines; dodge predators.");
-  const [best,setBest] = useState(0);
+  // Best score via useSyncExternalStore: SSR renders 0 (no hydration mismatch),
+  // client reads localStorage; syncBest writes + notifies subscribers.
+  const BEST_KEY = "canopy-crossing-best";
+  const readBest = useCallback(() => { try { return Number(localStorage.getItem(BEST_KEY) || 0); } catch { return 0; } }, []);
+  const subscribeBest = useCallback((cb: () => void) => { window.addEventListener("cc-best", cb); return () => window.removeEventListener("cc-best", cb); }, []);
+  const best = useSyncExternalStore(subscribeBest, readBest, () => 0);
+  const syncBest = useCallback((value: number) => {
+    try {
+      if (value > Number(localStorage.getItem(BEST_KEY) || 0)) {
+        localStorage.setItem(BEST_KEY, String(value));
+        window.dispatchEvent(new Event("cc-best"));
+      }
+    } catch {}
+  }, []);
   const [paused,setPaused] = useState(false);
   const [narrow,setNarrow] = useState(false);
-  const bestRef = useRef(0);
+  const [endKind,setEndKind] = useState<null|"win"|"gameover">(null);
   const pausedRef = useRef(false);
   const stageStartRef = useRef(0);
   const lastRowRef = useRef(START.y);
   const messageUntilRef = useRef(0);
   const spritesRef = useRef<Record<string, HTMLImageElement>>({});
+  const floatersRef = useRef<Floater[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
+  const hopRef = useRef(0);
+  const dieRef = useRef(0);
+  const clearRef = useRef(0);
+  const audioRef = useRef<{ctx:AudioContext|null}>({ctx:null});
+  const mutedRef = useRef(false);
+  const [muted,setMuted]=useState(false);
   useEffect(()=>{
     for(const [k,src] of Object.entries(SPRITE_SRC)){
       const img=new Image();
@@ -120,11 +160,39 @@ export default function CanopyCrossing() {
   },[]);
 
   const resetPlayer = useCallback(() => { playerRef.current={...START}; lastRowRef.current=START.y; facingRef.current="up"; },[]);
-  const syncBest = useCallback((value:number) => {
-    if(value>bestRef.current){bestRef.current=value;setBest(value);try{localStorage.setItem("canopy-crossing-best",String(value));}catch{}}
-  },[]);
-  useEffect(()=>{try{const v=Number(localStorage.getItem("canopy-crossing-best")||0);bestRef.current=v;setBest(v);}catch{}},[]);
   const togglePause=useCallback(()=>{if(!runningRef.current)return;pausedRef.current=!pausedRef.current;setPaused(pausedRef.current);setMessage(pausedRef.current?"PAUSED":"");},[]);
+  const toggleMute=useCallback(()=>{const nm=!mutedRef.current;mutedRef.current=nm;setMuted(nm);},[]);
+
+  // Tiny WebAudio synth SFX — no assets. Context is created on START (user gesture).
+  const tone=useCallback((freq:number,dur:number,type:OscillatorType="sine",vol=.14,delay=0)=>{
+    const a=audioRef.current; if(!a.ctx||mutedRef.current) return;
+    try{
+      const t0=a.ctx.currentTime+delay;
+      const o=a.ctx.createOscillator(),g=a.ctx.createGain();
+      o.type=type;o.frequency.value=freq;
+      g.gain.setValueAtTime(.0001,t0);
+      g.gain.exponentialRampToValueAtTime(vol,t0+.015);
+      g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+      o.connect(g);g.connect(a.ctx.destination);
+      o.start(t0);o.stop(t0+dur+.05);
+    }catch{}
+  },[]);
+  const sfxHop=useCallback(()=>tone(300+Math.random()*90,.09,"triangle",.1),[tone]);
+  const sfxPickup=useCallback(()=>{tone(880,.09,"sine",.13);tone(1318,.13,"sine",.11,.07);},[tone]);
+  const sfxDie=useCallback(()=>tone(150,.28,"sawtooth",.15),[tone]);
+  const sfxClear=useCallback(()=>{[523,659,784,1047].forEach((f,i)=>tone(f,.15,"triangle",.12,i*.085));},[tone]);
+  const sfxWin=useCallback(()=>{[523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,.18,"triangle",.12,i*.1));},[tone]);
+
+  const addFloater=useCallback((gx:number,gy:number,text:string,color:string)=>{
+    floatersRef.current.push({gx,gy,text,color,t0:performance.now()});
+    if(floatersRef.current.length>24)floatersRef.current.shift();
+  },[]);
+  const burst=useCallback((gx:number,gy:number,n:number,colors:string[],spd=2.2)=>{
+    const now=performance.now();
+    for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=spd*(.35+Math.random());
+      particlesRef.current.push({gx,gy,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.9,t0:now,life:480+Math.random()*420,color:colors[i%colors.length],size:1.6+Math.random()*2.6});}
+    if(particlesRef.current.length>180)particlesRef.current.splice(0,particlesRef.current.length-180);
+  },[]);
 
   const showStageCard = useCallback((lv:number) => {
     const s = stageOf(lv);
@@ -141,22 +209,32 @@ export default function CanopyCrossing() {
       setScore(scoreRef.current);syncBest(scoreRef.current);
       runningRef.current=false;setRunning(false);
       setMessage("CROWN CONQUERED — all five crossings complete!");
+      setEndKind("win");
+      sfxWin(); clearRef.current=t;
+      for(let i=0;i<5;i++) burst(1+i*2,.8,14,["#a8d96f","#ffd76e","#7fd4a8","#fff3c4"],3);
       resetPlayer();
       return;
     }
     levelRef.current++; scoreRef.current+=completed.bonus; stageStartRef.current=t;
     setLevel(levelRef.current);setScore(scoreRef.current);
+    clearRef.current=t; sfxClear();
+    addFloater(4.5,1.2,`+${completed.bonus}`,"#ffe9a3");
     moversRef.current=makeMovers(levelRef.current);
     insectsRef.current=makeInsects(levelRef.current);
     resetPlayer();
     showStageCard(levelRef.current);
-  },[resetPlayer,syncBest,showStageCard]);
+  },[resetPlayer,syncBest,showStageCard,sfxClear,sfxWin,addFloater,burst]);
 
   const start = useCallback(() => {
+    try{
+      if(!audioRef.current.ctx){const AC=window.AudioContext||(window as unknown as {webkitAudioContext?:typeof AudioContext}).webkitAudioContext;if(AC)audioRef.current.ctx=new AC();}
+      audioRef.current.ctx?.resume();
+    }catch{}
     levelRef.current=1; scoreRef.current=0; livesRef.current=3; bugsRef.current=0;
     moversRef.current=makeMovers(1); insectsRef.current=makeInsects(1); resetPlayer();
     setLevel(1);setScore(0);setLives(3);setBugs(0);
     stageStartRef.current=performance.now();pausedRef.current=false;setPaused(false);
+    setEndKind(null);
     runningRef.current=true;setRunning(true);
     showStageCard(1);
   },[resetPlayer,showStageCard]);
@@ -176,17 +254,21 @@ export default function CanopyCrossing() {
     }
     p.x=clamp(nx,0,COLS-1);
     p.y=clamp(p.y+dy,0,ROWS-1);
+    hopRef.current=performance.now();sfxHop();
     if(dy<0){
       const progress=Math.max(0,lastRowRef.current-p.y);
-      if(progress>0){scoreRef.current+=10*progress;setScore(scoreRef.current);lastRowRef.current=p.y;}
+      if(progress>0){scoreRef.current+=10*progress;setScore(scoreRef.current);lastRowRef.current=p.y;addFloater(p.x+.5,p.y+.1,`+${10*progress}`,"#a8d96f");}
     }
     const ix=insectsRef.current.findIndex(s=>s.x===p.x&&s.y===p.y);
     if(ix>=0){
       insectsRef.current.splice(ix,1);
       scoreRef.current+=25;setScore(scoreRef.current);
       bugsRef.current+=1;setBugs(bugsRef.current);
+      addFloater(p.x+.5,p.y,"+25","#ffd76e");
+      burst(p.x+.5,p.y+.5,10,["#ffd76e","#fff3c4","#ffb13d"],2.4);
+      sfxPickup();
     }
-  },[advanceStage]);
+  },[advanceStage,sfxHop,sfxPickup,addFloater,burst]);
 
   useEffect(()=>{
     const key=(e:KeyboardEvent)=>{
@@ -211,6 +293,8 @@ export default function CanopyCrossing() {
       if(c.width!==Math.floor(rect.width*dpr)||c.height!==Math.floor(rect.height*dpr)){c.width=Math.floor(rect.width*dpr);c.height=Math.floor(rect.height*dpr);}
       ctx.setTransform(dpr,0,0,dpr,0,0);
       const W=rect.width,H=rect.height,rowH=H/ROWS,colW=W/COLS;
+      const dieAge=t-dieRef.current;
+      if(dieAge<350){const k=1-dieAge/350;ctx.translate((Math.random()-.5)*12*k,(Math.random()-.5)*12*k);}
       const dt=Math.min((t-lastRef.current)/1000||0,.04);lastRef.current=t;
       if(messageUntilRef.current && t>messageUntilRef.current){ messageUntilRef.current=0; setMessage(""); }
       if(runningRef.current && !pausedRef.current){
@@ -227,11 +311,21 @@ export default function CanopyCrossing() {
           if(!safe){
             livesRef.current--;setLives(livesRef.current);setMessage("Missed the branch!");
             messageUntilRef.current=t+900;
+            dieRef.current=t; sfxDie();
+            burst(p.x+.5,p.y+.5,12,["#e2605c","#7fb3d4","#a8d96f"],2.6);
+            addFloater(p.x+.5,p.y+.2,"−1 ♥","#ff8f86");
             resetPlayer();
-            if(livesRef.current<=0){syncBest(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("The jungle wins this round.");}
+            if(livesRef.current<=0){syncBest(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("The jungle wins this round.");setEndKind("gameover");}
           } else if(!isExit&&lane!=="hazard"&&hits[0]){
             p.x+=hits[0].speed*dt;
-            if(p.x<-.4||p.x>COLS-.6){livesRef.current--;setLives(livesRef.current);resetPlayer();}
+            if(p.x<-.4||p.x>COLS-.6){
+              livesRef.current--;setLives(livesRef.current);
+              dieRef.current=t;sfxDie();
+              addFloater(clamp(p.x,0,COLS-1)+.5,p.y+.2,"−1 ♥","#ff8f86");
+              resetPlayer();
+              if(livesRef.current<=0){syncBest(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("Swept out of the canopy.");setEndKind("gameover");}
+              else{setMessage("Swept off the limb!");messageUntilRef.current=t+900;}
+            }
           }
         }
       }
@@ -261,7 +355,61 @@ export default function CanopyCrossing() {
         if(r===0){ctx.fillStyle="rgba(175,224,95,.16)";ctx.fillRect(0,y,W,rowH);}
         else if(isExitRow){ctx.fillStyle="rgba(255,205,90,.08)";ctx.fillRect(0,y,W,rowH);}
         else if(r===5||r===10||r===11){ctx.fillStyle="rgba(255,255,255,.035)";ctx.fillRect(0,y,W,rowH);}
+        else if(LANE_TYPES[r]==="hazard"){ctx.fillStyle="rgba(150,40,30,.13)";ctx.fillRect(0,y,W,rowH);}
+        else if(LANE_TYPES[r]==="vine"){ctx.fillStyle="rgba(90,170,80,.07)";ctx.fillRect(0,y,W,rowH);}
         ctx.strokeStyle="rgba(255,255,255,.025)";ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+      }
+      // Stationary perches: rest rows 5/10 and the side-exit row are logically
+      // safe, so render them as big obvious full-width limbs (behind movers),
+      // tiled from the branch sprite's middle band to avoid distortion.
+      {
+        const perchRows:number[]=[5,10];
+        if(stage.goal.type==="side") perchRows.push(stage.goal.row);
+        const bSpr=spritesRef.current["branch"];
+        for(const r of perchRows){
+          const py=r*rowH;
+          ctx.fillStyle="rgba(130,225,130,.10)";
+          ctx.beginPath();ctx.ellipse(W/2,py+rowH*.6,W*.48,rowH*.34,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle="rgba(0,0,0,.35)";
+          ctx.beginPath();ctx.ellipse(W/2,py+rowH*.95,W*.46,rowH*.14,0,0,Math.PI*2);ctx.fill();
+          if(bSpr){
+            ctx.save();ctx.globalCompositeOperation="screen";
+            const sw=bSpr.width,sy=bSpr.height*.30,sh=bSpr.height*.35;
+            const segW=W/3,dh=segW*sh/sw;
+            for(let i=0;i<3;i++) ctx.drawImage(bSpr,0,sy,sw,sh,i*segW,py+rowH/2-dh/2,segW,dh);
+            ctx.restore();
+          }else{
+            ctx.lineCap="round";ctx.strokeStyle="#755238";ctx.lineWidth=Math.max(10,rowH*.5);
+            ctx.beginPath();ctx.moveTo(W*.02,py+rowH*.5);ctx.lineTo(W*.98,py+rowH*.5);ctx.stroke();
+          }
+          ctx.strokeStyle="rgba(196,232,150,.55)";ctx.lineWidth=Math.max(2,rowH*.07);ctx.lineCap="round";
+          ctx.beginPath();ctx.moveTo(W*.03,py+rowH*.30);ctx.lineTo(W*.97,py+rowH*.30);ctx.stroke();
+        }
+      }
+      // Lane edge ticks: instant safe/danger reading without looking at the movers.
+      // Green = rideable limb, red = predator lane, gray = rest, gold = goal row.
+      for(let r=1;r<=9;r++){
+        const y=r*rowH;
+        const isExitRow=stage.goal.type==="side"&&r===stage.goal.row;
+        const lane=LANE_TYPES[r];
+        const col=isExitRow?"#ffd76e":r===5?"rgba(150,160,150,.45)":lane==="hazard"?"rgba(255,96,74,.8)":"rgba(130,225,130,.65)";
+        ctx.fillStyle=col;
+        ctx.fillRect(0,y+rowH*.32,5,rowH*.36);
+        ctx.fillRect(W-5,y+rowH*.32,5,rowH*.36);
+      }
+      // Predator flow telegraphing: red chevrons on the edge each predator
+      // lane enters from, so players can read travel direction at a glance.
+      for(let r=1;r<=9;r++){
+        const isExitRow=stage.goal.type==="side"&&r===stage.goal.row;
+        if(LANE_TYPES[r]!=="hazard"||isExitRow) continue;
+        const dir=r%2?1:-1;
+        const y=r*rowH+rowH*.62;
+        ctx.fillStyle="rgba(255,120,95,.85)";ctx.textAlign="center";
+        ctx.font=`900 ${Math.max(12,rowH*.3)}px system-ui`;
+        const bx=dir>0?16:W-16;
+        ctx.globalAlpha=.6+.4*Math.abs(Math.sin(t/260+r));
+        ctx.fillText(dir>0?"❯❯":"❮❮",bx,y);
+        ctx.globalAlpha=1;ctx.textAlign="start";
       }
       // Exit marker for side-goal stages: glowing edge + chevron on the exit limb.
       if(stage.goal.type==="side"){
@@ -278,9 +426,19 @@ export default function CanopyCrossing() {
         ctx.fillText("EXIT",W/2,gy+rowH*.62);
         ctx.textAlign="start";
       }
-      ctx.font=`${Math.max(10,rowH*.22)}px system-ui`;ctx.fillStyle="rgba(220,255,225,.55)";
-      if(stage.goal.type==="top") ctx.fillText("CROWN",12,rowH*.55);
-      ctx.textAlign="center";ctx.font=`700 ${Math.max(10,rowH*.18)}px system-ui`;ctx.fillStyle="rgba(230,246,218,.72)";ctx.fillText(stage.subtitle.toUpperCase(),W/2,rowH*.55);ctx.textAlign="start";
+      if(stage.goal.type==="top"){
+        // Obvious goal: a gold crown band across the whole top row.
+        ctx.fillStyle="rgba(255,205,90,.16)";ctx.fillRect(0,0,W,rowH);
+        ctx.strokeStyle="rgba(255,215,120,.6)";ctx.lineWidth=Math.max(2,rowH*.06);
+        ctx.beginPath();ctx.moveTo(0,rowH-1);ctx.lineTo(W,rowH-1);ctx.stroke();
+        const bob=Math.sin(t/300)*3;
+        ctx.textAlign="center";ctx.fillStyle="#ffd76e";
+        ctx.font=`900 ${Math.max(14,rowH*.32)}px system-ui`;
+        ctx.fillText("👑  REACH THE CROWN  👑",W/2,rowH*.64+bob);
+        ctx.textAlign="start";
+      }else{
+        ctx.textAlign="center";ctx.font=`700 ${Math.max(10,rowH*.18)}px system-ui`;ctx.fillStyle="rgba(230,246,218,.72)";ctx.fillText(stage.subtitle.toUpperCase(),W/2,rowH*.55);ctx.textAlign="start";
+      }
 
       for(const m of moversRef.current){
         const x=m.x*colW,y=m.row*rowH+rowH*.28,w=m.width*colW,h=rowH*.44;
@@ -288,10 +446,33 @@ export default function CanopyCrossing() {
         if(spr){
           ctx.save();ctx.globalCompositeOperation="screen";
           if(m.kind==="hazard"){
-            const dw=colW*1.5,dh=dw*spr.height/spr.width;
+            const dw=colW*1.15,dh=dw*spr.height/spr.width;
+            const pulse=.22+.14*Math.sin(t/240+m.x*2);
+            ctx.fillStyle=`rgba(255,70,45,${pulse})`;
+            ctx.beginPath();ctx.ellipse(x+w/2,y+h*.95,dw*.62,rowH*.22,0,0,Math.PI*2);ctx.fill();
             ctx.drawImage(spr,x+w/2-dw/2,y+h/2-dh/2,dw,dh);
+            const ppx=playerRef.current.x,ppy=playerRef.current.y;
+            if(runningRef.current&&ppy===m.row&&Math.abs(ppx+.5-(m.x+m.width/2))<1.7){
+              ctx.fillStyle="#ffd2c4";ctx.font=`900 ${Math.max(14,rowH*.5)}px system-ui`;ctx.textAlign="center";
+              ctx.fillText("!",x+w/2,y-h*.15);ctx.textAlign="start";
+            }
+          }else if(m.kind==="branch"){
+            // Big obvious safe limb: draw the art's middle band undistorted,
+            // with a grounding shadow, a soft safe-glow, and a bright top edge.
+            ctx.fillStyle="rgba(130,225,130,.10)";
+            ctx.beginPath();ctx.ellipse(x+w/2,y+h*.6,w*.62,rowH*.34,0,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle="rgba(0,0,0,.35)";
+            ctx.beginPath();ctx.ellipse(x+w/2,y+h*.95,w*.52,h*.32,0,0,Math.PI*2);ctx.fill();
+            const sw=spr.width,sy=spr.height*.30,sh=spr.height*.35;
+            const dh=w*sh/sw;
+            ctx.drawImage(spr,0,sy,sw,sh,x,y+h/2-dh/2,w,dh);
+            ctx.strokeStyle="rgba(196,232,150,.55)";ctx.lineWidth=Math.max(2,rowH*.07);ctx.lineCap="round";
+            ctx.beginPath();ctx.moveTo(x+6,y+h/2-dh*.30);ctx.lineTo(x+w-6,y+h/2-dh*.30);ctx.stroke();
           }else{
-            const dh=rowH*(m.kind==="vine"?0.95:1.25);
+            // Vine: safe too — same soft safe-glow so it reads instantly.
+            ctx.fillStyle="rgba(130,225,130,.10)";
+            ctx.beginPath();ctx.ellipse(x+w/2,y+h*.6,w*.62,rowH*.34,0,0,Math.PI*2);ctx.fill();
+            const dh=w*(spr.height/spr.width);
             ctx.drawImage(spr,x,y+h/2-dh/2,w,dh);
           }
           ctx.restore();
@@ -330,11 +511,15 @@ export default function CanopyCrossing() {
       const p=playerRef.current;const px=(p.x+.5)*colW,py=(p.y+.55)*rowH;
       const facing=facingRef.current;
       const mon=spritesRef.current[`monitor-${facing}`];
+      const hopAge=(t-hopRef.current)/200;
+      const hopS=hopAge<1?1+.22*Math.sin(hopAge*Math.PI):1;
+      ctx.fillStyle="rgba(0,0,0,.38)";
+      ctx.beginPath();ctx.ellipse(px,py+rowH*.42,colW*.42*(2-hopS),rowH*.13,0,0,Math.PI*2);ctx.fill();
       if(mon){
         ctx.save();ctx.globalCompositeOperation="screen";
-        const dw=colW*(facing==="up"||facing==="down"?1.35:1.7);
+        const dw=colW*(facing==="up"||facing==="down"?1.35:1.7)*hopS;
         const dh=dw*mon.height/mon.width;
-        ctx.drawImage(mon,px-dw/2,py-dh/2,dw,dh);
+        ctx.drawImage(mon,px-dw/2,py-dh/2-(hopS-1)*rowH*.5,dw,dh);
         ctx.restore();
       }else{
       ctx.save();ctx.translate(px,py);
@@ -366,23 +551,45 @@ export default function CanopyCrossing() {
       ctx.restore();
       }
 
+      // Floating score text.
+      for(let i=floatersRef.current.length-1;i>=0;i--){
+        const f=floatersRef.current[i],age=t-f.t0;
+        if(age>900){floatersRef.current.splice(i,1);continue;}
+        const fy=(f.gy+.3)*rowH-age/1000*34;
+        ctx.globalAlpha=1-age/900;ctx.fillStyle=f.color;
+        ctx.font=`900 ${Math.max(13,rowH*.34)}px system-ui`;ctx.textAlign="center";
+        ctx.fillText(f.text,f.gx*colW,fy);ctx.textAlign="start";ctx.globalAlpha=1;
+      }
+      // Particles.
+      for(let i=particlesRef.current.length-1;i>=0;i--){
+        const pt=particlesRef.current[i],age=t-pt.t0;
+        if(age>pt.life){particlesRef.current.splice(i,1);continue;}
+        const k=1-age/pt.life;
+        pt.gx+=pt.vx*dt;pt.gy+=pt.vy*dt;pt.vy+=3.2*dt;
+        ctx.globalAlpha=k;ctx.fillStyle=pt.color;
+        ctx.beginPath();ctx.arc(pt.gx*colW,pt.gy*rowH,pt.size*k+0.4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      }
+      // Death flash / stage-clear flash.
+      if(t-dieRef.current<380){ctx.fillStyle=`rgba(210,45,30,${.32*(1-(t-dieRef.current)/380)})`;ctx.fillRect(0,0,W,H);}
+      if(t-clearRef.current<500){ctx.fillStyle=`rgba(255,215,120,${.28*(1-(t-clearRef.current)/500)})`;ctx.fillRect(0,0,W,H);}
+
       raf=requestAnimationFrame(frame);
     };
     raf=requestAnimationFrame(frame);return()=>cancelAnimationFrame(raf);
-  },[resetPlayer,advanceStage]);
+  },[resetPlayer,advanceStage,syncBest,sfxDie,addFloater,burst]);
 
-  const onTouchStart=(e:any)=>{const t=e.changedTouches[0];touchRef.current={x:t.clientX,y:t.clientY};};
-  const onTouchEnd=(e:any)=>{const s=touchRef.current;if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);touchRef.current=null;};
+  const onTouchStart=(e:React.TouchEvent)=>{const t=e.changedTouches[0];touchRef.current={x:t.clientX,y:t.clientY};};
+  const onTouchEnd=(e:React.TouchEvent)=>{const s=touchRef.current;if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);touchRef.current=null;};
 
   const hudStage=stageOf(level);
   return <main style={{minHeight:"100svh",background:"#030806",color:"#edf7e9",fontFamily:"system-ui,sans-serif",padding:narrow?"10px":"18px"}}>
     <div style={{maxWidth:760,margin:"0 auto"}}>
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"end",gap:12,marginBottom:12}}>
         <div><div style={{fontSize:12,letterSpacing:3,color:"#8ebc77"}}>ARBOREAL PLANET ARCADE · PROTOTYPE</div><h1 style={{margin:"3px 0 0",fontSize:"clamp(28px,6vw,54px)",lineHeight:.95}}>CANOPY CROSSING</h1></div>
-        <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score} · BEST {best} · 🪲 {bugs}<br/><span style={{color:"#e2605c"}}>{"♥".repeat(Math.max(0,lives))}</span><br/>{hudStage.name.toUpperCase()}<br/><span style={{fontSize:11,color:"#9dc98f",letterSpacing:1}}>{objectiveOf(hudStage)}</span></div>
+        <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score} · BEST {best} · 🪲 {bugs}<br/><span style={{color:"#e2605c"}}>{"♥".repeat(Math.max(0,lives))}</span><br/>STAGE {level}/5 · {hudStage.name.toUpperCase()}<br/><span style={{fontSize:11,color:"#9dc98f",letterSpacing:1}}>{objectiveOf(hudStage)}</span></div>
       </header>
       <div style={{position:"relative"}}>
-      <section style={{position:"relative",height:narrow?"min(50svh,480px)":"min(72svh,760px)",minHeight:narrow?340:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <section style={{position:"relative",height:narrow?"min(42svh,400px)":"min(72svh,760px)",minHeight:narrow?300:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}} aria-label="Canopy Crossing game"/>
         {(running&&message)&&<div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:"min(82%,420px)",padding:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.88)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
           <strong style={{fontSize:20}}>{message}</strong>
@@ -390,18 +597,27 @@ export default function CanopyCrossing() {
       </section>
       {!running&&<div style={{position:"absolute",inset:0,display:"flex",overflowY:"auto",padding:12,borderRadius:20}}>
         <div style={{width:"min(88%,380px)",margin:"auto",padding:narrow?14:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.92)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
-          <strong style={{fontSize:narrow?22:30}}>CLIMB THE CANOPY</strong>
-          <img src="/arcade/canopy-crossing/monitor-up.webp" alt="Baby blue tree monitor" style={{width:narrow?104:170,margin:"-6px auto 4px",display:"block",mixBlendMode:"screen"}}/>
-          <p style={{color:"#b9c9b7",lineHeight:1.5,fontSize:narrow?13:16,margin:"6px 0 12px"}}>Guide a baby blue tree monitor through five escalating New Guinea canopy stages. Some climbs end at the crown — others at the far bank. Ride branches and vines, grab insects, dodge predators.</p>
-          <button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button>
+          <strong style={{fontSize:narrow?22:30}}>{endKind==="win"?"👑 CROWN CONQUERED":endKind==="gameover"?"THE JUNGLE WINS":"CLIMB THE CANOPY"}</strong>
+          {endKind&&<p style={{color:endKind==="win"?"#ffd76e":"#ff9d8f",fontWeight:800,fontSize:narrow?14:16,margin:"8px 0 0"}}>
+            {endKind==="win"?"All five crossings complete!":"Out of hearts."} Final score: {score}{best>0&&` · Best: ${best}`}
+          </p>}
+          <img src="/arcade/canopy-crossing/monitor-up.webp" alt="Baby blue tree monitor" style={{width:endKind?(narrow?84:110):(narrow?104:170),margin:"-6px auto 4px",display:"block",mixBlendMode:"screen"}}/>
+          {!endKind&&<p style={{color:"#b9c9b7",lineHeight:1.5,fontSize:narrow?13:16,margin:"6px 0 12px"}}>Guide a baby blue tree monitor through five escalating New Guinea canopy stages. Some climbs end at the crown — others at the far bank. Ride branches and vines, grab insects, dodge predators.</p>}
+          {!endKind&&<div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:6,margin:"0 0 14px",fontSize:11,fontWeight:700,color:"#cfe3c9"}}>
+            <span style={{border:"1px solid rgba(130,225,130,.5)",borderRadius:999,padding:"3px 9px"}}>🟢 rideable limb</span>
+            <span style={{border:"1px solid rgba(255,96,74,.5)",borderRadius:999,padding:"3px 9px"}}>🔴 predator lane</span>
+            <span style={{border:"1px solid rgba(255,205,90,.5)",borderRadius:999,padding:"3px 9px"}}>👑 / EXIT = goal</span>
+            <span style={{border:"1px solid rgba(255,190,80,.5)",borderRadius:999,padding:"3px 9px"}}>🪲 +25 bonus</span>
+          </div>}
+          <button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{endKind?"PLAY AGAIN":"START ASCENT"}</button>
         </div>
       </div>}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,maxWidth:300,margin:"14px auto 0",userSelect:"none"}}>
-        <span/><button onClick={()=>move(0,-1)} style={btn}>▲</button><span/>
-        <button onClick={()=>move(-1,0)} style={btn}>◀</button><button onClick={()=>move(0,1)} style={btn}>▼</button><button onClick={()=>move(1,0)} style={btn}>▶</button>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,maxWidth:300,margin:"14px auto 0",userSelect:"none",marginBottom:narrow?"calc(84px + env(safe-area-inset-bottom))":0}}>
+        <span/><button onClick={()=>move(0,-1)} style={btn} aria-label="Hop up">▲</button><span/>
+        <button onClick={()=>move(-1,0)} style={btn} aria-label="Hop left">◀</button><button onClick={()=>move(0,1)} style={btn} aria-label="Hop down">▼</button><button onClick={()=>move(1,0)} style={btn} aria-label="Hop right">▶</button>
       </div>
-      <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:10}}><button onClick={togglePause} style={{...btn,width:110}}>{paused?"RESUME":"PAUSE"}</button></div>
+      <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:10}}><button onClick={togglePause} style={{...btn,width:110}}>{paused?"RESUME":"PAUSE"}</button><button onClick={toggleMute} style={{...btn,width:64}} aria-label="Toggle sound">{muted?"🔇":"🔊"}</button></div>
       <p style={{textAlign:"center",fontSize:12,color:"#748579"}}>Arrow keys / WASD · swipe on mobile · P/Esc pause · best score saves on device</p>
     </div>
   </main>;
