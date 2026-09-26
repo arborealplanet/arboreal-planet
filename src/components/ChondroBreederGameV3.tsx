@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { clutchSizeForPairing } from "@/lib/chondro-clutch-size";
 import { inheritTraitSet } from "@/lib/chondro-genetics";
@@ -805,6 +806,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [seasonCarePaid, setSeasonCarePaid] = useState(0);
   const [cinematicSeen, setCinematicSeen] = useState(false);
   const [replayingIntro, setReplayingIntro] = useState(false);
+  const [entered, setEntered] = useState(false);
   // Two-tap season-care confirmation: the first tap arms the button and shows
   // the computed total, the second tap pays. Guards against an accidental tap
   // spending a large season total.
@@ -1617,6 +1619,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setResetMenuOpen(false);
     setResetArmed(false);
     setResetConfirmText("");
+    setEntered(false);
     setStarted(false);
     setCash(STARTING_CASH);
     setColony([]);
@@ -1665,42 +1668,46 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       <IntroCinematic onDone={() => setReplayingIntro(false)} />
     );
 
+  // The start splash: any visit without an active session lands here first.
+  // Tapping through sends first-timers to the intro cinematic (exactly once);
+  // everyone else goes straight into the game.
+  if (!entered)
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
+        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-emerald-400/70">The Green Tree Python Breeding Simulator</p>
+        <h1 className="mt-6 font-serif text-6xl leading-[1.05] text-white sm:text-7xl">ARBOREAL<br />KEEPER</h1>
+        <div className="mt-8 h-px w-40 bg-emerald-400/40" />
+        <p className="mt-8 max-w-md text-base leading-7 text-white/50">
+          Breed, incubate, hatch and build your lineage.<br />
+          Rare neonates don&rsquo;t wait &mdash; start your collection today.
+        </p>
+        <button
+          onClick={() => { setEntered(true); if (cinematicSeen) setStarted(true); }}
+          className="mt-10 w-full max-w-md rounded-full bg-emerald-400 px-8 py-4 text-sm font-black uppercase tracking-[0.2em] text-emerald-950 transition hover:bg-emerald-300"
+        >
+          Start your collection
+        </button>
+        <Link
+          href="/"
+          className="mt-4 block w-full max-w-md rounded-full border border-white/20 px-8 py-4 text-sm font-bold text-white/85 transition hover:border-white/40 hover:text-white"
+        >
+          Back to Arboreal Planet
+        </Link>
+        {cinematicSeen ? (
+          <button onClick={() => setReplayingIntro(true)} className="mt-6 text-xs text-white/35 underline decoration-white/20 underline-offset-4 transition hover:text-white/60">
+            Replay the intro
+          </button>
+        ) : null}
+        <p className="mt-10 text-[10px] font-bold uppercase tracking-[0.28em] text-white/30">Free to play &middot; Your program saves as you go</p>
+      </div>
+    );
+
   // The intro cinematic auto-plays exactly once per player — gated on
   // cinematicSeen, not on started, so store-only buyers who open a breeder
   // tab later still get their one viewing.
   if (!started && !cinematicSeen)
     return (
       <IntroCinematic onDone={handleFirstCinematicDone} />
-    );
-
-  if (!started)
-    return (
-      <div className="mx-auto max-w-5xl px-5 py-10 sm:px-6">
-        <section className="panel rounded-[32px] p-7 sm:p-10">
-          <div className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/55">Arboreal Keeper</div>
-          <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">Start your collection.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-white/45">
-            Your $30,000 credit at Hank Scale&rsquo;s Reptiles is loaded. Build a trait program, a pure locality program, or both. Most snakes now begin with little or no expression, high percentages are genuinely rare, and each subspecies has traits it is naturally more likely to express.
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/[.06] p-4 text-sm text-white/40">
-              <div className="font-semibold text-emerald-100/65">Trait breeder</div>
-              <div className="mt-1 text-xs leading-5">Breed by appearance for free, or pay for optional genetic testing to reveal exact trait percentages.</div>
-            </div>
-            <div className="rounded-2xl border border-white/[.06] p-4 text-sm text-white/40">
-              <div className="font-semibold text-amber-100/65">Locality breeder</div>
-              <div className="mt-1 text-xs leading-5">Keep named-locality lines pure and chase phenotype grades such as A+ Jayapura phenotype.</div>
-            </div>
-          </div>
-          <div className="mt-5 text-xs text-white/32">Progress autosaves to this browser{cloudSave ? " and your Arboreal Planet account" : ""}.</div>
-          <button onClick={() => setStarted(true)} className="mt-8 rounded-2xl bg-amber-200 px-6 py-3 text-sm font-black text-[#17130a]">Start your collection</button>
-          {cinematicSeen ? (
-            <div className="mt-4">
-              <button onClick={() => setReplayingIntro(true)} className="text-xs text-white/35 underline decoration-white/20 underline-offset-4 transition hover:text-white/60">Replay the intro</button>
-            </div>
-          ) : null}
-        </section>
-      </div>
     );
 
   return (
