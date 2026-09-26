@@ -7,6 +7,13 @@ const COLS = 9;
 const ROWS = 12;
 const START = { x: 4, y: 11 };
 const LANE_TYPES = ["goal","branch","hazard","branch","vine","rest","branch","hazard","vine","branch","rest","start"] as const;
+const STAGES = [
+  {name:"Rainforest Edge", subtitle:"Learn the canopy", speed:1, bonus:500},
+  {name:"River Crossing", subtitle:"Fast wet limbs", speed:1.12, bonus:650},
+  {name:"Dense Canopy", subtitle:"Tighter safe windows", speed:1.25, bonus:800},
+  {name:"Night Canopy", subtitle:"Predators in the dark", speed:1.38, bonus:1000},
+  {name:"Tropical Storm", subtitle:"Survive the crown", speed:1.55, bonus:1500},
+] as const;
 
 type Pos = { x:number; y:number };
 type Mover = { row:number; x:number; width:number; speed:number; kind:"branch"|"hazard"|"vine" };
@@ -19,7 +26,7 @@ function makeMovers(level:number): Mover[] {
     if (row===5) continue;
     const kind = LANE_TYPES[row] === "hazard" ? "hazard" : LANE_TYPES[row] === "vine" ? "vine" : "branch";
     const dir = row % 2 ? 1 : -1;
-    const base = 0.42 + level * 0.035 + row * 0.012;
+    const stage=STAGES[Math.min(level-1,STAGES.length-1)];\n    const base = (0.40 + level * 0.025 + row * 0.012) * stage.speed;
     for (let i=0;i<3;i++) movers.push({row,x:i*3.6+(row%3)*0.45,width:kind==="branch"?2.25:kind==="vine"?1.55:1.1,speed:dir*base,kind});
   }
   return movers;
@@ -88,7 +95,7 @@ export default function CanopyCrossing() {
         for(const m of moversRef.current){m.x+=m.speed*dt;if(m.speed>0&&m.x>COLS+1)m.x=-m.width-1;if(m.speed<0&&m.x+m.width<-1)m.x=COLS+1;}
         const p=playerRef.current;
         if(p.y===0){
-          levelRef.current++; scoreRef.current+=500;
+          const completed=STAGES[Math.min(levelRef.current-1,STAGES.length-1)];\n          if(levelRef.current>=STAGES.length){scoreRef.current+=completed.bonus;setScore(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("CROWN CONQUERED — all five stages cleared!");resetPlayer();continue;}\n          levelRef.current++; scoreRef.current+=completed.bonus;
           setLevel(levelRef.current);setScore(scoreRef.current);setMessage("Canopy reached! Next ascent.");
           moversRef.current=makeMovers(levelRef.current);resetPlayer();
           setTimeout(()=>setMessage(""),900);
@@ -177,13 +184,13 @@ export default function CanopyCrossing() {
     <div style={{maxWidth:760,margin:"0 auto"}}>
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"end",gap:12,marginBottom:12}}>
         <div><div style={{fontSize:12,letterSpacing:3,color:"#8ebc77"}}>ARBOREAL PLANET ARCADE · PROTOTYPE</div><h1 style={{margin:"3px 0 0",fontSize:"clamp(28px,6vw,54px)",lineHeight:.95}}>CANOPY CROSSING</h1></div>
-        <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score}<br/>LIVES {"●".repeat(Math.max(0,lives))}<br/>ASCENT {level}</div>
+        <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score}<br/>LIVES {"●".repeat(Math.max(0,lives))}<br/>{STAGES[Math.min(level-1,STAGES.length-1)].name.toUpperCase()}</div>
       </header>
       <section style={{position:"relative",height:"min(72svh,760px)",minHeight:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}} aria-label="Canopy Crossing game"/>
         {(!running||message)&&<div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:"min(82%,420px)",padding:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.88)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
           <strong style={{fontSize:running?20:30}}>{running?message:"CLIMB THE CANOPY"}</strong>
-          {!running&&<><p style={{color:"#b9c9b7",lineHeight:1.5}}>Guide a baby blue tree monitor from the forest floor to the crown. Ride branches and vines. Avoid moving predators.</p><button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button></>}
+          {!running&&<><p style={{color:"#b9c9b7",lineHeight:1.5}}>Guide a baby blue tree monitor through five escalating New Guinea canopy stages. Ride branches and vines. Avoid moving predators.</p><button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button></>}
         </div>}
       </section>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,maxWidth:300,margin:"14px auto 0",userSelect:"none"}}>
