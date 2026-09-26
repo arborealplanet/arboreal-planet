@@ -6,13 +6,14 @@ import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedS
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
 import { consumeStockRotated, isHankScaleMuted, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
 
-// Three blink variants of Hank's idle loop. Every clip opens and closes on
-// the same eyes-open pose, so cutting between them is as invisible as each
-// clip's own loop point — the store never visibly repeats.
+// Three blink variants of Hank's idle loop in the Verdant Vivarium shop.
+// Every clip opens and closes on the same eyes-open pose, so cutting
+// between them is as invisible as each clip's own loop point — the store
+// never visibly repeats.
 const SHOP_CLIPS = [
-  "/hatchery/game/bunn-shop-loop-a.mp4",
-  "/hatchery/game/bunn-shop-loop-b.mp4",
-  "/hatchery/game/bunn-shop-loop-c.mp4",
+  "/hatchery/game/bunn-shop-loop-v4-a.mp4",
+  "/hatchery/game/bunn-shop-loop-v4-b.mp4",
+  "/hatchery/game/bunn-shop-loop-v4-c.mp4",
 ];
 
 function ShopLoopVideo() {
@@ -46,7 +47,7 @@ function ShopLoopVideo() {
             preload="auto"
             disablePictureInPicture
             aria-hidden={!active}
-            poster="/hatchery/game/bunn-shop-counter.webp"
+            poster="/hatchery/game/bunn-shop-counter-v4.webp"
             onEnded={active ? advance : undefined}
             className={`absolute inset-0 h-full w-full object-cover [object-position:center_35%] transition-opacity duration-150 ${
               active ? "opacity-100" : "pointer-events-none opacity-0"
