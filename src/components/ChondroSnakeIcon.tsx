@@ -8,6 +8,7 @@ export function ChondroSnakeIcon({
   name,
   compact = false,
   tiny = false,
+  mini = false,
   lifeStage,
   neonateColor,
   locality,
@@ -22,6 +23,8 @@ export function ChondroSnakeIcon({
   traits?: PortraitTraits;
   compact?: boolean;
   tiny?: boolean;
+  /** 80px square thumbnail (receipt rows, haul banner). Badges hidden. */
+  mini?: boolean;
   lifeStage?: ChondroLifeStage;
   neonateColor?: ChondroNeonateColor;
   locality?: string;
@@ -107,7 +110,7 @@ export function ChondroSnakeIcon({
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${tiny ? "h-44 w-full" : compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${mini ? "h-20 w-20" : tiny ? "h-44 w-full" : compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
       {versionedSrc ? (
         <img
           key={versionedSrc}
@@ -122,23 +125,29 @@ export function ChondroSnakeIcon({
         />
       ) : null}
       <div
-        className="absolute inset-0 place-items-center p-6 text-center"
+        className={`absolute inset-0 place-items-center text-center ${mini ? "p-2" : "p-6"}`}
         style={{ display: versionedSrc ? "none" : "grid" }}
       >
         <div>
-          <svg viewBox="0 0 64 64" className="mx-auto h-14 w-14 text-emerald-100/25" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+          <svg viewBox="0 0 64 64" className={`mx-auto text-emerald-100/25 ${mini ? "h-8 w-8" : "h-14 w-14"}`} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
             <path d="M32 12c-9 0-16 6-16 14 0 5 3 9 7 11-4 2-7 6-7 11 0 8 7 14 16 14s16-6 16-14c0-5-3-9-7-11 4-2 7-6 7-11 0-8-7-14-16-14z" />
             <circle cx="32" cy="18" r="1.6" fill="currentColor" stroke="none" />
           </svg>
-          <div className="mt-3 text-[10px] font-black uppercase tracking-[.18em] text-emerald-100/55">Sprite pending</div>
-          <div className="mt-2 text-xs font-semibold text-white/45">{locality ?? classification ?? subspecies}</div>
-          <div className="mt-1 text-[10px] text-white/30">Artwork for this animal is on the way</div>
+          <div className={`font-black uppercase text-emerald-100/55 ${mini ? "mt-1 text-[8px] tracking-[.14em]" : "mt-3 text-[10px] tracking-[.18em]"}`}>Sprite pending</div>
+          {!mini ? (
+            <>
+              <div className="mt-2 text-xs font-semibold text-white/45">{locality ?? classification ?? subspecies}</div>
+              <div className="mt-1 text-[10px] text-white/30">Artwork for this animal is on the way</div>
+            </>
+          ) : null}
         </div>
       </div>
-      <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
-        Virtual
-      </div>
-      {lifeStage && lifeStage !== "Adult" ? (
+      {!mini ? (
+        <div className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-100/20 bg-[#06100c]/85 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em] text-emerald-100/75 shadow-lg backdrop-blur-sm">
+          Virtual
+        </div>
+      ) : null}
+      {!mini && lifeStage && lifeStage !== "Adult" ? (
         <div className={`pointer-events-none absolute right-2 top-2 rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.12em] shadow-lg backdrop-blur-sm ${neonateColor === "Red" ? "border-red-200/20 bg-red-950/75 text-red-100/80" : "border-amber-100/20 bg-amber-950/75 text-amber-100/80"}`}>
           {lifeStage ?? "Juvenile"}
         </div>

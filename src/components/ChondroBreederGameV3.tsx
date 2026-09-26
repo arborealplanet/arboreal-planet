@@ -129,6 +129,12 @@ type Snake = {
   gravid?: boolean;
   /** Wall-clock timestamp when a gravid female lays (set at expedition import). */
   gravidLaysAt?: number;
+  /**
+   * Stable sprite seed carried over from a Canopy Hunter catch, so the colony
+   * card shows the exact sprite (or "Sprite pending" treatment) the hunter
+   * screens showed. Falls back to the animal id when absent.
+   */
+  spriteSeed?: string;
 };
 type StoreSnake = Snake & { price: number; pretested: boolean };
 type Clutch = { id: string; dam: Snake; sire: Snake; offspring: Snake[] };
@@ -873,6 +879,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [expeditionFeeArmed, setExpeditionFeeArmed] = useState(false);
   const expeditionFeeArmTimer = useRef<number | null>(null);
   const [expeditionResult, setExpeditionResult] = useState<string | null>(null);
+  // The imported colony records from the latest expedition, so the haul
+  // banner can show the exact same Keeper art the receipt showed.
+  const [lastExpeditionImports, setLastExpeditionImports] = useState<Snake[]>([]);
   // The rolled destination region and whether its flight intro has played.
   // The flight video (matched to the region's signature subspecies) plays
   // full-screen after entry, before the canopy search begins.
@@ -1556,12 +1565,11 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     const freeSlots = Math.max(0, animalHousingCapacity(enclosures) - colony.length);
     if (wilds.length > freeSlots) return;
     const nowStamp = Date.now();
-    setColony((current) => [
-      ...current,
-      ...wilds.map((wild, i) =>
-        normalizeSnake(wildSnakeToKeeperSnake(wild, `canopy-${nowStamp}-${i}`)),
-      ),
-    ]);
+    const imports = wilds.map((wild, i) =>
+      normalizeSnake(wildSnakeToKeeperSnake(wild, `canopy-${nowStamp}-${i}`)),
+    );
+    setColony((current) => [...current, ...imports]);
+    setLastExpeditionImports(imports);
     setExpeditionResult(
       `Expedition haul: ${wilds.length} ${wilds.length === 1 ? "snake" : "snakes"} brought home to the colony.`,
     );
@@ -1795,15 +1803,46 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     <BreederGameScreenContext.Provider value={screen}>
     <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 sm:py-8">
       {expeditionResult ? (
-        <div role="status" className="mb-4 flex items-center gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.06] p-4">
-          <p className="flex-1 text-sm font-semibold text-emerald-100/85">{expeditionResult}</p>
-          <button
-            type="button"
-            onClick={() => setExpeditionResult(null)}
-            className="shrink-0 rounded-xl border border-white/[.09] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:bg-white/[.06] hover:text-white/85"
-          >
-            Dismiss
-          </button>
+        <div role="status" className="mb-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.06] p-4">
+          <div className="flex items-center gap-3">
+            <p className="flex-1 text-sm font-semibold text-emerald-100/85">{expeditionResult}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setExpeditionResult(null);
+                setLastExpeditionImports([]);
+              }}
+              className="shrink-0 rounded-xl border border-white/[.09] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:bg-white/[.06] hover:text-white/85"
+            >
+              Dismiss
+            </button>
+          </div>
+          {lastExpeditionImports.length > 0 ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {lastExpeditionImports.slice(0, 8).map((animal) => (
+                <div key={animal.id} className="h-20 w-20 shrink-0" title={animal.name}>
+                  <ChondroSnakeIcon
+                    subspecies={animal.subspecies as never}
+                    name={animal.name}
+                    lifeStage={animal.lifeStage as never}
+                    neonateColor={animal.neonateColor}
+                    locality={animal.locality}
+                    classification={animal.classification as never}
+                    ancestry={animal.ancestry as never}
+                    localityAncestry={animal.localityAncestry}
+                    phenotypeScore={animal.phenotypeScore}
+                    spriteSeed={animal.spriteSeed ?? animal.id}
+                    mini
+                  />
+                </div>
+              ))}
+              {lastExpeditionImports.length > 8 ? (
+                <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl border border-white/[.06] bg-black/20 text-xs font-bold text-white/50">
+                  +{lastExpeditionImports.length - 8}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[.06] bg-white/[.018] p-3 sm:gap-3 sm:p-4">

@@ -19,6 +19,7 @@ import {
   startJungleMusic,
   stopJungleMusic,
 } from "@/lib/jungle-ambience";
+import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Phase = "briefing" | "trail" | "grove" | "catch" | "results";
 
@@ -28,12 +29,14 @@ const ZONE_HALF = 0.11; // 22% green zone
 const GROVES_PER_EXPEDITION = 4;
 const TREES_PER_GROVE = 3;
 
+// Keyed variants: edge-connected black flood-filled to transparent at build
+// time, so the art composites solidly with normal blending (no screen-blend
+// ghosting on the dark trail).
 const TREE_ARTS = [
-  "/arcade/canopy-hunter/tree.webp",
-  "/arcade/canopy-hunter/tree-2.webp",
-  "/arcade/canopy-hunter/tree-3.webp",
+  "/arcade/canopy-hunter/tree-keyed.webp",
+  "/arcade/canopy-hunter/tree-2-keyed.webp",
+  "/arcade/canopy-hunter/tree-3-keyed.webp",
 ];
-const PYTHON_ART = "/arcade/canopy-hunter/python.webp";
 const BANNER_ART = "/arcade/canopy-hunter/canopy-banner.webp";
 const PATH_ART = "/arcade/canopy-hunter/path-night.webp";
 const PATH_FORK_2_ART = "/arcade/canopy-hunter/path-fork-2.webp";
@@ -45,8 +48,33 @@ function pathArtForTrailCount(count: number): string {
   if (count >= 3) return PATH_FORK_3_ART;
   return PATH_ART;
 }
-const EXPLORER_ART = "/arcade/canopy-hunter/explorer-back.webp";
+const EXPLORER_ART = "/arcade/canopy-hunter/explorer-back-keyed.webp";
 const FOREGROUND_ART = "/arcade/canopy-hunter/foreground-branches.webp";
+
+/**
+ * A caught wild snake rendered through the exact same Keeper pipeline as the
+ * colony (ChondroSnakeIcon): the true locality/stage sprite when art exists,
+ * Keeper's own "Sprite pending" treatment when it doesn't. The sprite seed is
+ * the wild snake's stable name, matching the seed stored on import, so the
+ * catch screen, receipt, haul banner, and colony card all resolve identically.
+ */
+function WildSnakeArt({ wild, mini = false }: { wild: WildSnake; mini?: boolean }) {
+  return (
+    <ChondroSnakeIcon
+      subspecies={wild.subspecies}
+      name={wild.name}
+      lifeStage={wild.lifeStage}
+      neonateColor={wild.neonateColor}
+      locality={wild.locality}
+      classification="Pure"
+      ancestry={{ [wild.subspecies]: 100 }}
+      localityAncestry={{ [wild.locality]: 100 }}
+      phenotypeScore={wild.phenotypeScore}
+      spriteSeed={wild.name}
+      mini={mini}
+    />
+  );
+}
 
 /** One branch at a fork in the trail. Exactly one trail per leg hides a python. */
 interface TrailOption {
@@ -101,22 +129,6 @@ function TreeArt({ variant, dimmed, swayDelay }: { variant: number; dimmed: bool
       className={`object-cover ${dimmed ? "opacity-35 saturate-50" : ""}`}
       style={{ transformOrigin: "50% 100%", animation: `ch-sway 5s ease-in-out ${swayDelay}s infinite` }}
     />
-  );
-}
-
-function PythonArt({ className = "h-full w-full" }: { className?: string }) {
-  return (
-    <div className={`relative ${className}`}>
-      <Image
-        src={PYTHON_ART}
-        alt=""
-        aria-hidden="true"
-        fill
-        sizes="(max-width: 640px) 40vw, 20vw"
-        draggable={false}
-        className="object-contain"
-      />
-    </div>
   );
 }
 
@@ -480,8 +492,8 @@ export function CanopyHunter({
                 <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">{trail.label}</span>
               </button>
             ))}
-            {/* Third-person hunter */}
-            <div className="absolute bottom-1 left-1/2 z-10 h-32 w-24 -translate-x-1/2 mix-blend-screen sm:h-40 sm:w-32">
+            {/* Third-person hunter (keyed art, fully opaque) */}
+            <div className="absolute bottom-1 left-1/2 z-10 h-32 w-24 -translate-x-1/2 sm:h-40 sm:w-32">
               <Image src={EXPLORER_ART} alt="" aria-hidden="true" fill sizes="96px" draggable={false} className="object-contain" />
             </div>
             {/* Foreground foliage frames the shot */}
@@ -517,16 +529,16 @@ export function CanopyHunter({
                     onClick={() => searchTree(i)}
                     disabled={wasSearched}
                     aria-label={wasSearched ? (showPython ? `Tree ${i + 1}: python found` : `Tree ${i + 1}: searched, empty`) : `Search tree ${i + 1}`}
-                    className={`group relative aspect-[3/4] mix-blend-screen transition active:scale-95 ${
+                    className={`group relative aspect-[3/4] transition active:scale-95 ${
                       i === 1 ? "w-24 -translate-y-3 sm:w-32" : "w-32 sm:w-44"
                     } ${wasSearched ? "" : "hover:drop-shadow-[0_0_20px_rgba(52,211,153,.35)]"}`}
                   >
                     <div className={`absolute inset-0 ${wasSearched && !showPython ? "opacity-60" : ""}`}>
                       <TreeArt variant={variant} dimmed={wasSearched && !showPython} swayDelay={(i % 5) * 0.7} />
                     </div>
-                    {showPython && (
-                      <div className="absolute inset-x-1 bottom-1 top-4">
-                        <PythonArt />
+                    {showPython && groveWilds[i] && (
+                      <div className="absolute inset-x-1 bottom-1 top-4 grid place-items-center">
+                        <WildSnakeArt wild={groveWilds[i]} mini />
                       </div>
                     )}
                     {wasSearched && !showPython && (
@@ -559,10 +571,10 @@ export function CanopyHunter({
               <Image src={BANNER_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 36rem" draggable={false} className="object-cover" />
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,10,8,.25)_0%,rgba(4,10,8,.88)_100%)]" />
             </div>
-            <div className="relative mx-auto -mt-24 h-64 w-64 sm:-mt-28 sm:h-80 sm:w-80">
+            <div className="relative mx-auto -mt-24 w-64 sm:-mt-28 sm:w-80">
               <div className="absolute inset-6 rounded-full bg-emerald-400/15 blur-3xl" aria-hidden="true" />
-              <div className="relative h-full w-full drop-shadow-[0_0_35px_rgba(52,211,153,.25)]">
-                <PythonArt />
+              <div className="relative drop-shadow-[0_0_35px_rgba(52,211,153,.25)]">
+                <WildSnakeArt wild={currentWild} />
               </div>
             </div>
           </div>
@@ -653,8 +665,8 @@ export function CanopyHunter({
                     key={wild.name}
                     className="flex items-center gap-4 rounded-2xl border border-white/[.06] bg-black/40 p-3"
                   >
-                    <div className="h-24 w-24 shrink-0">
-                      <PythonArt />
+                    <div className="h-20 w-20 shrink-0">
+                      <WildSnakeArt wild={wild} mini />
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

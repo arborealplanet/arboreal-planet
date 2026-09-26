@@ -30,6 +30,8 @@ type Snake = {
   notes?: string;
   sireId?: string;
   damId?: string;
+  /** Stable sprite seed carried over from a Canopy Hunter catch (else the id). */
+  spriteSeed?: string;
 };
 
 type Sort = "name" | "trait" | "generation" | "locality";
@@ -273,7 +275,7 @@ export function ChondroCollectionManager() {
                 <label onClick={(e) => e.stopPropagation()} className="mt-1 flex cursor-pointer items-center">
                   <input type="checkbox" checked={selectedIds.has(animal.id)} onChange={() => toggleSelect(animal.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${animal.name}`} className="h-4 w-4 accent-emerald-300" />
                 </label>
-                <ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification as never} ancestry={animal.ancestry as never} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} compact />
+                <ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification as never} ancestry={animal.ancestry as never} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.spriteSeed ?? animal.id} compact />
                 <div className="min-w-0 flex-1"><div className="truncate text-sm font-bold text-white/80">{favorites.includes(animal.id) ? "★ " : ""}{animal.name}</div><div className="mt-1 text-[10px] text-white/38">{animal.sex} · {animal.lifeStage} · {animal.locality}</div><div className="mt-1 text-[10px] text-white/34">Gen {animal.generation} · {animal.classification} · {animal.nidoStatus}</div></div>
                 <span className="text-xs text-emerald-200/45 transition group-hover:translate-x-0.5 group-hover:text-emerald-200/80">→</span>
               </div>
@@ -307,7 +309,7 @@ function AnimalDetail({ animal, favorite, animals }: { animal: Snake; favorite: 
     <div className="space-y-5">
       <ChondroAnimalRecordActions key={animal.id} animalId={animal.id} initialName={animal.name} initialNotes={animal.notes} initialLifeStage={animal.lifeStage} initialSex={animal.sex} favorite={favorite} />
       <div className="rounded-[24px] border border-white/[.07] bg-[radial-gradient(circle_at_50%_35%,rgba(57,230,125,.08),transparent_45%),rgba(0,0,0,.18)] p-5">
-        <div className="mx-auto max-w-[360px]"><ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification as never} ancestry={animal.ancestry as never} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.id} /></div>
+        <div className="mx-auto max-w-[360px]"><ChondroSnakeIcon subspecies={animal.subspecies as never} name={animal.name} traits={{ highBlack: animal.highBlack, highWhite: animal.highWhite, blueStripe: animal.blueStripe, yellowRetention: animal.yellowRetention, blotches: animal.blotches }} lifeStage={animal.lifeStage as never} neonateColor={animal.neonateColor} locality={animal.locality} classification={animal.classification as never} ancestry={animal.ancestry as never} localityAncestry={animal.localityAncestry} phenotypeScore={animal.phenotypeScore} spriteSeed={animal.spriteSeed ?? animal.id} /></div>
         <div className="mt-4 flex flex-wrap justify-center gap-2 text-[10px] font-bold uppercase tracking-[.1em]">
           <span className="rounded-full border border-white/[.08] px-3 py-1.5 text-white/58">{animal.sex}</span>
           <span className="rounded-full border border-white/[.08] px-3 py-1.5 text-white/58">{animal.lifeStage}</span>

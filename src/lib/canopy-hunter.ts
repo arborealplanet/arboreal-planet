@@ -168,6 +168,13 @@ export interface KeeperSnake {
   gravid?: boolean;
   /** Wall-clock timestamp when a gravid female lays (set at import). */
   gravidLaysAt?: number;
+  /**
+   * Stable sprite seed shared with the pre-import views (catch screen,
+   * expedition receipt). The colony renders the exact same Keeper sprite —
+   * or the exact same "Sprite pending" treatment — that the hunter screens
+   * showed, because every view seeds from this value.
+   */
+  spriteSeed?: string;
 }
 
 type RandomFn = () => number;
@@ -416,6 +423,10 @@ export function wildSnakeToKeeperSnake(wild: WildSnake, id: string): KeeperSnake
     // A gravid female's laying timer starts the moment she joins the colony.
     gravid: wild.gravid || undefined,
     gravidLaysAt: wild.gravid ? Date.now() + GRAVID_GESTATION_MS : undefined,
+    // The wild snake's name is stable from catch to import, so the colony
+    // card resolves the identical sprite (or "Sprite pending") the hunter
+    // screens showed.
+    spriteSeed: wild.name,
   };
 }
 
