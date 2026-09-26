@@ -312,7 +312,7 @@ export const HAT_LINES = {
   greetings: [
     "Ahh... a new keeper steps into my chamber. I am the Sorting Hat — seer of scales, reader of bloodlines.",
     "Bring me your serpents, keeper. One by one, I shall tell you where each truly belongs.",
-    "Twelve serpents wait upon my dais. Probe them well — a hat is only as wise as its keeper's eyes.",
+    "Ten serpents wait upon my dais. Probe them well — a hat is only as wise as its keeper's eyes.",
   ],
   arrive: [
     "Place the serpent upon the dais... steady now. Let me have a look at this one.",

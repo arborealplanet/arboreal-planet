@@ -33,8 +33,6 @@ type Phase =
   | "sort"
   | "deliberate"
   | "reveal"
-  | "locality"
-  | "localityReveal"
   | "results";
 
 type Mode = "ceremony" | "endless";
@@ -56,6 +54,37 @@ function fillTemplate(t: string, vars: Record<string, string>): string {
     (acc, [k, v]) => acc.replaceAll(`{${k}}`, v),
     t,
   );
+}
+
+/* Live sort-timer store: ticks every 250ms while the sort phase is up so the
+   decaying swift-call bonus can count down on screen. Kept outside React so
+   the interval never sets state inside an effect. */
+let sortTickValue = 0;
+let sortTickTimer: number | null = null;
+const sortTickListeners = new Set<() => void>();
+function subscribeSortTick(onChange: () => void) {
+  sortTickListeners.add(onChange);
+  return () => {
+    sortTickListeners.delete(onChange);
+  };
+}
+function getSortTick() {
+  return sortTickValue;
+}
+function startSortTick() {
+  sortTickValue = 0;
+  sortTickListeners.forEach((cb) => cb());
+  if (sortTickTimer != null) window.clearInterval(sortTickTimer);
+  sortTickTimer = window.setInterval(() => {
+    sortTickValue += 1;
+    sortTickListeners.forEach((cb) => cb());
+  }, 250);
+}
+function stopSortTick() {
+  if (sortTickTimer != null) {
+    window.clearInterval(sortTickTimer);
+    sortTickTimer = null;
+  }
 }
 
 /* ------------------------------- sound ---------------------------------- */
@@ -342,6 +371,7 @@ export function SnakeSorting() {
   const [probing, setProbing] = useState<ProbeKind | null>(null);
   const [deepUsed, setDeepUsed] = useState<boolean>(false);
   const [earlyBonus, setEarlyBonus] = useState(0);
+  const [localityOptions, setLocalityOptions] = useState<string[]>([]);
   const [pickedHouse, setPickedHouse] = useState<HouseId | null>(null);
   const [pickedLocality, setPickedLocality] = useState<string | null>(null);
   const [houseWasCorrect, setHouseWasCorrect] = useState(false);
@@ -362,7 +392,7 @@ export function SnakeSorting() {
   const [recap, setRecap] = useState<RecapEntry[]>([]);
 
   const timeouts = useRef<number[]>([]);
-  const sortElapsedMs = useRef(0);
+  const sortTick = useSyncExternalStore(subscribeSortTick, getSortTick, getSortTick);
   const mutedRef = useRef(false);
   const scoreRef = useRef(0);
   const synth = useSynth(mutedRef);
@@ -395,11 +425,8 @@ export function SnakeSorting() {
      clock reads in the component body. */
   useEffect(() => {
     if (phase !== "sort") return;
-    sortElapsedMs.current = 0;
-    const id = window.setInterval(() => {
-      sortElapsedMs.current += 250;
-    }, 250);
-    return () => window.clearInterval(id);
+    startSortTick();
+    return () => stopSortTick();
   }, [phase]);
 
   const later = (ms: number, fn: () => void) => {
@@ -421,6 +448,7 @@ export function SnakeSorting() {
     setEarlyBonus(0);
     setPickedHouse(null);
     setPickedLocality(null);
+    setLocalityOptions([]);
     setHouseWasCorrect(false);
     setLocalityWasCorrect(false);
     setGain({ house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
@@ -541,7 +569,7 @@ export function SnakeSorting() {
 
   const pickHouse = (id: HouseId) => {
     if (phase !== "sort" || !snake) return;
-    const elapsedMs = sortElapsedMs.current;
+    const elapsedMs = sortTick * 250;
     setPickedHouse(id);
     setPhase("deliberate");
     setHatLine(pick(HAT_LINES.deliberating));
@@ -581,6 +609,8 @@ export function SnakeSorting() {
       setBestStreak((b) => Math.max(b, newStreak));
       setHousesCorrect((c) => c + 1);
       setHouseWasCorrect(true);
+      setLocalitiesOffered((c) => c + 1);
+      setLocalityOptions(shuffle(HOUSE_BY_ID[snake.house].localities));
       setHatLine(`${HAT_LINES.correctHouse[snake.house]}`);
       synth.slam();
       buzz(25);
@@ -608,20 +638,17 @@ export function SnakeSorting() {
 
   const continueFromReveal = () => {
     if (!snake) return;
-    if (houseWasCorrect) {
-      setLocalitiesOffered((c) => c + 1);
-      setPhase("locality");
-      setHatLine(pick(HAT_LINES.localityPrompt));
-      synth.tick();
-    } else if (mode === "endless" && strikes >= 3) {
+    if (mode === "endless" && strikes >= 3) {
       finishGame();
     } else {
       advanceToNextSnake();
     }
   };
 
+  /* Homeland bonus: one quick guess, right inside the reveal. The House
+     call is the win — this is pure bonus points. */
   const pickLocality = (loc: string) => {
-    if (phase !== "locality" || !snake) return;
+    if (phase !== "reveal" || !snake || !houseWasCorrect || pickedLocality) return;
     const correct = loc === snake.locality;
     setPickedLocality(loc);
     setLocalityWasCorrect(correct);
@@ -643,7 +670,6 @@ export function SnakeSorting() {
       );
       synth.buzz();
     }
-    setPhase("localityReveal");
   };
 
   const totalSnakes = mode === "ceremony" ? order.length : undefined;
@@ -869,7 +895,8 @@ export function SnakeSorting() {
                 {phase === "sort" && (
                   <div className="ss-rise">
                     <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-100/70">
-                      Call its house
+                      Call its house ·{" "}
+                      <span className="text-amber-200">+{speedBonus(sortTick * 250)}</span>
                     </p>
                     <div className="grid grid-cols-2 gap-2.5">
                       {HOUSES.map((h) => (
@@ -886,7 +913,9 @@ export function SnakeSorting() {
                               <p className="text-[14px] font-black" style={{ color: h.color }}>
                                 {h.name}
                               </p>
-                              <p className="text-[10px] italic text-white/45">{h.shortTaxon}</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">
+                                {h.region}
+                              </p>
                             </div>
                           </div>
                           <p className="mt-1.5 text-[11px] italic leading-snug text-white/55">
@@ -910,67 +939,14 @@ export function SnakeSorting() {
                     pickedHouse={pickedHouse}
                     correct={houseWasCorrect}
                     gain={gain}
+                    pickedLocality={pickedLocality}
+                    localityWasCorrect={localityWasCorrect}
+                    localityOptions={localityOptions}
+                    onPickLocality={pickLocality}
+                    isLastSnake={mode === "ceremony" && idx >= order.length - 1}
                     onContinue={continueFromReveal}
                     reducedMotion={reducedMotion}
                   />
-                )}
-
-                {phase === "locality" && (
-                  <div className="ss-rise">
-                    <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-100/70">
-                      Name its homeland · +{LOCALITY_POINTS}
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {shuffle(HOUSE_BY_ID[snake.house].localities).map((loc) => (
-                        <button
-                          key={loc}
-                          type="button"
-                          onClick={() => pickLocality(loc)}
-                          className="rounded-full border border-white/20 bg-black/60 px-5 py-2.5 text-[14px] font-bold text-white/90 backdrop-blur-sm transition active:scale-95 hover:border-amber-200/50 hover:text-amber-100"
-                        >
-                          {loc}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {phase === "localityReveal" && pickedLocality && (
-                  <div className="ss-rise relative overflow-hidden rounded-2xl border border-white/12 bg-black/60 p-4 text-center backdrop-blur-sm">
-                    {localityWasCorrect && !reducedMotion && (
-                      <Sparkles color={HOUSE_BY_ID[snake.house].color} seed={idx + 7} />
-                    )}
-                    <p
-                      className="ss-slam text-2xl font-black uppercase tracking-wide"
-                      style={{
-                        color: localityWasCorrect
-                          ? HOUSE_BY_ID[snake.house].color
-                          : "#f87171",
-                        textShadow: `0 0 24px ${localityWasCorrect ? HOUSE_BY_ID[snake.house].glow : "rgba(248,113,113,.4)"}`,
-                      }}
-                    >
-                      {localityWasCorrect ? "True local!" : snake.locality}
-                    </p>
-                    {localityWasCorrect ? (
-                      <p className="mt-1 text-[13px] text-white/75">
-                        +{LOCALITY_POINTS} pts — the Hat bows to your eye.
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-[13px] text-white/75">
-                        This one hailed from{" "}
-                        <span className="font-bold text-amber-200">{snake.locality}</span>.
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={advanceToNextSnake}
-                      className="mt-3 w-full rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 px-3 py-2.5 text-[13px] font-black uppercase tracking-wider text-black transition active:scale-95"
-                    >
-                      {mode === "ceremony" && idx >= order.length - 1
-                        ? "Hear the verdict →"
-                        : "Next serpent →"}
-                    </button>
-                  </div>
                 )}
               </div>
 
@@ -997,6 +973,11 @@ function RevealPanel({
   pickedHouse,
   correct,
   gain,
+  pickedLocality,
+  localityWasCorrect,
+  localityOptions,
+  onPickLocality,
+  isLastSnake,
   onContinue,
   reducedMotion,
 }: {
@@ -1004,10 +985,16 @@ function RevealPanel({
   pickedHouse: HouseId;
   correct: boolean;
   gain: Gain;
+  pickedLocality: string | null;
+  localityWasCorrect: boolean;
+  localityOptions: string[];
+  onPickLocality: (loc: string) => void;
+  isLastSnake: boolean;
   onContinue: () => void;
   reducedMotion: boolean;
 }) {
   const house = HOUSE_BY_ID[snake.house];
+  const total = gain.house + gain.speed + gain.streakBonus + gain.earlyBonus + gain.locality;
   return (
     <div className="ss-rise relative overflow-hidden rounded-2xl border border-white/12 bg-black/65 p-4 text-center backdrop-blur-sm">
       {correct && !reducedMotion && <Sparkles color={house.color} seed={snake.id.length} />}
@@ -1027,12 +1014,9 @@ function RevealPanel({
           {gain.speed > 0 && <GainRow label="Swift call" value={gain.speed} />}
           {gain.streakBonus > 0 && <GainRow label="Streak bonus" value={gain.streakBonus} />}
           {gain.earlyBonus > 0 && <GainRow label="Early call" value={gain.earlyBonus} />}
+          {gain.locality > 0 && <GainRow label="Homeland bonus" value={gain.locality} />}
           <div className="border-t border-white/10 pt-1">
-            <GainRow
-              label="Total"
-              value={gain.house + gain.speed + gain.streakBonus + gain.earlyBonus}
-              bold
-            />
+            <GainRow label="Total" value={total} bold />
           </div>
         </div>
       ) : (
@@ -1045,12 +1029,45 @@ function RevealPanel({
         </div>
       )}
 
+      {/* Homeland bonus: one quick guess, right here. The House was the win. */}
+      {correct && (
+        <div className="mt-2.5 border-t border-white/10 pt-2.5">
+          {pickedLocality == null ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">
+                📍 Homeland bonus · +{LOCALITY_POINTS}
+              </p>
+              <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+                {localityOptions.map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => onPickLocality(loc)}
+                    className="rounded-full border border-white/20 bg-black/60 px-3.5 py-1.5 text-[12px] font-bold text-white/90 backdrop-blur-sm transition active:scale-95 hover:border-amber-200/50 hover:text-amber-100"
+                  >
+                    {loc}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p
+              className={`text-[13px] font-bold ${localityWasCorrect ? "text-emerald-300" : "text-white/60"}`}
+            >
+              {localityWasCorrect
+                ? `📍 ${pickedLocality} ✓ +${LOCALITY_POINTS}`
+                : `📍 hailed from ${snake.locality}`}
+            </p>
+          )}
+        </div>
+      )}
+
       <button
         type="button"
         onClick={onContinue}
         className="mt-3 w-full rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 px-3 py-2.5 text-[13px] font-black uppercase tracking-wider text-black transition active:scale-95"
       >
-        {correct ? "Name its homeland →" : "Next serpent →"}
+        {correct && isLastSnake ? "Hear the verdict →" : "Next serpent →"}
       </button>
     </div>
   );
@@ -1099,11 +1116,25 @@ function TitleScreen({
         Sorting Hat.
       </h1>
       <p className="mt-3 max-w-[300px] text-[13.5px] leading-relaxed text-white/65">
-        Twelve serpents await upon the dais. Probe their scales, crown and
-        homeland — then call their House, and name their valley.
+        Ten serpents await upon the dais. Probe them, call their House — the
+        homeland is pure bonus.
       </p>
 
-      <div className="mt-6 w-full space-y-2.5">
+      <div className="mt-4 grid w-full grid-cols-4 gap-1.5">
+        {HOUSES.map((h) => (
+          <div
+            key={h.id}
+            className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-black/45 px-1 py-2 backdrop-blur-sm"
+          >
+            <Crest house={h.id} size={30} />
+            <p className="text-[10px] font-bold" style={{ color: h.color }}>
+              {h.name.replace("House ", "")}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 w-full space-y-2.5">
         <button
           type="button"
           onClick={() => onStart("ceremony")}
@@ -1111,7 +1142,7 @@ function TitleScreen({
         >
           Begin the ceremony
           <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
-            10 serpents · call the House, then the homeland
+            10 serpents · the House call is the win
           </span>
         </button>
         <button
@@ -1149,7 +1180,7 @@ function TitleScreen({
           {[
             ["① Probe", "Tap Scales, Crown and Origin to reveal the serpent's field marks."],
             ["② Sort", "Call its House — Azurea, Utaraensis, Pulcher or Viridis. Faster calls earn up to +50. Certain? Call early for +25 per unrevealed probe (blind call: +75)."],
-            ["③ Localize", "Name its homeland valley for +50 and the True Local's glory."],
+            ["③ Localize", "Homeland bonus: after a correct sort, name its valley for +50 — pure bonus points."],
             ["🔮 Deep scan", "Stuck? Spend 25 pts for the Hat's decisive insight — but it forfeits the early-call bonus."],
           ].map(([t, d]) => (
             <p key={t} className="text-[12.5px] leading-snug text-white/70">
@@ -1206,8 +1237,9 @@ function ResultsScreen({
   const rank = rankFor(score);
   const nextRank = [...RANKS].reverse().find((r) => r.min > score);
   const shortHouse = (h: HouseId) => HOUSE_BY_ID[h].name.replace("House ", "");
+  const [showRecap, setShowRecap] = useState(false);
   return (
-    <div className="ss-rise flex flex-col items-center pt-8 text-center">
+    <div className="ss-rise flex flex-col items-center pt-5 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-teal-200/80">
         The Headmaster&apos;s verdict
       </p>
@@ -1215,23 +1247,23 @@ function ResultsScreen({
       <img
         src={`${ASSET}/sorting-hat.webp`}
         alt="The Sorting Hat"
-        className="ss-float mt-4 h-24 w-24 rounded-full border border-amber-200/30 object-cover shadow-[0_0_30px_rgba(251,191,36,.3)]"
+        className="ss-float mt-3 h-20 w-20 rounded-full border border-amber-200/30 object-cover shadow-[0_0_30px_rgba(251,191,36,.3)]"
       />
-      <h2 className="mt-4 font-serif text-4xl font-black text-amber-50">{rank.title}</h2>
+      <h2 className="mt-3 font-serif text-4xl font-black text-amber-50">{rank.title}</h2>
       <p className="mt-1 text-[13px] italic text-white/55">{rank.blurb}</p>
       {nextRank && (
         <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-200/70">
           {nextRank.min - score} pts to {nextRank.title}
         </p>
       )}
-      <p className="mt-3 text-5xl font-black text-amber-200">{score}</p>
+      <p className="mt-2 text-5xl font-black text-amber-200">{score}</p>
       {isNewBest && (
         <p className="ss-pop mt-2 rounded-full border border-amber-300/40 bg-amber-400/15 px-4 py-1 text-[12px] font-black uppercase tracking-widest text-amber-200">
           ✦ New best ✦
         </p>
       )}
 
-      <div className="mt-5 grid w-full grid-cols-2 gap-2">
+      <div className="mt-4 grid w-full grid-cols-2 gap-2">
         {[
           ["Houses sorted", `${housesCorrect} / ${mode === "ceremony" ? totalSnakes : "∞"}`],
           ["Best streak", `🔥 ${bestStreak}`],
@@ -1240,7 +1272,7 @@ function ResultsScreen({
         ].map(([label, value]) => (
           <div
             key={label}
-            className="rounded-2xl border border-white/10 bg-black/55 px-3 py-3 backdrop-blur-sm"
+            className="rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 backdrop-blur-sm"
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">
               {label}
@@ -1251,10 +1283,36 @@ function ResultsScreen({
       </div>
 
       {recap.length > 0 && (
-        <div className="mt-5 w-full rounded-2xl border border-white/10 bg-black/55 p-3 text-left backdrop-blur-sm">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white/45">
-            {mode === "ceremony" ? "Ceremony recap" : "Night's tally"}
-          </p>
+        <button
+          type="button"
+          onClick={() => setShowRecap(true)}
+          className="mt-4 w-full rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 text-[12px] font-bold uppercase tracking-[0.2em] text-white/60 backdrop-blur-sm transition active:scale-95"
+        >
+          {`▸ ${mode === "ceremony" ? "Ceremony recap" : "Night's tally"} (${recap.length})`}
+        </button>
+      )}
+      {showRecap && recap.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          onClick={() => setShowRecap(false)}
+        >
+          <div
+            className="ss-rise max-h-[70vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#161009] p-3 text-left shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/45">
+                {mode === "ceremony" ? "Ceremony recap" : "Night's tally"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowRecap(false)}
+                aria-label="Close recap"
+                className="rounded-full border border-white/15 bg-black/60 px-2.5 py-1 text-[12px] text-white/70 transition active:scale-95"
+              >
+                ✕
+              </button>
+            </div>
           <ul className="space-y-1.5">
             {recap.map((e, i) => (
               <li key={i} className="flex items-center gap-2 text-[12px]">
@@ -1279,10 +1337,11 @@ function ResultsScreen({
               </li>
             ))}
           </ul>
+          </div>
         </div>
       )}
 
-      <div className="mt-4 flex w-full items-start gap-2.5 text-left">
+      <div className="mt-3 flex w-full items-start gap-2.5 text-left">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`${ASSET}/sorting-hat.webp`}
@@ -1294,7 +1353,7 @@ function ResultsScreen({
         </div>
       </div>
 
-      <div className="mt-5 w-full space-y-2.5">
+      <div className="mt-4 w-full space-y-2.5">
         <button
           type="button"
           onClick={() => onRestart("ceremony")}
