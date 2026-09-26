@@ -1885,7 +1885,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         </div>
       </div>
 
-      {screen === "all" && (breedingCycle || geneticTestsPending.length || facilityConstruction || gravidFemales.length) ? (
+      {(breedingCycle || geneticTestsPending.length || facilityConstruction || gravidFemales.length) ? (
         <div className="mt-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4">
           <div className="text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/45">Operations Queue</div>
           <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
