@@ -188,7 +188,7 @@ export function ChondroBreederWorkspace() {
       </button>
 
       <nav
-        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(98px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl transition-transform duration-300 ease-out sm:px-3 lg:bottom-4 lg:h-[98px] lg:max-w-[800px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${navCollapsed ? "max-lg:-translate-x-[calc(100%-52px)]" : ""}`}
+        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(98px+env(safe-area-inset-bottom))] grid-cols-5 gap-1 border-t border-white/[.08] bg-[#030806]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl transition-transform duration-300 ease-out sm:px-3 lg:bottom-4 lg:h-[98px] lg:max-w-[800px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${navCollapsed ? "max-lg:-translate-x-full" : ""}`}
         aria-label="Arboreal Keeper navigation"
       >
         {dockViews.map((id) => {
