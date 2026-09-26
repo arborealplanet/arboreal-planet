@@ -9,6 +9,7 @@ import {
   generateWildSnake,
   randomEscapeLine,
   rollRegion,
+  rollTrailSign,
   rollZoneCenter,
   type CanopyRegion,
   type WildSnake,
@@ -82,6 +83,8 @@ interface TrailOption {
   treeVariants: number[];
   /** Which of the grove's trees hides the python, or null when this trail is empty. */
   pythonTree: number | null;
+  /** The briefing's promised "sign": rustling leaves betray the python's trail. */
+  showsSign: boolean;
 }
 
 interface Leg {
@@ -163,6 +166,29 @@ function Fireflies({ count = 8 }: { count?: number }) {
         />
       ))}
     </>
+  );
+}
+
+/**
+ * The briefing's promised "sign": fluttering leaves above the trail that
+ * hides tonight's python. Pure CSS so it stays crisp at any size.
+ */
+function TrailSign() {
+  return (
+    <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2" aria-hidden="true">
+      <span className="flex items-end justify-center gap-1">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="block h-2.5 w-1.5 rounded-[50%_0] bg-emerald-300/85"
+            style={{ animation: `ch-rustle 1.6s ease-in-out ${i * 0.28}s infinite` }}
+          />
+        ))}
+      </span>
+      <span className="mt-1 block whitespace-nowrap text-center text-[9px] font-black uppercase tracking-[.18em] text-emerald-200/75">
+        rustling leaves
+      </span>
+    </span>
   );
 }
 
@@ -260,6 +286,8 @@ export function CanopyHunter({
           label: trailLabel(trailCount, t),
           treeVariants: [0, 1, 2].map((_, i) => (g + t + i) % TREE_ARTS.length),
           pythonTree: hidesPython ? Math.floor(Math.random() * TREES_PER_GROVE) : null,
+          // The signs aren't always readable — some nights the canopy keeps quiet.
+          showsSign: hidesPython ? rollTrailSign() : false,
         });
       }
       nextLegs.push({ trails });
@@ -369,6 +397,11 @@ export function CanopyHunter({
 
   const currentWild = catchTree !== null ? groveWilds[catchTree] : undefined;
   const currentTrails = legs[legIndex]?.trails ?? [];
+  const bestFind =
+    bag.length > 0
+      ? bag.reduce((a, b) => (b.phenotypeScore > a.phenotypeScore ? b : a))
+      : null;
+  const searchesUsed = EXPEDITION_SEARCHES - searchesLeft;
 
   function trailButtonPos(count: number, index: number): React.CSSProperties {
     if (count === 1) return { left: "50%", bottom: "36%", transform: "translateX(-50%)" };
@@ -387,7 +420,8 @@ export function CanopyHunter({
   return (
     <div className="mx-auto w-full max-w-3xl">
       <style>{`@keyframes ch-sway { 0%,100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
-@keyframes ch-firefly { 0%,100% { transform: translate(0,0); opacity: .25; } 50% { transform: translate(10px,-14px); opacity: 1; } }`}</style>
+@keyframes ch-firefly { 0%,100% { transform: translate(0,0); opacity: .25; } 50% { transform: translate(10px,-14px); opacity: 1; } }
+@keyframes ch-rustle { 0%,100% { transform: rotate(-18deg) translateY(0); opacity: .55; } 50% { transform: rotate(24deg) translateY(-3px); opacity: 1; } }`}</style>
 
       {/* Header */}
       <div className="relative text-center">
@@ -444,7 +478,7 @@ export function CanopyHunter({
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
             <li>· {GROVES_PER_EXPEDITION} groves along the trail, {TREES_PER_GROVE} trees each — {EXPEDITION_TREES} trees in all.</li>
             <li>· You have {EXPEDITION_SEARCHES} searches — spend them wisely.</li>
-            <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs: rustling leaves mean snakes.</li>
+            <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs: rustling leaves mean a snake is near — when the night lets you spot them.</li>
             <li>· Spot one and grab it before it slips away.</li>
             <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea.</li>
             <li>· Caught snakes head straight into your Keeper colony.</li>
@@ -467,13 +501,13 @@ export function CanopyHunter({
           <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} />
           <div className={`relative aspect-[4/3] overflow-hidden rounded-[26px] border border-white/[.07] transition-all duration-700 sm:aspect-[16/9] ${walking ? "scale-110 opacity-0" : "scale-100 opacity-100"}`}>
             <Image src={pathArtForTrailCount(currentTrails.length)} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
-            {/* Distant trees near the vanishing point sell the depth */}
-            <div className="absolute left-[37%] top-[24%] w-16 opacity-90 mix-blend-screen sm:w-20">
+            {/* Distant trees near the vanishing point sell the depth (keyed art, plain opacity dimming) */}
+            <div className="absolute left-[37%] top-[24%] w-16 opacity-90 sm:w-20">
               <div className="relative aspect-[3/4] brightness-[.55]">
                 <TreeArt variant={(legIndex + 1) % TREE_ARTS.length} dimmed={false} swayDelay={0.4} />
               </div>
             </div>
-            <div className="absolute right-[37%] top-[24%] w-16 opacity-90 mix-blend-screen sm:w-20">
+            <div className="absolute right-[37%] top-[24%] w-16 opacity-90 sm:w-20">
               <div className="relative aspect-[3/4] brightness-[.55]">
                 <TreeArt variant={(legIndex + 2) % TREE_ARTS.length} dimmed={false} swayDelay={1.3} />
               </div>
@@ -481,16 +515,17 @@ export function CanopyHunter({
             <Fireflies />
             {/* Trail choices sit on the path ahead */}
             {currentTrails.map((trail, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => chooseTrail(i)}
-                disabled={walking}
-                style={trailButtonPos(currentTrails.length, i)}
-                className="absolute z-10 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 disabled:opacity-60 sm:max-w-[11rem]"
-              >
-                <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">{trail.label}</span>
-              </button>
+              <div key={i} className="absolute z-10" style={trailButtonPos(currentTrails.length, i)}>
+                {trail.showsSign && <TrailSign />}
+                <button
+                  type="button"
+                  onClick={() => chooseTrail(i)}
+                  disabled={walking}
+                  className="max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 disabled:opacity-60 sm:max-w-[11rem]"
+                >
+                  <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">{trail.label}</span>
+                </button>
+              </div>
             ))}
             {/* Third-person hunter (keyed art, fully opaque) */}
             <div className="absolute bottom-1 left-1/2 z-10 h-32 w-24 -translate-x-1/2 sm:h-40 sm:w-32">
@@ -507,7 +542,7 @@ export function CanopyHunter({
             )}
           </div>
           <p className="mt-4 text-center text-xs text-white/35">
-            {currentTrails.length <= 1 ? "One way forward." : "Pick the trail that feels right."}
+            {currentTrails.length <= 1 ? "One way forward." : "Read the signs — rustling leaves mean a snake is near."}
           </p>
         </div>
       )}
@@ -552,6 +587,9 @@ export function CanopyHunter({
             </div>
             <Image src={FOREGROUND_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="pointer-events-none object-cover opacity-60 mix-blend-screen" />
           </div>
+          {grove.pythonTree === null && searched.every(Boolean) && (
+            <p className="mt-3 text-center text-xs italic text-white/40">Only leaves — the signs misled you this time.</p>
+          )}
           <button
             type="button"
             onClick={followTrail}
@@ -659,7 +697,30 @@ export function CanopyHunter({
             <div className="p-6 sm:p-8">
 
             {bag.length > 0 ? (
-              <ul className="mt-2 space-y-3">
+              <>
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3 text-[11px] font-semibold uppercase tracking-[.14em] text-white/50">
+                  <span>
+                    Found · <span className="text-emerald-200">{bag.length}/{EXPEDITION_PYTHONS}</span>
+                  </span>
+                  <span>
+                    Searches used · <span className="text-emerald-200">{searchesUsed}</span>
+                  </span>
+                  <span>
+                    Escaped · <span className="text-emerald-200">{escapedCount}</span>
+                  </span>
+                </div>
+                {bestFind && (
+                  <p className="mt-3 text-center text-sm">
+                    <span className="text-[10px] font-black uppercase tracking-[.16em] text-amber-200/70">Best find · </span>
+                    <span className="font-bold text-amber-100">{bestFind.name}</span>
+                    <span className="text-white/50"> — phenotype {bestFind.phenotypeScore}</span>
+                  </p>
+                )}
+              </>
+            ) : null}
+
+            {bag.length > 0 ? (
+              <ul className="mt-4 space-y-3">
                 {bag.map((wild) => (
                   <li
                     key={wild.name}
@@ -671,6 +732,11 @@ export function CanopyHunter({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="truncate text-sm font-bold text-white">{wild.name}</div>
+                        {bestFind && wild.name === bestFind.name && (
+                          <span className="rounded-full border border-amber-200/30 bg-amber-200/[.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-[.14em] text-amber-200">
+                            Best find
+                          </span>
+                        )}
                         {wild.gravid && <GravidBadge />}
                       </div>
                       <div className="mt-0.5 text-xs text-white/50">

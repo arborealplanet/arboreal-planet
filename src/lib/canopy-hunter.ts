@@ -14,6 +14,19 @@ export const EXPEDITION_SEARCHES = 8;
 export const EXPEDITION_PYTHONS = 4;
 
 /**
+ * Chance that the trail hiding a python shows a "rustling leaves" tell on
+ * the fork screen. The briefing promises readable signs — this keeps the
+ * promise while leaving some nights unreadable, so the fork stays a hunt,
+ * not a giveaway. TUNABLE.
+ */
+export const EXPEDITION_TRAIL_SIGN_CHANCE = 0.75;
+
+/** Roll whether tonight's python trail shows its rustling-leaves tell. */
+export function rollTrailSign(random: RandomFn = Math.random): boolean {
+  return random() < EXPEDITION_TRAIL_SIGN_CHANCE;
+}
+
+/**
  * A wild-caught gravid female lays her clutch this long after she is
  * brought home to the colony (wall-clock, like every other game timer).
  */
