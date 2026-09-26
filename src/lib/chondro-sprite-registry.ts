@@ -123,11 +123,8 @@ const localitySprites: Record<string, StageSpriteSet> = {
         variant("/hatchery/snakes/localities/sorong/red-adult.webp"),
         variant("/hatchery/snakes/localities/timika/red-adult.webp"),
       ],
-      Yellow: [
-        variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp"),
-        variant("/hatchery/snakes/localities/sorong/yellow-adult.webp"),
-        variant("/hatchery/snakes/localities/timika/yellow-adult.webp"),
-      ],
+      // Owner 2026-09-26: Yellow Arfak adults always use the Yellow Sorong adult sprite (no random pick).
+      Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-adult.webp")],
     },
     adultAny: [variant("/hatchery/snakes/localities/arfak/adult.webp")],
   },
