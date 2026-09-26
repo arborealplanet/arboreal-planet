@@ -100,12 +100,66 @@ const subspeciesShort: Record<Subspecies, string> = {
   "Morelia azurea utaraensis": "M. a. utaraensis",
   "Morelia viridis": "M. viridis",
 };
-const localitiesBySubspecies: Record<Subspecies, Locality[]> = {
-  "Morelia azurea azurea": ["Biak", "Numfor"],
-  "Morelia azurea pulcher": ["Manokwari", "Arfak", "Sorong", "Timika", "Kofiau"],
-  "Morelia azurea utaraensis": ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],
-  "Morelia viridis": ["Aru", "Merauke"],
+type RarityTier = "common" | "uncommon" | "rare" | "legendary";
+
+const RARITY_WEIGHTS: Record<RarityTier, number> = {
+  common: 50,
+  uncommon: 25,
+  rare: 10,
+  legendary: 4,
 };
+
+type LocalityPhase = { locality: Locality; color: "Red" | "Yellow"; tier: RarityTier };
+
+// Owner-set shop rarity (2026-09-26): which locality + neonate-phase combos appear
+// in the store and how often. Always-yellow localities (Kofiau, Aru, Merauke)
+// only appear as Yellow.
+const LOCALITY_PHASE_RARITY: Record<Subspecies, LocalityPhase[]> = {
+  "Morelia azurea azurea": [
+    { locality: "Biak", color: "Yellow", tier: "common" },
+    { locality: "Biak", color: "Red", tier: "common" },
+    { locality: "Numfor", color: "Yellow", tier: "uncommon" },
+    { locality: "Numfor", color: "Red", tier: "rare" },
+  ],
+  "Morelia azurea pulcher": [
+    { locality: "Manokwari", color: "Yellow", tier: "uncommon" },
+    { locality: "Manokwari", color: "Red", tier: "rare" },
+    { locality: "Arfak", color: "Yellow", tier: "legendary" },
+    { locality: "Arfak", color: "Red", tier: "legendary" },
+    { locality: "Sorong", color: "Yellow", tier: "common" },
+    { locality: "Sorong", color: "Red", tier: "rare" },
+    { locality: "Timika", color: "Yellow", tier: "legendary" },
+    { locality: "Timika", color: "Red", tier: "legendary" },
+    { locality: "Kofiau", color: "Yellow", tier: "legendary" },
+  ],
+  "Morelia azurea utaraensis": [
+    { locality: "Cyclops", color: "Yellow", tier: "uncommon" },
+    { locality: "Cyclops", color: "Red", tier: "rare" },
+    { locality: "Jayapura", color: "Yellow", tier: "common" },
+    { locality: "Jayapura", color: "Red", tier: "uncommon" },
+    { locality: "Lereh", color: "Yellow", tier: "uncommon" },
+    { locality: "Lereh", color: "Red", tier: "rare" },
+    { locality: "Wamena", color: "Yellow", tier: "legendary" },
+    { locality: "Wamena", color: "Red", tier: "legendary" },
+    { locality: "Yapen", color: "Yellow", tier: "legendary" },
+    { locality: "Yapen", color: "Red", tier: "legendary" },
+  ],
+  "Morelia viridis": [
+    { locality: "Aru", color: "Yellow", tier: "common" },
+    { locality: "Merauke", color: "Yellow", tier: "rare" },
+  ],
+};
+
+function chooseLocalityPhase(subspecies: Subspecies, random: () => number): LocalityPhase {
+  const options = LOCALITY_PHASE_RARITY[subspecies];
+  const total = options.reduce((sum, option) => sum + RARITY_WEIGHTS[option.tier], 0);
+  let roll = random() * total;
+  for (const option of options) {
+    roll -= RARITY_WEIGHTS[option.tier];
+    if (roll <= 0) return option;
+  }
+  return options[options.length - 1];
+}
 
 type SpriteQaItem = {
   id: string;
@@ -326,15 +380,8 @@ function chooseSubspecies(random: () => number, source: Snake["source"], effects
 function makeRandomOffer(seed: number, index: number, random: () => number, effects: Map<Subspecies, ConservationRow>): Offer {
   const source: Snake["source"] = random() < 0.6 ? "Captive Bred" : "Import";
   const subspecies = chooseSubspecies(random, source, effects);
-  const localities = localitiesBySubspecies[subspecies];
-  const locality = localities[Math.floor(random() * localities.length)];
+  const { locality, color: neonateColor } = chooseLocalityPhase(subspecies, random);
   const sex: Sex = random() < 0.5 ? "Male" : "Female";
-  const neonateColor: "Red" | "Yellow" =
-    subspecies === "Morelia viridis" || locality === "Kofiau"
-      ? "Yellow"
-      : random() < 0.4
-        ? "Red"
-        : "Yellow";
   const stages: LifeStage[] = ["Hatchling", "Neonate", "Subadult", "Adult"];
   const lifeStage = stages[Math.floor(random() * stages.length)];
   const geneticsTested = random() < 0.22;
@@ -998,7 +1045,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                   phenotypeScore={offer.phenotypeScore}
                   spriteSeed={offer.id}
                   compact
-                  tiny={carousel}
+                  large={carousel}
                 />
                 </div>
                 {carousel ? (

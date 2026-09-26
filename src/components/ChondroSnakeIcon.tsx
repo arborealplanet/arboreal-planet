@@ -9,6 +9,7 @@ export function ChondroSnakeIcon({
   compact = false,
   tiny = false,
   mini = false,
+  large = false,
   lifeStage,
   neonateColor,
   locality,
@@ -25,6 +26,8 @@ export function ChondroSnakeIcon({
   tiny?: boolean;
   /** 80px square thumbnail (receipt rows, haul banner). Badges hidden. */
   mini?: boolean;
+  /** Taller full-width art for the mobile shop carousel so the snake spreads across the card. */
+  large?: boolean;
   lifeStage?: ChondroLifeStage;
   neonateColor?: ChondroNeonateColor;
   locality?: string;
@@ -47,7 +50,7 @@ export function ChondroSnakeIcon({
   });
   const isSubadult = lifeStage === "Subadult";
   const versionedCandidates = rawCandidates.map(
-    (src) => `${src}?v=2026-09-20-cyclops-aru-mixed-v7`,
+    (src) => `${src}?v=2026-09-26-sprite-wave-v8`,
   );
   const versionedSrc = versionedCandidates[0] ?? null;
 
@@ -110,7 +113,7 @@ export function ChondroSnakeIcon({
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${mini ? "h-20 w-20" : tiny ? "h-44 w-full" : compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-white/[.06] bg-black/20 ${mini ? "h-20 w-20" : tiny ? "h-44 w-full" : large ? "h-60 w-full" : compact ? "h-40 min-w-40 sm:h-48 sm:min-w-48" : "h-56 w-full sm:h-72"}`}>
       {versionedSrc ? (
         <img
           key={versionedSrc}

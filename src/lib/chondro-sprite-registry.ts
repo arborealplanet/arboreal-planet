@@ -41,11 +41,11 @@ const variant = (
   options: Omit<SpriteVariant, "path"> = {},
 ): SpriteVariant => ({ path, ...options });
 
+// Fallback chains for sprite paths that were replaced or repaired. The two
+// corrupt Wamena red-neonate fallbacks were deleted on 2026-09-26; the live
+// primary remains with no fallbacks.
 const spritePathFallbacks: Record<string, string[]> = {
-  "/hatchery/snakes/localities/wamena/red-neonate-live.webp": [
-    "/hatchery/snakes/localities/wamena/red-neonate-fixed.webp",
-    "/hatchery/snakes/localities/wamena/red-neonate-v3.webp",
-  ],
+  "/hatchery/snakes/localities/wamena/red-neonate-live.webp": [],
 };
 
 const localitySprites: Record<string, StageSpriteSet> = {
@@ -55,6 +55,7 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-neonate.webp")],
     },
     adult: {
+      Red: [variant("/hatchery/snakes/localities/lereh/red-adult.webp")],
       Yellow: [variant("/hatchery/snakes/localities/lereh/yellow-adult.webp")],
     },
   },
@@ -64,12 +65,31 @@ const localitySprites: Record<string, StageSpriteSet> = {
       Yellow: [variant("/hatchery/snakes/localities/wamena/yellow-neonate.webp")],
     },
     adult: {
+      Red: [variant("/hatchery/snakes/localities/wamena/red-adult.webp")],
       Yellow: [variant("/hatchery/snakes/recovered-v6/wamena/yellow-adult.webp")],
     },
   },
   Cyclops: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/recovered-v7/cyclops/red-neonate.webp")],
+      Red: [
+        variant("/hatchery/snakes/recovered-v7/cyclops/red-neonate.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-neonate-2.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-neonate-3.webp"),
+      ],
+      Yellow: [variant("/hatchery/snakes/localities/cyclops/yellow-neonate.webp")],
+    },
+    adult: {
+      Red: [
+        variant("/hatchery/snakes/localities/cyclops/red-adult.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-adult-2.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-adult-3.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-adult-4.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-adult-5.webp"),
+      ],
+      Yellow: [
+        variant("/hatchery/snakes/localities/cyclops/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/cyclops/yellow-adult-2.webp"),
+      ],
     },
   },
   Manokwari: {
@@ -88,29 +108,124 @@ const localitySprites: Record<string, StageSpriteSet> = {
   },
   Arfak: {
     juvenile: {
-      Red: [variant("/hatchery/snakes/localities/arfak/red-neonate.webp")],
+      // Same-subspecies (pulcher) placeholders until dedicated Arfak red-neonate art exists.
+      Red: [
+        variant("/hatchery/snakes/localities/manokwari/red-neonate.webp"),
+        variant("/hatchery/snakes/localities/sorong/red-neonate.webp"),
+        variant("/hatchery/snakes/localities/timika/red-neonate.webp"),
+      ],
+      Yellow: [variant("/hatchery/snakes/localities/arfak/yellow-neonate.webp")],
+    },
+    adult: {
+      // Same-subspecies (pulcher) placeholders until dedicated Arfak adult art exists.
+      Red: [
+        variant("/hatchery/snakes/localities/manokwari/red-adult.webp"),
+        variant("/hatchery/snakes/localities/sorong/red-adult.webp"),
+        variant("/hatchery/snakes/localities/timika/red-adult.webp"),
+      ],
+      Yellow: [
+        variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/sorong/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/timika/yellow-adult.webp"),
+      ],
     },
     adultAny: [variant("/hatchery/snakes/localities/arfak/adult.webp")],
   },
   Sorong: {
     juvenile: {
+      Red: [variant("/hatchery/snakes/localities/sorong/red-neonate.webp")],
       Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-neonate.webp")],
     },
     adult: {
+      Red: [
+        variant("/hatchery/snakes/localities/sorong/red-adult.webp"),
+        variant("/hatchery/snakes/localities/sorong/red-adult-2.webp"),
+        variant("/hatchery/snakes/localities/sorong/red-adult-3.webp"),
+      ],
       Yellow: [
+        variant("/hatchery/snakes/localities/sorong/yellow-adult.webp"),
         variant("/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp", { minPhenotypeScore: 85 }),
       ],
     },
   },
   Timika: {
+    juvenile: {
+      Red: [variant("/hatchery/snakes/localities/timika/red-neonate.webp")],
+      Yellow: [variant("/hatchery/snakes/localities/timika/yellow-neonate.webp")],
+    },
     adult: {
       Red: [variant("/hatchery/snakes/localities/timika/red-adult.webp")],
       Yellow: [variant("/hatchery/snakes/localities/timika/yellow-adult.webp")],
     },
   },
-  Kofiau: {},
-  Jayapura: {},
-  Yapen: {},
+  Kofiau: {
+    juvenile: {
+      Yellow: [variant("/hatchery/snakes/localities/kofiau/yellow-neonate.webp")],
+    },
+    adult: {
+      Yellow: [
+        variant("/hatchery/snakes/localities/kofiau/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/kofiau/yellow-adult-2.webp"),
+        variant("/hatchery/snakes/localities/kofiau/yellow-adult-3.webp"),
+        variant("/hatchery/snakes/localities/kofiau/yellow-adult-4.webp"),
+      ],
+    },
+  },
+  Jayapura: {
+    juvenile: {
+      Red: [
+        variant("/hatchery/snakes/localities/jayapura/red-neonate.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-neonate-2.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-neonate-3.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-neonate-4.webp"),
+      ],
+      Yellow: [
+        variant("/hatchery/snakes/localities/jayapura/yellow-neonate.webp"),
+        variant("/hatchery/snakes/localities/jayapura/yellow-neonate-2.webp"),
+      ],
+    },
+    adult: {
+      Red: [
+        variant("/hatchery/snakes/localities/jayapura/red-adult.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-adult-2.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-adult-a-plus.webp", { minPhenotypeScore: 85 }),
+      ],
+      Yellow: [
+        variant("/hatchery/snakes/localities/jayapura/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/jayapura/yellow-adult-2.webp"),
+        variant("/hatchery/snakes/localities/jayapura/yellow-adult-a-plus.webp", { minPhenotypeScore: 85 }),
+      ],
+    },
+  },
+  Yapen: {
+    juvenile: {
+      // Same-subspecies (utaraensis) placeholder until dedicated Yapen red-neonate art exists.
+      Red: [
+        variant("/hatchery/snakes/localities/wamena/red-neonate-live.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-neonate.webp"),
+        variant("/hatchery/snakes/recovered-v7/cyclops/red-neonate.webp"),
+        variant("/hatchery/snakes/localities/lereh/red-neonate.webp"),
+      ],
+      Yellow: [
+        variant("/hatchery/snakes/localities/yapen/yellow-neonate.webp"),
+        variant("/hatchery/snakes/localities/yapen/yellow-neonate-2.webp"),
+      ],
+    },
+    adult: {
+      // Same-subspecies (utaraensis) placeholders until dedicated Yapen adult art exists.
+      Red: [
+        variant("/hatchery/snakes/localities/wamena/red-adult.webp"),
+        variant("/hatchery/snakes/localities/jayapura/red-adult.webp"),
+        variant("/hatchery/snakes/localities/cyclops/red-adult.webp"),
+      ],
+      Yellow: [
+        variant("/hatchery/snakes/recovered-v6/wamena/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/jayapura/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/cyclops/yellow-adult.webp"),
+        variant("/hatchery/snakes/localities/lereh/yellow-adult.webp"),
+      ],
+    },
+  },
   Biak: {
     juvenile: {
       Red: [variant("/hatchery/snakes/recovered-v6/biak/red-neonate.webp")],
@@ -136,22 +251,35 @@ const localitySprites: Record<string, StageSpriteSet> = {
     juvenile: {
       Yellow: [variant("/hatchery/snakes/recovered-v7/aru/yellow-neonate.webp")],
     },
-    adultAny: [variant("/hatchery/snakes/localities/aru/adult-live-v2.webp")],
+    adultAny: [
+      variant("/hatchery/snakes/localities/aru/adult.webp"),
+      variant("/hatchery/snakes/localities/aru/adult-a-plus.webp", { minPhenotypeScore: 85 }),
+    ],
   },
   Merauke: {
     juvenile: {
       Yellow: [variant("/hatchery/snakes/localities/merauke/yellow-neonate.webp")],
     },
+    adultAny: [variant("/hatchery/snakes/localities/merauke/adult.webp")],
   },
 };
 
-const specificHybridSprites: Record<string, StageSpriteSet> = {};
+const specificHybridSprites: Record<string, StageSpriteSet> = {
+  "aru-wamena": {
+    juvenile: {
+      Red: [variant("/hatchery/snakes/hybrids/aru-wamena/neonate.webp")],
+    },
+  },
+};
 
 const hybridSprites: Record<string, StageSpriteSet> = {
   "pulcher-utaraensis": {
     juvenile: {
       Red: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/red-neonate.webp")],
       Yellow: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/yellow-neonate.webp")],
+    },
+    adult: {
+      Red: [variant("/hatchery/snakes/hybrids/pulcher-utaraensis/red-adult.webp")],
     },
   },
 };
@@ -160,6 +288,10 @@ const hybridSprites: Record<string, StageSpriteSet> = {
 // another variant here; existing animals keep a stable result because the
 // picker is seeded from the snake id.
 const designerSprites: StageSpriteSet = {
+  juvenile: {
+    Red: [variant("/hatchery/snakes/special/designer/red-neonate.webp")],
+    Yellow: [variant("/hatchery/snakes/special/designer/yellow-neonate.webp")],
+  },
   adultAny: [
     variant("/hatchery/snakes/special/designer/adult-01.webp"),
   ],
@@ -403,5 +535,10 @@ export const CHONDRO_SPRITE_ASSET_PLAN = {
     sorongYellowAdultAPlus: "/hatchery/snakes/special/sorong-yellow-adult-a-plus.webp",
     designerAdult01: "/hatchery/snakes/special/designer/adult-01.webp",
   },
-  pending: {},
+  pending: {
+    // Slots still wired to same-subspecies placeholder art (owner-approved rule).
+    yapen: "juvenile.Red + adult.Red/Yellow use utaraensis (Wamena/Jayapura/Cyclops/Lereh) art",
+    arfak: "juvenile.Red + adult.Red/Yellow use pulcher (Manokwari/Sorong/Timika) art",
+    numfor: "temporary Biak fallback (owner-approved)",
+  },
 } as const;
