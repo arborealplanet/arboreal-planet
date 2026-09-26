@@ -83,11 +83,19 @@ export default function CanopyCrossing() {
   const [message,setMessage] = useState("Cross five wild canopy stages. Climb to the crown — or slip out the far bank. Ride branches and vines; dodge predators.");
   const [best,setBest] = useState(0);
   const [paused,setPaused] = useState(false);
+  const [narrow,setNarrow] = useState(false);
   const bestRef = useRef(0);
   const pausedRef = useRef(false);
   const stageStartRef = useRef(0);
   const lastRowRef = useRef(START.y);
   const messageUntilRef = useRef(0);
+  useEffect(()=>{
+    const mq = window.matchMedia("(max-width:640px)");
+    const apply = ()=>setNarrow(mq.matches);
+    apply();
+    mq.addEventListener("change",apply);
+    return ()=>mq.removeEventListener("change",apply);
+  },[]);
 
   const resetPlayer = useCallback(() => { playerRef.current={...START}; lastRowRef.current=START.y; facingRef.current="up"; },[]);
   const syncBest = useCallback((value:number) => {
@@ -309,13 +317,13 @@ export default function CanopyCrossing() {
   const onTouchEnd=(e:any)=>{const s=touchRef.current;if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);touchRef.current=null;};
 
   const hudStage=stageOf(level);
-  return <main style={{minHeight:"100svh",background:"#030806",color:"#edf7e9",fontFamily:"system-ui,sans-serif",padding:"18px"}}>
+  return <main style={{minHeight:"100svh",background:"#030806",color:"#edf7e9",fontFamily:"system-ui,sans-serif",padding:narrow?"10px":"18px"}}>
     <div style={{maxWidth:760,margin:"0 auto"}}>
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"end",gap:12,marginBottom:12}}>
         <div><div style={{fontSize:12,letterSpacing:3,color:"#8ebc77"}}>ARBOREAL PLANET ARCADE · PROTOTYPE</div><h1 style={{margin:"3px 0 0",fontSize:"clamp(28px,6vw,54px)",lineHeight:.95}}>CANOPY CROSSING</h1></div>
         <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score} · BEST {best} · 🪲 {bugs}<br/><span style={{color:"#e2605c"}}>{"♥".repeat(Math.max(0,lives))}</span><br/>{hudStage.name.toUpperCase()}<br/><span style={{fontSize:11,color:"#9dc98f",letterSpacing:1}}>{objectiveOf(hudStage)}</span></div>
       </header>
-      <section style={{position:"relative",height:"min(72svh,760px)",minHeight:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <section style={{position:"relative",height:narrow?"min(50svh,480px)":"min(72svh,760px)",minHeight:narrow?340:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}} aria-label="Canopy Crossing game"/>
         {(!running||message)&&<div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:"min(82%,420px)",padding:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.88)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
           <strong style={{fontSize:running?20:30}}>{running?message:"CLIMB THE CANOPY"}</strong>
