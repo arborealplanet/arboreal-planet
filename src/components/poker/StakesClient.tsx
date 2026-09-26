@@ -71,10 +71,10 @@ export function StakesClient() {
         api<{ animals: Animal[] }>("/api/wagers/eligible"),
         api<{ wagers: WagerRow[] }>("/api/wagers/history"),
       ]);
-      setTokens(t.tokens);
-      setAnimals(a.animals);
-      setHistory(h.wagers);
-      const active = h.wagers.find((w) => w.state === "in_progress" || w.state === "awaiting_start");
+      setTokens(t.tokens ?? []);
+      setAnimals(a.animals ?? []);
+      setHistory(h.wagers ?? []);
+      const active = (h.wagers ?? []).find((w) => w.state === "in_progress" || w.state === "awaiting_start");
       if (active) setActiveId(active.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load stakes.");
