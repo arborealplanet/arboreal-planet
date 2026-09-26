@@ -48,15 +48,26 @@ export default function CanopyCrossing() {
   const [lives,setLives] = useState(3);
   const [level,setLevel] = useState(1);
   const [message,setMessage] = useState("Reach the crown. Avoid predators. Ride the moving canopy.");
+  const [best,setBest] = useState(0);
+  const [paused,setPaused] = useState(false);
+  const bestRef = useRef(0);
+  const pausedRef = useRef(false);
+  const stageStartRef = useRef(0);
+  const lastRowRef = useRef(START.y);
   const messageUntilRef = useRef(0);
 
-  const resetPlayer = useCallback(() => { playerRef.current={...START}; },[]);
+  const resetPlayer = useCallback(() => { playerRef.current={...START}; lastRowRef.current=START.y; },[]);
+  const syncBest = useCallback((value:number) => {
+    if(value>bestRef.current){bestRef.current=value;setBest(value);try{localStorage.setItem("canopy-crossing-best",String(value));}catch{}}
+  },[]);
+  useEffect(()=>{try{const v=Number(localStorage.getItem("canopy-crossing-best")||0);bestRef.current=v;setBest(v);}catch{}},[]);
+  const togglePause=useCallback(()=>{if(!runningRef.current)return;pausedRef.current=!pausedRef.current;setPaused(pausedRef.current);setMessage(pausedRef.current?"PAUSED":"");},[]);
 
   const start = useCallback(() => {
     levelRef.current=1; scoreRef.current=0; livesRef.current=3;
     moversRef.current=makeMovers(1); resetPlayer();
     setLevel(1);setScore(0);setLives(3);setMessage("");
-    runningRef.current=true;setRunning(true);
+    stageStartRef.current=performance.now();pausedRef.current=false;setPaused(false);runningRef.current=true;setRunning(true);
   },[resetPlayer]);
 
   const move = useCallback((dx:number,dy:number) => {
@@ -64,7 +75,10 @@ export default function CanopyCrossing() {
     const p=playerRef.current;
     p.x=clamp(p.x+dx,0,COLS-1);
     p.y=clamp(p.y+dy,0,ROWS-1);
-    if(dy<0){ scoreRef.current+=10; setScore(scoreRef.current); }
+    if(dy<0){
+      const progress=Math.max(0,lastRowRef.current-p.y);
+      if(progress>0){scoreRef.current+=10*progress;setScore(scoreRef.current);lastRowRef.current=p.y;}
+    }
   },[]);
 
   useEffect(()=>{
@@ -74,11 +88,11 @@ export default function CanopyCrossing() {
       if(k==="arrowup"||k==="w") move(0,-1);
       if(k==="arrowdown"||k==="s") move(0,1);
       if(k==="arrowleft"||k==="a") move(-1,0);
-      if(k==="arrowright"||k==="d") move(1,0);
+      if(k==="arrowright"||k==="d") move(1,0);\n      if(k==="p"||k==="escape") togglePause();
     };
     window.addEventListener("keydown",key,{passive:false});
     return()=>window.removeEventListener("keydown",key);
-  },[move]);
+  },[move,togglePause]);
 
   useEffect(()=>{
     let raf=0;
@@ -91,11 +105,11 @@ export default function CanopyCrossing() {
       const W=rect.width,H=rect.height,rowH=H/ROWS,colW=W/COLS;
       const dt=Math.min((t-lastRef.current)/1000||0,.04);lastRef.current=t;
       if(messageUntilRef.current && t>messageUntilRef.current){ messageUntilRef.current=0; setMessage(""); }
-      if(runningRef.current){
+      if(runningRef.current && !pausedRef.current){
         for(const m of moversRef.current){m.x+=m.speed*dt;if(m.speed>0&&m.x>COLS+1)m.x=-m.width-1;if(m.speed<0&&m.x+m.width<-1)m.x=COLS+1;}
         const p=playerRef.current;
         if(p.y===0){
-          const completed=STAGES[Math.min(levelRef.current-1,STAGES.length-1)];\n          if(levelRef.current>=STAGES.length){scoreRef.current+=completed.bonus;setScore(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("CROWN CONQUERED — all five stages cleared!");resetPlayer();continue;}\n          levelRef.current++; scoreRef.current+=completed.bonus;
+          const completed=STAGES[Math.min(levelRef.current-1,STAGES.length-1)];\n          if(levelRef.current>=STAGES.length){const timeBonus=Math.max(0,Math.floor(1500-(t-stageStartRef.current)/20));scoreRef.current+=completed.bonus+timeBonus;setScore(scoreRef.current);syncBest(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("CROWN CONQUERED — all five stages cleared!");resetPlayer();continue;}\n          levelRef.current++; scoreRef.current+=completed.bonus; stageStartRef.current=t;
           setLevel(levelRef.current);setScore(scoreRef.current);setMessage("Canopy reached! Next ascent.");
           moversRef.current=makeMovers(levelRef.current);resetPlayer();
           setTimeout(()=>setMessage(""),900);
@@ -106,7 +120,7 @@ export default function CanopyCrossing() {
           if(!safe){
             livesRef.current--;setLives(livesRef.current);setMessage("Missed the branch!");
             resetPlayer();
-            if(livesRef.current<=0){runningRef.current=false;setRunning(false);setMessage("The jungle wins this round.");}
+            if(livesRef.current<=0){syncBest(scoreRef.current);runningRef.current=false;setRunning(false);setMessage("The jungle wins this round.");}
           } else if(lane!=="hazard"&&hits[0]){
             p.x+=hits[0].speed*dt;
             if(p.x<-.4||p.x>COLS-.6){livesRef.current--;setLives(livesRef.current);resetPlayer();}
@@ -184,7 +198,7 @@ export default function CanopyCrossing() {
     <div style={{maxWidth:760,margin:"0 auto"}}>
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"end",gap:12,marginBottom:12}}>
         <div><div style={{fontSize:12,letterSpacing:3,color:"#8ebc77"}}>ARBOREAL PLANET ARCADE · PROTOTYPE</div><h1 style={{margin:"3px 0 0",fontSize:"clamp(28px,6vw,54px)",lineHeight:.95}}>CANOPY CROSSING</h1></div>
-        <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score}<br/>LIVES {"●".repeat(Math.max(0,lives))}<br/>{STAGES[Math.min(level-1,STAGES.length-1)].name.toUpperCase()}</div>
+        <div style={{textAlign:"right",fontWeight:800,fontSize:14}}>SCORE {score} · BEST {best}<br/>LIVES {"●".repeat(Math.max(0,lives))}<br/>{STAGES[Math.min(level-1,STAGES.length-1)].name.toUpperCase()}</div>
       </header>
       <section style={{position:"relative",height:"min(72svh,760px)",minHeight:520,border:"1px solid #315b3a",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.55)",touchAction:"none"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}} aria-label="Canopy Crossing game"/>
@@ -197,7 +211,8 @@ export default function CanopyCrossing() {
         <span/><button onClick={()=>move(0,-1)} style={btn}>▲</button><span/>
         <button onClick={()=>move(-1,0)} style={btn}>◀</button><button onClick={()=>move(0,1)} style={btn}>▼</button><button onClick={()=>move(1,0)} style={btn}>▶</button>
       </div>
-      <p style={{textAlign:"center",fontSize:12,color:"#748579"}}>Arrow keys / WASD · swipe on mobile · standalone prototype with no account or database dependency</p>
+      <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:10}}><button onClick={togglePause} style={{...btn,width:110}}>{paused?"RESUME":"PAUSE"}</button></div>
+      <p style={{textAlign:"center",fontSize:12,color:"#748579"}}>Arrow keys / WASD · swipe on mobile · P/Esc pause · best score saves on device</p>
     </div>
   </main>;
 }
