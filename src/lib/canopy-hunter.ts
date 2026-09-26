@@ -13,6 +13,12 @@ export const EXPEDITION_TREES = 12;
 export const EXPEDITION_SEARCHES = 8;
 export const EXPEDITION_PYTHONS = 4;
 
+/**
+ * A wild-caught gravid female lays her clutch this long after she is
+ * brought home to the colony (wall-clock, like every other game timer).
+ */
+export const GRAVID_GESTATION_MS = 24 * 60 * 60 * 1000;
+
 /* ------------------------------------------------------------------ */
 /* Expedition entry (Arboreal Keeper in-game event)                     */
 /* ------------------------------------------------------------------ */
@@ -117,6 +123,8 @@ export interface WildSnake {
   /** ~8% of finds: one standout trait, called out in the UI. */
   exceptional: boolean;
   exceptionalTraitLabel: string | null;
+  /** Adult females roll 30% gravid — she lays a wild clutch after import. */
+  gravid: boolean;
   notes: string;
 }
 
@@ -156,6 +164,10 @@ export interface KeeperSnake {
   ancestry: Partial<Record<CanopySubspecies, number>>;
   notes: string;
   breederInitials: string | null;
+  /** Wild-caught gravid females: true until she lays her clutch. */
+  gravid?: boolean;
+  /** Wall-clock timestamp when a gravid female lays (set at import). */
+  gravidLaysAt?: number;
 }
 
 type RandomFn = () => number;
@@ -292,11 +304,9 @@ function rollNeonateColor(locality: CanopyLocality, random: RandomFn): CanopyNeo
   return random() < 0.5 ? "Red" : "Yellow";
 }
 
+/** Wild catches come in two flavors: fresh neonates or full adults. */
 function rollLifeStage(random: RandomFn): CanopyLifeStage {
-  const r = random();
-  if (r < 0.4) return "Neonate";
-  if (r < 0.75) return "Subadult";
-  return "Adult";
+  return random() < 0.5 ? "Neonate" : "Adult";
 }
 
 function rollCondition(random: RandomFn): CanopyCondition {
@@ -337,6 +347,10 @@ export function generateWildSnake(n: number, region: CanopyRegion, random: Rando
     (traits.highBlack + traits.highWhite + traits.blueStripe + traits.yellowRetention + traits.blotches) / 5,
   );
 
+  // Adult females have a 30% shot at being gravid — after she's brought
+  // home, a timer starts, and when it runs out she lays a wild clutch.
+  const gravid = lifeStage === "Adult" && sex === "Female" && random() < 0.3;
+
   return {
     name: `Wild ${locality} ${n}`,
     locality,
@@ -351,6 +365,7 @@ export function generateWildSnake(n: number, region: CanopyRegion, random: Rando
     exceptionalTraitLabel: exceptional
       ? `Exceptional high-blue specimen (${traits.blueStripe}% blue)`
       : null,
+    gravid,
     notes: `Caught in a Canopy Hunter ${region.name} expedition.`,
   };
 }
@@ -398,6 +413,9 @@ export function wildSnakeToKeeperSnake(wild: WildSnake, id: string): KeeperSnake
     ancestry: { [wild.subspecies]: 100 },
     notes: wild.notes,
     breederInitials: null,
+    // A gravid female's laying timer starts the moment she joins the colony.
+    gravid: wild.gravid || undefined,
+    gravidLaysAt: wild.gravid ? Date.now() + GRAVID_GESTATION_MS : undefined,
   };
 }
 

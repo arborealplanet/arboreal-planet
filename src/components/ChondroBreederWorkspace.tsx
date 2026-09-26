@@ -318,7 +318,9 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                   onClick={openExpedition}
                   className="group flex min-h-[112px] flex-col items-start rounded-[20px] border border-emerald-300/25 bg-emerald-300/[.05] p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/40 hover:bg-emerald-300/[.08]"
                 >
-                  <span className="grid h-10 w-10 place-items-center rounded-[14px] border border-emerald-300/25 bg-black/25 text-base text-emerald-200">✦</span>
+                  <span className="relative block h-10 w-10 overflow-hidden rounded-[14px] border border-emerald-300/25">
+                    <Image src="/arcade/canopy-hunter/expedition-badge.webp" alt="Canopy Hunter expedition badge" fill sizes="40px" className="object-cover" />
+                  </span>
                   <span className="mt-auto pt-4 text-sm font-bold text-white/80">Canopy Hunter</span>
                   <span className="mt-1 text-[11px] leading-4 text-emerald-100/60">
                     {expedition.freeReady

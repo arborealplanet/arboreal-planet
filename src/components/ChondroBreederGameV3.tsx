@@ -125,6 +125,10 @@ type Snake = {
   ancestry: Partial<Record<Subspecies, number>>;
   notes: string;
   breederInitials: string | null;
+  /** Wild-caught gravid female: true until she lays her clutch in the colony. */
+  gravid?: boolean;
+  /** Wall-clock timestamp when a gravid female lays (set at expedition import). */
+  gravidLaysAt?: number;
 };
 type StoreSnake = Snake & { price: number; pretested: boolean };
 type Clutch = { id: string; dam: Snake; sire: Snake; offspring: Snake[] };
@@ -643,6 +647,25 @@ function createClutch(dam: Snake, sire: Snake, breederInitials: string): Clutch 
   };
 }
 
+/**
+ * A wild-caught gravid female was already bred in the canopy — the sire is
+ * some unknown wild male. He never joins the colony; he exists only inside
+ * the clutch record so the clutch follows the exact same path as any other.
+ * Mirroring the dam's taxonomy guarantees pure locality/subspecies babies.
+ */
+function makeWildSire(dam: Snake): Snake {
+  return {
+    ...dam,
+    id: `wild-sire-${dam.id}`,
+    name: `Wild ${dam.locality} sire`,
+    sex: "Male",
+    parentIds: [],
+    notes: "Unknown wild male — sire of a wild-laid clutch.",
+    gravid: false,
+    gravidLaysAt: undefined,
+  };
+}
+
 function saleValue(a: Snake, season: number) {
   const traits = [a.highBlack, a.highWhite, a.blueStripe, a.yellowRetention, a.blotches ?? 0];
   const strongest = Math.max(...traits);
@@ -962,6 +985,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const seasonCareCost = Math.max(SEASON_CARE_PER_ADULT, adultCount * SEASON_CARE_PER_ADULT);
   const dam = colony.find((a) => a.id === damId) ?? null;
   const sire = colony.find((a) => a.id === sireId) ?? null;
+  const gravidFemales = colony.filter((a) => a.gravid);
   const saleIncome = sales.reduce((sum, item) => sum + item.value, 0);
   const clutchEstablishmentCost = clutch ? CLUTCH_ESTABLISH_BASE_COST + clutch.offspring.length * CLUTCH_ESTABLISH_PER_HATCHLING : 0;
 
@@ -1240,6 +1264,31 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       setBreedingMessage(`${readyTests.length} genetic test${readyTests.length === 1 ? " is" : "s are"} ready.`);
       return;
     }
+    // A wild-caught gravid female lays her clutch once her timer runs out.
+    // She waits if another clutch still needs establishing or a breeding
+    // cycle is running — this effect retries on the next tick.
+    const readyLayer = colony.find(
+      (animal) => animal.gravid && typeof animal.gravidLaysAt === "number" && animal.gravidLaysAt <= now,
+    );
+    if (readyLayer && !clutch && !breedingCycle) {
+      if (!breederIdentityLoaded) return;
+      if (!breederInitials) {
+        setInitialsPrompt(true);
+        setBreedingMessage("Choose breeder initials before the wild clutch can be recorded. Her eggs are being held safely until initials are confirmed.");
+        return;
+      }
+      const wildSire = makeWildSire(readyLayer);
+      setColony((current) =>
+        current.map((animal) =>
+          animal.id === readyLayer.id ? { ...animal, gravid: false, gravidLaysAt: undefined } : animal,
+        ),
+      );
+      setClutch(createClutch(readyLayer, wildSire, breederInitials));
+      setClutchEstablished(false);
+      setHoldbacks([]);
+      setBreedingMessage(`${readyLayer.name} laid her clutch — pure ${readyLayer.locality} babies, sired wild in the canopy. The clutch hatched and now needs to be established.`);
+      return;
+    }
     if (!breedingCycle || breedingCycle.completesAt > now) return;
     const cycleDam = colony.find((animal) => animal.id === breedingCycle.damId);
     const cycleSire = colony.find((animal) => animal.id === breedingCycle.sireId);
@@ -1294,7 +1343,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       setBreedingCycle({ ...breedingCycle, stage: nextStage.id, completesAt: Date.now() + nextStage.hours * 3_600_000 });
       setBreedingMessage(nextStage.id === "development" ? "Pairing successful. The pair has separated naturally and development has started." : nextStage.id === "incubation" ? "Development complete. The eggs were laid and moved into the incubator. Incubation has started." : `${nextStage.label} started.`);
     }
-  }, [hydrated, now, facilityConstruction, geneticTestsPending, breedingCycle, colony, breederInitials, breederIdentityLoaded, damId, sireId]);
+  }, [hydrated, now, facilityConstruction, geneticTestsPending, breedingCycle, clutch, colony, breederInitials, breederIdentityLoaded, damId, sireId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function buyEnclosure(type: EnclosureType) {
@@ -1385,6 +1434,10 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
 
   function breedSelected() {
     if (!dam || !sire) return;
+    if (dam.gravid) {
+      setBreedingMessage(`${dam.name} is already gravid from the wild — she'll lay her own clutch soon. Pick another dam.`);
+      return;
+    }
     if (!breederInitials) {
       setInitialsPrompt(true);
       setInitialsStatus("");
@@ -1453,6 +1506,15 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setExpeditionFlightDone(false);
   }
 
+  // Back out of a finished run to the entry gate (free/paid). The gate —
+  // not the game — decides whether another trip is free, paid, or locked.
+  function exitExpeditionToGate() {
+    setExpeditionEntered(false);
+    setExpeditionFeeArmed(false);
+    setExpeditionRegion(null);
+    setExpeditionFlightDone(false);
+  }
+
   // Rolls tonight's destination, queues its flight intro, and marks the
   // player as entered. Reduced-motion players skip the flight video.
   function beginExpeditionFlight() {
@@ -1500,13 +1562,13 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         normalizeSnake(wildSnakeToKeeperSnake(wild, `canopy-${nowStamp}-${i}`)),
       ),
     ]);
-    setExpeditionOpen(false);
-    setExpeditionEntered(false);
-    setExpeditionRegion(null);
-    setExpeditionFlightDone(false);
     setExpeditionResult(
       `Expedition haul: ${wilds.length} ${wilds.length === 1 ? "snake" : "snakes"} brought home to the colony.`,
     );
+    // Note: the modal stays open on purpose — CanopyHunter's own receipt
+    // ("N snakes added to your colony" + "Plan another expedition") renders
+    // in its results phase after bringHome() sets sent=true. Closing happens
+    // via onClose (Close / backdrop / "Back to the game") or onExitToGate.
   }
 
   async function claimBreederInitials() {
@@ -1823,11 +1885,12 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         </div>
       </div>
 
-      {screen === "all" && (breedingCycle || geneticTestsPending.length || facilityConstruction) ? (
+      {screen === "all" && (breedingCycle || geneticTestsPending.length || facilityConstruction || gravidFemales.length) ? (
         <div className="mt-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[.025] p-4">
           <div className="text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/45">Operations Queue</div>
           <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {breedingCycle ? <div className="rounded-xl border border-amber-200/10 p-3"><div className="text-xs font-bold text-amber-100/65">{BREEDING_STAGES.find((stage) => stage.id === breedingCycle.stage)?.label}</div><div className="mt-1 text-[10px] text-white/35">{colony.find((animal) => animal.id === breedingCycle.damId)?.name ?? breedingCycle.damId} × {colony.find((animal) => animal.id === breedingCycle.sireId)?.name ?? breedingCycle.sireId} · {remainingTime(breedingCycle.completesAt - now)}</div></div> : null}
+            {gravidFemales.map((animal) => <div key={animal.id} className="rounded-xl border border-pink-300/10 p-3"><div className="text-xs font-bold text-pink-100/65">Gravid — wild clutch coming</div><div className="mt-1 text-[10px] text-white/35">{animal.name} · lays in {remainingTime(Math.max(0, (animal.gravidLaysAt ?? now) - now))}</div></div>)}
             {geneticTestsPending.map((job) => <div key={job.snakeId} className="rounded-xl border border-sky-300/10 p-3"><div className="text-xs font-bold text-sky-100/65">Genetic Test</div><div className="mt-1 text-[10px] text-white/35">{colony.find((animal) => animal.id === job.snakeId)?.name ?? job.snakeId} · {remainingTime(job.completesAt - now)}</div></div>)}
             {facilityConstruction ? <div className="rounded-xl border border-emerald-300/10 p-3"><div className="text-xs font-bold text-emerald-100/65">Construction</div><div className="mt-1 text-[10px] text-white/35">{ROOM_EXPANSIONS.find((room) => room.id === facilityConstruction.roomId)?.name ?? facilityConstruction.roomId} · {remainingTime(facilityConstruction.completesAt - now)}</div></div> : null}
           </div>
@@ -1977,7 +2040,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
               </div>
             ) : (
               <div className="mt-4">
-                <CanopyHunter region={expeditionRegion} onCatch={handleExpeditionCatch} onClose={closeExpedition} />
+                <CanopyHunter region={expeditionRegion} onCatch={handleExpeditionCatch} onClose={closeExpedition} onExitToGate={exitExpeditionToGate} />
               </div>
             )}
           </div>
