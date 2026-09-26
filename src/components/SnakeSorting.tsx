@@ -7,6 +7,7 @@ import {
   BEST_ENDLESS_KEY,
   CEREMONY_SNAKES,
   DEEP_SCAN_COST,
+  EARLY_BONUS_PER_PROBE,
   HAT_LINES,
   HOUSES,
   HOUSE_BY_ID,
@@ -271,6 +272,7 @@ interface Gain {
   house: number;
   speed: number;
   streakBonus: number;
+  earlyBonus: number;
   locality: number;
 }
 
@@ -316,11 +318,12 @@ export function SnakeSorting() {
   const [probed, setProbed] = useState<ProbeKind[]>([]);
   const [probing, setProbing] = useState<ProbeKind | null>(null);
   const [deepUsed, setDeepUsed] = useState<boolean>(false);
+  const [earlyBonus, setEarlyBonus] = useState(0);
   const [pickedHouse, setPickedHouse] = useState<HouseId | null>(null);
   const [pickedLocality, setPickedLocality] = useState<string | null>(null);
   const [houseWasCorrect, setHouseWasCorrect] = useState(false);
   const [localityWasCorrect, setLocalityWasCorrect] = useState(false);
-  const [gain, setGain] = useState<Gain>({ house: 0, speed: 0, streakBonus: 0, locality: 0 });
+  const [gain, setGain] = useState<Gain>({ house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
   const [hatLine, setHatLine] = useState(HAT_LINES.greetings[0]);
   const [isNewBest, setIsNewBest] = useState(false);
   const [bestCeremony, setBestCeremony] = useBestScore(BEST_CEREMONY_KEY);
@@ -380,11 +383,12 @@ export function SnakeSorting() {
     setProbed([]);
     setProbing(null);
     setDeepUsed(false);
+    setEarlyBonus(0);
     setPickedHouse(null);
     setPickedLocality(null);
     setHouseWasCorrect(false);
     setLocalityWasCorrect(false);
-    setGain({ house: 0, speed: 0, streakBonus: 0, locality: 0 });
+    setGain({ house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
   };
 
   const enterScan = () => {
@@ -488,9 +492,14 @@ export function SnakeSorting() {
   };
 
   const beginSort = () => {
-    if (phase !== "scan" || probed.length < 3) return;
+    if (phase !== "scan") return;
+    // Early-call bonus: +25 per probe left unrevealed. Deep Scan forfeits it.
+    const bonus = deepUsed ? 0 : (3 - probed.length) * EARLY_BONUS_PER_PROBE;
+    setEarlyBonus(bonus);
     setPhase("sort");
-    setHatLine("The probes are spent. Now, keeper — call its House!");
+    setHatLine(
+      bonus > 0 ? pick(HAT_LINES.earlyCall) : "The probes are spent. Now, keeper — call its House!",
+    );
     synth.tick();
   };
 
@@ -514,10 +523,11 @@ export function SnakeSorting() {
         house: HOUSE_POINTS,
         speed: spd,
         streakBonus: sBonus,
+        earlyBonus,
         locality: 0,
       };
       setGain(g);
-      addScore(g.house + g.speed + g.streakBonus);
+      addScore(g.house + g.speed + g.streakBonus + g.earlyBonus);
       const newStreak = streak + 1;
       setStreak(newStreak);
       setBestStreak((b) => Math.max(b, newStreak));
@@ -786,15 +796,15 @@ export function SnakeSorting() {
                           🔮 Deep scan (−{DEEP_SCAN_COST} pts)
                         </button>
                       )}
-                      {probed.length >= 3 && (
-                        <button
+                      <button
                           type="button"
                           onClick={beginSort}
                           className="ss-pop flex-1 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 px-3 py-2.5 text-[13px] font-black uppercase tracking-wider text-black shadow-[0_0_24px_rgba(251,191,36,.35)] transition active:scale-95"
                         >
-                          Begin the sorting →
+                          {deepUsed || probed.length >= 3
+                            ? "Begin the sorting →"
+                            : `Call it now (+${(3 - probed.length) * EARLY_BONUS_PER_PROBE})`}
                         </button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -959,8 +969,13 @@ function RevealPanel({
           <GainRow label="House claimed" value={gain.house} />
           {gain.speed > 0 && <GainRow label="Swift call" value={gain.speed} />}
           {gain.streakBonus > 0 && <GainRow label="Streak bonus" value={gain.streakBonus} />}
+          {gain.earlyBonus > 0 && <GainRow label="Early call" value={gain.earlyBonus} />}
           <div className="border-t border-white/10 pt-1">
-            <GainRow label="Total" value={gain.house + gain.speed + gain.streakBonus} bold />
+            <GainRow
+              label="Total"
+              value={gain.house + gain.speed + gain.streakBonus + gain.earlyBonus}
+              bold
+            />
           </div>
         </div>
       ) : (
@@ -1076,9 +1091,9 @@ function TitleScreen({
         <div className="ss-rise mt-2 w-full space-y-2 rounded-2xl border border-white/10 bg-black/55 p-4 text-left backdrop-blur-sm">
           {[
             ["① Probe", "Tap Scales, Crown and Origin to reveal the serpent's field marks."],
-            ["② Sort", "Call its House — Azurea, Utaraensis, Pulcher or Viridis. Faster calls earn up to +50."],
+            ["② Sort", "Call its House — Azurea, Utaraensis, Pulcher or Viridis. Faster calls earn up to +50. Certain? Call early for +25 per unrevealed probe (blind call: +75)."],
             ["③ Localize", "Name its homeland valley for +50 and the True Local's glory."],
-            ["🔮 Deep scan", "Stuck? Spend 25 pts for the Hat's decisive insight."],
+            ["🔮 Deep scan", "Stuck? Spend 25 pts for the Hat's decisive insight — but it forfeits the early-call bonus."],
           ].map(([t, d]) => (
             <p key={t} className="text-[12.5px] leading-snug text-white/70">
               <span className="font-bold text-amber-200">{t} — </span>

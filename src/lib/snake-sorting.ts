@@ -332,6 +332,12 @@ export const HAT_LINES = {
     "The serpent is laid bare. Now — call its House!",
     "I have seen enough. Speak, keeper: which House claims this blood?",
   ],
+  earlyCall: [
+    "Bold! Calling it with sight unseen — the Hat respects a gambler.",
+    "No more probing? Then trust your eyes, keeper. Speak its House!",
+    "Hasty... or brilliant? The dais holds its breath.",
+    "You would sort on half the evidence? Very well — the Hat loves nerve.",
+  ],
   deliberating: [
     "Hmm... let me turn this one over in my brim...",
     "Scales don't lie, but they do love to tease...",
@@ -396,6 +402,9 @@ export const CEREMONY_SNAKES = 10;
 export const HOUSE_POINTS = 100;
 export const LOCALITY_POINTS = 50;
 export const DEEP_SCAN_COST = 25;
+/* Early-call bonus: +25 for each probe left unrevealed when the House is
+   called. Blind call (0 probes) = +75. Deep Scan forfeits it. */
+export const EARLY_BONUS_PER_PROBE = 25;
 export const MAX_SPEED_BONUS = 50;
 export const SPEED_BONUS_WINDOW_MS = 30_000;
 
