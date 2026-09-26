@@ -33,7 +33,7 @@ export default function CanopyCrossing() {
   const levelRef = useRef(1);
   const scoreRef = useRef(0);
   const livesRef = useRef(3);
-  const touchRef = useRef<{x:number;y:number}|null>(null);
+  const touchRef = useRef<{x:number;y:number}|null>(null);\n  const facingRef = useRef<"up"|"down"|"left"|"right">("up");
   const [running,setRunning] = useState(false);
   const [score,setScore] = useState(0);
   const [lives,setLives] = useState(3);
@@ -128,13 +128,32 @@ export default function CanopyCrossing() {
 
       const p=playerRef.current;const px=(p.x+.5)*colW,py=(p.y+.55)*rowH;
       ctx.save();ctx.translate(px,py);
-      ctx.strokeStyle="#93d65c";ctx.lineWidth=Math.max(5,rowH*.08);ctx.lineCap="round";
-      ctx.beginPath();ctx.moveTo(-colW*.18,0);ctx.quadraticCurveTo(-colW*.38,rowH*.08,-colW*.44,rowH*.22);ctx.stroke();
-      ctx.fillStyle="#55a948";ctx.beginPath();ctx.ellipse(0,0,colW*.22,rowH*.15,-.15,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#78c65b";ctx.beginPath();ctx.ellipse(colW*.18,-rowH*.04,colW*.12,rowH*.09,-.1,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#10170e";ctx.beginPath();ctx.arc(colW*.22,-rowH*.065,2.2,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle="#75c85a";ctx.lineWidth=3;
-      for(const s of [-1,1]){ctx.beginPath();ctx.moveTo(s*colW*.08,rowH*.05);ctx.lineTo(s*colW*.2,rowH*.16);ctx.stroke();}
+      const facing=facingRef.current;
+      const angle=facing==="up"?-Math.PI/2:facing==="down"?Math.PI/2:facing==="left"?Math.PI:0;
+      ctx.rotate(angle);
+      const s=Math.min(colW/76,rowH/54);
+      ctx.scale(s,s);
+      // Baby blue tree monitor: long slender body, banded tail, turquoise/black pattern.
+      ctx.lineCap="round";ctx.lineJoin="round";
+      ctx.strokeStyle="#071314";ctx.lineWidth=8;
+      ctx.beginPath();ctx.moveTo(-18,1);ctx.bezierCurveTo(-38,5,-54,19,-61,8);ctx.bezierCurveTo(-68,-3,-53,-15,-43,-10);ctx.stroke();
+      ctx.strokeStyle="#59cbd1";ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(-18,1);ctx.bezierCurveTo(-38,5,-54,19,-61,8);ctx.bezierCurveTo(-68,-3,-53,-15,-43,-10);ctx.stroke();
+      ctx.fillStyle="#58cbd1";ctx.strokeStyle="#071314";ctx.lineWidth=3;
+      ctx.beginPath();ctx.ellipse(-4,0,25,10,-.03,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(13,-8);ctx.quadraticCurveTo(31,-10,39,-4);ctx.quadraticCurveTo(42,0,37,4);ctx.quadraticCurveTo(25,9,12,7);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle="#071314";ctx.lineWidth=4;
+      for(const yy of [-1,1]) for(const xx of [-1,1]){
+        ctx.beginPath();ctx.moveTo(xx<0?-10:7,yy*6);ctx.lineTo((xx<0?-20:17),yy*15);ctx.lineTo((xx<0?-28:25),yy*16);ctx.stroke();
+      }
+      ctx.strokeStyle="#163c42";ctx.lineWidth=3;
+      for(const bx of [-18,-10,-2,6]){ctx.beginPath();ctx.moveTo(bx,-8);ctx.lineTo(bx+3,8);ctx.stroke();}
+      ctx.strokeStyle="#173a40";ctx.lineWidth=2;
+      for(const tx of [-48,-40,-32]){ctx.beginPath();ctx.moveTo(tx,-4);ctx.lineTo(tx+2,7);ctx.stroke();}
+      ctx.fillStyle="#d8edf0";ctx.beginPath();ctx.ellipse(28,-4,4.5,3.6,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#5b3218";ctx.beginPath();ctx.arc(29,-4,2.2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#0a0b08";ctx.beginPath();ctx.arc(29.5,-4,1.1,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#e9f4dd";ctx.beginPath();ctx.arc(36,-1,1.1,0,Math.PI*2);ctx.fill();
       ctx.restore();
 
       raf=requestAnimationFrame(frame);
@@ -155,7 +174,7 @@ export default function CanopyCrossing() {
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}} aria-label="Canopy Crossing game"/>
         {(!running||message)&&<div style={{position:"absolute",left:"50%",top:"50%",transform:"translate(-50%,-50%)",width:"min(82%,420px)",padding:22,textAlign:"center",borderRadius:18,background:"rgba(2,10,7,.88)",border:"1px solid rgba(159,213,117,.35)",backdropFilter:"blur(8px)"}}>
           <strong style={{fontSize:running?20:30}}>{running?message:"CLIMB THE CANOPY"}</strong>
-          {!running&&<><p style={{color:"#b9c9b7",lineHeight:1.5}}>Guide an emerald tree monitor from the forest floor to the crown. Ride branches and vines. Avoid moving predators.</p><button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button></>}
+          {!running&&<><p style={{color:"#b9c9b7",lineHeight:1.5}}>Guide a baby blue tree monitor from the forest floor to the crown. Ride branches and vines. Avoid moving predators.</p><button onClick={start} style={{border:0,borderRadius:999,padding:"13px 24px",fontWeight:900,fontSize:16,cursor:"pointer",background:"#a8d96f",color:"#10200d"}}>{lives<=0?"PLAY AGAIN":"START ASCENT"}</button></>}
         </div>}
       </section>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,maxWidth:300,margin:"14px auto 0",userSelect:"none"}}>
