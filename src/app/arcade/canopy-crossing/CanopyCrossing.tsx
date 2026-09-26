@@ -64,6 +64,59 @@ const SPRITE_SRC: Record<string,string> = {
 
 const clamp = (n:number,min:number,max:number) => Math.max(min,Math.min(max,n));
 
+// Sprites ship on solid black backgrounds ("sprite-keyable"). Drawing them
+// with 'screen' blend keys the black out but leaves the art ghostly —
+// translucent over bright lanes. Instead, key each sprite once at load:
+// flood-fill the edge-connected near-black background to transparent, then
+// draw with normal source-over at true 100% opacity. Also records the
+// subject's bounding box so every facing can be normalized to one size.
+type KeyedSprite = { img: HTMLCanvasElement; bx:number; by:number; bw:number; bh:number };
+function keySprite(src: HTMLImageElement): KeyedSprite {
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  const fallback = (): KeyedSprite => {
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    c.getContext("2d")!.drawImage(src, 0, 0);
+    return { img: c, bx: 0, by: 0, bw: w, bh: h };
+  };
+  try {
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true })!;
+    ctx.drawImage(src, 0, 0);
+    const id = ctx.getImageData(0, 0, w, h), d = id.data;
+    const seen = new Uint8Array(w * h);
+    const stack: number[] = [];
+    const push = (x:number, y:number) => {
+      const p = y * w + x;
+      if (seen[p]) return;
+      const i = p * 4;
+      if (d[i] >= 16 || d[i+1] >= 16 || d[i+2] >= 16) return;
+      seen[p] = 1; stack.push(p);
+    };
+    for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+    for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+    while (stack.length) {
+      const p = stack.pop()!;
+      d[p*4+3] = 0;
+      const x = p % w, y = (p / w) | 0;
+      if (x > 0) push(x-1, y);
+      if (x < w-1) push(x+1, y);
+      if (y > 0) push(x, y-1);
+      if (y < h-1) push(x, y+1);
+    }
+    ctx.putImageData(id, 0, 0);
+    let x0=w, y0=h, x1=-1, y1=-1;
+    for (let p = 0; p < w*h; p++) {
+      if (d[p*4+3] > 8) {
+        const x = p % w, y = (p / w) | 0;
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+    if (x1 < 0) return fallback();
+    return { img: c, bx: x0, by: y0, bw: x1-x0+1, bh: y1-y0+1 };
+  } catch { return fallback(); }
+}
+
 function makeMovers(level:number): Mover[] {
   const movers: Mover[] = [];
   const st = stageOf(level);
@@ -135,7 +188,7 @@ export default function CanopyCrossing() {
   const stageStartRef = useRef(0);
   const lastRowRef = useRef(START.y);
   const messageUntilRef = useRef(0);
-  const spritesRef = useRef<Record<string, HTMLImageElement>>({});
+  const spritesRef = useRef<Record<string, KeyedSprite>>({});
   const floatersRef = useRef<Floater[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const hopRef = useRef(0);
@@ -147,7 +200,7 @@ export default function CanopyCrossing() {
   useEffect(()=>{
     for(const [k,src] of Object.entries(SPRITE_SRC)){
       const img=new Image();
-      img.onload=()=>{spritesRef.current[k]=img;};
+      img.onload=()=>{spritesRef.current[k]=keySprite(img);};
       img.src=src;
     }
   },[]);
@@ -334,9 +387,11 @@ export default function CanopyCrossing() {
       // Layered New Guinea canopy: foliage sprite when loaded, procedural fallback.
       const fol=spritesRef.current["foliage"];
       if(fol){
-        ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.5;
-        const fs=Math.max(W/fol.width,H/fol.height),fdw=fol.width*fs,fdh=fol.height*fs;
-        ctx.drawImage(fol,(W-fdw)/2,(H-fdh)/2,fdw,fdh);
+        // Keyed leaves drawn solid at reduced alpha — a real canopy wash,
+        // not a screen-blend haze.
+        ctx.save();ctx.globalAlpha=.55;
+        const fs=Math.max(W/fol.img.width,H/fol.img.height),fdw=fol.img.width*fs,fdh=fol.img.height*fs;
+        ctx.drawImage(fol.img,(W-fdw)/2,(H-fdh)/2,fdw,fdh);
         ctx.restore();
       }else{
         ctx.fillStyle="rgba(20,63,40,.42)";
@@ -373,11 +428,12 @@ export default function CanopyCrossing() {
           ctx.fillStyle="rgba(0,0,0,.35)";
           ctx.beginPath();ctx.ellipse(W/2,py+rowH*.95,W*.46,rowH*.14,0,0,Math.PI*2);ctx.fill();
           if(bSpr){
-            ctx.save();ctx.globalCompositeOperation="screen";
-            const sw=bSpr.width,sy=bSpr.height*.30,sh=bSpr.height*.35;
-            const segW=W/3,dh=segW*sh/sw;
-            for(let i=0;i<3;i++) ctx.drawImage(bSpr,0,sy,sw,sh,i*segW,py+rowH/2-dh/2,segW,dh);
-            ctx.restore();
+            // One continuous limb: three distinct slices of the art's middle
+            // band (no squeeze, no 3x repetition, no seams), keyed so the
+            // band edges melt into the canopy.
+            const sy=bSpr.img.height*.30,sh=bSpr.img.height*.35,slices=3;
+            const ssw=bSpr.img.width/slices,segW=W/slices,dh=segW*sh/ssw;
+            for(let i=0;i<slices;i++) ctx.drawImage(bSpr.img,i*ssw,sy,ssw,sh,i*segW,py+rowH/2-dh/2,segW,dh);
           }else{
             ctx.lineCap="round";ctx.strokeStyle="#755238";ctx.lineWidth=Math.max(10,rowH*.5);
             ctx.beginPath();ctx.moveTo(W*.02,py+rowH*.5);ctx.lineTo(W*.98,py+rowH*.5);ctx.stroke();
@@ -444,13 +500,14 @@ export default function CanopyCrossing() {
         const x=m.x*colW,y=m.row*rowH+rowH*.28,w=m.width*colW,h=rowH*.44;
         const spr=spritesRef.current[m.kind==="hazard"?"predator":m.kind];
         if(spr){
-          ctx.save();ctx.globalCompositeOperation="screen";
           if(m.kind==="hazard"){
-            const dw=colW*1.15,dh=dw*spr.height/spr.width;
+            // Solid keyed predator at full opacity — the threat has to read
+            // against the green canopy, not dissolve into it.
+            const dw=colW*1.25,dh=dw*spr.img.height/spr.img.width;
             const pulse=.22+.14*Math.sin(t/240+m.x*2);
             ctx.fillStyle=`rgba(255,70,45,${pulse})`;
             ctx.beginPath();ctx.ellipse(x+w/2,y+h*.95,dw*.62,rowH*.22,0,0,Math.PI*2);ctx.fill();
-            ctx.drawImage(spr,x+w/2-dw/2,y+h/2-dh/2,dw,dh);
+            ctx.drawImage(spr.img,x+w/2-dw/2,y+h/2-dh/2,dw,dh);
             const ppx=playerRef.current.x,ppy=playerRef.current.y;
             if(runningRef.current&&ppy===m.row&&Math.abs(ppx+.5-(m.x+m.width/2))<1.7){
               ctx.fillStyle="#ffd2c4";ctx.font=`900 ${Math.max(14,rowH*.5)}px system-ui`;ctx.textAlign="center";
@@ -463,19 +520,20 @@ export default function CanopyCrossing() {
             ctx.beginPath();ctx.ellipse(x+w/2,y+h*.6,w*.62,rowH*.34,0,0,Math.PI*2);ctx.fill();
             ctx.fillStyle="rgba(0,0,0,.35)";
             ctx.beginPath();ctx.ellipse(x+w/2,y+h*.95,w*.52,h*.32,0,0,Math.PI*2);ctx.fill();
-            const sw=spr.width,sy=spr.height*.30,sh=spr.height*.35;
-            const dh=w*sh/sw;
-            ctx.drawImage(spr,0,sy,sw,sh,x,y+h/2-dh/2,w,dh);
+            // Three distinct band slices across the mover — continuous bark,
+            // no 3x repetition or seams.
+            const sy=spr.img.height*.30,sh=spr.img.height*.35,slices=3;
+            const ssw=spr.img.width/slices,segW=w/slices,dh=segW*sh/ssw;
+            for(let i=0;i<slices;i++) ctx.drawImage(spr.img,i*ssw,sy,ssw,sh,x+i*segW,y+h/2-dh/2,segW,dh);
             ctx.strokeStyle="rgba(196,232,150,.55)";ctx.lineWidth=Math.max(2,rowH*.07);ctx.lineCap="round";
             ctx.beginPath();ctx.moveTo(x+6,y+h/2-dh*.30);ctx.lineTo(x+w-6,y+h/2-dh*.30);ctx.stroke();
           }else{
             // Vine: safe too — same soft safe-glow so it reads instantly.
             ctx.fillStyle="rgba(130,225,130,.10)";
             ctx.beginPath();ctx.ellipse(x+w/2,y+h*.6,w*.62,rowH*.34,0,0,Math.PI*2);ctx.fill();
-            const dh=w*(spr.height/spr.width);
-            ctx.drawImage(spr,x,y+h/2-dh/2,w,dh);
+            const dh=w*(spr.img.height/spr.img.width);
+            ctx.drawImage(spr.img,x,y+h/2-dh/2,w,dh);
           }
-          ctx.restore();
         }else if(m.kind==="hazard"){
           ctx.fillStyle="#6d2b27";ctx.beginPath();ctx.ellipse(x+w/2,y+h/2,w*.42,h*.36,0,0,Math.PI*2);ctx.fill();
           ctx.fillStyle="#d9b26f";ctx.beginPath();ctx.arc(x+w*.72,y+h*.32,3,0,Math.PI*2);ctx.fill();
@@ -496,10 +554,8 @@ export default function CanopyCrossing() {
         ctx.beginPath();ctx.arc(ix,iy,10,0,Math.PI*2);ctx.fill();
         const bug=spritesRef.current["insect"];
         if(bug){
-          ctx.save();ctx.globalCompositeOperation="screen";
           const bd=colW*1.05;
-          ctx.drawImage(bug,ix-bd/2,iy-bd/2,bd,bd);
-          ctx.restore();
+          ctx.drawImage(bug.img,ix-bd/2,iy-bd/2,bd,bd);
         }else{
           ctx.fillStyle="#ffcf6e";
           ctx.beginPath();ctx.ellipse(ix,iy,4.2,3,.5,0,Math.PI*2);ctx.fill();
@@ -516,11 +572,13 @@ export default function CanopyCrossing() {
       ctx.fillStyle="rgba(0,0,0,.38)";
       ctx.beginPath();ctx.ellipse(px,py+rowH*.42,colW*.42*(2-hopS),rowH*.13,0,0,Math.PI*2);ctx.fill();
       if(mon){
-        ctx.save();ctx.globalCompositeOperation="screen";
-        const dw=colW*(facing==="up"||facing==="down"?1.35:1.7)*hopS;
-        const dh=dw*mon.height/mon.width;
-        ctx.drawImage(mon,px-dw/2,py-dh/2-(hopS-1)*rowH*.5,dw,dh);
-        ctx.restore();
+        // One consistent hero size for every facing: fit the art's subject
+        // box into the same square target — no more direction-dependent scale.
+        const target=colW*2*hopS;
+        const s=target/Math.max(mon.bw,mon.bh);
+        const dw=mon.bw*s,dh=mon.bh*s;
+        const cy=py-(hopS-1)*rowH*.5;
+        ctx.drawImage(mon.img,mon.bx,mon.by,mon.bw,mon.bh,px-dw/2,cy-dh/2,dw,dh);
       }else{
       ctx.save();ctx.translate(px,py);
       const angle=facing==="up"?-Math.PI/2:facing==="down"?Math.PI/2:facing==="left"?Math.PI:0;
