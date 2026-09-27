@@ -6,6 +6,7 @@ import { CardView, type CardSuit } from "@/components/poker/CardView";
 import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
 import { playSfx, unlockAudio } from "@/lib/poker/sfx";
+import { handLabel } from "@/lib/poker/blackjack";
 
 // Value tiers the house will match during the NPC pilot. The DB is the
 // final gate; this just keeps the UI from offering dead ends.
@@ -44,6 +45,14 @@ interface CollectionSnake {
   lifeStage: "neonate" | "juvenile" | "subadult" | "adult";
   game: "gtp" | "emerald";
 }
+interface StakeTable {
+  hands: { cards: { rank: number; suit: string }[] }[];
+  activeHand: number;
+  dealer: { rank: number; suit: string }[];
+  holeHidden: boolean;
+  phase: string;
+  result?: { handIndex: number; outcome: string }[];
+}
 interface Session {
   wager_id: string;
   wager_state: string;
@@ -51,18 +60,17 @@ interface Session {
   player_score: number;
   hands_played: number;
   winner: string | null;
-  open_hand: null | {
-    hand: number | null;
-    suddenDeath: boolean;
-    player: { rank: number; suit: string }[];
-    playerTotal?: number;
-    dealerUp: { rank: number; suit: string } | null;
-    dealerTotal?: number;
-    phase: string;
-    doubled: boolean;
-    insuranceTaken: boolean;
-    insuranceOffered: boolean;
-  };
+  npc_name: string | null;
+  player_asset_name: string | null;
+  tier: string | null;
+  open_hand: StakeTable | null;
+}
+interface GameResponse {
+  table?: StakeTable | null;
+  result?: { handIndex: number; outcome: string }[];
+  winner?: "player" | "house";
+  push?: boolean;
+  session: Session;
 }
 interface WagerRow {
   id: string;
@@ -218,12 +226,9 @@ export function StakesClient() {
     setError(null);
     try {
       unlockAudio();
-      const s = await api<{ hand: Session["open_hand"]; session: Session }>(`/api/wagers/${activeId}/hand`, {
-        method: "POST",
-        body: JSON.stringify({ action: "deal" }),
-      });
+      const s = await api<GameResponse>(`/api/wagers/${activeId}/deal`, { method: "POST" });
       setSession(s.session);
-      playSfx("deal");
+      playSfx(s.push ? "click" : "deal");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not deal.");
     } finally {
@@ -232,18 +237,18 @@ export function StakesClient() {
   }, [activeId, busy]);
 
   const act = useCallback(
-    async (action: string) => {
+    async (action: "hit" | "stand") => {
       if (!activeId || busy) return;
       setBusy(true);
       setError(null);
       try {
         unlockAudio();
-        const s = await api<{ hand?: Session["open_hand"]; session: Session }>(
-          `/api/wagers/${activeId}/action`,
-          { method: "POST", body: JSON.stringify({ action }) }
-        );
+        const s = await api<GameResponse>(`/api/wagers/${activeId}/action`, {
+          method: "POST",
+          body: JSON.stringify({ action }),
+        });
         setSession(s.session);
-        playSfx(action === "hit" || action === "double" ? "deal" : "click");
+        playSfx(action === "hit" ? "deal" : "click");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Illegal action.");
       } finally {
@@ -298,7 +303,8 @@ export function StakesClient() {
   }
 
   const tokensLeft = tokens.filter((t) => t.status === "available").length;
-  const hand = session?.open_hand ?? null;
+  const table = session?.open_hand ?? null;
+  const playerCards = table?.hands?.[0]?.cards ?? [];
 
   return (
     <TableFelt className="min-h-dvh">
@@ -314,7 +320,8 @@ export function StakesClient() {
 
         <h1 className="mt-4 text-2xl font-black text-amber-100">Hatchling Stakes</h1>
         <p className="text-xs text-emerald-100/50">
-          Five blackjack hands from 100 match chips. Finish above 100 and both hatchlings are yours.
+          One hand of Canopy Blackjack against the house. Win the hand and both hatchlings are
+          yours — a push just re-deals.
         </p>
 
         {error && (
@@ -326,16 +333,14 @@ export function StakesClient() {
         {activeId && session ? (
           <div className="mt-6">
             <div className="rounded-2xl border border-amber-200/20 bg-black/50 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-emerald-100/70">
-                  Match chips <span className="font-black text-amber-200">{session.player_score}</span>
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="truncate text-emerald-100/70">
+                  {session.player_asset_name ?? "Your hatchling"}{" "}
+                  <span className="text-emerald-100/40">vs</span>{" "}
+                  {session.npc_name ?? "House hatchling"}
                 </span>
-                <span className="text-emerald-100/70">
-                  {hand?.suddenDeath ? (
-                    <>Sudden <span className="font-bold text-amber-100">death</span></>
-                  ) : (
-                    <>Hand <span className="font-bold text-amber-100">{Math.min(session.hands_played + (hand ? 1 : 0), 5)}</span>/5</>
-                  )}
+                <span className="shrink-0 text-xs font-semibold text-amber-200/80">
+                  winner takes both
                 </span>
               </div>
 
@@ -359,15 +364,46 @@ export function StakesClient() {
                     Back to stakes
                   </button>
                 </div>
-              ) : hand ? (
+              ) : table ? (
                 <div className="mt-4">
-                  <div className="flex justify-center gap-2">
-                    {hand.dealerUp && <CardView rank={hand.dealerUp.rank} suit={hand.dealerUp.suit as CardSuit} size="md" />}
-                    <CardView rank={0} suit="S" faceDown size="md" />
+                  <div className="flex items-end justify-between">
+                    <p className="text-[11px] uppercase tracking-widest text-emerald-100/50">House</p>
+                    {table.phase === "done" && table.dealer.length > 0 && (
+                      <p className="text-xs text-emerald-100/60">
+                        {handLabel(table.dealer as { rank: number; suit: CardSuit }[])}
+                      </p>
+                    )}
                   </div>
-                  <p className="mt-1 text-center text-[11px] text-emerald-100/50">House</p>
-                  <div className="mt-3 flex justify-center gap-2">
-                    {hand.player.map((c, i) => (
+                  <div className="mt-2 flex gap-2">
+                    {table.dealer.map((c, i) => (
+                      <CardView
+                        key={i}
+                        rank={c.rank}
+                        suit={c.suit as CardSuit}
+                        size="fluid"
+                        className="min-w-0 flex-1 max-w-[72px]"
+                      />
+                    ))}
+                    {table.holeHidden && (
+                      <CardView
+                        rank={0}
+                        suit="S"
+                        faceDown
+                        size="fluid"
+                        className="min-w-0 flex-1 max-w-[72px]"
+                      />
+                    )}
+                  </div>
+                  <div className="mt-4 flex items-end justify-between">
+                    <p className="text-[11px] uppercase tracking-widest text-emerald-100/50">You</p>
+                    {playerCards.length > 0 && (
+                      <p className="text-xs font-semibold text-amber-100/90">
+                        {handLabel(playerCards as { rank: number; suit: CardSuit }[])}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    {playerCards.map((c, i) => (
                       <CardView
                         key={i}
                         rank={c.rank}
@@ -377,37 +413,29 @@ export function StakesClient() {
                       />
                     ))}
                   </div>
-                  <p className="mt-1 text-center text-[11px] text-emerald-100/50">
-                    You{hand.doubled ? " (doubled)" : ""}
-                    {hand.suddenDeath ? " · sudden death" : ""}
-                  </p>
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    {hand.phase === "insurance" && (
-                      <>
-                        <button onClick={() => act("insurance-yes")} disabled={busy} className="rounded-full bg-amber-300 px-5 py-2 text-sm font-bold text-black disabled:opacity-50">
-                          Insure
-                        </button>
-                        <button onClick={() => act("insurance-no")} disabled={busy} className="rounded-full border border-emerald-200/25 px-5 py-2 text-sm font-bold text-emerald-100/80 disabled:opacity-50">
-                          No insurance
-                        </button>
-                      </>
-                    )}
-                    {hand.phase === "player" && (
-                      <>
-                        <button onClick={() => act("hit")} disabled={busy} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-bold text-black disabled:opacity-50">
-                          Hit
-                        </button>
-                        <button onClick={() => act("stand")} disabled={busy} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-bold text-black disabled:opacity-50">
-                          Stand
-                        </button>
-                        {hand.player.length === 2 && (
-                          <button onClick={() => act("double")} disabled={busy} className="rounded-full bg-amber-300 px-5 py-2 text-sm font-bold text-black disabled:opacity-50">
-                            Double
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  {table.phase === "player" ? (
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      <button onClick={() => act("hit")} disabled={busy} className="rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black disabled:opacity-50">
+                        Hit
+                      </button>
+                      <button onClick={() => act("stand")} disabled={busy} className="rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black disabled:opacity-50">
+                        Stand
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-center">
+                      <p className="mb-3 text-sm font-bold text-amber-100">
+                        Push — nobody takes the hatchlings. Run it back.
+                      </p>
+                      <button
+                        onClick={deal}
+                        disabled={busy}
+                        className="rounded-full bg-emerald-500 px-8 py-2.5 font-bold text-black disabled:opacity-50"
+                      >
+                        {busy ? "Dealing…" : "Deal again"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 text-center">
@@ -416,7 +444,7 @@ export function StakesClient() {
                     disabled={busy}
                     className="rounded-full bg-emerald-500 px-8 py-2.5 font-bold text-black disabled:opacity-50"
                   >
-                    {busy ? "Dealing…" : session.hands_played >= 5 ? "Deal sudden-death hand" : `Deal hand ${session.hands_played + 1}`}
+                    {busy ? "Dealing…" : "Deal the hand"}
                   </button>
                 </div>
               )}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callRpc, requirePokerIdentity, rpcErrorMessage, unauthorized } from "@/lib/poker-server";
-import { generateShoe } from "@/lib/poker/stake-service";
+import { generateShoe } from "@/lib/poker/stake-blackjack";
 import { publicSession, type SessionPublic } from "@/lib/poker/stake-flow";
 
 export const runtime = "nodejs";

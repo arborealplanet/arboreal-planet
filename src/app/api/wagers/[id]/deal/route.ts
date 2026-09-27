@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePokerIdentity, rpcErrorMessage, unauthorized } from "@/lib/poker-server";
-import { bjApply, bjDealerPlay, bjLegalActions, bjSettle } from "@/lib/poker/blackjack";
+import { bjDealerPlay, bjSettle } from "@/lib/poker/blackjack";
 import {
+  dealStakeTable,
   finishStakeTable,
   loadFullTable,
   publicStakeTable,
@@ -12,42 +13,29 @@ import { loadSession, publicSession } from "@/lib/poker/stake-flow";
 
 export const runtime = "nodejs";
 
-// A snake is the whole bet — double, split, and insurance don't map to a
-// single-asset wager, so the stakes table plays hit/stand only.
-const ACTIONS = ["hit", "stand"] as const;
-
-// POST { action: "hit"|"stand" }: play the open hand. When the hand ends the
-// dealer plays out, the table settles, and the wager resolves: winner takes
-// both hatchlings, a push clears for a re-deal.
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// POST: deal one Den-style blackjack hand for the snake wager. Idempotent —
+// if a hand is already open it returns the public table instead of dealing
+// over it. Naturals run out immediately.
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const identity = await requirePokerIdentity();
   if (!identity) return unauthorized();
   const { id } = await params;
-  let body: { action?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Bad request." }, { status: 400 });
-  }
-  const action = String(body.action ?? "");
-  if (!(ACTIONS as readonly string[]).includes(action)) {
-    return NextResponse.json({ error: "Illegal action." }, { status: 400 });
-  }
   const token = identity.token;
   try {
     const session = await loadSession(token, id);
     if (session.wager_state !== "in_progress" || session.session_state !== "in_progress") {
       return NextResponse.json({ error: "This wager is not in progress." }, { status: 400 });
     }
-    const full = await loadFullTable(token, id);
-    if (!full) {
-      return NextResponse.json({ error: "No open hand — deal first." }, { status: 400 });
+    const existing = await loadFullTable(token, id);
+    if (existing) {
+      return NextResponse.json({
+        table: publicStakeTable(existing),
+        session: publicSession(session),
+      });
     }
-    if (!bjLegalActions(full).includes(action as "hit" | "stand")) {
-      return NextResponse.json({ error: "Illegal action." }, { status: 400 });
-    }
-    let t = bjApply(full, action);
+    let t = dealStakeTable();
     if (t.phase === "dealer") {
+      // Natural on the deal: run it out and finish immediately.
       t = bjSettle(bjDealerPlay(t));
       const done = await finishStakeTable(token, identity.user.id, id, t);
       const fresh = await loadSession(token, id);
