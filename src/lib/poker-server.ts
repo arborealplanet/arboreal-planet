@@ -47,6 +47,8 @@ export function rpcErrorMessage(err: unknown): string {
   if (/paused/i.test(clean)) return "Hatchling Stakes is paused right now.";
   if (/not open in the NPC pilot/i.test(clean))
     return "That tier isn't open in the NPC pilot yet — sprout, vine and canopy only.";
+  if (/42883|no function matches/i.test(clean))
+    return "Staking is having a moment on our end — give it a minute and try again.";
   if (/bet out of range|rebuy out of range/i.test(clean)) return "Bet out of range for this table.";
   if (/payout out of bounds/i.test(clean)) return "Result rejected by the house.";
   return clean.slice(0, 160) || "Something went wrong.";
