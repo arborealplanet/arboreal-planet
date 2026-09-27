@@ -11,6 +11,15 @@ import { playSfx, unlockAudio } from "@/lib/poker/sfx";
 // final gate; this just keeps the UI from offering dead ends.
 const PILOT_TIERS = ["sprout", "vine", "canopy"];
 
+// "No think, just play": a snake's league comes from its life stage, so
+// picking the snake picks the league. No tier picker anywhere in the UI.
+const LEAGUE_FOR_STAGE: Record<string, string> = {
+  neonate: "sprout",
+  juvenile: "vine",
+  subadult: "canopy",
+  adult: "canopy",
+};
+
 // The house plays under the zero UUID in every stakes table.
 const HOUSE_ID = "00000000-0000-0000-0000-000000000000";
 // Terminal game_sessions states. Settle writes 'complete' (void writes
@@ -78,15 +87,13 @@ export function StakesClient() {
   const [unlimitedTokens, setUnlimitedTokens] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [selectedAnimal, setSelectedAnimal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmCreate, setConfirmCreate] = useState(false);
   const [claimName, setClaimName] = useState("");
-  const [claimTier, setClaimTier] = useState("sprout");
-  const [claimStage, setClaimStage] = useState("neonate");
-  const [claimBusy, setClaimBusy] = useState(false);
-  const [claimSnakeId, setClaimSnakeId] = useState("");
+  // One picker drives the whole lobby: "eligible:<asset_key>" plays a
+  // registered snake as-is; "collection:<id>" claims a keeper snake first
+  // (league set automatically from its life stage) and then plays it.
+  const [playPick, setPlayPick] = useState("");
 
   // Mirror of `busy` for the session poller: never let a stale poll response
   // clobber a fresher session snapshot while an action is in flight.
@@ -100,14 +107,9 @@ export function StakesClient() {
   );
   const unclaimedCollection = collection.filter((s) => !claimedKeeperIds.has(s.id));
 
-  const pickCollectionSnake = (id: string) => {
-    setClaimSnakeId(id);
-    const s = collection.find((c) => c.id === id);
-    if (s) {
-      setClaimName(s.name);
-      setClaimStage(s.lifeStage);
-    }
-  };
+  // One tap: pick a snake, get its league automatically, walk straight into
+  // the match. Registered snakes play as-is; keeper snakes are claimed first
+  // with the league derived from their life stage.
 
   const refresh = useCallback(async () => {
     if (!signedIn) return;
@@ -136,32 +138,56 @@ export function StakesClient() {
     return () => clearTimeout(id);
   }, [signedIn, refresh]);
 
-  const claimSnake = useCallback(async () => {
-    if (claimBusy) return;
-    setClaimBusy(true);
+
+  const play = useCallback(async () => {
+    if (!playPick || busy) return;
+    setBusy(true);
     setError(null);
     try {
       unlockAudio();
-      const picked = collection.find((c) => c.id === claimSnakeId);
-      const traits = picked
-        ? { keeper_id: picked.id, game: picked.game, detail: picked.detail }
-        : {};
-      const claimed = await api<{ asset_key: string }>("/api/wagers/claim", {
+      if (!unlimitedTokens && !tokens.some((t) => t.status === "available")) {
+        throw new Error("No wager tokens left this week — they refresh Monday.");
+      }
+      let assetKey: string;
+      if (playPick.startsWith("eligible:")) {
+        assetKey = playPick.slice("eligible:".length);
+      } else if (playPick.startsWith("collection:")) {
+        const picked = collection.find((c) => c.id === playPick.slice("collection:".length));
+        const league = LEAGUE_FOR_STAGE[picked?.lifeStage ?? ""] ?? "sprout";
+        const claimed = await api<{ asset_key: string }>("/api/wagers/claim", {
+          method: "POST",
+          body: JSON.stringify({
+            name: picked?.name ?? claimName.trim(),
+            tier: league,
+            lifeStage: picked?.lifeStage ?? "neonate",
+            traits: picked ? { keeper_id: picked.id, game: picked.game, detail: picked.detail } : {},
+          }),
+        });
+        assetKey = claimed.asset_key;
+      } else {
+        // Manual name entry (no keeper snakes found): sprout league.
+        if (!claimName.trim()) throw new Error("Enter a snake name first.");
+        const claimed = await api<{ asset_key: string }>("/api/wagers/claim", {
+          method: "POST",
+          body: JSON.stringify({ name: claimName.trim(), tier: "sprout", lifeStage: "neonate", traits: {} }),
+        });
+        assetKey = claimed.asset_key;
+      }
+      const w = await api<{ wagerId: string }>("/api/wagers/create", {
         method: "POST",
-        body: JSON.stringify({ name: claimName, tier: claimTier, lifeStage: claimStage, traits }),
+        body: JSON.stringify({ assetKey }),
       });
+      setActiveId(w.wagerId);
       setClaimName("");
-      setClaimSnakeId("");
-      await refresh();
-      setSelectedAnimal(claimed.asset_key ?? "");
+      setPlayPick("");
       playSfx("chip");
+      await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not register your snake.");
+      setError(e instanceof Error ? e.message : "Could not start the match.");
     } finally {
-      setClaimBusy(false);
+      setBusy(false);
     }
-  }, [claimName, claimTier, claimStage, claimBusy, claimSnakeId, collection, refresh]);
-
+  }, [playPick, busy, tokens, unlimitedTokens, collection, claimName, refresh]);
   const loadSession = useCallback(async (id: string) => {
     try {
       const s = await api<Session>(`/api/wagers/${id}/state`, { cache: "no-store" });
@@ -185,30 +211,6 @@ export function StakesClient() {
       clearInterval(t);
     };
   }, [activeId, loadSession]);
-
-  const createWager = useCallback(async () => {
-    if (!selectedAnimal || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      unlockAudio();
-      if (!unlimitedTokens && !tokens.some((t) => t.status === "available")) {
-        throw new Error("No wager tokens left this week.");
-      }
-      const w = await api<{ wagerId: string }>("/api/wagers/create", {
-        method: "POST",
-        body: JSON.stringify({ assetKey: selectedAnimal }),
-      });
-      setActiveId(w.wagerId);
-      setConfirmCreate(false);
-      playSfx("chip");
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create wager.");
-    } finally {
-      setBusy(false);
-    }
-  }, [selectedAnimal, tokens, unlimitedTokens, busy, refresh]);
 
   const deal = useCallback(async () => {
     if (!activeId || busy) return;
@@ -428,106 +430,50 @@ export function StakesClient() {
           </div>
         ) : (
           <div className="mt-6 space-y-6">
-            {/* Create */}
+            {/* Play — one picker, one button. The snake sets its league automatically. */}
             <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">
-              <h2 className="font-bold text-amber-100">Stake a hatchling</h2>
-              {animals.length === 0 ? (
-                <p className="mt-2 text-sm text-emerald-100/60">
-                  No eligible hatchlings yet. Register one of your snakes below and it becomes
-                  eligible to stake.
-                </p>
-              ) : (
-                <>
-                  <label className="mt-3 block text-xs text-emerald-100/60">Your hatchling</label>
-                  <select
-                    value={selectedAnimal}
-                    onChange={(e) => setSelectedAnimal(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
-                  >
-                    <option value="">Choose…</option>
-                    {animals.map((a) => {
-                      const pilotOpen = PILOT_TIERS.includes(a.tier);
-                      return (
-                        <option key={a.asset_key} value={a.asset_key} disabled={!pilotOpen}>
-                          {a.trait_snapshot?.name ?? "Hatchling"} · {a.tier}
-                          {pilotOpen ? "" : " (pilot locked)"}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  {animals.some((a) => !PILOT_TIERS.includes(a.tier)) && (
-                    <p className="mt-1 text-[11px] text-emerald-100/40">
-                      Emergent and crown snakes unlock for staking after the NPC pilot.
-                    </p>
-                  )}
-                  <p className="mt-3 text-xs text-emerald-100/60">
-                    The house mints its own hatchling at the same tier as your counter-stake.
-                  </p>
-                  {!confirmCreate ? (
-                    <button
-                      onClick={() => {
-                        if (!selectedAnimal) {
-                          setError("Choose a hatchling first.");
-                          return;
-                        }
-                        if (!unlimitedTokens && tokensLeft === 0) {
-                          setError("No wager tokens left this week — they refresh Monday.");
-                          return;
-                        }
-                        setConfirmCreate(true);
-                      }}
-                      className="mt-4 rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black"
-                    >
-                      Continue
-                    </button>
-                  ) : (
-                    <div className="mt-4 rounded-xl border border-red-400/40 bg-red-950/40 p-4">
-                      <p className="text-sm text-red-100">
-                        <strong>Final:</strong> your hatchling locks in escrow. Win all five hands and
-                        you take the house&apos;s hatchling too. Lose, and yours goes to the house.
-                        No take-backs.
-                      </p>
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          onClick={createWager}
-                          disabled={busy}
-                          className="rounded-full bg-red-500 px-6 py-2 text-sm font-bold text-white disabled:opacity-50"
-                        >
-                          {busy ? "…" : "Lock it in"}
-                        </button>
-                        <button
-                          onClick={() => setConfirmCreate(false)}
-                          className="rounded-full border border-emerald-200/25 px-5 py-2 text-sm text-emerald-100/80"
-                        >
-                          Not yet
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Claim a snake */}
-            <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">
-              <h2 className="font-bold text-amber-100">Register a snake for staking</h2>
+              <h2 className="font-bold text-amber-100">Play Hatchling Stakes</h2>
               <p className="mt-2 text-sm text-emerald-100/60">
-                Pick one of your snakes and it becomes eligible to stake — no typing needed.
+                Pick a snake and you&apos;re in — its league is set automatically from its life
+                stage. The house matches your league. Winner takes both hatchlings, no
+                take-backs.
               </p>
-              {unclaimedCollection.length > 0 ? (
+              {animals.length > 0 || unclaimedCollection.length > 0 ? (
                 <>
                   <label className="mt-3 block text-xs text-emerald-100/60">Your snake</label>
                   <select
-                    value={claimSnakeId}
-                    onChange={(e) => pickCollectionSnake(e.target.value)}
+                    value={playPick}
+                    onChange={(e) => setPlayPick(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
                   >
                     <option value="">Choose…</option>
-                    {unclaimedCollection.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} · {s.detail} · {s.lifeStage}
-                      </option>
-                    ))}
+                    {animals.length > 0 && (
+                      <optgroup label="Ready to stake">
+                        {animals.map((a) => {
+                          const pilotOpen = PILOT_TIERS.includes(a.tier);
+                          return (
+                            <option
+                              key={a.asset_key}
+                              value={`eligible:${a.asset_key}`}
+                              disabled={!pilotOpen}
+                            >
+                              {a.trait_snapshot?.name ?? "Hatchling"} · {a.tier} league
+                              {pilotOpen ? "" : " (pilot locked)"}
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    )}
+                    {unclaimedCollection.length > 0 && (
+                      <optgroup label="Your collection">
+                        {unclaimedCollection.map((s) => (
+                          <option key={s.id} value={`collection:${s.id}`}>
+                            {s.name} · {s.detail} · {LEAGUE_FOR_STAGE[s.lifeStage] ?? "sprout"}{" "}
+                            league
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </>
               ) : (
@@ -535,10 +481,7 @@ export function StakesClient() {
                   <label className="mt-3 block text-xs text-emerald-100/60">Snake name</label>
                   <input
                     value={claimName}
-                    onChange={(e) => {
-                      setClaimName(e.target.value);
-                      setClaimSnakeId("");
-                    }}
+                    onChange={(e) => setClaimName(e.target.value)}
                     maxLength={80}
                     placeholder="e.g. Slinky"
                     className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100 placeholder:text-emerald-100/30"
@@ -548,47 +491,15 @@ export function StakesClient() {
                   </p>
                 </>
               )}
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-emerald-100/60">Tier</label>
-                  <select
-                    value={claimTier}
-                    onChange={(e) => setClaimTier(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
-                  >
-                    {PILOT_TIERS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-[11px] text-emerald-100/40">
-                    Emergent and crown unlock after the NPC pilot.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs text-emerald-100/60">Life stage</label>
-                  <select
-                    value={claimStage}
-                    onChange={(e) => setClaimStage(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
-                  >
-                    {["neonate", "juvenile", "subadult", "adult"].map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
               <button
-                onClick={claimSnake}
-                disabled={claimBusy || !claimName.trim()}
-                className="mt-4 rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black disabled:opacity-50"
+                onClick={play}
+                disabled={busy || (!playPick && !claimName.trim())}
+                className="mt-4 w-full rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-black disabled:opacity-50"
               >
-                {claimBusy ? "Registering…" : "Register snake"}
+                {busy ? "Starting…" : "Play"}
               </button>
             </div>
+
 
             {/* History */}
             {history.length > 0 && (              <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">

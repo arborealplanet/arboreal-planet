@@ -62,12 +62,15 @@ const SIZE_CLASSES: Record<
   lg: { card: "w-[104px] h-[148px]", index: "text-sm", pip: "text-2xl", ace: "text-6xl", radius: "rounded-xl" },
   // Fluid: fills its wrapper's width at a 5:7 ratio; pips scale with the card
   // via container-query units so a full row always fits small screens.
+  // NOTE: the card's own radius must NOT use cqw — an element can't query
+  // itself, so cqw here resolves against an ancestor/viewport and turns the
+  // card into a pill. Children (pips/indices) may use cqw; the card uses px.
   fluid: {
     card: "w-full aspect-[5/7] @container",
     index: "text-[13cqw]",
     pip: "text-[22cqw]",
     ace: "text-[55cqw]",
-    radius: "rounded-[10cqw]",
+    radius: "rounded-[10px]",
   },
 };
 
