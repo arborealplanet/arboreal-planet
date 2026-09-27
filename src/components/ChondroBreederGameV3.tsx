@@ -879,6 +879,22 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [expeditionFeeArmed, setExpeditionFeeArmed] = useState(false);
   const expeditionFeeArmTimer = useRef<number | null>(null);
   const [expeditionResult, setExpeditionResult] = useState<string | null>(null);
+  // Founder/testing exemption: unlimited free expeditions. Checked
+  // server-side via /api/canopy-hunter/status so it follows the account,
+  // not the device. A failed lookup simply keeps the standard entry model.
+  const [expeditionUnlimited, setExpeditionUnlimited] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimited === true) setExpeditionUnlimited(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   // The imported colony records from the latest expedition, so the haul
   // banner can show the exact same Keeper art the receipt showed.
   const [lastExpeditionImports, setLastExpeditionImports] = useState<Snake[]>([]);
@@ -1502,9 +1518,11 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   /* ------------------------------------------------------------------ */
 
   // The free expedition is ready when the player has never gone (0) or the
-  // seven-day cooldown has elapsed. `now` ticks every 60s, so the Home quick
-  // action and this modal refresh their cadence text without a reload.
-  const expeditionFreeReady = now >= expeditionNextAt;
+  // seven-day cooldown has elapsed — or the account is exempt, in which
+  // case every trip is free with no cooldown. `now` ticks every 60s, so
+  // the Home quick action and this modal refresh their cadence text
+  // without a reload.
+  const expeditionFreeReady = expeditionUnlimited || now >= expeditionNextAt;
   const expeditionFreeInDays = Math.max(1, Math.ceil((expeditionNextAt - now) / DAY_MS));
 
   function closeExpedition() {
@@ -1540,7 +1558,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   // partially imported or silently dropped.
   function enterExpeditionFree() {
     if (!started || !expeditionFreeReady || openSlots < EXPEDITION_PYTHONS) return;
-    setExpeditionNextAt(Date.now() + EXPEDITION_FREE_COOLDOWN_MS);
+    // Exempt accounts never burn the weekly cooldown — every trip is free.
+    if (!expeditionUnlimited) setExpeditionNextAt(Date.now() + EXPEDITION_FREE_COOLDOWN_MS);
     beginExpeditionFlight();
   }
 
@@ -2030,7 +2049,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                 ) : expeditionFreeReady ? (
                   <div className="mt-4">
                     <div role="status" className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.06] p-4 text-sm leading-6 text-emerald-100/85">
-                      Your free weekly expedition is ready. There is room for the whole catch.
+                      {expeditionUnlimited
+                        ? "Unlimited expeditions on your account — head out whenever you like, every trip is free."
+                        : "Your free weekly expedition is ready. There is room for the whole catch."}
                     </div>
                     <button
                       type="button"

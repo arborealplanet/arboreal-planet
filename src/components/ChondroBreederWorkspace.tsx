@@ -246,6 +246,21 @@ function ScreenHeading({ eyebrow, title, detail }: { eyebrow: string; title: str
 function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
   const tools: WorkspaceView[] = ["career", "projects", "conservation", "community", "guide"];
   const [expedition, setExpedition] = useState(readExpeditionCardState);
+  // Founder/testing exemption: unlimited free expeditions, checked
+  // server-side so it follows the account, not the device.
+  const [expeditionUnlimited, setExpeditionUnlimited] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimited === true) setExpeditionUnlimited(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     const refresh = () => setExpedition(readExpeditionCardState());
     window.addEventListener("arboreal-chondro-breeder-save-change", refresh);
@@ -323,9 +338,11 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                   </span>
                   <span className="mt-auto pt-4 text-sm font-bold text-white/80">Canopy Hunter</span>
                   <span className="mt-1 text-[11px] leading-4 text-emerald-100/60">
-                    {expedition.freeReady
-                      ? "Free expedition ready — tap to head out."
-                      : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`}
+                    {expeditionUnlimited
+                      ? "Unlimited free expeditions — tap to head out."
+                      : expedition.freeReady
+                        ? "Free expedition ready — tap to head out."
+                        : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`}
                   </span>
                 </button>
               ) : null}
