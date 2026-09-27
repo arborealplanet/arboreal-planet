@@ -62,6 +62,10 @@ export function StakesClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmCreate, setConfirmCreate] = useState(false);
+  const [claimName, setClaimName] = useState("");
+  const [claimTier, setClaimTier] = useState("sprout");
+  const [claimStage, setClaimStage] = useState("neonate");
+  const [claimBusy, setClaimBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!signedIn) return;
@@ -86,6 +90,27 @@ export function StakesClient() {
     const id = setTimeout(() => void refresh(), 0);
     return () => clearTimeout(id);
   }, [signedIn, refresh]);
+
+  const claimSnake = useCallback(async () => {
+    if (claimBusy) return;
+    setClaimBusy(true);
+    setError(null);
+    try {
+      unlockAudio();
+      const claimed = await api<{ asset_key: string }>("/api/wagers/claim", {
+        method: "POST",
+        body: JSON.stringify({ name: claimName, tier: claimTier, lifeStage: claimStage }),
+      });
+      setClaimName("");
+      await refresh();
+      setSelectedAnimal(claimed.asset_key ?? "");
+      playSfx("chip");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not register your snake.");
+    } finally {
+      setClaimBusy(false);
+    }
+  }, [claimName, claimTier, claimStage, claimBusy, refresh]);
 
   const loadSession = useCallback(async (id: string) => {
     try {
@@ -345,8 +370,8 @@ export function StakesClient() {
               <h2 className="font-bold text-amber-100">Stake a hatchling</h2>
               {animals.length === 0 ? (
                 <p className="mt-2 text-sm text-emerald-100/60">
-                  No eligible hatchlings yet. Animals become eligible when a breeding event is
-                  registered by the game server — Keeper save files alone don&apos;t qualify.
+                  No eligible hatchlings yet. Register one of your snakes below and it becomes
+                  eligible to stake.
                 </p>
               ) : (
                 <>
@@ -411,9 +436,62 @@ export function StakesClient() {
               )}
             </div>
 
+            {/* Claim a snake */}
+            <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">
+              <h2 className="font-bold text-amber-100">Register a snake for staking</h2>
+              <p className="mt-2 text-sm text-emerald-100/60">
+                Any snake in your collection can be staked — name it, set its tier and life
+                stage, and it becomes eligible.
+              </p>
+              <label className="mt-3 block text-xs text-emerald-100/60">Snake name</label>
+              <input
+                value={claimName}
+                onChange={(e) => setClaimName(e.target.value)}
+                maxLength={80}
+                placeholder="e.g. Slinky"
+                className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100 placeholder:text-emerald-100/30"
+              />
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-emerald-100/60">Tier</label>
+                  <select
+                    value={claimTier}
+                    onChange={(e) => setClaimTier(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
+                  >
+                    {["sprout", "vine", "canopy", "emergent", "crown"].map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-emerald-100/60">Life stage</label>
+                  <select
+                    value={claimStage}
+                    onChange={(e) => setClaimStage(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
+                  >
+                    {["neonate", "juvenile", "subadult", "adult"].map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={claimSnake}
+                disabled={claimBusy || !claimName.trim()}
+                className="mt-4 rounded-full bg-emerald-500 px-6 py-2 text-sm font-bold text-black disabled:opacity-50"
+              >
+                {claimBusy ? "Registering…" : "Register snake"}
+              </button>
+            </div>
+
             {/* History */}
-            {history.length > 0 && (
-              <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">
+            {history.length > 0 && (              <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">
                 <h2 className="font-bold text-amber-100">Past wagers</h2>
                 <div className="mt-2 space-y-1">
                   {history.slice(0, 10).map((w) => (

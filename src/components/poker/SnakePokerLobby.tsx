@@ -28,7 +28,7 @@ const GAMES = [
   {
     href: "/arcade/snake-poker/stakes",
     name: "Hatchling Stakes",
-    desc: "Risk a hatchling you bred against the house's own stock in a five-hand blackjack score attack. Winner takes both. Two entries a week.",
+    desc: "Risk one of your snakes against the house's own stock in a five-hand blackjack score attack. Winner takes both. Two entries a week.",
     tag: "High risk",
   },
 ];
