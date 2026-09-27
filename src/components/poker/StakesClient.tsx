@@ -303,7 +303,14 @@ export function StakesClient() {
   }
 
   const tokensLeft = tokens.filter((t) => t.status === "available").length;
-  const table = session?.open_hand ?? null;
+  const rawTable = session?.open_hand ?? null;
+  // open_hand is null until the first deal. Anything that isn't a real
+  // table shape (e.g. the '{}' session default) counts as no open hand —
+  // rendering it as a table crashes the page.
+  const table =
+    rawTable && Array.isArray(rawTable.hands) && Array.isArray(rawTable.dealer)
+      ? rawTable
+      : null;
   const playerCards = table?.hands?.[0]?.cards ?? [];
 
   return (

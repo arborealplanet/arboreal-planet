@@ -24,13 +24,19 @@ export async function loadSession(token: string, id: string): Promise<SessionPub
 /**
  * The server only ever stores the public table projection in current_hand
  * (the shoe and the dealer's hole card live in bj_state and never leave the
- * API route), so the only job here is renaming it for the client.
+ * API route). A fresh session row defaults current_hand to '{}', so the job
+ * here is renaming a real table for the client while treating anything else
+ * (the empty default, a partial write) as no open hand. The client must
+ * never try to render a non-table as a table — that crashes the page.
  */
 export function publicSession(session: SessionPublic) {
   const { current_hand, ...rest } = session;
+  const ch = (current_hand ?? null) as Record<string, unknown> | null;
+  const open_hand =
+    ch && Array.isArray(ch.hands) && Array.isArray(ch.dealer) ? ch : null;
   return {
     ...rest,
     current_hand: undefined,
-    open_hand: (current_hand ?? null) as Record<string, unknown> | null,
+    open_hand,
   };
 }
