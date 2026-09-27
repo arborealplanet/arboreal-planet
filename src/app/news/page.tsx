@@ -6,7 +6,7 @@ import { curatedReptileNews } from "@/lib/curated-reptile-news";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "News | Arboreal Planet",
+  title: "News",
   description: "Source-linked Green Tree Python, reptile keeping, plant, conservation, and U.S. market news.",
 };
 

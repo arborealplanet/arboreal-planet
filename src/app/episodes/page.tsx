@@ -9,7 +9,7 @@ import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Episodes | Arboreal Planet",
+  title: "Episodes",
   description: "Arboreal Planet TV: keeper-made episodes on green tree pythons, plants and the hobby. Submit your episode by email.",
 };
 

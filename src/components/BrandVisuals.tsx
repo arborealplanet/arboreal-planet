@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Image from "next/image";
 
 function Pitcher({ left, top, scale = 1 }: { left: string; top: string; scale?: number }) {
@@ -53,10 +52,3 @@ export function ArborealsByBunnBadge() {
   );
 }
 
-export function SnakeStocksHomeFeature() {
-  return (
-    <Link href="/snake-stocks" className="block">
-      <SnakeStocksBrandBanner compact />
-    </Link>
-  );
-}

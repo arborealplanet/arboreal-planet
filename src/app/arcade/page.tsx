@@ -68,7 +68,7 @@ export default function ArcadePage() {
             description="Build a Green Tree Python program around breeding, locality projects, housing, offspring, market decisions and records — start small and grow your keeper program over time."
             steps={keeperSteps}
           />
-          {/* Canopy Hunter is intentionally unlisted until launch — the route /arcade/canopy-hunter stays live for owner review. */}
+          {/* Canopy Hunter retired as a standalone game — it now lives inside Arboreal Keeper as a special event; /arcade/canopy-hunter redirects there. */}
           <GameCard
             href="/arcade/snake-sorting"
             imageSrc="/arcade/snake-sorting/snake-sorter-logo.webp"
