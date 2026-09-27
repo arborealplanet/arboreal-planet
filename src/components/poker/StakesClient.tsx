@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CardView, type CardSuit } from "@/components/poker/CardView";
 import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
@@ -10,6 +10,12 @@ import { playSfx, unlockAudio } from "@/lib/poker/sfx";
 // Value tiers the house will match during the NPC pilot. The DB is the
 // final gate; this just keeps the UI from offering dead ends.
 const PILOT_TIERS = ["sprout", "vine", "canopy"];
+
+// The house plays under the zero UUID in every stakes table.
+const HOUSE_ID = "00000000-0000-0000-0000-000000000000";
+// Terminal game_sessions states. Settle writes 'complete' (void writes
+// 'voided'); the match UI must treat all of these as finished.
+const TERMINAL_SESSION_STATES = ["settled", "complete", "voided"];
 
 interface Token {
   slot: number;
@@ -35,6 +41,7 @@ interface Session {
   session_state: string;
   player_score: number;
   hands_played: number;
+  winner: string | null;
   open_hand: null | {
     hand: number | null;
     suddenDeath: boolean;
@@ -79,6 +86,13 @@ export function StakesClient() {
   const [claimStage, setClaimStage] = useState("neonate");
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimSnakeId, setClaimSnakeId] = useState("");
+
+  // Mirror of `busy` for the session poller: never let a stale poll response
+  // clobber a fresher session snapshot while an action is in flight.
+  const busyRef = useRef(false);
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
 
   const claimedKeeperIds = new Set(
     animals.map((a) => a.trait_snapshot?.keeper_id).filter((k): k is string => !!k)
@@ -159,7 +173,7 @@ export function StakesClient() {
     if (!activeId) return;
     let cancelled = false;
     const tick = () => {
-      if (!cancelled) void loadSession(activeId);
+      if (!cancelled && !busyRef.current) void loadSession(activeId);
     };
     const first = setTimeout(tick, 0);
     const t = setInterval(tick, 6000);
@@ -310,18 +324,22 @@ export function StakesClient() {
                   Match chips <span className="font-black text-amber-200">{session.player_score}</span>
                 </span>
                 <span className="text-emerald-100/70">
-                  Hand <span className="font-bold text-amber-100">{Math.min(session.hands_played + (hand ? 1 : 0), 5)}</span>/5
+                  {hand?.suddenDeath ? (
+                    <>Sudden <span className="font-bold text-amber-100">death</span></>
+                  ) : (
+                    <>Hand <span className="font-bold text-amber-100">{Math.min(session.hands_played + (hand ? 1 : 0), 5)}</span>/5</>
+                  )}
                 </span>
               </div>
 
-              {session.session_state === "settled" ? (
+              {TERMINAL_SESSION_STATES.includes(session.session_state) ? (
                 <div className="mt-4 text-center">
                   <p className="text-xl font-black text-amber-100">
-                    {session.wager_state === "player_won"
-                      ? "🏆 You take both hatchlings!"
-                      : session.wager_state === "npc_won"
-                        ? "The house takes your hatchling."
-                        : "Wager closed."}
+                    {session.winner === HOUSE_ID
+                      ? "The house takes your hatchling."
+                      : session.winner
+                        ? "🏆 You take both hatchlings!"
+                        : "Wager closed — both hatchlings unlocked."}
                   </p>
                   <button
                     onClick={() => {
@@ -391,7 +409,7 @@ export function StakesClient() {
                     disabled={busy}
                     className="rounded-full bg-emerald-500 px-8 py-2.5 font-bold text-black disabled:opacity-50"
                   >
-                    {busy ? "Dealing…" : `Deal hand ${session.hands_played + 1}`}
+                    {busy ? "Dealing…" : session.hands_played >= 5 ? "Deal sudden-death hand" : `Deal hand ${session.hands_played + 1}`}
                   </button>
                 </div>
               )}
@@ -574,7 +592,7 @@ export function StakesClient() {
                   {history.slice(0, 10).map((w) => (
                     <p key={w.id} className="text-xs text-emerald-100/60">
                       {new Date(w.created_at).toLocaleDateString()} · {w.state.replace(/_/g, " ")}
-                      {w.winner ? ` · winner: ${w.winner}` : ""}
+                      {w.winner ? ` · winner: ${w.winner === HOUSE_ID ? "House" : "You"}` : ""}
                     </p>
                   ))}
                 </div>
