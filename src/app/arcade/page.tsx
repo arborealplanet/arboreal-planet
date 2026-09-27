@@ -24,6 +24,13 @@ const triviaSteps = [
   { title: "4 · RANK UP", text: "Climb from Hatchling to Chondro Master and chase your persisted best score." },
 ];
 
+const pokerSteps = [
+  { title: "1 · BUY IN", text: "Take a seat at the den with lifesap — the house currency for card games, persisted on your account." },
+  { title: "2 · THREE TABLES", text: "Coil Hold'em against five AI snake pros, Canopy Blackjack, and Serpent Draw video poker." },
+  { title: "3 · HATCHLING STAKES", text: "Wager a home-bred hatchling against the house in a five-hand blackjack score attack — winner takes the snake." },
+  { title: "4 · WEEKLY TOKENS", text: "Stakes tokens refresh weekly, so every breeder gets a regular shot at the table." },
+];
+
 export default function ArcadePage() {
   return (
     <main className="bg-black">
@@ -79,6 +86,15 @@ export default function ArcadePage() {
             title="Reptile Trivia"
             description="Ten-question rounds on green tree pythons, snake biology, husbandry and Arboreal Planet lore. Beat the clock, ride your streak, and climb from Hatchling to Chondro Master."
             steps={triviaSteps}
+          />
+          <GameCard
+            href="/arcade/snake-poker"
+            imageSrc="/arcade/snake-poker/snake-poker-card.jpg"
+            imageAlt="Red green tree python coiled on a mossy branch — Snake Poker"
+            kicker="New game"
+            title="Snake Poker"
+            description="The Snake-Poker Den: six-seat Texas Hold'em against five AI snake pros, Canopy Blackjack and Serpent Draw video poker — plus Hatchling Stakes, where breeders risk home-bred hatchlings."
+            steps={pokerSteps}
           />
         </div>
       </section>

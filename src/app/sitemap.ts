@@ -23,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/arcade/arboreal-keeper",
     "/arcade/snake-sorting",
     "/arcade/reptile-trivia",
+    "/arcade/snake-poker",
     "/search",
     "/privacy",
     "/terms",
