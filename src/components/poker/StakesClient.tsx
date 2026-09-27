@@ -75,6 +75,7 @@ export function StakesClient() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [collection, setCollection] = useState<CollectionSnake[]>([]);
   const [history, setHistory] = useState<WagerRow[]>([]);
+  const [unlimitedTokens, setUnlimitedTokens] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [selectedAnimal, setSelectedAnimal] = useState("");
@@ -112,12 +113,13 @@ export function StakesClient() {
     if (!signedIn) return;
     try {
       const [t, a, h, c] = await Promise.all([
-        api<{ tokens: Token[] }>("/api/wagers/tokens"),
+        api<{ tokens: Token[]; unlimited?: boolean }>("/api/wagers/tokens"),
         api<{ animals: Animal[] }>("/api/wagers/eligible"),
         api<{ wagers: WagerRow[] }>("/api/wagers/history"),
         api<{ animals: CollectionSnake[] }>("/api/wagers/collection").catch(() => ({ animals: [] })),
       ]);
       setTokens(t.tokens ?? []);
+      setUnlimitedTokens(t.unlimited === true);
       setAnimals(a.animals ?? []);
       setCollection(c.animals ?? []);
       setHistory(h.wagers ?? []);
@@ -190,8 +192,9 @@ export function StakesClient() {
     setError(null);
     try {
       unlockAudio();
-      const token = tokens.find((t) => t.status === "available");
-      if (!token) throw new Error("No wager tokens left this week.");
+      if (!unlimitedTokens && !tokens.some((t) => t.status === "available")) {
+        throw new Error("No wager tokens left this week.");
+      }
       const w = await api<{ wagerId: string }>("/api/wagers/create", {
         method: "POST",
         body: JSON.stringify({ assetKey: selectedAnimal }),
@@ -205,7 +208,7 @@ export function StakesClient() {
     } finally {
       setBusy(false);
     }
-  }, [selectedAnimal, tokens, busy, refresh]);
+  }, [selectedAnimal, tokens, unlimitedTokens, busy, refresh]);
 
   const deal = useCallback(async () => {
     if (!activeId || busy) return;
@@ -302,7 +305,9 @@ export function StakesClient() {
           <Link href="/arcade/snake-poker" className="text-sm text-emerald-100/60 hover:text-amber-200">
             ← The Den
           </Link>
-          <div className="text-sm text-emerald-100/80">🎰 {tokensLeft}/2 weekly tokens</div>
+          <div className="text-sm text-emerald-100/80">
+            🎰 {unlimitedTokens ? "∞ weekly tokens" : `${tokensLeft}/2 weekly tokens`}
+          </div>
         </div>
 
         <h1 className="mt-4 text-2xl font-black text-amber-100">Hatchling Stakes</h1>
@@ -465,7 +470,7 @@ export function StakesClient() {
                           setError("Choose a hatchling first.");
                           return;
                         }
-                        if (tokensLeft === 0) {
+                        if (!unlimitedTokens && tokensLeft === 0) {
                           setError("No wager tokens left this week — they refresh Monday.");
                           return;
                         }
