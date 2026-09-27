@@ -221,10 +221,10 @@ export function DrawPoker() {
                     });
                     playSfx("click");
                   }}
-                  className={`relative rounded-xl transition ${holds[i] ? "-translate-y-2" : ""}`}
+                  className={`relative min-w-0 flex-1 max-w-[104px] rounded-xl transition ${holds[i] ? "-translate-y-2" : ""}`}
                   aria-label={`${label(c)} ${holds[i] ? "held" : "not held"}`}
                 >
-                  <CardView rank={c.rank} suit={c.suit} size="lg" />
+                  <CardView rank={c.rank} suit={c.suit} size="fluid" />
                   {holds[i] && (
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold text-black">
                       HELD

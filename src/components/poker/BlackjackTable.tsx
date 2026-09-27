@@ -199,9 +199,17 @@ export function BlackjackTable() {
             </div>
             <div className="mt-2 flex gap-2">
               {(table.phase === "done" ? table.dealer : table.dealer.slice(0, 1)).map((c, i) => (
-                <CardView key={i} rank={c.rank} suit={c.suit} size="md" />
+                <CardView
+                  key={i}
+                  rank={c.rank}
+                  suit={c.suit}
+                  size="fluid"
+                  className="min-w-0 flex-1 max-w-[72px]"
+                />
               ))}
-              {table.phase !== "done" && table.dealer.length > 1 && <CardView rank={0} suit="S" faceDown size="md" />}
+              {table.phase !== "done" && table.dealer.length > 1 && (
+                <CardView rank={0} suit="S" faceDown size="fluid" className="min-w-0 flex-1 max-w-[72px]" />
+              )}
             </div>
 
             {/* Player hands */}
@@ -224,7 +232,13 @@ export function BlackjackTable() {
                   </div>
                   <div className="mt-2 flex gap-2">
                     {h.cards.map((c, i) => (
-                      <CardView key={i} rank={c.rank} suit={c.suit} size="md" />
+                      <CardView
+                        key={i}
+                        rank={c.rank}
+                        suit={c.suit}
+                        size="fluid"
+                        className="min-w-0 flex-1 max-w-[72px]"
+                      />
                     ))}
                   </div>
                 </div>

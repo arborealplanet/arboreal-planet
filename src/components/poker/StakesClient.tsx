@@ -7,6 +7,10 @@ import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
 import { playSfx, unlockAudio } from "@/lib/poker/sfx";
 
+// Value tiers the house will match during the NPC pilot. The DB is the
+// final gate; this just keeps the UI from offering dead ends.
+const PILOT_TIERS = ["sprout", "vine", "canopy"];
+
 interface Token {
   slot: number;
   status: string;
@@ -339,7 +343,13 @@ export function StakesClient() {
                   <p className="mt-1 text-center text-[11px] text-emerald-100/50">House</p>
                   <div className="mt-3 flex justify-center gap-2">
                     {hand.player.map((c, i) => (
-                      <CardView key={i} rank={c.rank} suit={c.suit as CardSuit} size="md" />
+                      <CardView
+                        key={i}
+                        rank={c.rank}
+                        suit={c.suit as CardSuit}
+                        size="fluid"
+                        className="min-w-0 flex-1 max-w-[72px]"
+                      />
                     ))}
                   </div>
                   <p className="mt-1 text-center text-[11px] text-emerald-100/50">
@@ -412,12 +422,21 @@ export function StakesClient() {
                     className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
                   >
                     <option value="">Choose…</option>
-                    {animals.map((a) => (
-                      <option key={a.asset_key} value={a.asset_key}>
-                        {a.trait_snapshot?.name ?? "Hatchling"} · {a.tier}
-                      </option>
-                    ))}
+                    {animals.map((a) => {
+                      const pilotOpen = PILOT_TIERS.includes(a.tier);
+                      return (
+                        <option key={a.asset_key} value={a.asset_key} disabled={!pilotOpen}>
+                          {a.trait_snapshot?.name ?? "Hatchling"} · {a.tier}
+                          {pilotOpen ? "" : " (pilot locked)"}
+                        </option>
+                      );
+                    })}
                   </select>
+                  {animals.some((a) => !PILOT_TIERS.includes(a.tier)) && (
+                    <p className="mt-1 text-[11px] text-emerald-100/40">
+                      Emergent and crown snakes unlock for staking after the NPC pilot.
+                    </p>
+                  )}
                   <p className="mt-3 text-xs text-emerald-100/60">
                     The house mints its own hatchling at the same tier as your counter-stake.
                   </p>
@@ -514,12 +533,15 @@ export function StakesClient() {
                     onChange={(e) => setClaimTier(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
                   >
-                    {["sprout", "vine", "canopy", "emergent", "crown"].map((t) => (
+                    {PILOT_TIERS.map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-[11px] text-emerald-100/40">
+                    Emergent and crown unlock after the NPC pilot.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-xs text-emerald-100/60">Life stage</label>

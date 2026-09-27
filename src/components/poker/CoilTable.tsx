@@ -320,7 +320,13 @@ export function CoilTable() {
               </div>
               <div className="mt-3 flex min-h-16 justify-center gap-2">
                 {table.board.map((c, i) => (
-                  <CardView key={i} rank={c.rank} suit={c.suit} size="md" />
+                  <CardView
+                    key={i}
+                    rank={c.rank}
+                    suit={c.suit}
+                    size="fluid"
+                    className="min-w-0 flex-1 max-w-[72px]"
+                  />
                 ))}
                 {table.board.length === 0 && (
                   <p className="self-center text-xs text-emerald-100/30">No community cards yet</p>

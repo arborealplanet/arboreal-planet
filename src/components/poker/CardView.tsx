@@ -7,7 +7,7 @@ export const CARD_ART_BASE_URL =
   "https://ykaqnxajszwgeqkmaora.supabase.co/storage/v1/object/public/arcade-card-art";
 
 export type CardSuit = "S" | "H" | "D" | "C";
-export type CardSize = "sm" | "md" | "lg";
+export type CardSize = "sm" | "md" | "lg" | "fluid";
 
 const SUIT_META: Record<CardSuit, { name: string; glyph: string; color: string }> = {
   S: { name: "Spades", glyph: "♠", color: "#171816" },
@@ -60,6 +60,15 @@ const SIZE_CLASSES: Record<
   sm: { card: "w-11 h-[62px]", index: "text-[9px]", pip: "text-[11px]", ace: "text-2xl", radius: "rounded-md" },
   md: { card: "w-[72px] h-[102px]", index: "text-xs", pip: "text-[17px]", ace: "text-4xl", radius: "rounded-lg" },
   lg: { card: "w-[104px] h-[148px]", index: "text-sm", pip: "text-2xl", ace: "text-6xl", radius: "rounded-xl" },
+  // Fluid: fills its wrapper's width at a 5:7 ratio; pips scale with the card
+  // via container-query units so a full row always fits small screens.
+  fluid: {
+    card: "w-full aspect-[5/7] @container",
+    index: "text-[13cqw]",
+    pip: "text-[22cqw]",
+    ace: "text-[55cqw]",
+    radius: "rounded-[10cqw]",
+  },
 };
 
 export function rankText(rank: number): string {
