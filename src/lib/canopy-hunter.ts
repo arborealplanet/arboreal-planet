@@ -325,7 +325,7 @@ function rollNeonateColor(locality: CanopyLocality, random: RandomFn): CanopyNeo
 }
 
 /** Wild catches come in two flavors: fresh neonates or full adults. */
-function rollLifeStage(random: RandomFn): CanopyLifeStage {
+export function rollLifeStage(random: RandomFn = Math.random): CanopyLifeStage {
   return random() < 0.5 ? "Neonate" : "Adult";
 }
 
@@ -342,13 +342,20 @@ function rollCondition(random: RandomFn): CanopyCondition {
  */
 /**
  * Generate one wild snake for a region. `n` numbers the finds within the
- * expedition ("Wild Biak 1", "Wild Biak 2", …).
+ * expedition ("Wild Biak 1", "Wild Biak 2", …). Pass `lifeStage` to fix the
+ * stage (the grove pre-rolls it so the hiding spot matches: adults hunt
+ * the tall trees, neonates hide in the low plants).
  */
-export function generateWildSnake(n: number, region: CanopyRegion, random: RandomFn = Math.random): WildSnake {
+export function generateWildSnake(
+  n: number,
+  region: CanopyRegion,
+  random: RandomFn = Math.random,
+  lifeStage: CanopyLifeStage | null = null,
+): WildSnake {
   const locality = region.localities[Math.floor(random() * region.localities.length)];
   const subspecies = CANOPY_LOCALITY_SUBSPECIES[locality];
   const sex: CanopySex = random() < 0.5 ? "Male" : "Female";
-  const lifeStage = rollLifeStage(random);
+  const stage = lifeStage ?? rollLifeStage(random);
   const neonateColor = rollNeonateColor(locality, random);
 
   const exceptional = random() < 0.08;
@@ -369,14 +376,14 @@ export function generateWildSnake(n: number, region: CanopyRegion, random: Rando
 
   // Adult females have a 30% shot at being gravid — after she's brought
   // home, a timer starts, and when it runs out she lays a wild clutch.
-  const gravid = lifeStage === "Adult" && sex === "Female" && random() < 0.3;
+  const gravid = stage === "Adult" && sex === "Female" && random() < 0.3;
 
   return {
     name: `Wild ${locality} ${n}`,
     locality,
     subspecies,
     sex,
-    lifeStage,
+    lifeStage: stage,
     neonateColor,
     traits,
     condition: rollCondition(random),
@@ -462,4 +469,262 @@ const ESCAPE_LINES = [
 /** Flavor text for a missed catch. */
 export function randomEscapeLine(random: RandomFn = Math.random): string {
   return ESCAPE_LINES[Math.floor(random() * ESCAPE_LINES.length)];
+}
+
+/* ------------------------------------------------------------------ */
+/* Regional atmosphere (scenery grading per expedition region)         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Per-region night atmosphere. This is the scenery system: every region
+ * grades the trail and grove scenes with its own palette, fog, fireflies,
+ * and moon, and the night deepens grove by grove. When painted region
+ * backdrops exist, drop the file path into `backdrop` and the scenes will
+ * layer it under the grade automatically.
+ */
+export interface CanopyAtmosphere {
+  /** CSS background for the color-grade overlay over trail/grove scenes. */
+  grade: string;
+  /** 0..1 opacity of the drifting fog layer. */
+  fogOpacity: number;
+  /** Tint of the fog layer. */
+  fogTint: string;
+  /** Firefly count for the trail scene. */
+  fireflies: number;
+  /** Firefly glow color. */
+  fireflyColor: string;
+  /** Moon glow color. */
+  moonColor: string;
+  /** Flavor name shown in the trail status ("Moss-forest midnight"). */
+  nightName: string;
+  /**
+   * Optional painted region backdrop (e.g.
+   * "/arcade/canopy-hunter/scenery/grove-highlands.webp"). Rendered in the
+   * grove scene under the grade — the trail keeps its fork paintings as the
+   * base layer (a backdrop there would bury them), so painted scenery lives
+   * where the player actually hunts: the grove. Undefined until art exists;
+   * the grade carries the regional mood on its own.
+   */
+  backdrop?: string;
+}
+
+export const CANOPY_REGION_ATMOSPHERE: Record<CanopyRegion["id"], CanopyAtmosphere> = {
+  cenderawasih: {
+    grade:
+      "linear-gradient(180deg, rgba(8,47,46,.42) 0%, rgba(4,20,18,.10) 55%, rgba(2,10,10,.55) 100%)",
+    fogOpacity: 0.22,
+    fogTint: "#5eead4",
+    fireflies: 10,
+    fireflyColor: "#fef9c3",
+    moonColor: "rgba(253,224,171,.9)",
+    nightName: "Island dusk",
+    backdrop: "/arcade/canopy-hunter/scenery/grove-cenderawasih.webp",
+  },
+  "birds-head": {
+    grade:
+      "linear-gradient(180deg, rgba(46,16,70,.45) 0%, rgba(20,8,32,.12) 55%, rgba(8,4,16,.60) 100%)",
+    fogOpacity: 0.28,
+    fogTint: "#c4b5fd",
+    fireflies: 8,
+    fireflyColor: "#fde68a",
+    moonColor: "rgba(221,214,254,.9)",
+    nightName: "Vogelkop night",
+    backdrop: "/arcade/canopy-hunter/scenery/grove-birds-head.webp",
+  },
+  highlands: {
+    grade:
+      "linear-gradient(180deg, rgba(12,34,64,.50) 0%, rgba(8,20,40,.14) 55%, rgba(3,8,18,.62) 100%)",
+    fogOpacity: 0.5,
+    fogTint: "#bfdbfe",
+    fireflies: 5,
+    fireflyColor: "#e0f2fe",
+    moonColor: "rgba(186,230,253,.95)",
+    nightName: "Moss-forest midnight",
+    backdrop: "/arcade/canopy-hunter/scenery/grove-highlands.webp",
+  },
+  southern: {
+    grade:
+      "linear-gradient(180deg, rgba(80,36,8,.48) 0%, rgba(40,20,8,.12) 55%, rgba(16,8,4,.60) 100%)",
+    fogOpacity: 0.18,
+    fogTint: "#fcd34d",
+    fireflies: 12,
+    fireflyColor: "#fde68a",
+    moonColor: "rgba(254,215,170,.95)",
+    nightName: "Trans-Fly dusk",
+    backdrop: "/arcade/canopy-hunter/scenery/grove-southern.webp",
+  },
+};
+
+/** Atmosphere for an expedition region. */
+export function atmosphereForRegion(region: CanopyRegion): CanopyAtmosphere {
+  return CANOPY_REGION_ATMOSPHERE[region.id];
+}
+
+/* ------------------------------------------------------------------ */
+/* Regional flora: tall trees hide adults, low plants hide neonates    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Keyed tree cutouts per region (3 per region). Tall trees hide adult
+ * pythons; the scenes fall back to the shared keyed tree set if a region
+ * ever ships without its own.
+ */
+export const CANOPY_REGION_TREES: Record<CanopyRegion["id"], string[]> = {
+  cenderawasih: [
+    "/arcade/canopy-hunter/trees/cenderawasih-1.webp",
+    "/arcade/canopy-hunter/trees/cenderawasih-2.webp",
+    "/arcade/canopy-hunter/trees/cenderawasih-3.webp",
+  ],
+  "birds-head": [
+    "/arcade/canopy-hunter/trees/birds-head-1.webp",
+    "/arcade/canopy-hunter/trees/birds-head-2.webp",
+    "/arcade/canopy-hunter/trees/birds-head-3.webp",
+  ],
+  highlands: [
+    "/arcade/canopy-hunter/trees/highlands-1.webp",
+    "/arcade/canopy-hunter/trees/highlands-2.webp",
+    "/arcade/canopy-hunter/trees/highlands-3.webp",
+  ],
+  southern: [
+    "/arcade/canopy-hunter/trees/southern-1.webp",
+    "/arcade/canopy-hunter/trees/southern-2.webp",
+    "/arcade/canopy-hunter/trees/southern-3.webp",
+  ],
+};
+
+/**
+ * Keyed low-plant cutouts per region (1 per region). Neonates hide in the
+ * undergrowth — the height mechanic switches on for a region once its
+ * plant art exists.
+ */
+export const CANOPY_REGION_PLANTS: Record<CanopyRegion["id"], string[]> = {
+  cenderawasih: ["/arcade/canopy-hunter/plants/cenderawasih.webp"],
+  "birds-head": ["/arcade/canopy-hunter/plants/birds-head.webp"],
+  highlands: ["/arcade/canopy-hunter/plants/highlands.webp"],
+  southern: ["/arcade/canopy-hunter/plants/southern.webp"],
+};
+
+export type GroveSpotKind = "tree" | "plant";
+
+/** One hiding spot in a grove: a tall tree or a low plant. */
+export interface GroveSpot {
+  kind: GroveSpotKind;
+  /** Index into the region's tree or plant art set. */
+  variant: number;
+}
+
+/**
+ * Build one grove's hiding spots. Always at least one tall tree and one
+ * low plant once the region has plant art; without plant art the grove
+ * falls back to all trees and the height mechanic stays off.
+ */
+export function createGroveSpots(
+  treeVariants: number,
+  plantVariants: number,
+  random: RandomFn = Math.random,
+): GroveSpot[] {
+  const kinds: GroveSpotKind[] =
+    plantVariants > 0
+      ? random() < 0.5
+        ? ["tree", "tree", "plant"]
+        : ["tree", "plant", "plant"]
+      : ["tree", "tree", "tree"];
+  for (let i = kinds.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+  }
+  return kinds.map((kind) => ({
+    kind,
+    variant: Math.floor(random() * (kind === "tree" ? treeVariants : plantVariants)),
+  }));
+}
+
+/**
+ * The night deepens across the four groves: dusk, nightfall, deep night,
+ * blue hour. Index with the 0-based leg/grove index.
+ */
+export const NIGHT_PHASES = ["Dusk", "Nightfall", "Deep night", "Blue hour"] as const;
+
+export function nightPhaseForLeg(legIndex: number): (typeof NIGHT_PHASES)[number] {
+  return NIGHT_PHASES[Math.max(0, Math.min(NIGHT_PHASES.length - 1, legIndex))];
+}
+
+/** 0 at dusk → 1 at the blue hour: extra darkness layered over the grade. */
+export function nightfallForLeg(legIndex: number): number {
+  return Math.max(0, Math.min(1, legIndex / (NIGHT_PHASES.length - 1)));
+}
+
+/* ------------------------------------------------------------------ */
+/* Expedition scoring                                                  */
+/* ------------------------------------------------------------------ */
+
+export type ExpeditionRank = "S" | "A" | "B" | "C" | "D";
+
+export interface ExpeditionScore {
+  points: number;
+  rank: ExpeditionRank;
+}
+
+/**
+ * Rank the night: catches and hot streaks earn, escapes and wasted
+ * searches cost. Tuned so a perfect night (4 caught, hot streak) is S,
+ * a clean 3-catch night is A, and a skunked night is D. TUNABLE.
+ */
+export function scoreExpedition(
+  caught: number,
+  bestStreak: number,
+  escaped: number,
+  searchesUsed: number,
+): ExpeditionScore {
+  const points =
+    caught * 40 + bestStreak * 10 - escaped * 10 - Math.max(0, searchesUsed - 4) * 5;
+  const rank: ExpeditionRank =
+    points >= 170 ? "S" : points >= 130 ? "A" : points >= 90 ? "B" : points >= 40 ? "C" : "D";
+  return { points, rank };
+}
+
+export const EXPEDITION_RANK_LINES: Record<ExpeditionRank, string> = {
+  S: "Legend of the canopy — the night gave up everything.",
+  A: "A hunter's night. The colony grows stronger.",
+  B: "A solid night under the leaves.",
+  C: "The canopy kept most of its secrets.",
+  D: "A quiet night. The snakes were listening.",
+};
+
+/* ------------------------------------------------------------------ */
+/* Shed-skin finds (consolation sign on empty trees)                   */
+/* ------------------------------------------------------------------ */
+
+/** Chance an empty searched tree turns up a fresh shed skin. TUNABLE. */
+export const SHED_FIND_CHANCE = 0.3;
+
+/** Roll whether tonight's empty tree hides a shed skin. */
+export function rollShedFind(random: RandomFn = Math.random): boolean {
+  return random() < SHED_FIND_CHANCE;
+}
+
+const SHED_LINES = [
+  "Shed skin — fresh. Somebody was here tonight.",
+  "A papery shed tangled in the bark. Close.",
+  "Shed skin, still supple. You're on warm trail.",
+  "An empty coil of shed — the owner slipped away.",
+];
+
+/** Flavor text for a shed-skin find. */
+export function randomShedLine(random: RandomFn = Math.random): string {
+  return SHED_LINES[Math.floor(random() * SHED_LINES.length)];
+}
+
+/* ------------------------------------------------------------------ */
+/* Catch escalation: the snakes get warier as the night deepens        */
+/* ------------------------------------------------------------------ */
+
+/** Sweep period multiplier per leg — the timing bar speeds up each grove. */
+export const ESCALATION_PER_LEG = 0.92;
+/** Fastest the sweep ever gets (ms per one-way pass). */
+export const MIN_SWEEP_MS = 700;
+
+/** Sweep period for a leg index, shrinking as the night deepens. */
+export function sweepMsForLeg(legIndex: number, baseMs: number): number {
+  return Math.max(MIN_SWEEP_MS, Math.round(baseMs * Math.pow(ESCALATION_PER_LEG, legIndex)));
 }

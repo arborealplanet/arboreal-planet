@@ -6,12 +6,28 @@ import {
   EXPEDITION_PYTHONS,
   EXPEDITION_SEARCHES,
   EXPEDITION_TREES,
+  EXPEDITION_RANK_LINES,
+  CANOPY_REGION_PLANTS,
+  CANOPY_REGION_TREES,
+  atmosphereForRegion,
+  createGroveSpots,
   generateWildSnake,
+  nightPhaseForLeg,
+  nightfallForLeg,
   randomEscapeLine,
+  randomShedLine,
+  rollLifeStage,
   rollRegion,
+  rollShedFind,
   rollTrailSign,
   rollZoneCenter,
+  scoreExpedition,
+  sweepMsForLeg,
+  type CanopyAtmosphere,
+  type CanopyLifeStage,
   type CanopyRegion,
+  type ExpeditionRank,
+  type GroveSpot,
   type WildSnake,
 } from "@/lib/canopy-hunter";
 import {
@@ -39,6 +55,7 @@ const TREE_ARTS = [
   "/arcade/canopy-hunter/tree-3-keyed.webp",
 ];
 const BANNER_ART = "/arcade/canopy-hunter/canopy-banner.webp";
+const CATCH_ART = "/arcade/canopy-hunter/catch-backdrop.webp";
 const PATH_ART = "/arcade/canopy-hunter/path-night.webp";
 const PATH_FORK_2_ART = "/arcade/canopy-hunter/path-fork-2.webp";
 const PATH_FORK_3_ART = "/arcade/canopy-hunter/path-fork-3.webp";
@@ -51,6 +68,8 @@ function pathArtForTrailCount(count: number): string {
 }
 const EXPLORER_ART = "/arcade/canopy-hunter/explorer-back-keyed.webp";
 const FOREGROUND_ART = "/arcade/canopy-hunter/foreground-branches.webp";
+/** Unused coiled-python illustration, repurposed as the results-screen quarry art. */
+const PYTHON_ART = "/arcade/canopy-hunter/python.webp";
 
 /**
  * A caught wild snake rendered through the exact same Keeper pipeline as the
@@ -80,9 +99,15 @@ function WildSnakeArt({ wild, mini = false }: { wild: WildSnake; mini?: boolean 
 /** One branch at a fork in the trail. Exactly one trail per leg hides a python. */
 interface TrailOption {
   label: string;
-  treeVariants: number[];
-  /** Which of the grove's trees hides the python, or null when this trail is empty. */
-  pythonTree: number | null;
+  spots: GroveSpot[];
+  /** Index into spots hiding the python, or null when this trail is empty. */
+  pythonSpot: number | null;
+  /**
+   * The hidden python's life stage, pre-rolled so the hiding spot matches:
+   * adults hunt the tall trees, neonates hide in the low plants. Null when
+   * the region has no plant art (height mechanic off) or the trail is empty.
+   */
+  pythonLifeStage: CanopyLifeStage | null;
   /** The briefing's promised "sign": rustling leaves betray the python's trail. */
   showsSign: boolean;
 }
@@ -120,10 +145,10 @@ function trailLabel(count: number, index: number): string {
 /* Art: production sprites                                             */
 /* ------------------------------------------------------------------ */
 
-function TreeArt({ variant, dimmed, swayDelay }: { variant: number; dimmed: boolean; swayDelay: number }) {
+function SpotArt({ src, dimmed, swayDelay }: { src: string; dimmed: boolean; swayDelay: number }) {
   return (
     <Image
-      src={TREE_ARTS[variant % TREE_ARTS.length]}
+      src={src}
       alt=""
       aria-hidden="true"
       fill
@@ -133,6 +158,25 @@ function TreeArt({ variant, dimmed, swayDelay }: { variant: number; dimmed: bool
       style={{ transformOrigin: "50% 100%", animation: `ch-sway 5s ease-in-out ${swayDelay}s infinite` }}
     />
   );
+}
+
+/** The region's keyed tree set once its art lands, else the shared set. */
+function regionTreeSet(region: CanopyRegion | null): string[] {
+  const set = region ? CANOPY_REGION_TREES[region.id] : [];
+  return set.length > 0 ? set : TREE_ARTS;
+}
+
+/**
+ * Art for a grove hiding spot: the region's tall trees or low plants.
+ * Plant spots only exist once the region's plant art has landed.
+ */
+function artForSpot(region: CanopyRegion | null, spot: GroveSpot): string {
+  if (spot.kind === "plant") {
+    const set = region ? CANOPY_REGION_PLANTS[region.id] : [];
+    return set[spot.variant % set.length];
+  }
+  const set = regionTreeSet(region);
+  return set[spot.variant % set.length];
 }
 
 /** Pulsing pink badge for a gravid female. */
@@ -150,15 +194,17 @@ function GravidBadge({ className = "" }: { className?: string }) {
   );
 }
 
-function Fireflies({ count = 8 }: { count?: number }) {
+function Fireflies({ count = 8, color = "#fef9c3" }: { count?: number; color?: string }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
         <span
           key={i}
           aria-hidden="true"
-          className="pointer-events-none absolute h-1 w-1 rounded-full bg-yellow-200"
+          className="pointer-events-none absolute h-1 w-1 rounded-full"
           style={{
+            backgroundColor: color,
+            boxShadow: `0 0 6px ${color}`,
             left: `${8 + ((i * 37) % 84)}%`,
             top: `${18 + ((i * 53) % 52)}%`,
             animation: `ch-firefly ${3 + (i % 4)}s ease-in-out ${i * 0.6}s infinite`,
@@ -166,6 +212,89 @@ function Fireflies({ count = 8 }: { count?: number }) {
         />
       ))}
     </>
+  );
+}
+
+/**
+ * Regional scenery: color grade, moon, drifting fog, and fireflies layered
+ * over the trail and grove scenes, deepening as the night wears on. Pure
+ * CSS over the existing art — when painted region backdrops exist, the
+ * region config's `backdrop` path layers in underneath automatically.
+ */
+function NightAtmosphere({
+  region,
+  legIndex,
+  compact = false,
+  showBackdrop = true,
+}: {
+  region: CanopyRegion | null;
+  legIndex: number;
+  compact?: boolean;
+  /**
+   * The trail scene passes false: its fork paintings are the base layer
+   * and a region backdrop would bury them. Painted scenery lives in the
+   * grove scene, where the player actually hunts.
+   */
+  showBackdrop?: boolean;
+}) {
+  if (!region) return null;
+  const atmo: CanopyAtmosphere = atmosphereForRegion(region);
+  const nightfall = nightfallForLeg(legIndex);
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+      {showBackdrop && atmo.backdrop && (
+        <Image
+          src={atmo.backdrop}
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="(max-width: 640px) 100vw, 48rem"
+          draggable={false}
+          className="object-cover"
+        />
+      )}
+      {/* regional color grade */}
+      <div className="absolute inset-0" style={{ background: atmo.grade }} />
+      {/* the night deepens grove by grove */}
+      <div className="absolute inset-0 bg-black" style={{ opacity: nightfall * 0.35 }} />
+      {/* moon climbs as the night wears on */}
+      <div
+        className="absolute h-20 w-20"
+        style={{ right: "8%", top: `${34 - legIndex * 6}%` }}
+      >
+        <div
+          className="absolute inset-0 rounded-full blur-2xl"
+          style={{ background: atmo.moonColor, opacity: 0.5 }}
+        />
+        <div
+          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            background: `radial-gradient(circle at 35% 35%, #ffffff 0%, ${atmo.moonColor} 55%, transparent 72%)`,
+          }}
+        />
+      </div>
+      {/* drifting fog */}
+      <div
+        className="absolute -left-10 bottom-[-10%] h-40 w-[70%] rounded-full blur-3xl"
+        style={{
+          background: atmo.fogTint,
+          opacity: atmo.fogOpacity * 0.5,
+          animation: "ch-drift 11s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute -right-10 bottom-[-16%] h-48 w-[80%] rounded-full blur-3xl"
+        style={{
+          background: atmo.fogTint,
+          opacity: atmo.fogOpacity * 0.35,
+          animation: "ch-drift 14s ease-in-out 2s infinite reverse",
+        }}
+      />
+      <Fireflies
+        count={compact ? Math.max(3, Math.floor(atmo.fireflies / 2)) : atmo.fireflies}
+        color={atmo.fireflyColor}
+      />
+    </div>
   );
 }
 
@@ -219,6 +348,11 @@ export function CanopyHunter({
   const [searchesLeft, setSearchesLeft] = useState(EXPEDITION_SEARCHES);
   const [bag, setBag] = useState<WildSnake[]>([]);
   const [escapedCount, setEscapedCount] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [sheds, setSheds] = useState(0);
+  const [journal, setJournal] = useState<string[]>([]);
+  const [groveNote, setGroveNote] = useState<string | null>(null);
   const [catchTree, setCatchTree] = useState<number | null>(null);
   const [zoneCenter, setZoneCenter] = useState(0.5);
   const [catchResolved, setCatchResolved] = useState(false);
@@ -238,10 +372,20 @@ export function CanopyHunter({
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     () => false,
   );
-  const period = reducedMotion ? SWEEP_MS * 2.5 : SWEEP_MS;
+  const period = sweepMsForLeg(legIndex, reducedMotion ? SWEEP_MS * 2.5 : SWEEP_MS);
   const zoneHalf = reducedMotion ? 0.2 : ZONE_HALF;
 
   const resolvedCount = bag.length + escapedCount;
+  const phaseName = nightPhaseForLeg(legIndex);
+  /** Distant trees on the trail — the region's own set once its art lands. */
+  const trailTrees = regionTreeSet(region);
+  /** Painted region grove backdrop, when the art exists. */
+  const groveBackdrop = region?.id ? atmosphereForRegion(region).backdrop : undefined;
+
+  /** Append a line to the night's field journal. */
+  function log(line: string) {
+    setJournal((j) => [...j, line]);
+  }
 
   /* Jungle music lives as long as the expedition modal does. */
   useEffect(() => () => {
@@ -275,6 +419,10 @@ export function CanopyHunter({
     // User gesture: the one safe moment to wake the Web Audio engine.
     startJungleMusic();
     const expeditionRegion = regionProp ?? rollRegion();
+    const regionTrees = CANOPY_REGION_TREES[expeditionRegion.id];
+    const regionPlants = CANOPY_REGION_PLANTS[expeditionRegion.id];
+    const treeVariants = regionTrees.length > 0 ? regionTrees.length : TREE_ARTS.length;
+    const plantVariants = regionPlants.length;
     const nextLegs: Leg[] = [];
     for (let g = 0; g < GROVES_PER_EXPEDITION; g += 1) {
       const trailCount = pickTrailCount();
@@ -282,10 +430,27 @@ export function CanopyHunter({
       const trails: TrailOption[] = [];
       for (let t = 0; t < trailCount; t += 1) {
         const hidesPython = t === pythonTrail;
+        const spots = createGroveSpots(treeVariants, plantVariants);
+        let pythonSpot: number | null = null;
+        let pythonLifeStage: CanopyLifeStage | null = null;
+        if (hidesPython) {
+          if (plantVariants > 0) {
+            // Height mechanic: adults hunt the tall trees, neonates hide low.
+            const stage = rollLifeStage();
+            const matching = spots
+              .map((s, i) => (stage === "Adult" ? s.kind === "tree" : s.kind === "plant") ? i : -1)
+              .filter((i) => i >= 0);
+            pythonSpot = matching[Math.floor(Math.random() * matching.length)];
+            pythonLifeStage = stage;
+          } else {
+            pythonSpot = Math.floor(Math.random() * spots.length);
+          }
+        }
         trails.push({
           label: trailLabel(trailCount, t),
-          treeVariants: [0, 1, 2].map((_, i) => (g + t + i) % TREE_ARTS.length),
-          pythonTree: hidesPython ? Math.floor(Math.random() * TREES_PER_GROVE) : null,
+          spots,
+          pythonSpot,
+          pythonLifeStage,
           // The signs aren't always readable — some nights the canopy keeps quiet.
           showsSign: hidesPython ? rollTrailSign() : false,
         });
@@ -302,6 +467,13 @@ export function CanopyHunter({
     setSearchesLeft(EXPEDITION_SEARCHES);
     setBag([]);
     setEscapedCount(0);
+    setStreak(0);
+    setBestStreak(0);
+    setSheds(0);
+    setJournal([
+      `${expeditionRegion.name} — expedition begins at ${atmosphereForRegion(expeditionRegion).nightName.toLowerCase()}.`,
+    ]);
+    setGroveNote(null);
     setCatchTree(null);
     setCatchResolved(false);
     setCatchMessage(null);
@@ -314,11 +486,18 @@ export function CanopyHunter({
     if (phase !== "trail" || walking) return;
     const trail = legs[legIndex]?.trails[trailIndex];
     if (!trail) return;
+    log(`${nightPhaseForLeg(legIndex)} — took the ${trail.label.toLowerCase()} to grove ${legIndex + 1}.`);
+    setGroveNote(null);
     setWalking(true);
     window.setTimeout(() => {
       const wilds: Record<number, WildSnake> = {};
-      if (trail.pythonTree !== null && region) {
-        wilds[trail.pythonTree] = generateWildSnake(wildIdRef.current, region);
+      if (trail.pythonSpot !== null && region) {
+        wilds[trail.pythonSpot] = generateWildSnake(
+          wildIdRef.current,
+          region,
+          Math.random,
+          trail.pythonLifeStage,
+        );
         wildIdRef.current += 1;
       }
       setGrove(trail);
@@ -338,12 +517,19 @@ export function CanopyHunter({
     nextSearched[index] = true;
     setSearched(nextSearched);
     setSearchesLeft((n) => n - 1);
+    setGroveNote(null);
     if (groveWilds[index]) {
       setCatchTree(index);
       setZoneCenter(rollZoneCenter());
       setCatchResolved(false);
       setCatchMessage(null);
       setPhase("catch");
+    } else if (rollShedFind()) {
+      // Consolation sign: a fresh shed means a python was here tonight.
+      const line = randomShedLine();
+      setSheds((n) => n + 1);
+      setGroveNote(line);
+      log(`Grove ${legIndex + 1} — shed skin found.`);
     }
   }
 
@@ -356,13 +542,24 @@ export function CanopyHunter({
     setCatchResolved(true);
     if (success && wild) {
       setBag((b) => [...b, wild]);
+      const nextStreak = streak + 1;
+      setStreak(nextStreak);
+      setBestStreak((b) => Math.max(b, nextStreak));
+      log(
+        `Grove ${legIndex + 1} — bagged ${wild.name} (${wild.sex.toLowerCase()}, ${wild.lifeStage.toLowerCase()}).` +
+          (nextStreak >= 2 ? ` Streak ×${nextStreak}.` : ""),
+      );
       setCatchMessage(
         wild.gravid
           ? "Bagged! She's gravid — she'll lay her clutch once she's settled in your colony."
-          : "Bagged! A new animal for the collection.",
+          : nextStreak >= 2
+            ? `Bagged! Streak ×${nextStreak} — you're on fire.`
+            : "Bagged! A new animal for the collection.",
       );
     } else {
       setEscapedCount((n) => n + 1);
+      setStreak(0);
+      log(`Grove ${legIndex + 1} — it slipped away.`);
       setCatchMessage(randomEscapeLine());
     }
   }
@@ -373,7 +570,9 @@ export function CanopyHunter({
   }
 
   function followTrail() {
+    setGroveNote(null);
     if (legIndex + 1 >= GROVES_PER_EXPEDITION) {
+      log(`${nightPhaseForLeg(legIndex)} — the night ends.`);
       setPhase("results");
     } else {
       setLegIndex((n) => n + 1);
@@ -402,6 +601,7 @@ export function CanopyHunter({
       ? bag.reduce((a, b) => (b.phenotypeScore > a.phenotypeScore ? b : a))
       : null;
   const searchesUsed = EXPEDITION_SEARCHES - searchesLeft;
+  const score = scoreExpedition(bag.length, bestStreak, escapedCount, searchesUsed);
 
   function trailButtonPos(count: number, index: number): React.CSSProperties {
     if (count === 1) return { left: "50%", bottom: "36%", transform: "translateX(-50%)" };
@@ -421,7 +621,8 @@ export function CanopyHunter({
     <div className="mx-auto w-full max-w-3xl">
       <style>{`@keyframes ch-sway { 0%,100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
 @keyframes ch-firefly { 0%,100% { transform: translate(0,0); opacity: .25; } 50% { transform: translate(10px,-14px); opacity: 1; } }
-@keyframes ch-rustle { 0%,100% { transform: rotate(-18deg) translateY(0); opacity: .55; } 50% { transform: rotate(24deg) translateY(-3px); opacity: 1; } }`}</style>
+@keyframes ch-rustle { 0%,100% { transform: rotate(-18deg) translateY(0); opacity: .55; } 50% { transform: rotate(24deg) translateY(-3px); opacity: 1; } }
+@keyframes ch-drift { 0%,100% { transform: translateX(-24px); } 50% { transform: translateX(24px); } }`}</style>
 
       {/* Header */}
       <div className="relative text-center">
@@ -480,7 +681,11 @@ export function CanopyHunter({
             <li>· You have {EXPEDITION_SEARCHES} searches — spend them wisely.</li>
             <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs: rustling leaves mean a snake is near — when the night lets you spot them.</li>
             <li>· Spot one and grab it before it slips away.</li>
-            <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea.</li>
+            <li>· Hunt by height: adults cruise the high branches — search the tall trees. Neonates hide low — check the undergrowth.</li>
+            <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea, and each region hunts under its own sky.</li>
+            <li>· The night deepens as you go — Dusk, Nightfall, Deep night, Blue hour — and the snakes get warier (and quicker) the later it gets.</li>
+            <li>· Chain clean grabs for a streak. Your night earns a hunter&apos;s rank, S through D.</li>
+            <li>· Empty trees sometimes turn up fresh shed skins — signs you&apos;re on warm trail.</li>
             <li>· Caught snakes head straight into your Keeper colony.</li>
           </ul>
           <div className="px-6 pb-6 sm:px-8 sm:pb-8">
@@ -498,21 +703,21 @@ export function CanopyHunter({
       {/* Trail — pseudo-3D third-person fork choice */}
       {phase === "trail" && (
         <div className="mt-8">
-          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} />
+          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} />
           <div className={`relative aspect-[4/3] overflow-hidden rounded-[26px] border border-white/[.07] transition-all duration-700 sm:aspect-[16/9] ${walking ? "scale-110 opacity-0" : "scale-100 opacity-100"}`}>
             <Image src={pathArtForTrailCount(currentTrails.length)} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
+            <NightAtmosphere region={region} legIndex={legIndex} showBackdrop={false} />
             {/* Distant trees near the vanishing point sell the depth (keyed art, plain opacity dimming) */}
             <div className="absolute left-[37%] top-[24%] w-16 opacity-90 sm:w-20">
               <div className="relative aspect-[3/4] brightness-[.55]">
-                <TreeArt variant={(legIndex + 1) % TREE_ARTS.length} dimmed={false} swayDelay={0.4} />
+                <SpotArt src={trailTrees[(legIndex + 1) % trailTrees.length]} dimmed={false} swayDelay={0.4} />
               </div>
             </div>
             <div className="absolute right-[37%] top-[24%] w-16 opacity-90 sm:w-20">
               <div className="relative aspect-[3/4] brightness-[.55]">
-                <TreeArt variant={(legIndex + 2) % TREE_ARTS.length} dimmed={false} swayDelay={1.3} />
+                <SpotArt src={trailTrees[(legIndex + 2) % trailTrees.length]} dimmed={false} swayDelay={1.3} />
               </div>
             </div>
-            <Fireflies />
             {/* Trail choices sit on the path ahead */}
             {currentTrails.map((trail, i) => (
               <div key={i} className="absolute z-10" style={trailButtonPos(currentTrails.length, i)}>
@@ -550,26 +755,35 @@ export function CanopyHunter({
       {/* Grove — search the trees */}
       {phase === "grove" && grove && (
         <div className="mt-8">
-          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} grove />
+          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} grove />
           <div className="relative overflow-hidden rounded-[26px] border border-white/[.07]">
-            <Image src={PATH_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover brightness-[.38]" />
+            {!groveBackdrop && (
+              <Image src={PATH_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover brightness-[.38]" />
+            )}
+            <NightAtmosphere region={region} legIndex={legIndex} compact />
             <div className="relative flex items-end justify-center gap-2 px-4 pb-8 pt-10 sm:gap-6">
-              {grove.treeVariants.map((variant, i) => {
+              {grove.spots.map((spot, i) => {
                 const wasSearched = searched[i];
-                const showPython = wasSearched && grove.pythonTree === i;
+                const showPython = wasSearched && grove.pythonSpot === i;
+                const isTree = spot.kind === "tree";
+                const spotName = isTree ? "tree" : "undergrowth";
                 return (
                   <button
                     key={i}
                     type="button"
                     onClick={() => searchTree(i)}
                     disabled={wasSearched}
-                    aria-label={wasSearched ? (showPython ? `Tree ${i + 1}: python found` : `Tree ${i + 1}: searched, empty`) : `Search tree ${i + 1}`}
+                    aria-label={wasSearched ? (showPython ? `${spotName} ${i + 1}: python found` : `${spotName} ${i + 1}: searched, empty`) : `Search ${isTree ? `tree ${i + 1}` : `the undergrowth`}`}
                     className={`group relative aspect-[3/4] transition active:scale-95 ${
-                      i === 1 ? "w-24 -translate-y-3 sm:w-32" : "w-32 sm:w-44"
+                      isTree
+                        ? i === 1
+                          ? "w-24 -translate-y-3 sm:w-32"
+                          : "w-32 sm:w-44"
+                        : "w-20 sm:w-28"
                     } ${wasSearched ? "" : "hover:drop-shadow-[0_0_20px_rgba(52,211,153,.35)]"}`}
                   >
                     <div className={`absolute inset-0 ${wasSearched && !showPython ? "opacity-60" : ""}`}>
-                      <TreeArt variant={variant} dimmed={wasSearched && !showPython} swayDelay={(i % 5) * 0.7} />
+                      <SpotArt src={artForSpot(region, spot)} dimmed={wasSearched && !showPython} swayDelay={(i % 5) * 0.7} />
                     </div>
                     {showPython && groveWilds[i] && (
                       <div className="absolute inset-x-1 bottom-1 top-4 grid place-items-center">
@@ -587,8 +801,16 @@ export function CanopyHunter({
             </div>
             <Image src={FOREGROUND_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="pointer-events-none object-cover opacity-60 mix-blend-screen" />
           </div>
-          {grove.pythonTree === null && searched.every(Boolean) && (
+          {grove.pythonSpot === null && searched.every(Boolean) && (
             <p className="mt-3 text-center text-xs italic text-white/40">Only leaves — the signs misled you this time.</p>
+          )}
+          {groveNote && (
+            <p className="mt-3 text-center text-xs font-semibold text-amber-200/80">{groveNote}</p>
+          )}
+          {legIndex >= 2 && (
+            <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-[.16em] text-white/35">
+              The night deepens — the snakes are warier now
+            </p>
           )}
           <button
             type="button"
@@ -597,7 +819,7 @@ export function CanopyHunter({
           >
             {legIndex + 1 >= GROVES_PER_EXPEDITION ? "Finish the expedition →" : "Follow the trail →"}
           </button>
-          <p className="mt-3 text-center text-xs text-white/35">Tap a tree to search it — or move on down the trail.</p>
+          <p className="mt-3 text-center text-xs text-white/35">Tap a tree or the undergrowth to search it — or move on down the trail.</p>
         </div>
       )}
 
@@ -606,7 +828,7 @@ export function CanopyHunter({
         <div className="mx-auto mt-8 max-w-xl overflow-hidden rounded-[26px] border border-white/[.07] bg-white/[.02]">
           <div className="relative">
             <div className="relative h-40 sm:h-48">
-              <Image src={BANNER_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 36rem" draggable={false} className="object-cover" />
+              <Image src={CATCH_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 36rem" draggable={false} className="object-cover" />
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,10,8,.25)_0%,rgba(4,10,8,.88)_100%)]" />
             </div>
             <div className="relative mx-auto -mt-24 w-64 sm:-mt-28 sm:w-80">
@@ -640,6 +862,13 @@ export function CanopyHunter({
 
             {!catchResolved ? (
               <div className="mt-6">
+                {streak >= 1 && (
+                  <p className="mb-3 text-center">
+                    <span className="inline-block rounded-full border border-orange-300/30 bg-orange-400/10 px-4 py-1 text-[11px] font-black uppercase tracking-[.16em] text-orange-200">
+                      Streak ×{streak} — keep it hot
+                    </span>
+                  </p>
+                )}
                 <p className="text-center text-xs uppercase tracking-[.16em] text-white/40">
                   Tap grab when the marker is in the green
                 </p>
@@ -684,23 +913,37 @@ export function CanopyHunter({
       {phase === "results" && (
         <div className="mx-auto mt-8 max-w-xl">
           <div className="overflow-hidden rounded-[26px] border border-white/[.07] bg-white/[.02]">
-            <div className="relative h-32 sm:h-36">
-              <Image src={BANNER_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 36rem" draggable={false} className="object-cover" />
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,10,8,.15)_0%,rgba(4,10,8,.9)_100%)]" />
+            <div className="relative h-44 sm:h-52">
+              <Image src={PYTHON_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 36rem" draggable={false} className="object-cover object-top" />
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,10,8,.30)_0%,rgba(4,10,8,.92)_100%)]" />
               <div className="absolute bottom-3 left-6 right-6 sm:left-8 sm:right-8">
                 <h2 className="text-xl font-semibold text-white">Expedition complete</h2>
                 <p className="mt-1 text-sm text-white/50">
                   {region ? `${region.name} · ` : ""}{bag.length} caught · {escapedCount} escaped
                 </p>
               </div>
+              <div
+                className={`absolute bottom-4 right-6 grid h-16 w-16 place-items-center rounded-full border-2 bg-black/70 backdrop-blur-sm sm:right-8 ${RANK_STYLES[score.rank]}`}
+                title={`Hunter rank ${score.rank} · ${score.points} pts`}
+              >
+                <span className="text-3xl font-black">{score.rank}</span>
+              </div>
             </div>
             <div className="p-6 sm:p-8">
 
+            <p className="text-center text-sm italic text-white/55">{EXPEDITION_RANK_LINES[score.rank]}</p>
+
             {bag.length > 0 ? (
               <>
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3 text-[11px] font-semibold uppercase tracking-[.14em] text-white/50">
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3 text-[11px] font-semibold uppercase tracking-[.14em] text-white/50">
                   <span>
                     Found · <span className="text-emerald-200">{bag.length}/{EXPEDITION_PYTHONS}</span>
+                  </span>
+                  <span>
+                    Best streak · <span className="text-emerald-200">×{bestStreak}</span>
+                  </span>
+                  <span>
+                    Sheds · <span className="text-emerald-200">{sheds}</span>
                   </span>
                   <span>
                     Searches used · <span className="text-emerald-200">{searchesUsed}</span>
@@ -768,6 +1011,22 @@ export function CanopyHunter({
               </button>
             )}
 
+            {journal.length > 0 && (
+              <div className="mt-6 rounded-2xl border border-white/[.07] bg-black/30 p-4 sm:p-5">
+                <h3 className="text-[10px] font-black uppercase tracking-[.2em] text-white/40">
+                  Field notes
+                </h3>
+                <ul className="mt-2 space-y-1.5">
+                  {journal.map((line, i) => (
+                    <li key={i} className="text-xs leading-5 text-white/55">
+                      <span className="mr-2 text-emerald-300/50">·</span>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {sent && (
               <div className="mt-6 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.07] p-4 text-center">
                 <p className="text-sm font-bold text-emerald-200">
@@ -800,17 +1059,30 @@ export function CanopyHunter({
   );
 }
 
+/** Rank badge colors for the results screen. */
+const RANK_STYLES: Record<ExpeditionRank, string> = {
+  S: "border-amber-300/60 text-amber-300 shadow-[0_0_30px_rgba(252,211,77,.25)]",
+  A: "border-emerald-300/60 text-emerald-300 shadow-[0_0_30px_rgba(110,231,183,.20)]",
+  B: "border-sky-300/50 text-sky-300",
+  C: "border-white/25 text-white/70",
+  D: "border-white/15 text-white/40",
+};
+
 function TrailStatus({
   region,
   legIndex,
   searchesLeft,
   bagCount,
+  streak,
+  phaseName,
   grove = false,
 }: {
   region: CanopyRegion | null;
   legIndex: number;
   searchesLeft: number;
   bagCount: number;
+  streak: number;
+  phaseName: string;
   grove?: boolean;
 }) {
   return (
@@ -818,7 +1090,7 @@ function TrailStatus({
       {region && (
         <>
           <div className="text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/60">
-            {grove ? `Grove ${legIndex + 1} of ${GROVES_PER_EXPEDITION}` : `Leg ${legIndex + 1} of ${GROVES_PER_EXPEDITION} — choose your path`}
+            {grove ? `Grove ${legIndex + 1} of ${GROVES_PER_EXPEDITION}` : `Leg ${legIndex + 1} of ${GROVES_PER_EXPEDITION} — choose your path`} · {phaseName}
           </div>
           <div className="mt-1 text-lg font-semibold text-white">{region.name}</div>
           <p className="mt-0.5 text-xs text-white/40">{region.tagline}</p>
@@ -827,6 +1099,9 @@ function TrailStatus({
       <div className="mx-auto mt-3 flex max-w-md items-center justify-between rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3">
         <span className="text-xs font-semibold uppercase tracking-[.14em] text-white/50">
           Searches left · <span className="text-emerald-200">{searchesLeft}</span>
+        </span>
+        <span className={`text-xs font-semibold uppercase tracking-[.14em] ${streak >= 2 ? "text-orange-200" : "text-white/50"}`}>
+          Streak · <span className={streak >= 2 ? "text-orange-200" : "text-emerald-200"}>×{streak}</span>
         </span>
         <span className="text-xs font-semibold uppercase tracking-[.14em] text-white/50">
           Bagged · <span className="text-emerald-200">{bagCount}</span>
