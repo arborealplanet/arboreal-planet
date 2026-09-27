@@ -502,6 +502,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   const [now, setNow] = useState(0);
   // Store search / filters / sort — persisted across visits.
   const [storeFilters, setStoreFilters] = useState<StoreFilters>(() => loadStoreFilters());
+  // Filter panel collapsed by default; tap the header to expand.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   useEffect(() => {
     try {
       window.localStorage.setItem(STORE_FILTERS_KEY, JSON.stringify(storeFilters));
@@ -682,6 +684,12 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   }, [offers, storeFilters]);
   const storeFiltersActive =
     storeFilters.query.trim() !== "" || storeFilters.locality !== "All" || storeFilters.sex !== "All" || storeFilters.priceBand !== "any" || storeFilters.sort !== "featured";
+  const activeFilterCount =
+    (storeFilters.query.trim() !== "" ? 1 : 0) +
+    (storeFilters.locality !== "All" ? 1 : 0) +
+    (storeFilters.sex !== "All" ? 1 : 0) +
+    (storeFilters.priceBand !== "any" ? 1 : 0) +
+    (storeFilters.sort !== "featured" ? 1 : 0);
   function resetStoreFilters() {
     setStoreFilters(DEFAULT_STORE_FILTERS);
   }
@@ -970,8 +978,25 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         </>
         )}
 
-        {/* Search / filters / sort — persisted across visits */}
-        <div className="mt-2 flex flex-none flex-wrap items-center gap-1.5">
+        {/* Search / filters / sort — collapsible panel, persisted across visits */}
+        <div className="mt-2 flex-none">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              aria-label={filtersOpen ? "Hide store filters" : "Show store filters"}
+              className="flex flex-1 items-center justify-between gap-2 rounded-xl border border-white/[.08] bg-black/20 px-3 py-2 text-left"
+            >
+              <span className="text-[11px] font-black uppercase tracking-[.14em] text-white/55">
+                {filtersOpen ? "Hide filters" : "Show filters"}{storeFiltersActive ? ` · ${activeFilterCount} active` : ""}
+              </span>
+              <span aria-hidden="true" className={`text-sm text-white/45 transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}>▾</span>
+            </button>
+            {storeFiltersActive ? <button type="button" onClick={resetStoreFilters} className="shrink-0 rounded-xl border border-white/[.1] px-3 py-2 text-[11px] font-bold text-white/55">Reset</button> : null}
+          </div>
+          {filtersOpen ? (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <input
             value={storeFilters.query}
             onChange={(event) => setStoreFilters((prev) => ({ ...prev, query: event.target.value }))}
@@ -996,7 +1021,8 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
             <option value="price-desc">Sort: Price ↓</option>
             <option value="name">Sort: Name</option>
           </select>
-          {storeFiltersActive ? <button type="button" onClick={resetStoreFilters} className="rounded-lg border border-white/[.1] px-2.5 py-1.5 text-[11px] font-bold text-white/55">Reset</button> : null}
+          </div>
+          ) : null}
         </div>
 
         {/* Upfront low-capacity banner */}

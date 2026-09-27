@@ -173,8 +173,10 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
 
   // Height reserves header + dock space; when the dock is collapsed the store
   // stretches to use the freed room. (Desktop never collapses.)
+  // Mobile scrolls vertically as one page (Hank video, pills, inventory at
+  // natural height); sm+ keeps the fixed-height panel with internal carousels.
   return (
-    <div className={`mx-auto flex ${navCollapsed ? "h-[calc(100dvh-66px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-72px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]" : "h-[calc(100dvh-164px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]"} w-full max-w-5xl flex-col overflow-hidden px-4 py-3 transition-[height] duration-300 sm:px-6`}>
+    <div className={`mx-auto flex ${navCollapsed ? "h-[calc(100dvh-66px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-72px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]" : "h-[calc(100dvh-164px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]"} w-full max-w-5xl flex-col overflow-y-auto overscroll-contain px-4 py-3 transition-[height] duration-300 sm:overflow-hidden sm:px-6`}>
       {/* Sprite QA — production tool, admins only, parked above the tip bar on the right */}
       {isAdmin && !qaOpen ? (
       <>
@@ -212,10 +214,10 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
 
-      {/* Hank's animated store — compact banner on phones so the merchandise
-          gets the screen; as large as possible on larger screens.
+      {/* Hank's animated store — large on phones per owner (2026-09-26);
+          as large as possible on larger screens.
           Mute tucked into the bottom-right corner. */}
-      <div className="relative min-h-0 w-full h-36 flex-none overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)] sm:h-auto sm:flex-1">
+      <div className="relative min-h-0 w-full h-56 flex-none overflow-hidden rounded-[24px] border border-emerald-300/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)] sm:h-auto sm:flex-1">
         <div className="absolute inset-0">
           <ShopLoopVideo />
         </div>
@@ -258,11 +260,12 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
           })}
         </div>
 
-      {/* Current-view inventory — horizontal carousel, never scrolls vertically.
-          Tabs stay mounted once visited (inactive ones are hidden, not
-          unmounted) so carousel scroll position survives tab switches and the
-          shop loader only runs on first visit. */}
-      <div className="mt-2 min-h-0 flex-1 overflow-hidden">
+      {/* Current-view inventory — on phones it renders at natural height and
+          scrolls with the page; sm+ keeps the horizontal carousel filling the
+          fixed panel. Tabs stay mounted once visited (inactive ones are hidden,
+          not unmounted) so carousel scroll position survives tab switches and
+          the shop loader only runs on first visit. */}
+      <div className="mt-2 min-h-0 flex-none overflow-hidden sm:flex-1">
         <div className={view === "animals" ? "h-full" : "hidden"}>
           <ChondroBreederExpandedShop section="snakes" layout="carousel" />
         </div>
