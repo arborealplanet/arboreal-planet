@@ -6,27 +6,40 @@ import {
   EXPEDITION_PYTHONS,
   EXPEDITION_SEARCHES,
   EXPEDITION_RANK_LINES,
+  CANOPY_LOCALITIES,
   CANOPY_REGION_PLANTS,
   CANOPY_REGION_TREES,
+  SHED_FIND_CHANCE,
+  SHED_FIND_CHANCE_SLOUGHING,
+  TRAIL_SIGN_LABELS,
   atmosphereForRegion,
   createGroveSpots,
+  examineShedClue,
   generateWildSnake,
+  loadCanopyCodex,
   nightPhaseForLeg,
   nightfallForLeg,
   randomEscapeLine,
   randomShedLine,
+  recordCanopyCodex,
+  rollBatSwarm,
+  rollEmptyTrailSign,
   rollLifeStage,
+  rollNightEvent,
+  rollPythonTrailSign,
   rollRegion,
   rollShedFind,
-  rollTrailSign,
   rollZoneCenter,
   scoreExpedition,
   sweepMsForLeg,
   type CanopyAtmosphere,
   type CanopyLifeStage,
+  type CanopyLocality,
   type CanopyRegion,
   type ExpeditionRank,
   type GroveSpot,
+  type NightEventKind,
+  type TrailSignKind,
   type WildSnake,
 } from "@/lib/canopy-hunter";
 import {
@@ -110,8 +123,12 @@ interface TrailOption {
    * the region has no plant art (height mechanic off) or the trail is empty.
    */
   pythonLifeStage: CanopyLifeStage | null;
-  /** The briefing's promised "sign": rustling leaves betray the python's trail. */
-  showsSign: boolean;
+  /**
+   * The briefing's promised "sign": rustling leaves, a fresh shed, heavy
+   * tracks — or, rarely, the enormous shed that marks a trophy grove.
+   * Cold trails sometimes lie with a stale shed.
+   */
+  sign: TrailSignKind | null;
 }
 
 interface Leg {
@@ -285,23 +302,32 @@ function NightAtmosphere({
 }
 
 /**
- * The briefing's promised "sign": fluttering leaves above the trail that
- * hides tonight's python. Pure CSS so it stays crisp at any size.
+ * The briefing's promised "sign": fluttering leaves, a fresh shed, heavy
+ * tracks — or the enormous shed that marks a trophy grove. Pure CSS so it
+ * stays crisp at any size.
  */
-function TrailSign() {
+function TrailSign({ kind }: { kind: TrailSignKind }) {
+  const styles: Record<TrailSignKind, { chip: string; text: string }> = {
+    rustle: { chip: "bg-emerald-300/85", text: "text-emerald-200/75" },
+    shed: { chip: "bg-amber-200/85", text: "text-amber-200/80" },
+    tracks: { chip: "bg-sky-300/85", text: "text-sky-200/80" },
+    legendary: { chip: "bg-yellow-300", text: "text-yellow-200" },
+    stale: { chip: "bg-white/30", text: "text-white/35" },
+  };
+  const s = styles[kind];
   return (
     <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2" aria-hidden="true">
       <span className="flex items-end justify-center gap-1">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="block h-2.5 w-1.5 rounded-[50%_0] bg-emerald-300/85"
+            className={`block h-2.5 w-1.5 rounded-[50%_0] ${s.chip} ${kind === "legendary" ? "animate-pulse" : ""}`}
             style={{ animation: `ch-rustle 1.6s ease-in-out ${i * 0.28}s infinite` }}
           />
         ))}
       </span>
-      <span className="mt-1 block whitespace-nowrap text-center text-[9px] font-black uppercase tracking-[.18em] text-emerald-200/75">
-        rustling leaves
+      <span className={`mt-1 block whitespace-nowrap text-center text-[9px] font-black uppercase tracking-[.18em] ${s.text}`}>
+        {TRAIL_SIGN_LABELS[kind].label}
       </span>
     </span>
   );
@@ -339,6 +365,18 @@ export function CanopyHunter({
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [sheds, setSheds] = useState(0);
+  /** A found shed can be examined once for a clue about the grove. */
+  const [canExamineShed, setCanExamineShed] = useState(false);
+  /** Expedition-wide night event (sloughing season), rolled once per night. */
+  const [nightEvent, setNightEvent] = useState<NightEventKind>(null);
+  /** Per-grove: a fruit-bat swarm covers the hunter's approach (wider zone). */
+  const [batSwarm, setBatSwarm] = useState(false);
+  /** Locality codex: every locality ever bagged, persisted across nights. */
+  const [codex, setCodex] = useState<CanopyLocality[]>([]);
+  /** Localities inked into the codex for the first time tonight. */
+  const [newCodexAdds, setNewCodexAdds] = useState<CanopyLocality[]>([]);
+  /** Spots whose python escaped this grove — the clues go cold for them. */
+  const [escapedSpots, setEscapedSpots] = useState<number[]>([]);
   const [journal, setJournal] = useState<string[]>([]);
   const [groveNote, setGroveNote] = useState<string | null>(null);
   const [catchTree, setCatchTree] = useState<number | null>(null);
@@ -361,7 +399,7 @@ export function CanopyHunter({
     () => false,
   );
   const period = sweepMsForLeg(legIndex, reducedMotion ? SWEEP_MS * 2.5 : SWEEP_MS);
-  const zoneHalf = reducedMotion ? 0.2 : ZONE_HALF;
+  const zoneHalf = (reducedMotion ? 0.2 : ZONE_HALF) * (batSwarm ? 1.35 : 1);
 
   const resolvedCount = bag.length + escapedCount;
   const phaseName = nightPhaseForLeg(legIndex);
@@ -440,8 +478,9 @@ export function CanopyHunter({
           spots,
           pythonSpot,
           pythonLifeStage,
-          // The signs aren't always readable — some nights the canopy keeps quiet.
-          showsSign: hidesPython ? rollTrailSign() : false,
+          // The signs aren't always readable — some nights the canopy keeps
+          // quiet, and cold trails sometimes lie with a stale shed.
+          sign: hidesPython ? rollPythonTrailSign() : rollEmptyTrailSign(),
         });
       }
       nextLegs.push({ trails });
@@ -460,9 +499,21 @@ export function CanopyHunter({
     setStreak(0);
     setBestStreak(0);
     setSheds(0);
+    setCanExamineShed(false);
+    const event = rollNightEvent();
+    setNightEvent(event);
+    setBatSwarm(false);
+    setCodex(loadCanopyCodex());
+    setNewCodexAdds([]);
     setJournal([
       `${expeditionRegion.name} — expedition begins at ${atmosphereForRegion(expeditionRegion).nightName}.`,
     ]);
+    if (event === "sloughing") {
+      setJournal((j) => [
+        ...j,
+        "The whole canopy is sloughing tonight — sheds everywhere, and every one is a clue waiting to be read.",
+      ]);
+    }
     setGroveNote(null);
     setCatchTree(null);
     setCatchResolved(false);
@@ -478,17 +529,28 @@ export function CanopyHunter({
     if (!trail) return;
     log(`${nightPhaseForLeg(legIndex)} — took the ${trail.label.toLowerCase()} to grove ${legIndex + 1}.`);
     setGroveNote(null);
+    setCanExamineShed(false);
     setWalking(true);
     window.setTimeout(() => {
       const wilds: Record<number, WildSnake> = {};
       if (trail.pythonSpot !== null && region) {
+        const prime = trail.sign === "legendary";
         wilds[trail.pythonSpot] = generateWildSnake(
           wildIdRef.current,
           region,
           Math.random,
           trail.pythonLifeStage,
+          prime,
         );
         wildIdRef.current += 1;
+        if (prime) {
+          log(`Grove ${legIndex + 1} — the enormous shed wasn't lying. Something exceptional hunts here.`);
+        }
+      }
+      const swarm = rollBatSwarm();
+      setBatSwarm(swarm);
+      if (swarm) {
+        log(`Grove ${legIndex + 1} — a fruit-bat swarm crosses overhead. The snakes won't hear you coming.`);
       }
       setGrove(trail);
       setGroveWilds(wilds);
@@ -497,6 +559,7 @@ export function CanopyHunter({
       setCatchTree(null);
       setCatchResolved(false);
       setCatchMessage(null);
+      setEscapedSpots([]);
       setWalking(false);
       setPhase("grove");
     }, 750);
@@ -516,13 +579,29 @@ export function CanopyHunter({
       setCatchResolved(false);
       setCatchMessage(null);
       setPhase("catch");
-    } else if (rollShedFind()) {
-      // Consolation sign: a fresh shed means a python was here tonight.
+    } else if (rollShedFind(Math.random, nightEvent === "sloughing" ? SHED_FIND_CHANCE_SLOUGHING : SHED_FIND_CHANCE)) {
+      // Consolation sign: a fresh shed means a python was here tonight —
+      // and it can be examined for a clue about the grove.
       const line = randomShedLine();
       setSheds((n) => n + 1);
       setGroveNote(line);
+      setCanExamineShed(true);
       log(`Grove ${legIndex + 1} — shed skin found.`);
     }
+  }
+
+  /** Read a found shed for clues about the grove's hidden python (if any). */
+  function examineShed() {
+    if (phase !== "grove" || !canExamineShed || !grove) return;
+    const spot = grove.pythonSpot;
+    const wild = spot !== null && !escapedSpots.includes(spot) ? groveWilds[spot] ?? null : null;
+    const clue =
+      wild && bag.includes(wild)
+        ? "This shed's owner is already in your bag — nice work."
+        : examineShedClue(wild, Math.random);
+    setCanExamineShed(false);
+    setGroveNote(clue);
+    log(`Grove ${legIndex + 1} — shed examined. ${clue}`);
   }
 
   function grab() {
@@ -537,9 +616,16 @@ export function CanopyHunter({
       const nextStreak = streak + 1;
       setStreak(nextStreak);
       setBestStreak((b) => Math.max(b, nextStreak));
+      // Ink the locality into the codex the moment it's bagged.
+      const { codex: nextCodex, newlyAdded } = recordCanopyCodex([wild.locality]);
+      setCodex(nextCodex);
+      if (newlyAdded.length > 0) {
+        setNewCodexAdds((prev) => [...prev, ...newlyAdded]);
+      }
       log(
         `Grove ${legIndex + 1} — bagged ${wild.name} (${wild.sex.toLowerCase()}, ${wild.lifeStage.toLowerCase()}).` +
-          (nextStreak >= 2 ? ` Streak ×${nextStreak}.` : ""),
+          (nextStreak >= 2 ? ` Streak ×${nextStreak}.` : "") +
+          (newlyAdded.length > 0 ? ` Codex — ${newlyAdded[0]} documented for the first time!` : ""),
       );
       setCatchMessage(
         wild.gravid
@@ -551,6 +637,7 @@ export function CanopyHunter({
     } else {
       setEscapedCount((n) => n + 1);
       setStreak(0);
+      if (catchTree !== null) setEscapedSpots((s) => [...s, catchTree]);
       log(`Grove ${legIndex + 1} — it slipped away.`);
       setCatchMessage(randomEscapeLine());
     }
@@ -593,7 +680,8 @@ export function CanopyHunter({
       ? bag.reduce((a, b) => (b.phenotypeScore > a.phenotypeScore ? b : a))
       : null;
   const searchesUsed = totalSearchesUsed;
-  const score = scoreExpedition(bag.length, bestStreak, escapedCount, searchesUsed);
+  const primeCaught = bag.filter((w) => w.prime).length;
+  const score = scoreExpedition(bag.length, bestStreak, escapedCount, searchesUsed, primeCaught);
 
   function trailButtonPos(count: number, index: number): React.CSSProperties {
     if (count === 1) return { left: "50%", bottom: "36%", transform: "translateX(-50%)" };
@@ -671,13 +759,16 @@ export function CanopyHunter({
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
             <li>· {GROVES_PER_EXPEDITION} groves along the trail, {TREES_PER_GROVE} hiding spots each — search the tall trees and the undergrowth alike.</li>
             <li>· Each grove gives you {SEARCHES_PER_GROVE} searches — spend them wisely, then follow the trail to the next grove.</li>
-            <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs: rustling leaves mean a snake is near — when the night lets you spot them.</li>
+            <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs — rustling leaves, fresh sheds, heavy tracks. Cold trails sometimes lie.</li>
             <li>· Spot one and grab it before it slips away.</li>
+            <li>· Not all ground is equal — common localities show themselves often, legendary ones are ghosts. In pulcher country expect Sorong; pray for Arfak.</li>
+            <li>· An enormous shed at a fork marks a trophy grove — something exceptional hunts there.</li>
             <li>· Hunt by height: adults cruise the high branches — search the tall trees. Neonates hide low — check the undergrowth.</li>
             <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea, and each region hunts under its own sky.</li>
             <li>· The night deepens as you go — Dusk, Nightfall, Deep night, Blue hour — and the snakes get warier (and quicker) the later it gets.</li>
             <li>· Chain clean grabs for a streak. Your night earns a hunter&apos;s rank, S through D.</li>
-            <li>· Empty trees sometimes turn up fresh shed skins — signs you&apos;re on warm trail.</li>
+            <li>· Empty trees sometimes turn up fresh shed skins — examine one and it&apos;ll tell you what&apos;s hiding in the grove.</li>
+            <li>· Every bagged locality is inked into your codex — document all {CANOPY_LOCALITIES.length}.</li>
             <li>· Caught snakes head straight into your Keeper colony.</li>
           </ul>
           <div className="px-6 pb-6 sm:px-8 sm:pb-8">
@@ -713,7 +804,7 @@ export function CanopyHunter({
             {/* Trail choices sit on the path ahead */}
             {currentTrails.map((trail, i) => (
               <div key={i} className="absolute z-10" style={trailButtonPos(currentTrails.length, i)}>
-                {trail.showsSign && <TrailSign />}
+                {trail.sign && <TrailSign kind={trail.sign} />}
                 <button
                   type="button"
                   onClick={() => chooseTrail(i)}
@@ -739,7 +830,7 @@ export function CanopyHunter({
             )}
           </div>
           <p className="mt-4 text-center text-xs text-white/35">
-            {currentTrails.length <= 1 ? "One way forward." : "Read the signs — rustling leaves mean a snake is near."}
+            {currentTrails.length <= 1 ? "One way forward." : "Read the signs — sheds, tracks and rustling leaves all talk. Cold trails sometimes lie."}
           </p>
         </div>
       )}
@@ -798,6 +889,22 @@ export function CanopyHunter({
           )}
           {groveNote && (
             <p className="mt-3 text-center text-xs font-semibold text-amber-200/80">{groveNote}</p>
+          )}
+          {canExamineShed && (
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={examineShed}
+                className="rounded-full border border-amber-200/30 bg-amber-200/[.07] px-5 py-2 text-xs font-bold uppercase tracking-[.14em] text-amber-100 transition hover:bg-amber-200/[.14] active:scale-95"
+              >
+                Examine the shed
+              </button>
+            </div>
+          )}
+          {nightEvent === "sloughing" && (
+            <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-[.16em] text-amber-200/60">
+              Sloughing night — sheds everywhere, every one a clue
+            </p>
           )}
           {legIndex >= 2 && (
             <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-[.16em] text-white/35">
@@ -864,6 +971,11 @@ export function CanopyHunter({
                 <p className="text-center text-xs uppercase tracking-[.16em] text-white/40">
                   Tap grab when the marker is in the green
                 </p>
+                {batSwarm && (
+                  <p className="mt-2 text-center text-[11px] font-bold uppercase tracking-[.14em] text-sky-200/70">
+                    Bat swarm overhead — wider green zone
+                  </p>
+                )}
                 <div className="relative mt-3 h-5 overflow-hidden rounded-full border border-white/10 bg-black/50">
                   <div
                     className="absolute inset-y-0 rounded-full bg-emerald-400/35"
@@ -925,7 +1037,7 @@ export function CanopyHunter({
 
             <p className="text-center text-sm italic text-white/55">{EXPEDITION_RANK_LINES[score.rank]}</p>
             <p className="mt-1 text-center text-[11px] text-white/35">
-              Hunter rank {score.rank} · {score.points} pts — +40 per catch, +10 per streak best, −10 per escape, −5 per search past the fourth
+              Hunter rank {score.rank} · {score.points} pts — +40 per catch, +10 per streak best, −10 per escape, −5 per search past the fourth, +10 per trophy animal
             </p>
 
             {bag.length > 0 ? (
@@ -946,6 +1058,11 @@ export function CanopyHunter({
                   <span>
                     Escaped · <span className="text-emerald-200">{escapedCount}</span>
                   </span>
+                  {primeCaught > 0 && (
+                    <span>
+                      Trophies · <span className="text-amber-200">{primeCaught}</span>
+                    </span>
+                  )}
                 </div>
                 {bestFind && (
                   <p className="mt-3 text-center text-sm">
@@ -956,6 +1073,38 @@ export function CanopyHunter({
                 )}
               </>
             ) : null}
+
+            {codex.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-white/[.07] bg-white/[.02] p-4">
+                <p className="text-center text-[10px] font-black uppercase tracking-[.16em] text-white/40">
+                  Locality codex · <span className="text-emerald-200">{codex.length}/{CANOPY_LOCALITIES.length}</span> documented
+                </p>
+                <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
+                  {CANOPY_LOCALITIES.map((loc) => {
+                    const found = codex.includes(loc);
+                    const isNew = newCodexAdds.includes(loc);
+                    return (
+                      <span
+                        key={loc}
+                        className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.1em] ${
+                          found
+                            ? "border-emerald-300/30 bg-emerald-300/[.08] text-emerald-100"
+                            : "border-white/10 text-white/25"
+                        } ${isNew ? "ring-1 ring-amber-300/60" : ""}`}
+                      >
+                        {loc}
+                        {isNew && <span className="text-amber-300"> · new</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+                {newCodexAdds.length > 0 && (
+                  <p className="mt-2 text-center text-xs font-semibold text-amber-200/80">
+                    New {newCodexAdds.length === 1 ? "locality" : "localities"} inked tonight: {newCodexAdds.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
 
             {bag.length > 0 ? (
               <ul className="mt-4 space-y-3">
@@ -970,6 +1119,11 @@ export function CanopyHunter({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="truncate text-sm font-bold text-white">{wild.name}</div>
+                        {wild.prime && (
+                          <span className="rounded-full border border-yellow-300/40 bg-yellow-300/[.1] px-2 py-0.5 text-[9px] font-black uppercase tracking-[.14em] text-yellow-200">
+                            Trophy
+                          </span>
+                        )}
                         {bestFind && wild.name === bestFind.name && (
                           <span className="rounded-full border border-amber-200/30 bg-amber-200/[.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-[.14em] text-amber-200">
                             Best find

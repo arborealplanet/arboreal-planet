@@ -14,16 +14,37 @@ export const EXPEDITION_SEARCHES = 8;
 export const EXPEDITION_PYTHONS = 4;
 
 /**
- * Chance that the trail hiding a python shows a "rustling leaves" tell on
- * the fork screen. The briefing promises readable signs — this keeps the
- * promise while leaving some nights unreadable, so the fork stays a hunt,
- * not a giveaway. TUNABLE.
+ * Signs at the trail fork. The briefing promises readable signs — the
+ * python's trail usually shows one, but some nights the canopy keeps
+ * quiet, and cold trails sometimes lie. TUNABLE weights below.
  */
-export const EXPEDITION_TRAIL_SIGN_CHANCE = 0.75;
+export type TrailSignKind = "rustle" | "shed" | "tracks" | "legendary" | "stale";
 
-/** Roll whether tonight's python trail shows its rustling-leaves tell. */
-export function rollTrailSign(random: RandomFn = Math.random): boolean {
-  return random() < EXPEDITION_TRAIL_SIGN_CHANCE;
+/** Label + flavor for each sign, shown above the trail choice. */
+export const TRAIL_SIGN_LABELS: Record<TrailSignKind, { label: string; hint: string }> = {
+  rustle: { label: "rustling leaves", hint: "Something moves down this trail." },
+  shed: { label: "fresh shed", hint: "A fresh shed at the trailhead — something passed here tonight." },
+  tracks: { label: "heavy tracks", hint: "Heavy tracks cross the trail. Whatever it is, it's big." },
+  legendary: { label: "enormous shed", hint: "An enormous shed — something exceptional hunts this grove." },
+  stale: { label: "old shed — cold", hint: "A dusty old shed. Cold trail… probably." },
+};
+
+/**
+ * Roll the sign for the trail hiding tonight's python. Legendary signs are
+ * rare: they mark a grove holding a primed, exceptional animal.
+ */
+export function rollPythonTrailSign(random: RandomFn = Math.random): TrailSignKind | null {
+  const r = random();
+  if (r < 0.30) return null; // the canopy keeps quiet
+  if (r < 0.55) return "rustle";
+  if (r < 0.72) return "shed";
+  if (r < 0.90) return "tracks";
+  return "legendary";
+}
+
+/** Cold trails sometimes lie: a stale shed that means nothing. */
+export function rollEmptyTrailSign(random: RandomFn = Math.random): TrailSignKind | null {
+  return random() < 0.15 ? "stale" : null;
 }
 
 /**
@@ -136,6 +157,8 @@ export interface WildSnake {
   /** ~8% of finds: one standout trait, called out in the UI. */
   exceptional: boolean;
   exceptionalTraitLabel: string | null;
+  /** Hid behind a legendary sign: primed traits, worth bonus score. */
+  prime: boolean;
   /** Adult females roll 30% gravid — she lays a wild clutch after import. */
   gravid: boolean;
   notes: string;
@@ -307,21 +330,94 @@ export function flightVideoForRegion(region: CanopyRegion): string {
 /* Wild-snake generation                                               */
 /* ------------------------------------------------------------------ */
 
-/**
- * Locality-driven neonate color. Aru and Merauke are true Morelia viridis
- * (yellow babies only — the Keeper enforces this via allowedColorsByTaxon),
- * and Kofiau famously throws yellow too. Every other northern locality
- * throws both red and yellow babies.
- */
-const YELLOW_NEONATE_LOCALITIES: ReadonlySet<CanopyLocality> = new Set([
-  "Aru",
-  "Kofiau",
-  "Merauke",
-]);
+/* ------------------------------------------------------------------ */
+/* Rarity — owner-set locality/phase table (2026-09-26)                */
+/* ------------------------------------------------------------------ */
 
-function rollNeonateColor(locality: CanopyLocality, random: RandomFn): CanopyNeonateColor {
-  if (YELLOW_NEONATE_LOCALITIES.has(locality)) return "Yellow";
-  return random() < 0.5 ? "Red" : "Yellow";
+type CanopyRarityTier = "common" | "uncommon" | "rare" | "legendary";
+
+/** Same weights as the Keeper shop: legendary combos are genuinely rare. */
+const CANOPY_RARITY_WEIGHTS: Record<CanopyRarityTier, number> = {
+  common: 50,
+  uncommon: 25,
+  rare: 10,
+  legendary: 4,
+};
+
+/**
+ * Owner-set rarity per locality and neonate phase — mirrors the Keeper
+ * shop's LOCALITY_PHASE_RARITY. A missing phase means that locality never
+ * throws that color (Aru, Kofiau and Merauke are yellow-only; every other
+ * northern locality throws both red and yellow babies).
+ */
+const CANOPY_PHASE_RARITY: Record<
+  CanopyLocality,
+  Partial<Record<CanopyNeonateColor, CanopyRarityTier>>
+> = {
+  Biak: { Yellow: "common", Red: "common" },
+  Numfor: { Yellow: "uncommon", Red: "rare" },
+  Manokwari: { Yellow: "uncommon", Red: "rare" },
+  Arfak: { Yellow: "legendary", Red: "legendary" },
+  Sorong: { Yellow: "common", Red: "rare" },
+  Timika: { Yellow: "legendary", Red: "legendary" },
+  Kofiau: { Yellow: "legendary" },
+  Cyclops: { Yellow: "uncommon", Red: "rare" },
+  Jayapura: { Yellow: "common", Red: "uncommon" },
+  Lereh: { Yellow: "uncommon", Red: "rare" },
+  Wamena: { Yellow: "legendary", Red: "legendary" },
+  Yapen: { Yellow: "legendary", Red: "legendary" },
+  Aru: { Yellow: "common" },
+  Merauke: { Yellow: "rare" },
+};
+
+/**
+ * Roll a (locality, neonate phase) pair for a region, weighted by the
+ * owner-set rarity table. In pulcher country this makes Sorong the snake
+ * you see most, with Arfak, Timika and Kofiau as genuine ghosts.
+ */
+function rollLocalityPhase(
+  region: CanopyRegion,
+  random: RandomFn,
+): { locality: CanopyLocality; neonateColor: CanopyNeonateColor } {
+  const options: { locality: CanopyLocality; neonateColor: CanopyNeonateColor; weight: number }[] = [];
+  for (const locality of region.localities) {
+    const phases = CANOPY_PHASE_RARITY[locality];
+    for (const color of Object.keys(phases) as CanopyNeonateColor[]) {
+      const tier = phases[color];
+      if (tier) options.push({ locality, neonateColor: color, weight: CANOPY_RARITY_WEIGHTS[tier] });
+    }
+  }
+  const total = options.reduce((sum, o) => sum + o.weight, 0);
+  let roll = random() * total;
+  for (const o of options) {
+    roll -= o.weight;
+    if (roll <= 0) return { locality: o.locality, neonateColor: o.neonateColor };
+  }
+  const last = options[options.length - 1];
+  return { locality: last.locality, neonateColor: last.neonateColor };
+}
+
+/**
+ * Trait roll with the Keeper's rarity curve: signature traits usually show
+ * something but high values stay rare; off-signature traits are usually 0.
+ * Ported from rollTrait in ChondroBreederGameV3 — keep the curves in sync.
+ */
+function rollWildTrait(random: RandomFn, signature: boolean): number {
+  const r = random();
+  if (signature) {
+    if (r < 0.25) return 0;
+    if (r < 0.55) return intBetween(random, 1, 10);
+    if (r < 0.78) return intBetween(random, 11, 25);
+    if (r < 0.92) return intBetween(random, 26, 50);
+    if (r < 0.98) return intBetween(random, 51, 75);
+    return intBetween(random, 76, 100);
+  }
+  if (r < 0.55) return 0;
+  if (r < 0.82) return intBetween(random, 1, 10);
+  if (r < 0.94) return intBetween(random, 11, 25);
+  if (r < 0.98) return intBetween(random, 26, 50);
+  if (r < 0.995) return intBetween(random, 51, 75);
+  return intBetween(random, 76, 100);
 }
 
 /** Wild catches come in two flavors: fresh neonates or full adults. */
@@ -351,23 +447,32 @@ export function generateWildSnake(
   region: CanopyRegion,
   random: RandomFn = Math.random,
   lifeStage: CanopyLifeStage | null = null,
+  /**
+   * Primed snakes hide behind legendary signs: always exceptional, with
+   * signature traits floored high. These are the night's trophy animals.
+   */
+  prime = false,
 ): WildSnake {
-  const locality = region.localities[Math.floor(random() * region.localities.length)];
+  const { locality, neonateColor } = rollLocalityPhase(region, random);
   const subspecies = CANOPY_LOCALITY_SUBSPECIES[locality];
   const sex: CanopySex = random() < 0.5 ? "Male" : "Female";
   const stage = lifeStage ?? rollLifeStage(random);
-  const neonateColor = rollNeonateColor(locality, random);
 
-  const exceptional = random() < 0.08;
-  // Regional trait lean: the region's signature traits roll higher.
-  const leaned = (key: CanopyTraitKey, min: number, max: number) =>
-    region.traitLean.includes(key) ? intBetween(random, min + 20, max + 20) : intBetween(random, min, max);
+  const exceptional = prime || random() < 0.08;
+  // Regional trait lean mirrors the Keeper's preferred-trait rarity curve:
+  // the region's signature traits roll the preferred distribution, every
+  // other trait rolls the long-tail common distribution.
+  const signature = (key: CanopyTraitKey) => region.traitLean.includes(key);
+  const rollTrait = (key: CanopyTraitKey) => {
+    const value = rollWildTrait(random, signature(key));
+    return prime && signature(key) ? Math.max(50, value) : value;
+  };
   const traits: CanopyTraits = {
-    highBlack: leaned("highBlack", 5, 40),
-    highWhite: leaned("highWhite", 5, 40),
-    blueStripe: exceptional ? intBetween(random, 65, 85) : leaned("blueStripe", 0, 30),
-    yellowRetention: leaned("yellowRetention", 10, 60),
-    blotches: intBetween(random, 0, 40),
+    highBlack: rollTrait("highBlack"),
+    highWhite: rollTrait("highWhite"),
+    blueStripe: exceptional ? intBetween(random, 65, 85) : rollTrait("blueStripe"),
+    yellowRetention: rollTrait("yellowRetention"),
+    blotches: rollWildTrait(random, false),
   };
 
   const phenotypeScore = Math.round(
@@ -392,6 +497,7 @@ export function generateWildSnake(
     exceptionalTraitLabel: exceptional
       ? `Exceptional high-blue specimen (${traits.blueStripe}% blue)`
       : null,
+    prime,
     gravid,
     notes: `Caught in a Canopy Hunter ${region.name} expedition.`,
   };
@@ -669,9 +775,10 @@ export function scoreExpedition(
   bestStreak: number,
   escaped: number,
   searchesUsed: number,
+  primeCaught = 0,
 ): ExpeditionScore {
   const points =
-    caught * 40 + bestStreak * 10 - escaped * 10 - Math.max(0, searchesUsed - 4) * 5;
+    caught * 40 + bestStreak * 10 - escaped * 10 - Math.max(0, searchesUsed - 4) * 5 + primeCaught * 10;
   const rank: ExpeditionRank =
     points >= 170 ? "S" : points >= 130 ? "A" : points >= 90 ? "B" : points >= 40 ? "C" : "D";
   return { points, rank };
@@ -691,10 +798,104 @@ export const EXPEDITION_RANK_LINES: Record<ExpeditionRank, string> = {
 
 /** Chance an empty searched tree turns up a fresh shed skin. TUNABLE. */
 export const SHED_FIND_CHANCE = 0.3;
+/** Shed chance while the canopy is sloughing (the "sloughing" night event). */
+export const SHED_FIND_CHANCE_SLOUGHING = 0.6;
 
 /** Roll whether tonight's empty tree hides a shed skin. */
-export function rollShedFind(random: RandomFn = Math.random): boolean {
-  return random() < SHED_FIND_CHANCE;
+export function rollShedFind(random: RandomFn = Math.random, chance: number = SHED_FIND_CHANCE): boolean {
+  return random() < chance;
+}
+
+/** The owner-set rarity tier of a locality + neonate phase combo. */
+export function rarityTierFor(locality: CanopyLocality, neonateColor: CanopyNeonateColor): CanopyRarityTier {
+  return CANOPY_PHASE_RARITY[locality][neonateColor] ?? "common";
+}
+
+/**
+ * Examine a found shed for clues about the grove's hidden python (if any).
+ * A cold shed is intel too: it says this grove is empty, so the hunter can
+ * stop spending searches here. Returns the clue line for the journal.
+ */
+export function examineShedClue(python: WildSnake | null, random: RandomFn = Math.random): string {
+  if (!python) {
+    return "You work the shed over — old, brittle, cold. Nothing's hunted this grove tonight. Save your searches.";
+  }
+  const roll = random();
+  if (roll < 0.4) {
+    return `The shed's scale pattern says ${python.locality} — it's hiding in this grove.`;
+  }
+  if (roll < 0.7) {
+    return python.lifeStage === "Adult"
+      ? "A big shed, snagged high in the bark — an adult works the tall trees."
+      : "A tiny shed in the leaf litter — a neonate hides low in the undergrowth.";
+  }
+  const tier = rarityTierFor(python.locality, python.neonateColor);
+  if (tier === "legendary" || python.prime) {
+    return "This shed came from something rare — check every shadow in this grove.";
+  }
+  if (python.exceptional) {
+    return "Blue sheen caught in the shed — an exceptional animal left this.";
+  }
+  return `Fresh edges on the shed — ${python.locality} passed through here tonight.`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Night events: the canopy doesn't hunt the same way twice            */
+/* ------------------------------------------------------------------ */
+
+/** Expedition-wide event, rolled once per night. */
+export type NightEventKind = "sloughing" | null;
+
+/**
+ * Some nights the whole canopy is sloughing — sheds turn up twice as
+ * often, and every one of them is a clue waiting to be read.
+ */
+export function rollNightEvent(random: RandomFn = Math.random): NightEventKind {
+  return random() < 0.25 ? "sloughing" : null;
+}
+
+/** Per-grove: a fruit-bat swarm crosses overhead, covering your approach. */
+export function rollBatSwarm(random: RandomFn = Math.random): boolean {
+  return random() < 0.2;
+}
+
+/* ------------------------------------------------------------------ */
+/* Locality codex: every documented locality, across expeditions       */
+/* ------------------------------------------------------------------ */
+
+export const CANOPY_CODEX_KEY = "canopy-hunter-codex-v1";
+
+/** Localities the hunter has ever bagged, persisted across expeditions. */
+export function loadCanopyCodex(): CanopyLocality[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CANOPY_CODEX_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((l): l is CanopyLocality =>
+      typeof l === "string" && (CANOPY_LOCALITIES as readonly string[]).includes(l),
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** Record newly bagged localities. Returns the full codex and what was new. */
+export function recordCanopyCodex(localities: CanopyLocality[]): {
+  codex: CanopyLocality[];
+  newlyAdded: CanopyLocality[];
+} {
+  const codex = loadCanopyCodex();
+  const newlyAdded = localities.filter((l) => !codex.includes(l));
+  const next = [...codex, ...newlyAdded];
+  if (typeof window !== "undefined" && newlyAdded.length > 0) {
+    try {
+      window.localStorage.setItem(CANOPY_CODEX_KEY, JSON.stringify(next));
+    } catch {
+      /* storage full or blocked — the night still counts */
+    }
+  }
+  return { codex: next, newlyAdded };
 }
 
 const SHED_LINES = [
