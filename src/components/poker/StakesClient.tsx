@@ -15,8 +15,15 @@ interface Token {
 interface Animal {
   asset_key: string;
   tier: string;
-  trait_snapshot: { name?: string } | null;
+  trait_snapshot: { name?: string; keeper_id?: string } | null;
   created_at: string;
+}
+interface CollectionSnake {
+  id: string;
+  name: string;
+  detail: string;
+  lifeStage: "neonate" | "juvenile" | "subadult" | "adult";
+  game: "gtp" | "emerald";
 }
 interface Session {
   wager_id: string;
@@ -55,6 +62,7 @@ export function StakesClient() {
   const { signedIn, loading } = useBankroll();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [collection, setCollection] = useState<CollectionSnake[]>([]);
   const [history, setHistory] = useState<WagerRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -66,17 +74,34 @@ export function StakesClient() {
   const [claimTier, setClaimTier] = useState("sprout");
   const [claimStage, setClaimStage] = useState("neonate");
   const [claimBusy, setClaimBusy] = useState(false);
+  const [claimSnakeId, setClaimSnakeId] = useState("");
+
+  const claimedKeeperIds = new Set(
+    animals.map((a) => a.trait_snapshot?.keeper_id).filter((k): k is string => !!k)
+  );
+  const unclaimedCollection = collection.filter((s) => !claimedKeeperIds.has(s.id));
+
+  const pickCollectionSnake = (id: string) => {
+    setClaimSnakeId(id);
+    const s = collection.find((c) => c.id === id);
+    if (s) {
+      setClaimName(s.name);
+      setClaimStage(s.lifeStage);
+    }
+  };
 
   const refresh = useCallback(async () => {
     if (!signedIn) return;
     try {
-      const [t, a, h] = await Promise.all([
+      const [t, a, h, c] = await Promise.all([
         api<{ tokens: Token[] }>("/api/wagers/tokens"),
         api<{ animals: Animal[] }>("/api/wagers/eligible"),
         api<{ wagers: WagerRow[] }>("/api/wagers/history"),
+        api<{ animals: CollectionSnake[] }>("/api/wagers/collection").catch(() => ({ animals: [] })),
       ]);
       setTokens(t.tokens ?? []);
       setAnimals(a.animals ?? []);
+      setCollection(c.animals ?? []);
       setHistory(h.wagers ?? []);
       const active = (h.wagers ?? []).find((w) => w.state === "in_progress" || w.state === "awaiting_start");
       if (active) setActiveId(active.id);
@@ -97,11 +122,16 @@ export function StakesClient() {
     setError(null);
     try {
       unlockAudio();
+      const picked = collection.find((c) => c.id === claimSnakeId);
+      const traits = picked
+        ? { keeper_id: picked.id, game: picked.game, detail: picked.detail }
+        : {};
       const claimed = await api<{ asset_key: string }>("/api/wagers/claim", {
         method: "POST",
-        body: JSON.stringify({ name: claimName, tier: claimTier, lifeStage: claimStage }),
+        body: JSON.stringify({ name: claimName, tier: claimTier, lifeStage: claimStage, traits }),
       });
       setClaimName("");
+      setClaimSnakeId("");
       await refresh();
       setSelectedAnimal(claimed.asset_key ?? "");
       playSfx("chip");
@@ -110,7 +140,7 @@ export function StakesClient() {
     } finally {
       setClaimBusy(false);
     }
-  }, [claimName, claimTier, claimStage, claimBusy, refresh]);
+  }, [claimName, claimTier, claimStage, claimBusy, claimSnakeId, collection, refresh]);
 
   const loadSession = useCallback(async (id: string) => {
     try {
@@ -440,17 +470,42 @@ export function StakesClient() {
             <div className="rounded-2xl border border-emerald-200/15 bg-black/45 p-5">
               <h2 className="font-bold text-amber-100">Register a snake for staking</h2>
               <p className="mt-2 text-sm text-emerald-100/60">
-                Any snake in your collection can be staked — name it, set its tier and life
-                stage, and it becomes eligible.
+                Pick one of your snakes and it becomes eligible to stake — no typing needed.
               </p>
-              <label className="mt-3 block text-xs text-emerald-100/60">Snake name</label>
-              <input
-                value={claimName}
-                onChange={(e) => setClaimName(e.target.value)}
-                maxLength={80}
-                placeholder="e.g. Slinky"
-                className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100 placeholder:text-emerald-100/30"
-              />
+              {unclaimedCollection.length > 0 ? (
+                <>
+                  <label className="mt-3 block text-xs text-emerald-100/60">Your snake</label>
+                  <select
+                    value={claimSnakeId}
+                    onChange={(e) => pickCollectionSnake(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100"
+                  >
+                    <option value="">Choose…</option>
+                    {unclaimedCollection.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} · {s.detail} · {s.lifeStage}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <label className="mt-3 block text-xs text-emerald-100/60">Snake name</label>
+                  <input
+                    value={claimName}
+                    onChange={(e) => {
+                      setClaimName(e.target.value);
+                      setClaimSnakeId("");
+                    }}
+                    maxLength={80}
+                    placeholder="e.g. Slinky"
+                    className="mt-1 w-full rounded-xl border border-emerald-200/20 bg-black/60 px-3 py-2 text-sm text-emerald-100 placeholder:text-emerald-100/30"
+                  />
+                  <p className="mt-1 text-[11px] text-emerald-100/40">
+                    No keeper snakes found — enter a name manually.
+                  </p>
+                </>
+              )}
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-emerald-100/60">Tier</label>
