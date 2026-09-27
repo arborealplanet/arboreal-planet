@@ -114,7 +114,8 @@ const localitySprites: Record<string, StageSpriteSet> = {
         variant("/hatchery/snakes/localities/sorong/red-neonate.webp"),
         variant("/hatchery/snakes/localities/timika/red-neonate.webp"),
       ],
-      Yellow: [variant("/hatchery/snakes/localities/arfak/yellow-neonate.webp")],
+      // Owner 2026-09-26: Yellow Arfak juveniles use the Yellow Manokwari neonate sprite.
+      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-neonate.webp")],
     },
     adult: {
       // Same-subspecies (pulcher) placeholders until dedicated Arfak adult art exists.
@@ -123,8 +124,8 @@ const localitySprites: Record<string, StageSpriteSet> = {
         variant("/hatchery/snakes/localities/sorong/red-adult.webp"),
         variant("/hatchery/snakes/localities/timika/red-adult.webp"),
       ],
-      // Owner 2026-09-26: Yellow Arfak adults always use the Yellow Sorong adult sprite (no random pick).
-      Yellow: [variant("/hatchery/snakes/localities/sorong/yellow-adult.webp")],
+      // Owner 2026-09-26: Yellow Arfak adults use the Yellow Manokwari adult sprite (no random pick).
+      Yellow: [variant("/hatchery/snakes/localities/manokwari/yellow-adult.webp")],
     },
     adultAny: [variant("/hatchery/snakes/localities/arfak/adult.webp")],
   },
