@@ -25,7 +25,8 @@ import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
 import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
 import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
-import { requestExpeditionOpen, EXPEDITION_ENTRY_FEE, EXPEDITION_FREE_COOLDOWN_MS } from "@/lib/canopy-hunter";
+import { requestExpeditionOpen, EXPEDITION_ENTRY_FEE, EXPEDITION_FREE_COOLDOWN_MS, EXPEDITION_PYTHONS } from "@/lib/canopy-hunter";
+import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
 
@@ -35,24 +36,34 @@ const DAY_MS = EXPEDITION_FREE_COOLDOWN_MS / 7;
 
 // Live cadence for the Canopy Hunter Home quick action: only a started save
 // gets the card, and it re-reads the save whenever the game persists (the
-// Home screen and the game never mount at the same time). SSR-safe via the
-// window guard.
-function readExpeditionCardState(): { started: boolean; freeReady: boolean; freeInDays: number } {
-  if (typeof window === "undefined") return { started: false, freeReady: false, freeInDays: 0 };
+// Home screen and the game never mount at the same time). Also reads housing
+// so the card reflects the blocked state instead of advertising a trip the
+// entry gate would refuse. SSR-safe via the window guard.
+function readExpeditionCardState(): { started: boolean; freeReady: boolean; freeInDays: number; blocked: boolean } {
+  const empty = { started: false, freeReady: false, freeInDays: 0, blocked: false };
+  if (typeof window === "undefined") return empty;
   try {
     const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
-    if (!raw) return { started: false, freeReady: false, freeInDays: 0 };
-    const parsed = JSON.parse(raw) as { started?: unknown; expeditionNextAt?: unknown };
-    if (parsed.started !== true) return { started: false, freeReady: false, freeInDays: 0 };
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as {
+      started?: unknown;
+      expeditionNextAt?: unknown;
+      colony?: unknown;
+      enclosures?: Record<string, number> | null;
+    };
+    if (parsed.started !== true) return empty;
     const nextAt = typeof parsed.expeditionNextAt === "number" ? parsed.expeditionNextAt : 0;
     const freeReady = Date.now() >= nextAt;
+    const colonySize = Array.isArray(parsed.colony) ? parsed.colony.length : 0;
+    const openSlots = Math.max(0, animalHousingCapacity(parsed.enclosures) - colonySize);
     return {
       started: true,
       freeReady,
       freeInDays: freeReady ? 0 : Math.max(1, Math.ceil((nextAt - Date.now()) / DAY_MS)),
+      blocked: openSlots < EXPEDITION_PYTHONS,
     };
   } catch {
-    return { started: false, freeReady: false, freeInDays: 0 };
+    return empty;
   }
 }
 
@@ -273,6 +284,15 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
     requestExpeditionOpen();
     onOpen("colony");
   }
+  const expeditionLabel = expeditionUnlimited
+    ? expedition.blocked
+      ? "Unlimited expeditions — free up housing space first."
+      : "Unlimited free expeditions — tap to head out."
+    : expedition.freeReady
+      ? expedition.blocked
+        ? "Free expedition ready — needs housing space first."
+        : "Free expedition ready — tap to head out."
+      : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`;
   return (
     <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
@@ -285,6 +305,25 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
               <div className="mt-1 text-3xl font-black tracking-[-.04em] text-white sm:text-4xl">Arboreal Keeper</div>
             </div>
           </div>
+
+          {expedition.started ? (
+            <button
+              type="button"
+              onClick={openExpedition}
+              className="group mt-4 flex w-full items-center gap-4 overflow-hidden rounded-[24px] border border-emerald-300/25 bg-emerald-300/[.05] p-4 text-left transition hover:border-emerald-300/40 hover:bg-emerald-300/[.08] sm:p-5"
+            >
+              <span className="relative block h-14 w-14 shrink-0 overflow-hidden rounded-[16px] border border-emerald-300/25">
+                <Image src="/arcade/canopy-hunter/expedition-badge.webp" alt="Canopy Hunter expedition badge" fill sizes="56px" className="object-cover" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/60">Special event · Canopy Hunter</span>
+                <span className="mt-1 block text-sm font-bold leading-5 text-white/85">{expeditionLabel}</span>
+              </span>
+              <span className="shrink-0 rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-bold text-[#06100c] transition group-hover:bg-emerald-200">
+                {expedition.blocked ? "Fix housing" : "Head out"}
+              </span>
+            </button>
+          ) : null}
 
           <section className="mt-4 overflow-hidden rounded-[30px] border border-emerald-300/12 bg-[#030806] shadow-[0_24px_70px_rgba(0,0,0,.28)]">
             <div className="grid lg:grid-cols-[minmax(330px,46%)_1fr]">
@@ -327,25 +366,6 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                 const item = views.find((entry) => entry.id === id)!;
                 return <ToolCard key={id} item={item} onClick={() => onOpen(id)} />;
               })}
-              {expedition.started ? (
-                <button
-                  type="button"
-                  onClick={openExpedition}
-                  className="group flex min-h-[112px] flex-col items-start rounded-[20px] border border-emerald-300/25 bg-emerald-300/[.05] p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/40 hover:bg-emerald-300/[.08]"
-                >
-                  <span className="relative block h-10 w-10 overflow-hidden rounded-[14px] border border-emerald-300/25">
-                    <Image src="/arcade/canopy-hunter/expedition-badge.webp" alt="Canopy Hunter expedition badge" fill sizes="40px" className="object-cover" />
-                  </span>
-                  <span className="mt-auto pt-4 text-sm font-bold text-white/80">Canopy Hunter</span>
-                  <span className="mt-1 text-[11px] leading-4 text-emerald-100/60">
-                    {expeditionUnlimited
-                      ? "Unlimited free expeditions — tap to head out."
-                      : expedition.freeReady
-                        ? "Free expedition ready — tap to head out."
-                        : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`}
-                  </span>
-                </button>
-              ) : null}
             </div>
           </section>
         </div>

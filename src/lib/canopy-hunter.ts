@@ -237,14 +237,14 @@ export const CANOPY_REGIONS: CanopyRegion[] = [
     id: "birds-head",
     name: "Bird's Head West",
     tagline: "Vogelkop lowlands and the Raja Ampat isles.",
-    localities: ["Sorong", "Manokwari", "Arfak", "Kofiau"],
+    localities: ["Sorong", "Manokwari", "Arfak", "Kofiau", "Timika"],
     traitLean: ["yellowRetention", "blueStripe"],
   },
   {
     id: "highlands",
     name: "Highlands & North Coast",
     tagline: "Moss forest, mountain valleys, and the Cyclops range.",
-    localities: ["Wamena", "Timika", "Jayapura", "Cyclops", "Lereh"],
+    localities: ["Wamena", "Jayapura", "Cyclops", "Lereh"],
     traitLean: ["blueStripe", "highWhite"],
   },
   {
@@ -477,8 +477,8 @@ export function randomEscapeLine(random: RandomFn = Math.random): string {
 
 /**
  * Per-region night atmosphere. This is the scenery system: every region
- * grades the trail and grove scenes with its own palette, fog, fireflies,
- * and moon, and the night deepens grove by grove. When painted region
+ * grades the trail and grove scenes with its own palette, fog, and
+ * fireflies, and the night deepens grove by grove. When painted region
  * backdrops exist, drop the file path into `backdrop` and the scenes will
  * layer it under the grade automatically.
  */
@@ -493,8 +493,6 @@ export interface CanopyAtmosphere {
   fireflies: number;
   /** Firefly glow color. */
   fireflyColor: string;
-  /** Moon glow color. */
-  moonColor: string;
   /** Flavor name shown in the trail status ("Moss-forest midnight"). */
   nightName: string;
   /**
@@ -516,7 +514,6 @@ export const CANOPY_REGION_ATMOSPHERE: Record<CanopyRegion["id"], CanopyAtmosphe
     fogTint: "#5eead4",
     fireflies: 10,
     fireflyColor: "#fef9c3",
-    moonColor: "rgba(253,224,171,.9)",
     nightName: "Island dusk",
     backdrop: "/arcade/canopy-hunter/scenery/grove-cenderawasih.webp",
   },
@@ -527,7 +524,6 @@ export const CANOPY_REGION_ATMOSPHERE: Record<CanopyRegion["id"], CanopyAtmosphe
     fogTint: "#c4b5fd",
     fireflies: 8,
     fireflyColor: "#fde68a",
-    moonColor: "rgba(221,214,254,.9)",
     nightName: "Vogelkop night",
     backdrop: "/arcade/canopy-hunter/scenery/grove-birds-head.webp",
   },
@@ -538,7 +534,6 @@ export const CANOPY_REGION_ATMOSPHERE: Record<CanopyRegion["id"], CanopyAtmosphe
     fogTint: "#bfdbfe",
     fireflies: 5,
     fireflyColor: "#e0f2fe",
-    moonColor: "rgba(186,230,253,.95)",
     nightName: "Moss-forest midnight",
     backdrop: "/arcade/canopy-hunter/scenery/grove-highlands.webp",
   },
@@ -549,7 +544,6 @@ export const CANOPY_REGION_ATMOSPHERE: Record<CanopyRegion["id"], CanopyAtmosphe
     fogTint: "#fcd34d",
     fireflies: 12,
     fireflyColor: "#fde68a",
-    moonColor: "rgba(254,215,170,.95)",
     nightName: "Trans-Fly dusk",
     backdrop: "/arcade/canopy-hunter/scenery/grove-southern.webp",
   },

@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   EXPEDITION_PYTHONS,
   EXPEDITION_SEARCHES,
-  EXPEDITION_TREES,
   EXPEDITION_RANK_LINES,
   CANOPY_REGION_PLANTS,
   CANOPY_REGION_TREES,
@@ -45,6 +44,9 @@ const ZONE_HALF = 0.11; // 22% green zone
 
 const GROVES_PER_EXPEDITION = 4;
 const TREES_PER_GROVE = 3;
+/** Searches refresh at every grove: each grove is always reachable, and the
+ *  choice is which hiding spots to spend them on. */
+const SEARCHES_PER_GROVE = EXPEDITION_SEARCHES / GROVES_PER_EXPEDITION;
 
 // Keyed variants: edge-connected black flood-filled to transparent at build
 // time, so the art composites solidly with normal blending (no screen-blend
@@ -216,7 +218,7 @@ function Fireflies({ count = 8, color = "#fef9c3" }: { count?: number; color?: s
 }
 
 /**
- * Regional scenery: color grade, moon, drifting fog, and fireflies layered
+ * Regional scenery: color grade, drifting fog, and fireflies layered
  * over the trail and grove scenes, deepening as the night wears on. Pure
  * CSS over the existing art — when painted region backdrops exist, the
  * region config's `backdrop` path layers in underneath automatically.
@@ -256,23 +258,7 @@ function NightAtmosphere({
       {/* regional color grade */}
       <div className="absolute inset-0" style={{ background: atmo.grade }} />
       {/* the night deepens grove by grove */}
-      <div className="absolute inset-0 bg-black" style={{ opacity: nightfall * 0.35 }} />
-      {/* moon climbs as the night wears on */}
-      <div
-        className="absolute h-20 w-20"
-        style={{ right: "8%", top: `${34 - legIndex * 6}%` }}
-      >
-        <div
-          className="absolute inset-0 rounded-full blur-2xl"
-          style={{ background: atmo.moonColor, opacity: 0.5 }}
-        />
-        <div
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full"
-          style={{
-            background: `radial-gradient(circle at 35% 35%, #ffffff 0%, ${atmo.moonColor} 55%, transparent 72%)`,
-          }}
-        />
-      </div>
+      <div className="absolute inset-0 bg-black" style={{ opacity: nightfall * 0.45 }} />
       {/* drifting fog */}
       <div
         className="absolute -left-10 bottom-[-10%] h-40 w-[70%] rounded-full blur-3xl"
@@ -345,7 +331,9 @@ export function CanopyHunter({
   const [grove, setGrove] = useState<TrailOption | null>(null);
   const [groveWilds, setGroveWilds] = useState<Record<number, WildSnake>>({});
   const [searched, setSearched] = useState<boolean[]>(() => Array(TREES_PER_GROVE).fill(false));
-  const [searchesLeft, setSearchesLeft] = useState(EXPEDITION_SEARCHES);
+  const [searchesLeft, setSearchesLeft] = useState(SEARCHES_PER_GROVE);
+  /** Total searches across all groves this expedition (for scoring). */
+  const [totalSearchesUsed, setTotalSearchesUsed] = useState(0);
   const [bag, setBag] = useState<WildSnake[]>([]);
   const [escapedCount, setEscapedCount] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -406,14 +394,15 @@ export function CanopyHunter({
     return () => cancelAnimationFrame(raf);
   }, [phase, catchResolved, period]);
 
-  /* Auto-advance to results when searches run out or every python is found. */
+  /* Auto-advance to results when every python is found. Searches refresh per
+     grove, so the night always runs all four groves. */
   useEffect(() => {
     if (phase !== "trail" && phase !== "grove") return;
-    if (searchesLeft <= 0 || resolvedCount >= EXPEDITION_PYTHONS) {
+    if (resolvedCount >= EXPEDITION_PYTHONS) {
       const t = setTimeout(() => setPhase("results"), 700);
       return () => clearTimeout(t);
     }
-  }, [phase, searchesLeft, resolvedCount]);
+  }, [phase, resolvedCount]);
 
   function startExpedition() {
     // User gesture: the one safe moment to wake the Web Audio engine.
@@ -464,14 +453,15 @@ export function CanopyHunter({
     setGrove(null);
     setGroveWilds({});
     setSearched(Array(TREES_PER_GROVE).fill(false));
-    setSearchesLeft(EXPEDITION_SEARCHES);
+    setSearchesLeft(SEARCHES_PER_GROVE);
+    setTotalSearchesUsed(0);
     setBag([]);
     setEscapedCount(0);
     setStreak(0);
     setBestStreak(0);
     setSheds(0);
     setJournal([
-      `${expeditionRegion.name} — expedition begins at ${atmosphereForRegion(expeditionRegion).nightName.toLowerCase()}.`,
+      `${expeditionRegion.name} — expedition begins at ${atmosphereForRegion(expeditionRegion).nightName}.`,
     ]);
     setGroveNote(null);
     setCatchTree(null);
@@ -503,6 +493,7 @@ export function CanopyHunter({
       setGrove(trail);
       setGroveWilds(wilds);
       setSearched(Array(TREES_PER_GROVE).fill(false));
+      setSearchesLeft(SEARCHES_PER_GROVE);
       setCatchTree(null);
       setCatchResolved(false);
       setCatchMessage(null);
@@ -517,6 +508,7 @@ export function CanopyHunter({
     nextSearched[index] = true;
     setSearched(nextSearched);
     setSearchesLeft((n) => n - 1);
+    setTotalSearchesUsed((n) => n + 1);
     setGroveNote(null);
     if (groveWilds[index]) {
       setCatchTree(index);
@@ -600,7 +592,7 @@ export function CanopyHunter({
     bag.length > 0
       ? bag.reduce((a, b) => (b.phenotypeScore > a.phenotypeScore ? b : a))
       : null;
-  const searchesUsed = EXPEDITION_SEARCHES - searchesLeft;
+  const searchesUsed = totalSearchesUsed;
   const score = scoreExpedition(bag.length, bestStreak, escapedCount, searchesUsed);
 
   function trailButtonPos(count: number, index: number): React.CSSProperties {
@@ -677,8 +669,8 @@ export function CanopyHunter({
             </div>
           </div>
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
-            <li>· {GROVES_PER_EXPEDITION} groves along the trail, {TREES_PER_GROVE} trees each — {EXPEDITION_TREES} trees in all.</li>
-            <li>· You have {EXPEDITION_SEARCHES} searches — spend them wisely.</li>
+            <li>· {GROVES_PER_EXPEDITION} groves along the trail, {TREES_PER_GROVE} hiding spots each — search the tall trees and the undergrowth alike.</li>
+            <li>· Each grove gives you {SEARCHES_PER_GROVE} searches — spend them wisely, then follow the trail to the next grove.</li>
             <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs: rustling leaves mean a snake is near — when the night lets you spot them.</li>
             <li>· Spot one and grab it before it slips away.</li>
             <li>· Hunt by height: adults cruise the high branches — search the tall trees. Neonates hide low — check the undergrowth.</li>
@@ -782,7 +774,7 @@ export function CanopyHunter({
                         : "w-20 sm:w-28"
                     } ${wasSearched ? "" : "hover:drop-shadow-[0_0_20px_rgba(52,211,153,.35)]"}`}
                   >
-                    <div className={`absolute inset-0 ${wasSearched && !showPython ? "opacity-60" : ""}`}>
+                    <div className={`absolute inset-0 transition-opacity duration-500 ${wasSearched && !showPython ? "opacity-60" : ""}`}>
                       <SpotArt src={artForSpot(region, spot)} dimmed={wasSearched && !showPython} swayDelay={(i % 5) * 0.7} />
                     </div>
                     {showPython && groveWilds[i] && (
@@ -932,6 +924,9 @@ export function CanopyHunter({
             <div className="p-6 sm:p-8">
 
             <p className="text-center text-sm italic text-white/55">{EXPEDITION_RANK_LINES[score.rank]}</p>
+            <p className="mt-1 text-center text-[11px] text-white/35">
+              Hunter rank {score.rank} · {score.points} pts — +40 per catch, +10 per streak best, −10 per escape, −5 per search past the fourth
+            </p>
 
             {bag.length > 0 ? (
               <>
@@ -1098,7 +1093,7 @@ function TrailStatus({
       )}
       <div className="mx-auto mt-3 flex max-w-md items-center justify-between rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3">
         <span className="text-xs font-semibold uppercase tracking-[.14em] text-white/50">
-          Searches left · <span className="text-emerald-200">{searchesLeft}</span>
+          Searches this grove · <span className="text-emerald-200">{searchesLeft}</span>
         </span>
         <span className={`text-xs font-semibold uppercase tracking-[.14em] ${streak >= 2 ? "text-orange-200" : "text-white/50"}`}>
           Streak · <span className={streak >= 2 ? "text-orange-200" : "text-emerald-200"}>×{streak}</span>
