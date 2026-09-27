@@ -25,6 +25,10 @@ create index if not exists episodes_slug_idx on public.episodes (slug);
 
 alter table public.episodes enable row level security;
 
+-- The public pages query PostgREST with the publishable key (anon role),
+-- so the table needs an explicit grant in addition to the RLS policy.
+grant select on public.episodes to anon, authenticated;
+
 drop policy if exists "Published episodes are public" on public.episodes;
 create policy "Published episodes are public"
   on public.episodes for select
