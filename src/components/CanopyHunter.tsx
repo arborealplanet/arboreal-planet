@@ -48,6 +48,7 @@ import {
   startJungleMusic,
   stopJungleMusic,
 } from "@/lib/jungle-ambience";
+import { playHankScaleLine } from "@/lib/hank-scale-voice";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Phase = "briefing" | "trail" | "grove" | "catch" | "results";
@@ -634,12 +635,14 @@ export function CanopyHunter({
             ? `Bagged! Streak ×${nextStreak} — you're on fire.`
             : "Bagged! A new animal for the collection.",
       );
+      playHankScaleLine(25);
     } else {
       setEscapedCount((n) => n + 1);
       setStreak(0);
       if (catchTree !== null) setEscapedSpots((s) => [...s, catchTree]);
       log(`Grove ${legIndex + 1} — it slipped away.`);
       setCatchMessage(randomEscapeLine());
+      playHankScaleLine(26);
     }
   }
 

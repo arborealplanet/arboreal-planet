@@ -67,6 +67,7 @@ const HANK_TIPS = [
   "Raise subadults to adults to unlock breeding.",
   "Check the Player Market for deals from other keepers.",
   "Holdbacks build your lineage — don't sell your best babies.",
+  "I sell snakes and snake accessories.",
 ];
 
 type View = "animals" | "enclosures" | "market";
@@ -103,7 +104,7 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
   }, []);
 
   // Hank Scale voice line per tip index (HANK_TIPS order).
-  const TIP_LINES = [3, 4, 5, 6, 7];
+  const TIP_LINES = [3, 4, 5, 6, 7, 22];
   const VIEW_LINES: Record<View, number> = { animals: 2, enclosures: 3, market: 6 };
 
   useEffect(() => {

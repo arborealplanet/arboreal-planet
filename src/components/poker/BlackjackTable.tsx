@@ -18,6 +18,7 @@ import {
   type BJTableState,
 } from "@/lib/poker/blackjack";
 import { playSfx, unlockAudio } from "@/lib/poker/sfx";
+import { playHankScaleLine } from "@/lib/hank-scale-voice";
 
 const BETS = [10, 25, 50, 100, 250, 500];
 
@@ -47,6 +48,7 @@ export function BlackjackTable() {
         (r2) => r2.outcome === "win" || r2.outcome === "blackjack"
       ).length;
       playSfx(wins > 0 ? "win" : "lose", payout);
+      playHankScaleLine(wins > 0 ? 27 : 28);
       setTable(settled);
       setPhase("done");
       await settleBet(roundId, payout, { risked: r, bet: opening });

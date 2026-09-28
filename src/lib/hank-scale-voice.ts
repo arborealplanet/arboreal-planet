@@ -6,7 +6,7 @@
 const BASE = "/hatchery/game/voice/snake-hill";
 const MUTE_KEY = "hank-scale-voice-muted";
 
-// Line number -> audio file. All 21 lines have MP3s in place.
+// Line number -> audio file. All 28 lines have MP3s in place.
 const LINE_FILES: Record<number, string> = {
   1: "line-01.mp3", // greeting
   2: "line-02.mp3", // animals tab
@@ -29,6 +29,13 @@ const LINE_FILES: Record<number, string> = {
   19: "line-19.mp3", // no housing available
   20: "line-20.mp3", // player market empty
   21: "line-21.mp3", // collection milestone
+  22: "line-22.mp3", // "I sell snakes and snake accessories."
+  23: "line-23.mp3", // two-tap confirm: "Tap it again if you're sure, son."
+  24: "line-24.mp3", // proceeds claimed: "Money on the counter — much obliged!"
+  25: "line-25.mp3", // Canopy Hunter: catch success
+  26: "line-26.mp3", // Canopy Hunter: catch failed
+  27: "line-27.mp3", // blackjack: win
+  28: "line-28.mp3", // blackjack: loss
 };
 
 let current: HTMLAudioElement | null = null;
@@ -60,7 +67,7 @@ export function setHankScaleMuted(muted: boolean): void {
   window.dispatchEvent(new CustomEvent("hank-scale-mute-changed"));
 }
 
-/** Play a Hank Scale voice line by number (1-21). Stops any line already playing. */
+/** Play a Hank Scale voice line by number (1-28). Stops any line already playing. */
 export function playHankScaleLine(n: number): void {
   const file = LINE_FILES[n];
   if (!file) return;
