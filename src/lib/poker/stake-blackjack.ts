@@ -142,13 +142,24 @@ export async function finishStakeTable(
     await savePublicTable(token, wagerId, t);
     return { push: true, table: publicStakeTable(t), result: t.result };
   }
+  // Clear the server-side table BEFORE settling: hatchling_stakes_bj_save
+  // only allows writes while the wager is in progress, and settle flips it
+  // to complete — saving after settle trips the guard and leaks a raw
+  // "wager not in progress" error over a result the player already earned.
+  // Best-effort: on a double-submit the first request already settled, and
+  // the disposable table state must not surface as an error then either.
+  try {
+    await saveFullTable(token, wagerId, null);
+  } catch {
+    /* already settled or never dealt; safe to ignore */
+  }
   const settled = await callRpc(token, "hatchling_stakes_settle", {
     p_wager_id: wagerId,
     p_winner: winner === "player" ? userId : NPC_UUID,
     p_player_score: winner === "player" ? 1 : 0,
   });
-  await saveFullTable(token, wagerId, null);
-  // Keep the final table visible so the client can show the deciding hand.
-  await savePublicTable(token, wagerId, t);
+  // The client receives the final table in this response, and the
+  // terminal UI never reads current_hand, so no post-settle publish is
+  // needed — and session_set_hand would trip the same in_progress guard.
   return { winner, settled, table: publicStakeTable(t), result: t.result };
 }

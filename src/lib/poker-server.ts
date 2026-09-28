@@ -44,6 +44,7 @@ export function rpcErrorMessage(err: unknown): string {
   if (/no wager tokens/i.test(clean)) return "No wager tokens left this week.";
   if (/not eligible/i.test(clean)) return "That hatchling is not eligible to stake.";
   if (/already staked/i.test(clean)) return "That hatchling is already staked.";
+  if (/wager not in progress/i.test(clean)) return "That wager already finished.";
   if (/paused/i.test(clean)) return "Hatchling Stakes is paused right now.";
   if (/not open in the NPC pilot/i.test(clean))
     return "That tier isn't open in the NPC pilot yet — sprout, vine and canopy only.";
