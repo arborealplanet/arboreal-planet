@@ -23,6 +23,7 @@ const footerProductLinks = [
   ["Learn", "/learn"],
   ["News", "/news"],
   ["Episodes", "/episodes"],
+  ["Radio", "/radio"],
   ["Shows & Events", "/events"],
   ["Animals", "/animals"],
   ["Genetics", "/genetics"],
@@ -101,6 +102,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <Link href="/learn" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Learn</Link>
         <Link href="/news" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">News</Link>
         <Link href="/episodes" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Episodes</Link>
+        <Link href="/radio" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Radio</Link>
         <Link href="/events" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Events</Link>
         <Link href="/plants" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Plants</Link>
         <Link href="/genetics" className="shrink-0 rounded-xl border border-white/[.055] bg-white/[.018] px-3 py-2.5 transition active:bg-white/[.05]">Genetics</Link>

@@ -28,8 +28,14 @@ const GAMES = [
   {
     href: "/arcade/snake-poker/stakes",
     name: "Hatchling Stakes",
-    desc: "Risk one of your snakes against the house's own stock in a five-hand blackjack score attack. Winner takes both. Two entries a week.",
+    desc: "Risk one of your snakes against the house's own stock in single-hand Den blackjack. Winner takes both. Two entries a week.",
     tag: "High risk",
+  },
+  {
+    href: "/arcade/snake-poker/duels",
+    name: "Snake Duels",
+    desc: "Keeper-vs-keeper Texas Hold'em. Stake a snake, send a challenge link, and both duelists lock in run or fold — best five-card hand takes both snakes.",
+    tag: "PvP",
   },
 ];
 

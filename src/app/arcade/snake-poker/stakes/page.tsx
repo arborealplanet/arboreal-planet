@@ -2,7 +2,7 @@ import { StakesClient } from "@/components/poker/StakesClient";
 
 export const metadata = {
   title: "Hatchling Stakes",
-  description: "Wager a home-bred hatchling against the house in a five-hand blackjack score attack.",
+  description: "Wager one of your snakes against the house in a single hand of Den blackjack — winner takes both.",
 };
 
 export default function StakesPage() {

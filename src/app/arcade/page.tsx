@@ -28,8 +28,8 @@ const triviaSteps = [
 const pokerSteps = [
   { title: "1 · BUY IN", text: "Take a seat at the den with lifesap — the house currency for card games, persisted on your account." },
   { title: "2 · THREE TABLES", text: "Coil Hold'em against five AI snake pros, Canopy Blackjack, and Serpent Draw video poker." },
-  { title: "3 · HATCHLING STAKES", text: "Wager a home-bred hatchling against the house in a five-hand blackjack score attack — winner takes the snake." },
-  { title: "4 · WEEKLY TOKENS", text: "Stakes tokens refresh weekly, so every breeder gets a regular shot at the table." },
+  { title: "3 · HATCHLING STAKES", text: "Wager one of your snakes against the house in Den blackjack — or challenge another keeper to a Snake Duel. Winner takes both snakes." },
+  { title: "4 · WEEKLY TOKENS", text: "Stakes tokens refresh weekly, so every keeper gets a regular shot at the table." },
 ];
 
 export default function ArcadePage() {
@@ -95,7 +95,7 @@ export default function ArcadePage() {
             imageAlt="Red green tree python coiled on a mossy branch — Snake Poker"
             kicker="New game"
             title="Snake Poker"
-            description="The Snake-Poker Den: six-seat Texas Hold'em against five AI snake pros, Canopy Blackjack and Serpent Draw video poker — plus Hatchling Stakes, where breeders risk home-bred hatchlings."
+            description="The Snake-Poker Den: six-seat Texas Hold'em against five AI snake pros, Canopy Blackjack and Serpent Draw video poker — plus Hatchling Stakes, where keepers wager snakes against the house or duel each other."
             steps={pokerSteps}
           />
         </div>

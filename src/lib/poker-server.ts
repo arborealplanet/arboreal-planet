@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { duelErrorMessage } from "@/lib/poker/duel-flow";
 
 export const runtime = "nodejs";
 
@@ -52,5 +53,7 @@ export function rpcErrorMessage(err: unknown): string {
     return "Staking is having a moment on our end — give it a minute and try again.";
   if (/bet out of range|rebuy out of range/i.test(clean)) return "Bet out of range for this table.";
   if (/payout out of bounds/i.test(clean)) return "Result rejected by the house.";
+  const duel = duelErrorMessage(clean);
+  if (duel) return duel;
   return clean.slice(0, 160) || "Something went wrong.";
 }

@@ -175,6 +175,26 @@ export function ArborealRadioPlayer() {
     playTrackRef.current = playTrack;
   }, [playTrack]);
 
+  // External control: the /radio station page dispatches `arboreal-radio:play`
+  // ({ index }) to start a track in this global player.
+  useEffect(() => {
+    const onRequestPlay = (e: Event) => {
+      const index = (e as CustomEvent<{ index?: number }>).detail?.index;
+      if (typeof index !== "number" || index < 0 || index >= LIZARD_MUSIC.length) return;
+      setPersisted((prev) => {
+        const next = { ...prev, dismissed: false };
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      setExpanded(true);
+      playTrackRef.current?.(index, true);
+    };
+    window.addEventListener("arboreal-radio:play", onRequestPlay);
+    return () => window.removeEventListener("arboreal-radio:play", onRequestPlay);
+  }, []);
+
   // Single audio element for the whole session.
   useEffect(() => {
     const audio = new Audio();
