@@ -9,6 +9,11 @@
  * Snake photos are NOT generated — they are supplied by the owner.
  * Drop a webp named `<snake-id>.webp` into
  * public/arcade/snake-sorting/snakes/ and set `photo` below.
+ *
+ * Ceremony flow per serpent: a Round One neonate-color wager (Red or
+ * Yellow, small points — skipped for House Viridis, which hatches only
+ * yellow), then Scales / Crown / Origin probes, then the House
+ * (subspecies) call, then the native-haunts (locality) bonus.
  */
 
 export type HouseId = "azurea" | "utaraensis" | "pulcher" | "viridis";
@@ -181,16 +186,16 @@ export const SNAKES: SortingSnake[] = [
     name: "“Mistral”",
     house: "utaraensis",
     locality: "Cyclops",
-    neonate: "red",
+    neonate: "yellow",
     photo: "/arcade/snake-sorting/snakes/mistral.webp",
     clues: [
-      { probe: "scales", label: "Neonate scales", text: "Red neonate — but white lateral dashes are already showing through." },
+      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — white lateral dashes already showing through the gold." },
       { probe: "crown", label: "Head", text: "Pale snout with white flecks dusting the crown." },
       { probe: "origin", label: "Homeland", text: "Foothills rising steep behind the north coast." },
     ],
-    deepScan: "A red baby showing high white this early, from the Cyclops foothills. Northern mainland blood — Utaraensis.",
+    deepScan: "A yellow baby flashing high white this early, from the Cyclops foothills. Northern mainland blood — Utaraensis.",
     lesson:
-      "The red neonate tempted you toward Azurea — but high white showing this early, on a northern mainland animal, is pure Utaraensis. Color alone never settles it.",
+      "Yellow hatchlings come from every house — that is the trap. But high white this early, blue tones on the crown, and the Cyclops foothills of the northern mainland: only House Utaraensis wears that combination.",
   },
   {
     id: "highblue",
@@ -323,6 +328,22 @@ export const HAT_LINES = {
     "Three probes, keeper — Scales, Crown, Origin. Choose where my gaze shall fall.",
     "My eyes are old but sharp. Probe the Scales, the Crown, the Origin — then we shall sort.",
   ],
+  neonateIntro: [
+    "Round one, keeper — a small wager before the probes. Was this serpent born red as ember, or yellow as morning sun? +25 for a true call.",
+    "Before we probe, a gambler's question. Red or yellow — what color was this serpent's first dawn? Call it true for +25.",
+  ],
+  neonateCorrect: [
+    "Born {actual} — and you called it! The wager is yours, keeper.",
+    "A true call! This one hatched {actual}. +25 to the keeper with the eye.",
+  ],
+  neonateWrong: [
+    "{picked}, you say? No — this serpent hatched {actual}. The probes will teach you.",
+    "A miss! {actual} was its first color. No shame — the wager was only ever small.",
+  ],
+  viridisSkip: [
+    "House Viridis hatches only yellow babes — no wager on this one, keeper. Straight to the probes.",
+    "A southern serpent — Viridis babes are yellow, every last one. No wager here; on to the probes.",
+  ],
   probeDone: [
     "Noted... noted. What else shall we examine?",
     "Mmm, interesting. Probe deeper, keeper.",
@@ -356,8 +377,8 @@ export const HAT_LINES = {
     "A bold call, keeper — and a wrong one. {correct}, plain as day.",
   ],
   localityPrompt: [
-    "The Hat senses more... name the valley this blood hails from, and earn the True Local's bounty.",
-    "House claimed! But can you name its homeland? The Hat is listening...",
+    "The Hat senses more... name the native haunts — the homeland this blood is believed to hail from — and earn the True Local's bounty.",
+    "House claimed! But can you call its native haunts? The Hat is listening...",
   ],
   localityCorrect: [
     "TRUE LOCAL! {locality} blood, through and through!",
@@ -401,6 +422,10 @@ export function rankFor(score: number): Rank {
 export const CEREMONY_SNAKES = 10;
 export const HOUSE_POINTS = 100;
 export const LOCALITY_POINTS = 50;
+/* Round One: the neonate-color wager. Small points, decided before a
+   single probe is spent. House Viridis is excluded — it hatches only
+   yellow, so there is no wager to make. */
+export const NEONATE_POINTS = 25;
 export const DEEP_SCAN_COST = 25;
 /* Early-call bonus: +25 for each probe left unrevealed when the House is
    called. Blind call (0 probes) = +75. Deep Scan forfeits it. */

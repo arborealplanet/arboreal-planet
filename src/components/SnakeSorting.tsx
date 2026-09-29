@@ -13,6 +13,7 @@ import {
   HOUSE_BY_ID,
   HOUSE_POINTS,
   LOCALITY_POINTS,
+  NEONATE_POINTS,
   PROBE_META,
   RANKS,
   SNAKES,
@@ -29,6 +30,7 @@ import {
 type Phase =
   | "title"
   | "arrive"
+  | "neonate"
   | "scan"
   | "sort"
   | "deliberate"
@@ -251,10 +253,12 @@ function PhotoPlate({
   snake,
   probing,
   reducedMotion,
+  neonateHidden,
 }: {
   snake: SortingSnake;
   probing: ProbeKind | null;
   reducedMotion: boolean;
+  neonateHidden: boolean;
 }) {
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-black/70 shadow-[0_0_60px_rgba(45,212,191,.12)]">
@@ -279,17 +283,22 @@ function PhotoPlate({
         </div>
       )}
 
-      {/* specimen tag */}
+      {/* specimen tag — the neonate color stays hidden while Round One
+          is undecided, or the wager would answer itself */}
       <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 py-1 backdrop-blur-sm">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full"
-          style={{
-            background: snake.neonate === "red" ? "#ef4444" : "#facc15",
-            boxShadow: `0 0 8px ${snake.neonate === "red" ? "#ef4444" : "#facc15"}`,
-          }}
+          style={
+            neonateHidden
+              ? { background: "rgba(255,255,255,.35)", boxShadow: "none" }
+              : {
+                  background: snake.neonate === "red" ? "#ef4444" : "#facc15",
+                  boxShadow: `0 0 8px ${snake.neonate === "red" ? "#ef4444" : "#facc15"}`,
+                }
+          }
         />
         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">
-          Neonate: {snake.neonate}
+          Neonate: {neonateHidden ? "?" : snake.neonate}
         </span>
       </div>
 
@@ -311,6 +320,7 @@ function PhotoPlate({
 /* --------------------------------- game --------------------------------- */
 
 interface Gain {
+  neonate: number;
   house: number;
   speed: number;
   streakBonus: number;
@@ -321,6 +331,7 @@ interface Gain {
 interface RecapEntry {
   snakeId: string;
   name: string;
+  neonate: "correct" | "wrong" | "skipped" | null;
   pickedHouse: HouseId;
   house: HouseId;
   houseCorrect: boolean;
@@ -376,7 +387,11 @@ export function SnakeSorting() {
   const [pickedLocality, setPickedLocality] = useState<string | null>(null);
   const [houseWasCorrect, setHouseWasCorrect] = useState(false);
   const [localityWasCorrect, setLocalityWasCorrect] = useState(false);
-  const [gain, setGain] = useState<Gain>({ house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
+  const [gain, setGain] = useState<Gain>({ neonate: 0, house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
+  /* Round One state: "pending" while the neonate wager is undecided
+     (the specimen tag stays hidden), "correct" / "wrong" once called,
+     "skipped" for House Viridis, which hatches only yellow. */
+  const [neonateState, setNeonateState] = useState<"pending" | "correct" | "wrong" | "skipped">("pending");
   const [hatLine, setHatLine] = useState(HAT_LINES.greetings[0]);
   const [isNewBest, setIsNewBest] = useState(false);
   const [bestCeremony, setBestCeremony] = useBestScore(BEST_CEREMONY_KEY);
@@ -451,7 +466,48 @@ export function SnakeSorting() {
     setLocalityOptions([]);
     setHouseWasCorrect(false);
     setLocalityWasCorrect(false);
-    setGain({ house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
+    setNeonateState("pending");
+    setGain({ neonate: 0, house: 0, speed: 0, streakBonus: 0, earlyBonus: 0, locality: 0 });
+  };
+
+  /* Round One: the neonate-color wager, before a single probe is spent.
+     House Viridis is excluded — it hatches only yellow, so there is no
+     wager to make. */
+  const enterNeonate = (s: SortingSnake) => {
+    if (s.house === "viridis") {
+      setNeonateState("skipped");
+      setHatLine(pick(HAT_LINES.viridisSkip));
+      synth.tick();
+      later(1700, enterScan);
+      return;
+    }
+    setPhase("neonate");
+    setHatLine(pick(HAT_LINES.neonateIntro));
+    synth.tick();
+  };
+
+  const pickNeonate = (color: "red" | "yellow") => {
+    if (phase !== "neonate" || !snake || neonateState !== "pending") return;
+    const correct = color === snake.neonate;
+    setNeonateState(correct ? "correct" : "wrong");
+    if (correct) {
+      setGain((g) => ({ ...g, neonate: NEONATE_POINTS }));
+      addScore(NEONATE_POINTS);
+      setHatLine(
+        fillTemplate(pick(HAT_LINES.neonateCorrect), { actual: snake.neonate }),
+      );
+      synth.chime();
+      buzz(20);
+    } else {
+      setHatLine(
+        fillTemplate(pick(HAT_LINES.neonateWrong), {
+          picked: color,
+          actual: snake.neonate,
+        }),
+      );
+      synth.buzz();
+    }
+    later(1700, enterScan);
   };
 
   const enterScan = () => {
@@ -464,7 +520,8 @@ export function SnakeSorting() {
     timeouts.current = [];
     const shuffled = shuffle(SNAKES);
     setMode(m);
-    setOrder(m === "ceremony" ? shuffled.slice(0, CEREMONY_SNAKES) : shuffled);
+    const newOrder = m === "ceremony" ? shuffled.slice(0, CEREMONY_SNAKES) : shuffled;
+    setOrder(newOrder);
     setIdx(0);
     setScoreBoth(0);
     setStreak(0);
@@ -480,29 +537,34 @@ export function SnakeSorting() {
     setPhase("arrive");
     setHatLine(pick(HAT_LINES.arrive));
     synth.tick();
-    later(1700, enterScan);
+    later(1700, () => enterNeonate(newOrder[0]));
   };
 
   const advanceToNextSnake = () => {
     resetSnakeState();
     const lastIdx = order.length - 1;
+    let next: SortingSnake;
     if (mode === "ceremony") {
       if (idx >= lastIdx) {
         finishGame();
         return;
       }
+      next = order[idx + 1];
       setIdx(idx + 1);
     } else {
       if (idx >= lastIdx) {
-        setOrder(shuffle(SNAKES));
+        const reshuffled = shuffle(SNAKES);
+        setOrder(reshuffled);
         setIdx(0);
+        next = reshuffled[0];
       } else {
+        next = order[idx + 1];
         setIdx(idx + 1);
       }
     }
     setPhase("arrive");
     setHatLine(pick(HAT_LINES.arrive));
-    later(1500, enterScan);
+    later(1500, () => enterNeonate(next));
   };
 
   const finishGame = () => {
@@ -585,6 +647,7 @@ export function SnakeSorting() {
       {
         snakeId: snake.id,
         name: snake.name,
+        neonate: neonateState === "pending" ? null : neonateState,
         pickedHouse: id,
         house: snake.house,
         houseCorrect: correct,
@@ -595,15 +658,17 @@ export function SnakeSorting() {
     if (correct) {
       const spd = speedBonus(elapsedMs);
       const sBonus = streak * 10;
-      const g: Gain = {
+      // Functional update: the Round One neonate wager was already banked
+      // into gain.neonate and must survive the rebuild.
+      setGain((prev) => ({
+        ...prev,
         house: HOUSE_POINTS,
         speed: spd,
         streakBonus: sBonus,
         earlyBonus,
         locality: 0,
-      };
-      setGain(g);
-      addScore(g.house + g.speed + g.streakBonus + g.earlyBonus);
+      }));
+      addScore(HOUSE_POINTS + spd + sBonus + earlyBonus);
       const newStreak = streak + 1;
       setStreak(newStreak);
       setBestStreak((b) => Math.max(b, newStreak));
@@ -645,7 +710,7 @@ export function SnakeSorting() {
     }
   };
 
-  /* Homeland bonus: one quick guess, right inside the reveal. The House
+  /* Native haunts bonus: one quick guess, right inside the reveal. The House
      call is the win — this is pure bonus points. */
   const pickLocality = (loc: string) => {
     if (phase !== "reveal" || !snake || !houseWasCorrect || pickedLocality) return;
@@ -786,7 +851,12 @@ export function SnakeSorting() {
 
               {/* stage */}
               <div className="ss-rise" key={snake.id}>
-                <PhotoPlate snake={snake} probing={probing} reducedMotion={reducedMotion} />
+                <PhotoPlate
+                  snake={snake}
+                  probing={probing}
+                  reducedMotion={reducedMotion}
+                  neonateHidden={neonateState === "pending"}
+                />
               </div>
 
               {/* clue chips */}
@@ -837,6 +907,43 @@ export function SnakeSorting() {
                   <p className="text-center text-[12px] uppercase tracking-[0.3em] text-white/40">
                     The serpent approaches…
                   </p>
+                )}
+
+                {phase === "neonate" && (
+                  <div className="ss-rise">
+                    <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-100/70">
+                      Round one · Neonate wager ·{" "}
+                      <span className="text-amber-200">+{NEONATE_POINTS}</span>
+                    </p>
+                    <p className="mb-3 text-center text-[13px] italic text-white/70">
+                      Was this serpent born red or yellow?
+                    </p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {(
+                        [
+                          { color: "red" as const, bg: "#ef4444", glow: "rgba(239,68,68,.35)", emoji: "🔴" },
+                          { color: "yellow" as const, bg: "#facc15", glow: "rgba(250,204,21,.35)", emoji: "🟡" },
+                        ]
+                      ).map((o) => (
+                        <button
+                          key={o.color}
+                          type="button"
+                          disabled={neonateState !== "pending"}
+                          onClick={() => pickNeonate(o.color)}
+                          className="rounded-2xl border border-white/12 bg-black/60 p-4 text-center backdrop-blur-sm transition active:scale-95 hover:border-white/30 disabled:opacity-60"
+                          style={{ boxShadow: `0 0 18px ${o.glow}` }}
+                        >
+                          <p className="text-2xl">{o.emoji}</p>
+                          <p
+                            className="mt-1 text-[15px] font-black uppercase tracking-widest"
+                            style={{ color: o.bg }}
+                          >
+                            {o.color}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {phase === "scan" && (
@@ -994,7 +1101,8 @@ function RevealPanel({
   reducedMotion: boolean;
 }) {
   const house = HOUSE_BY_ID[snake.house];
-  const total = gain.house + gain.speed + gain.streakBonus + gain.earlyBonus + gain.locality;
+  const total =
+    gain.neonate + gain.house + gain.speed + gain.streakBonus + gain.earlyBonus + gain.locality;
   return (
     <div className="ss-rise relative overflow-hidden rounded-2xl border border-white/12 bg-black/65 p-4 text-center backdrop-blur-sm">
       {correct && !reducedMotion && <Sparkles color={house.color} seed={snake.id.length} />}
@@ -1010,11 +1118,12 @@ function RevealPanel({
 
       {correct ? (
         <div className="mx-auto mt-2 max-w-[240px] space-y-1 text-[13px]">
+          {gain.neonate > 0 && <GainRow label="Neonate wager" value={gain.neonate} />}
           <GainRow label="House claimed" value={gain.house} />
           {gain.speed > 0 && <GainRow label="Swift call" value={gain.speed} />}
           {gain.streakBonus > 0 && <GainRow label="Streak bonus" value={gain.streakBonus} />}
           {gain.earlyBonus > 0 && <GainRow label="Early call" value={gain.earlyBonus} />}
-          {gain.locality > 0 && <GainRow label="Homeland bonus" value={gain.locality} />}
+          {gain.locality > 0 && <GainRow label="Native haunts" value={gain.locality} />}
           <div className="border-t border-white/10 pt-1">
             <GainRow label="Total" value={total} bold />
           </div>
@@ -1029,13 +1138,16 @@ function RevealPanel({
         </div>
       )}
 
-      {/* Homeland bonus: one quick guess, right here. The House was the win. */}
+      {/* Native haunts bonus: one quick guess, right here. The House was the win. */}
       {correct && (
         <div className="mt-2.5 border-t border-white/10 pt-2.5">
           {pickedLocality == null ? (
             <>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">
-                📍 Homeland bonus · +{LOCALITY_POINTS}
+                📍 Native haunts · +{LOCALITY_POINTS}
+              </p>
+              <p className="mt-0.5 text-[11px] italic text-white/40">
+                the homeland this blood is believed to hail from
               </p>
               <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
                 {localityOptions.map((loc) => (
@@ -1056,7 +1168,7 @@ function RevealPanel({
             >
               {localityWasCorrect
                 ? `📍 ${pickedLocality} ✓ +${LOCALITY_POINTS}`
-                : `📍 hailed from ${snake.locality}`}
+                : `📍 native haunts: ${snake.locality}`}
             </p>
           )}
         </div>
@@ -1116,8 +1228,8 @@ function TitleScreen({
         Sorting Hat.
       </h1>
       <p className="mt-3 max-w-[300px] text-[13.5px] leading-relaxed text-white/65">
-        Ten serpents await upon the dais. Probe them, call their House — the
-        homeland is pure bonus.
+        Ten serpents await upon the dais. Wager their birth color, probe
+        them, call their House — native haunts are pure bonus.
       </p>
 
       <div className="mt-4 grid w-full grid-cols-4 gap-1.5">
@@ -1178,9 +1290,10 @@ function TitleScreen({
       {showHow && (
         <div className="ss-rise mt-2 w-full space-y-2 rounded-2xl border border-white/10 bg-black/55 p-4 text-left backdrop-blur-sm">
           {[
-            ["① Probe", "Tap Scales, Crown and Origin to reveal the serpent's field marks."],
-            ["② Sort", "Call its House — Azurea, Utaraensis, Pulcher or Viridis. Faster calls earn up to +50. Certain? Call early for +25 per unrevealed probe (blind call: +75)."],
-            ["③ Localize", "Homeland bonus: after a correct sort, name its valley for +50 — pure bonus points."],
+            ["① Wager", `Red or yellow? Call the serpent's neonate color before a single probe, +${NEONATE_POINTS}. House Viridis hatches only yellow — no wager there.`],
+            ["② Probe", "Tap Scales, Crown and Origin to reveal the serpent's field marks."],
+            ["③ Sort", "Call its House — Azurea, Utaraensis, Pulcher or Viridis. Faster calls earn up to +50. Certain? Call early for +25 per unrevealed probe (blind call: +75)."],
+            ["④ Localize", `Native haunts: after a correct sort, name the homeland this blood is believed to hail from, +${LOCALITY_POINTS} — pure bonus points.`],
             ["🔮 Deep scan", "Stuck? Spend 25 pts for the Hat's decisive insight — but it forfeits the early-call bonus."],
           ].map(([t, d]) => (
             <p key={t} className="text-[12.5px] leading-snug text-white/70">
@@ -1323,6 +1436,11 @@ function ResultsScreen({
                 </span>
                 <span className="shrink-0 font-semibold text-white/90">{e.name}</span>
                 <span className="truncate text-white/50">
+                  {e.neonate === "correct"
+                    ? "neo ✓ · "
+                    : e.neonate === "wrong"
+                      ? "neo ✗ · "
+                      : ""}
                   {e.houseCorrect
                     ? shortHouse(e.house)
                     : `called ${shortHouse(e.pickedHouse)}, was ${shortHouse(e.house)}`}
