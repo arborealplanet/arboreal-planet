@@ -355,7 +355,8 @@ export const SNAKES: SortingSnake[] = [
     house: "pulcher",
     locality: "Sorong",
     neonate: "yellow",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/topaz.webp",
+    photoAlt: "/arcade/snake-sorting/snakes/topaz-alt.webp",
     clues: [
       { probe: "scales", label: "Adult scales", text: "Two years old and still glowing yellow-green — the yellow refuses to leave." },
       { probe: "crown", label: "Head", text: "Blue tones bleed from the crown down into the neck." },
