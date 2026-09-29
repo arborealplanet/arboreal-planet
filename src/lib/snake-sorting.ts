@@ -426,6 +426,8 @@ export const SNAKES: SortingSnake[] = [
 ];
 
 /* ------------------------------ Hat dialogue ----------------------------- */
+/** Wildcard hard mode ships in code but stays hidden until Gage flips this. */
+export const WILDCARD_ENABLED = false;
 
 export const HAT_LINES = {
   greetings: [

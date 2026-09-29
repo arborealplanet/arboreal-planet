@@ -18,6 +18,7 @@ import {
   NEONATE_POINTS,
   PROBE_META,
   RANKS,
+  WILDCARD_ENABLED,
   bankForMode,
   ceremonyOrder,
   rankFor,
@@ -1228,6 +1229,7 @@ function TitleScreen({
   onStart: (m: Mode) => void;
   onPileStart: () => void;
 }) {
+  const titleHouses = WILDCARD_ENABLED ? HOUSES : HOUSES.filter((h) => h.id !== "designer");
   return (
     <div className="ss-rise flex flex-col items-center pt-6 text-center">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1249,8 +1251,8 @@ function TitleScreen({
         them, call their House — native haunts are pure bonus.
       </p>
 
-      <div className="mt-4 grid w-full grid-cols-5 gap-1.5">
-        {HOUSES.map((h) => (
+      <div className={`mt-4 grid w-full gap-1.5 ${titleHouses.length > 4 ? "grid-cols-5" : "grid-cols-4"}`}>
+        {titleHouses.map((h) => (
           <div
             key={h.id}
             className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-black/45 px-1 py-2 backdrop-blur-sm"
@@ -1284,16 +1286,18 @@ function TitleScreen({
             Sort until 3 wrong calls end the night
           </span>
         </button>
-        <button
-          type="button"
-          onClick={() => onStart("wildcard")}
-          className="w-full rounded-2xl border border-fuchsia-300/30 bg-fuchsia-950/50 px-4 py-3 text-[14px] font-black uppercase tracking-wider text-fuchsia-100 backdrop-blur-sm transition active:scale-95"
-        >
-          🃏 Wildcard · hard mode
-          <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
-            10 serpents · designer blood walks the dais · a 5th option lurks
-          </span>
-        </button>
+        {WILDCARD_ENABLED && (
+          <button
+            type="button"
+            onClick={() => onStart("wildcard")}
+            className="w-full rounded-2xl border border-fuchsia-300/30 bg-fuchsia-950/50 px-4 py-3 text-[14px] font-black uppercase tracking-wider text-fuchsia-100 backdrop-blur-sm transition active:scale-95"
+          >
+            🃏 Wildcard · hard mode
+            <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
+              10 serpents · designer blood walks the dais · a 5th option lurks
+            </span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onPileStart}
@@ -1304,7 +1308,7 @@ function TitleScreen({
             8 photos on the table · drag each serpent onto its house pile
           </span>
         </button>
-        {(bestCeremony > 0 || bestEndless > 0 || bestWildcard > 0) && (
+        {(bestCeremony > 0 || bestEndless > 0 || (WILDCARD_ENABLED && bestWildcard > 0)) && (
           <p className="text-[12px] text-white/50">
             Best ceremony: <span className="font-bold text-amber-200">{bestCeremony}</span>
             {bestEndless > 0 && (
@@ -1313,7 +1317,7 @@ function TitleScreen({
                 <span className="font-bold text-violet-200">{bestEndless}</span>
               </>
             )}
-            {bestWildcard > 0 && (
+            {WILDCARD_ENABLED && bestWildcard > 0 && (
               <>
                 {" · "}Best wildcard:{" "}
                 <span className="font-bold text-fuchsia-200">{bestWildcard}</span>
