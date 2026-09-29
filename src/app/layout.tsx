@@ -25,10 +25,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.gif",
         width: 1200,
         height: 630,
-        alt: "Arboreal Planet — keeper-first reptile community",
+        alt: "Arboreal Planet — the blue-phase green tree python strikes",
       },
     ],
   },
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Arboreal Planet",
     description,
-    images: ["/og-image.jpg"],
+    images: ["/og-image.gif"],
   },
   robots: {
     index: true,
