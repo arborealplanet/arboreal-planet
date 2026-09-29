@@ -123,7 +123,7 @@ export const SNAKES: SortingSnake[] = [
     house: "azurea",
     locality: "Biak",
     neonate: "red",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/ember.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Brick-red neonate with heavy black dorsal scaling edging every scale." },
       { probe: "crown", label: "Head", text: "Crown mostly dark — black speckling across the whole head." },
@@ -155,7 +155,7 @@ export const SNAKES: SortingSnake[] = [
     house: "azurea",
     locality: "Biak",
     neonate: "red",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/coal.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Deep red neonate; black edging on every single dorsal scale." },
       { probe: "crown", label: "Head", text: "A near-solid black cap covers the head." },
@@ -171,7 +171,7 @@ export const SNAKES: SortingSnake[] = [
     house: "utaraensis",
     locality: "Jayapura",
     neonate: "yellow",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/glacier.webp",
     clues: [
       { probe: "scales", label: "Adult scales", text: "Green dorsum split by a teal-blue vertebral stripe." },
       { probe: "crown", label: "Head", text: "White labial scales and a pale, almost frosted crown." },
@@ -180,6 +180,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Blue vertebral stripe + high white on the north coast. That combination belongs to one house alone.",
     lesson:
       "Blue striping down the back with high white markings is the Utaraensis signature — the blue stripe never lies.",
+  },
+  {
+    id: "lumen",
+    name: "“Lumen”",
+    house: "utaraensis",
+    locality: "Lereh",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/lumen.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — a thin blue seam already splitting the dorsum." },
+      { probe: "crown", label: "Head", text: "Clean green crown, white lips just beginning to show." },
+      { probe: "origin", label: "Homeland", text: "Lowland forest on the north coast, rivers slow and wide." },
+    ],
+    deepScan: "Yellow baby, blue seam on the dorsum, northern lowlands. Lereh — northern blood, Utaraensis.",
+    lesson:
+      "The yellow tempted you south toward Viridis — but the blue seam never lies, and Lereh is northern ground. House Utaraensis.",
   },
   {
     id: "mistral",
@@ -196,6 +212,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "A yellow baby flashing high white this early, from the Cyclops foothills. Northern mainland blood — Utaraensis.",
     lesson:
       "Yellow hatchlings come from every house — that is the trap. But high white this early, blue tones on the crown, and the Cyclops foothills of the northern mainland: only House Utaraensis wears that combination.",
+  },
+  {
+    id: "tempest",
+    name: "“Tempest”",
+    house: "utaraensis",
+    locality: "Cyclops",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/tempest.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Red neonate — black edging on every dorsal scale, straight out of the island playbook." },
+      { probe: "crown", label: "Head", text: "A dark cap over the crown — but blue ghosts beneath the black." },
+      { probe: "origin", label: "Homeland", text: "Foothills rising steep behind the north coast." },
+    ],
+    deepScan: "Red baby, black-edged scales, Cyclops foothills. The black tempted you toward Azurea — but island black never touches the mainland. Northern blood: Utaraensis.",
+    lesson:
+      "The cruelest trap in the ceremony: a red baby with black edging, straight out of the Azurea playbook. But Azurea never touches the mainland — Cyclops is northern ground, and the blue ghosting under the black is pure Utaraensis.",
   },
   {
     id: "highblue",
@@ -260,6 +292,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Red baby, blue-flecked dorsum, western mountain slopes. The blue edging on a western animal settles it.",
     lesson:
       "Red neonate, western mountains, blue edging everywhere — House Pulcher. Azurea wears black where Pulcher wears blue.",
+  },
+  {
+    id: "copper",
+    name: "“Copper”",
+    house: "pulcher",
+    locality: "Manokwari",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/copper.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Red neonate — blue vertebral dashes marching down the spine." },
+      { probe: "crown", label: "Head", text: "A rust-red crown washed with blue at the edges." },
+      { probe: "origin", label: "Homeland", text: "Coastal lowlands on the Bird's Head — sea air, mangrove at the forest edge." },
+    ],
+    deepScan: "Red baby, blue dashes down the spine, Bird's Head coast. Manokwari — western blood, Pulcher.",
+    lesson:
+      "Red tempted you toward Azurea — but Azurea wears black where Pulcher wears blue. Coastal Bird's Head with blue dashes: House Pulcher, the Manokwari division.",
   },
   {
     id: "ivory",

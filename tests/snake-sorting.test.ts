@@ -53,4 +53,28 @@ describe("snake-sorting neonate round data", () => {
       assert.ok(HOUSE_BY_ID[s.house], `${s.id} references unknown house`);
     }
   });
+
+  it("Gage's new specimens are slotted with correct data", () => {
+    const expected = [
+      { id: "tempest", house: "utaraensis", locality: "Cyclops", neonate: "red" },
+      { id: "copper", house: "pulcher", locality: "Manokwari", neonate: "red" },
+      { id: "lumen", house: "utaraensis", locality: "Lereh", neonate: "yellow" },
+    ] as const;
+    for (const e of expected) {
+      const s = SNAKES.find((x) => x.id === e.id);
+      assert.ok(s, `${e.id} missing from the bank`);
+      assert.equal(s.house, e.house);
+      assert.equal(s.locality, e.locality);
+      assert.equal(s.neonate, e.neonate);
+      assert.equal(s.photo, `/arcade/snake-sorting/snakes/${e.id}.webp`);
+      assert.equal(s.clues.length, 3);
+      assert.ok(s.deepScan.length > 0 && s.lesson.length > 0);
+      assert.ok(HOUSE_BY_ID[s.house].localities.includes(s.locality));
+    }
+  });
+
+  it("snake ids are unique", () => {
+    const ids = SNAKES.map((s) => s.id);
+    assert.equal(new Set(ids).size, ids.length);
+  });
 });
