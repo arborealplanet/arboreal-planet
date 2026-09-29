@@ -182,7 +182,7 @@ export const SNAKES: SortingSnake[] = [
     house: "utaraensis",
     locality: "Cyclops",
     neonate: "red",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/mistral.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Red neonate — but white lateral dashes are already showing through." },
       { probe: "crown", label: "Head", text: "Pale snout with white flecks dusting the crown." },
