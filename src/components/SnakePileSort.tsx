@@ -41,6 +41,7 @@ const chime = () => {
   blip(880, 0.12, "sine", 0.08);
 };
 const thud = () => blip(150, 0.16, "sawtooth");
+const pop = () => blip(520, 0.08, "triangle");
 
 const PRAISE = [
   "Into the pile it goes!",
@@ -49,9 +50,14 @@ const PRAISE = [
   "Straight to its kin!",
 ];
 const SNARK = [
-  "Not {house}… back to the table with that one.",
+  "Not {house}… back to the Hat's brim with that one.",
   "The Hat shakes its brim — no.",
   "A bold pile, keeper — and a wrong one.",
+];
+const DRAW_LINES = [
+  "The Hat rummages… a serpent emerges!",
+  "The Hat offers you a serpent. Where does it belong?",
+  "Out it slides — sort it true, keeper.",
 ];
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const fill = (t: string, house: string) => t.replace("{house}", house);
@@ -60,15 +66,20 @@ const shortHouse = (id: HouseId) =>
 
 const PILE_HOUSES = HOUSES.filter((h) => h.id !== "designer");
 
-/* The Sorting Hat is the cursor for the whole pile table. Hotspot sits near
-   the hat's curled tip so it feels like the Hat itself is doing the pointing. */
+/* The Sorting Hat is the cursor for the whole pile table (mouse users).
+   Touch players get the Hat itself as a visible, tappable character instead. */
 const HAT_CURSOR = `url("/arcade/snake-sorting/sorting-hat-cursor.png") 52 10, auto`;
+const HAT_ART = "/arcade/snake-sorting/sorting-hat.png";
+const HAT_MINI = "/arcade/snake-sorting/sorting-hat-cursor.png";
 
 type DragState = { id: string; x: number; y: number };
+type HatMood = "idle" | "dealing" | "happy" | "no";
 const DRAG_THRESHOLD = 10;
 
 export default function SnakePileSort({ onExit }: { onExit: () => void }) {
-  const [deal, setDeal] = useState<SortingSnake[]>(() => pileSortDeal());
+  const [order, setOrder] = useState<SortingSnake[]>(() => pileSortDeal());
+  const [remaining, setRemaining] = useState<SortingSnake[]>(order);
+  const [drawn, setDrawn] = useState<SortingSnake | null>(null);
   const [placed, setPlaced] = useState<Record<string, HouseId>>({});
   const [misses, setMisses] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<string | null>(null);
@@ -77,17 +88,19 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
   const [finished, setFinished] = useState(false);
   const [timeBonus, setTimeBonus] = useState(0);
   const [hatLine, setHatLine] = useState(
-    "Eight serpents on the table, four piles awaiting. The Hat is watching…",
+    "Tap the Hat — eight serpents wait inside. The Hat is watching…",
   );
+  const [hatMood, setHatMood] = useState<HatMood>("idle");
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [best, setBest] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [hoverPile, setHoverPile] = useState<HouseId | null>(null);
   const elapsedRef = useRef(0);
-  /* Refs mirror the drag lifecycle so pointer handlers always see fresh state. */
+  /* Refs mirror the drag/deal lifecycle so handlers always see fresh state. */
   const downRef = useRef<{ id: string; x: number; y: number; pid: number } | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const remainingRef = useRef<SortingSnake[]>(remaining);
   const pileRefs = useRef<Partial<Record<HouseId, HTMLDivElement | null>>>({});
 
   useEffect(() => {
@@ -114,8 +127,42 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const syncRemaining = (pool: SortingSnake[]) => {
+    remainingRef.current = pool;
+    setRemaining(pool);
+  };
+
+  const calmHat = (after: number, from: HatMood) =>
+    window.setTimeout(() => setHatMood((m) => (m === from ? "idle" : m)), after);
+
+  const dealOne = () => {
+    const pool = remainingRef.current;
+    if (drawn || pool.length === 0 || finished) return;
+    const [next, ...rest] = pool;
+    syncRemaining(rest);
+    setDrawn(next);
+    setHatMood("dealing");
+    pop();
+    setHatLine(pick(DRAW_LINES));
+    calmHat(650, "dealing");
+  };
+
+  const tapHat = () => {
+    if (finished) return;
+    if (drawn) {
+      setHatLine("One at a time — sort the offered serpent first.");
+      setHatMood("no");
+      calmHat(500, "no");
+      return;
+    }
+    dealOne();
+  };
+
   const reset = () => {
-    setDeal(pileSortDeal());
+    const fresh = pileSortDeal();
+    setOrder(fresh);
+    syncRemaining([...fresh]);
+    setDrawn(null);
     setPlaced({});
     setMisses({});
     setSelected(null);
@@ -125,24 +172,28 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setFinished(false);
     setTimeBonus(0);
     setIsNewBest(false);
+    setHatMood("idle");
     dragRef.current = null;
     setDrag(null);
     setHoverPile(null);
     downRef.current = null;
-    setHatLine("A fresh table. The Hat cracks its brim…");
+    setHatLine("A fresh Hat, full of serpents. Tap it.");
   };
 
   const place = (snakeId: string, houseId: HouseId) => {
     if (finished || placed[snakeId]) return;
-    const snake = deal.find((s) => s.id === snakeId);
+    const snake = order.find((s) => s.id === snakeId);
     if (!snake) return;
     if (houseId === snake.house) {
       const next = { ...placed, [snakeId]: houseId };
       setPlaced(next);
       setScore((s) => s + PILE_CORRECT_POINTS);
       setSelected(null);
+      setDrawn(null);
       chime();
-      if (Object.keys(next).length >= deal.length) {
+      setHatMood("happy");
+      calmHat(700, "happy");
+      if (Object.keys(next).length >= order.length) {
         const secs = elapsedRef.current;
         const bonus = Math.max(0, 150 - secs);
         setTimeBonus(bonus);
@@ -155,15 +206,19 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
           setIsNewBest(true);
         }
         setFinished(true);
-        setHatLine("The table is clear! The Hat bows to your eye, keeper.");
+        setHatLine("The Hat is empty! It bows to your eye, keeper.");
       } else {
         setHatLine(pick(PRAISE));
+        /* The Hat offers the next serpent after a beat. */
+        window.setTimeout(dealOne, 750);
       }
     } else {
       setMisses((m) => ({ ...m, [snakeId]: (m[snakeId] ?? 0) + 1 }));
       setScore((s) => Math.max(0, s - PILE_WRONG_PENALTY));
       setShakeId(snakeId);
       window.setTimeout(() => setShakeId((cur) => (cur === snakeId ? null : cur)), 350);
+      setHatMood("no");
+      calmHat(500, "no");
       thud();
       setHatLine(fill(pick(SNARK), shortHouse(houseId)));
     }
@@ -232,9 +287,11 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setDragBoth(null);
   };
 
-  const table = deal.filter((s) => !placed[s.id]);
+  const inHat = remaining.length + (drawn ? 1 : 0);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  const dragSnake = drag ? deal.find((s) => s.id === drag.id) : undefined;
+
+  const hatMoodClass =
+    hatMood === "dealing" ? "hat-dealing" : hatMood === "happy" ? "hat-happy" : hatMood === "no" ? "hat-no" : "";
 
   return (
     <div
@@ -244,6 +301,14 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     >
       <style>{`
         .pile-sort-hat, .pile-sort-hat * { cursor: ${HAT_CURSOR}; }
+        @keyframes hat-dealing { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-10deg) translateY(-6px); } 75% { transform: rotate(9deg) translateY(-4px); } }
+        .hat-dealing { animation: hat-dealing .55s ease; }
+        @keyframes hat-happy { 0%,100% { transform: translateY(0); } 35% { transform: translateY(-12px); } 70% { transform: translateY(2px); } }
+        .hat-happy { animation: hat-happy .6s ease; }
+        @keyframes hat-no { 0%,100% { transform: translateX(0) rotate(0deg); } 25% { transform: translateX(-9px) rotate(-4deg); } 75% { transform: translateX(9px) rotate(4deg); } }
+        .hat-no { animation: hat-no .4s ease; }
+        @keyframes hat-deal { 0% { transform: translateY(-26px) scale(.65); opacity: 0; } 60% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        .hat-deal { animation: hat-deal .45s ease-out; }
         @keyframes pile-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
         .pile-shake { animation: pile-shake .3s ease; }
         @keyframes pile-drop { 0% { transform: scale(1.3); opacity: .3; } 100% { transform: scale(1); opacity: 1; } }
@@ -252,18 +317,20 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
         .pile-lift { animation: pile-lift .18s ease-out both; }
       `}</style>
 
-      {/* The carried serpent follows the Hat around. */}
-      {drag && dragSnake?.photo && (
+      {/* The carried serpent rides under the Hat while dragged. */}
+      {drag && drawn?.photo && (
         <div
           aria-hidden
-          className="pointer-events-none fixed left-0 top-0 z-[80]"
+          className="pointer-events-none fixed left-0 top-0 z-[80] flex flex-col items-center"
           style={{
-            transform: `translate(${drag.x}px, ${drag.y}px) translate(-50%, -115%) rotate(-5deg)`,
+            transform: `translate(${drag.x}px, ${drag.y}px) translate(-50%, -108%) rotate(-5deg)`,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={HAT_MINI} alt="" draggable={false} className="relative z-10 -mb-4 h-12 w-14 drop-shadow-[0_6px_12px_rgba(0,0,0,.6)]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={dragSnake.photo}
+            src={drawn.photo}
             alt=""
             draggable={false}
             className="h-24 w-32 rounded-xl border-2 border-amber-200/90 object-cover shadow-[0_18px_50px_rgba(0,0,0,.65)]"
@@ -281,7 +348,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
           ← Hat
         </button>
         <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-teal-200/80">
-          🖐️ Pile sort
+          🎩 Pile sort
         </p>
         <div className="flex items-center gap-2 text-[12px] font-bold">
           <span className="rounded-full border border-white/15 bg-black/60 px-2.5 py-1 text-amber-200">
@@ -299,10 +366,82 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
 
       {!finished ? (
         <>
+          {/* The Hat and its offering */}
+          <div className="flex items-center justify-center gap-3 sm:gap-5">
+            <button
+              type="button"
+              onClick={tapHat}
+              aria-label={drawn ? "The Sorting Hat — sort the offered serpent first" : "Tap the Sorting Hat to draw a serpent"}
+              className={`relative shrink-0 touch-manipulation rounded-full transition active:scale-90 ${hatMoodClass}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={HAT_ART}
+                alt="The Sorting Hat"
+                draggable={false}
+                className="h-28 w-28 object-contain drop-shadow-[0_10px_28px_rgba(0,0,0,.55)] sm:h-36 sm:w-36"
+              />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200/30 bg-black/75 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-200">
+                {inHat} in the Hat
+              </span>
+            </button>
+
+            <div className="flex min-h-[132px] flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-white/15 bg-black/40 p-2 sm:min-h-[152px]">
+              {drawn ? (
+                <button
+                  key={drawn.id}
+                  type="button"
+                  onPointerDown={(e) => onCardPointerDown(e, drawn.id)}
+                  onPointerMove={onCardPointerMove}
+                  onPointerUp={onCardPointerUp}
+                  onPointerCancel={onCardPointerCancel}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    /* Keyboard activation only — pointer taps are handled on pointer-up. */
+                    if (e.detail === 0) setSelected((cur) => (cur === drawn.id ? null : drawn.id));
+                  }}
+                  className={`hat-deal relative w-full max-w-[220px] touch-none select-none overflow-hidden rounded-2xl border bg-black/70 transition active:scale-95 ${
+                    shakeId === drawn.id ? "pile-shake" : ""
+                  } ${drag?.id === drawn.id ? "opacity-30" : ""} ${
+                    selected === drawn.id
+                      ? "pile-lift border-amber-200/80 shadow-[0_0_24px_rgba(251,191,36,.35)]"
+                      : "border-white/10"
+                  }`}
+                  aria-label="Offered serpent — drag it to its house pile, or tap to pick it up"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={drawn.photo ?? ""}
+                    alt="Serpent offered by the Sorting Hat"
+                    className="aspect-[4/3] w-full object-cover"
+                    draggable={false}
+                  />
+                  {selected === drawn.id && (
+                    <span className="absolute left-2 top-2 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black">
+                      In the Hat&apos;s grip — tap a pile
+                    </span>
+                  )}
+                  {(misses[drawn.id] ?? 0) > 0 && (
+                    <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-red-300">
+                      ✗ {misses[drawn.id]}
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <p className="px-3 text-center text-[12px] italic text-white/35">
+                  {remaining.length > 0 ? "Tap the Hat to draw a serpent…" : "The Hat is empty."}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* House piles */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <p className="mt-4 text-center text-[11px] uppercase tracking-[0.25em] text-white/40">
+            The four piles · {Object.keys(placed).length}/{order.length} sorted
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {PILE_HOUSES.map((h) => {
-              const inPile = deal.filter((s) => placed[s.id] === h.id);
+              const inPile = order.filter((s) => placed[s.id] === h.id);
               const hot = hoverPile === h.id;
               return (
                 <div
@@ -313,9 +452,9 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                   role="button"
                   tabIndex={0}
                   aria-label={`${h.name} pile`}
-                  onClick={() => selected && place(selected, h.id)}
+                  onClick={() => selected && drawn && place(selected, h.id)}
                   onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && selected) {
+                    if ((e.key === "Enter" || e.key === " ") && selected && drawn) {
                       e.preventDefault();
                       place(selected, h.id);
                     }
@@ -324,7 +463,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                     hot
                       ? "scale-[1.04] border-amber-200 shadow-[0_0_28px_rgba(251,191,36,.45)]"
                       : selected
-                        ? "pile-armed animate-pulse border-amber-200/60"
+                        ? "animate-pulse border-amber-200/60"
                         : "border-white/12"
                   }`}
                   style={{ boxShadow: hot ? undefined : `inset 0 0 0 1px ${h.glow}` }}
@@ -351,63 +490,15 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
               );
             })}
           </div>
-
-          <p className="mt-4 text-center text-[11px] uppercase tracking-[0.25em] text-white/40">
-            The table · {table.length} remaining
-          </p>
-
-          {/* The table */}
-          <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {table.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onPointerDown={(e) => onCardPointerDown(e, s.id)}
-                onPointerMove={onCardPointerMove}
-                onPointerUp={onCardPointerUp}
-                onPointerCancel={onCardPointerCancel}
-                onClick={(e) => {
-                  /* Keyboard activation only — pointer taps are handled on pointer-up. */
-                  if (e.detail === 0) setSelected((cur) => (cur === s.id ? null : s.id));
-                }}
-                className={`relative touch-none select-none overflow-hidden rounded-2xl border bg-black/70 transition active:scale-95 ${
-                  shakeId === s.id ? "pile-shake" : ""
-                } ${drag?.id === s.id ? "opacity-30" : ""} ${
-                  selected === s.id
-                    ? "pile-lift border-amber-200/80 shadow-[0_0_24px_rgba(251,191,36,.35)]"
-                    : "border-white/10"
-                }`}
-                aria-label="Unsorted serpent — drag it to its house pile, or tap to pick it up"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={s.photo ?? ""}
-                  alt="Serpent awaiting sorting"
-                  className="aspect-[4/3] w-full object-cover"
-                  draggable={false}
-                />
-                {selected === s.id && (
-                  <span className="absolute left-2 top-2 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black">
-                    In the Hat&apos;s grip — tap a pile
-                  </span>
-                )}
-                {(misses[s.id] ?? 0) > 0 && (
-                  <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-red-300">
-                    ✗ {misses[s.id]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
           <p className="mt-3 text-center text-[11px] text-white/35">
-            Drag a serpent onto its house pile — or tap it, then tap a pile. The Hat is your cursor.
+            Tap the Hat, then drag each serpent onto its house pile — or tap the serpent, then tap a pile.
           </p>
         </>
       ) : (
         /* Results */
         <div className="ss-rise rounded-2xl border border-white/10 bg-black/65 p-4 text-center backdrop-blur-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-teal-200/70">
-            Table cleared
+            Hat emptied
           </p>
           <p className="mt-1 text-4xl font-black text-amber-200">{score + timeBonus}</p>
           {isNewBest && <p className="mt-1 text-[13px] font-bold text-emerald-300">✦ New best ✦</p>}
@@ -423,7 +514,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
             <div className="rounded-xl border border-white/10 bg-white/[.04] p-2">
               <p className="font-black text-white/90">
                 {Math.round(
-                  (deal.filter((s) => !(misses[s.id] > 0)).length / Math.max(1, deal.length)) * 100,
+                  (order.filter((s) => !(misses[s.id] > 0)).length / Math.max(1, order.length)) * 100,
                 )}
                 %
               </p>
@@ -431,7 +522,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
             </div>
           </div>
           <ul className="mt-3 space-y-1.5 text-left">
-            {deal.map((s, i) => {
+            {order.map((s, i) => {
               const was = placed[s.id];
               const ok = was === s.house;
               return (
