@@ -1439,6 +1439,18 @@ function TitleScreen({
               <span className="block text-[12px] text-white/55">Specimen photography · MorphMarket store ↗</span>
             </span>
           </a>
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3">
+            <span
+              aria-hidden
+              className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400/30 to-emerald-600/30 text-[15px] font-black tracking-wide text-teal-100"
+            >
+              BMC
+            </span>
+            <span>
+              <span className="block text-[13.5px] font-bold text-white">BMC Bioscience LLC</span>
+              <span className="block text-[12px] text-white/55">Specimen photography</span>
+            </span>
+          </div>
         </div>
       )}
 

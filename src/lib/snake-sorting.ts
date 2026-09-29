@@ -276,6 +276,7 @@ export const SNAKES: SortingSnake[] = [
     locality: "Lereh",
     neonate: "yellow",
     photo: "/arcade/snake-sorting/snakes/lumen.webp",
+    photoAlt: "/arcade/snake-sorting/snakes/lumen-alt.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Yellow neonate — a thin blue seam already splitting the dorsum." },
       { probe: "crown", label: "Head", text: "Clean green crown, white lips just beginning to show." },
@@ -389,6 +390,7 @@ export const SNAKES: SortingSnake[] = [
     locality: "Manokwari",
     neonate: "red",
     photo: "/arcade/snake-sorting/snakes/copper.webp",
+    photoAlt: "/arcade/snake-sorting/snakes/copper-alt.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Red neonate — blue vertebral dashes marching down the spine." },
       { probe: "crown", label: "Head", text: "A rust-red crown washed with blue at the edges." },
@@ -485,7 +487,7 @@ export const SNAKES: SortingSnake[] = [
     house: "viridis",
     locality: "Merauke",
     neonate: "yellow",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/meridian.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Yellow neonate with heavy black lateral blotching." },
       { probe: "crown", label: "Head", text: "Black-speckled head with striking white lips." },
