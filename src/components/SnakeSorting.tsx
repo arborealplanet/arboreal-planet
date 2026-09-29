@@ -411,6 +411,7 @@ export function SnakeSorting() {
     }
   });
   const [showHow, setShowHow] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
   const [recap, setRecap] = useState<RecapEntry[]>([]);
 
   const timeouts = useRef<number[]>([]);
@@ -810,6 +811,8 @@ export function SnakeSorting() {
             bestWildcard={bestWildcard}
             showHow={showHow}
             setShowHow={setShowHow}
+            showCredits={showCredits}
+            setShowCredits={setShowCredits}
             onStart={startGame}
             onPileStart={() => setPileMode(true)}
           />
@@ -1219,6 +1222,8 @@ function TitleScreen({
   bestWildcard,
   showHow,
   setShowHow,
+  showCredits,
+  setShowCredits,
   onStart,
   onPileStart,
 }: {
@@ -1227,6 +1232,8 @@ function TitleScreen({
   bestWildcard: number;
   showHow: boolean;
   setShowHow: React.Dispatch<React.SetStateAction<boolean>>;
+  showCredits: boolean;
+  setShowCredits: React.Dispatch<React.SetStateAction<boolean>>;
   onStart: (m: Mode) => void;
   onPileStart: () => void;
 }) {
@@ -1328,13 +1335,22 @@ function TitleScreen({
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowHow((v) => !v)}
-        className="mt-4 text-[12px] font-semibold uppercase tracking-[0.2em] text-white/45 underline-offset-4 hover:underline"
-      >
-        {showHow ? "Hide" : "How it works"}
-      </button>
+      <div className="mt-4 flex items-center justify-center gap-6">
+        <button
+          type="button"
+          onClick={() => setShowHow((v) => !v)}
+          className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/45 underline-offset-4 hover:underline"
+        >
+          {showHow ? "Hide" : "How it works"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowCredits((v) => !v)}
+          className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/45 underline-offset-4 hover:underline"
+        >
+          {showCredits ? "Hide" : "Credits"}
+        </button>
+      </div>
       {showHow && (
         <div className="ss-rise mt-2 w-full space-y-2 rounded-2xl border border-white/10 bg-black/55 p-4 text-left backdrop-blur-sm">
           {[
@@ -1353,6 +1369,45 @@ function TitleScreen({
             Specimen photography is owner-supplied; placeholder plates stand in
             for this build.
           </p>
+        </div>
+      )}
+      {showCredits && (
+        <div className="ss-rise mt-2 w-full space-y-3 rounded-2xl border border-white/10 bg-black/55 p-4 text-left backdrop-blur-sm">
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-amber-200/80">
+            Photography &amp; specimens
+          </p>
+          <a
+            href="/arboreals-by-bunn"
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3 transition hover:border-amber-200/40"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/abb-site/assets/abb-logo-masthead.jpg"
+              alt="Arboreals By Bunn"
+              className="h-12 w-20 shrink-0 rounded-lg object-contain"
+            />
+            <span>
+              <span className="block text-[13.5px] font-bold text-white">Arboreals by Bunn</span>
+              <span className="block text-[12px] text-white/55">Specimen photography →</span>
+            </span>
+          </a>
+          <a
+            href="https://www.morphmarket.com/stores/jere000/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3 transition hover:border-amber-200/40"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/sellers/elleman-family-reptiles.webp"
+              alt="Elleman Family Reptiles"
+              className="h-12 w-20 shrink-0 rounded-lg object-cover"
+            />
+            <span>
+              <span className="block text-[13.5px] font-bold text-white">Elleman Family Reptiles</span>
+              <span className="block text-[12px] text-white/55">Specimen photography · MorphMarket store ↗</span>
+            </span>
+          </a>
         </div>
       )}
 

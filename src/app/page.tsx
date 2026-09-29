@@ -12,12 +12,21 @@ const trails = [
   { number: "03", label: "THE STORIES", title: "Follow the story", description: "Catch sourced reptile news, field notes, guides and the ideas worth talking about.", href: "/news", action: "Browse news", tone: "from-amber-800/30 to-[#201811]" },
 ] as const;
 
-const deeper = [
-  { title: "Plants & habitats", description: "From carnivorous plants to the spaces our animals call home.", href: "/plants", label: "Explore plants", icon: "✳" },
+const deeper = [  { title: "Plants & habitats", description: "From carnivorous plants to the spaces our animals call home.", href: "/plants", label: "Explore plants", icon: "✳" },
   { title: "Journal & guides", description: "Go deeper into keeping, breeding, taxonomy and conservation.", href: "/learn", label: "Start reading", icon: "◌" },
   { title: "Shows & events", description: "Find places to meet the community beyond the screen.", href: "/events", label: "See events", icon: "◇" },
   { title: "Marketplace", description: "Browse animals, plants, enclosures and keeper supplies.", href: "/marketplace", label: "Browse listings", icon: "▣" },
   { title: "Genetics & pedigrees", description: "Explore lineages, parentage and the bigger picture behind every animal.", href: "/genetics", label: "Explore lineages", icon: "⌘" },
+] as const;
+
+const sellers = [
+  {
+    name: "Elleman Family Reptiles",
+    logo: "/sellers/elleman-family-reptiles.webp",
+    logoAlt: "Elleman Family Reptiles logo — an orange snake over gothic lettering",
+    blurb: "Green tree pythons and more. Browse their animals on MorphMarket.",
+    href: "https://www.morphmarket.com/stores/jere000/",
+  },
 ] as const;
 
 export default async function Home() {
@@ -82,6 +91,24 @@ export default async function Home() {
         <Image src="/hatchery/snakes/localities/manokwari/yellow-adult.webp" alt="Illustrated Green Tree Python" fill sizes="100vw" className="object-contain object-center opacity-80" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#07110a] via-[#07110a]/55 to-transparent" />
         <div className="relative z-10 max-w-xl"><p className="section-kicker">Arboreal Arcade</p><h2 id="play-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white">Learn by playing.</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/75">Build a virtual keeper program, follow lineages, and see where your decisions lead. Virtual animals and game values stay inside the game.</p><Link href="/arcade/enter?next=%2Farcade" className="primary-action mt-6">Explore the Arcade →</Link></div>
+      </div>
+    </section>
+
+    <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20" aria-labelledby="sellers-title">
+      <p className="section-kicker">Recommended sellers</p>
+      <h2 id="sellers-title" className="mt-3 text-3xl font-semibold tracking-[-.04em] text-white sm:text-4xl">Buy from good people.</h2>
+      <p className="mt-3 max-w-2xl text-sm leading-7 text-white/55">Keepers and breeders we trust. Listings live on their own stores — we just point you there.</p>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {sellers.map((seller) => (
+          <a key={seller.name} href={seller.href} target="_blank" rel="noopener noreferrer" className="panel interactive-card group flex flex-col overflow-hidden rounded-3xl">
+            <Image src={seller.logo} alt={seller.logoAlt} width={1536} height={1024} className="aspect-[3/2] w-full object-cover" />
+            <div className="flex flex-1 flex-col p-6">
+              <h3 className="text-xl font-semibold text-white">{seller.name}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/55">{seller.blurb}</p>
+              <span className="mt-auto pt-5 text-xs font-bold text-emerald-200">Visit their MorphMarket store <span className="transition group-hover:translate-x-1 inline-block">↗</span></span>
+            </div>
+          </a>
+        ))}
       </div>
     </section>
 
