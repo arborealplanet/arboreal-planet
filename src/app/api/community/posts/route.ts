@@ -1,6 +1,6 @@
 import { NextRequest,NextResponse } from "next/server";
 import { getServerIdentity,SUPABASE_AUTH_KEY,SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
-import { normalizeCommunitySection } from "@/lib/community-sections";
+import { normalizeCommunitySection, resolveCommunityTags } from "@/lib/community-sections";
 
 const base={apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${SUPABASE_AUTH_KEY}`};
 const MAX_IMAGES=10;
@@ -32,7 +32,10 @@ export async function GET(request:NextRequest){
   const rpc=mode==="following"?"community_following_feed":"community_feed";
   const headers=mode==="following"&&identity?{apikey:SUPABASE_AUTH_KEY,Authorization:`Bearer ${identity.token}`,"Content-Type":"application/json"}:{...base,"Content-Type":"application/json"};
   const response=await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/${rpc}`,{method:"POST",headers,body:"{}",cache:"no-store"});
-  return response.ok?NextResponse.json({rows:await response.json(),viewerId:identity?.user.id??null,authRequired:false}):NextResponse.json({error:"Community unavailable"},{status:502});
+  if(!response.ok)return NextResponse.json({error:"Community unavailable"},{status:502});
+  const rows=await response.json();
+  const withTags=Array.isArray(rows)?rows.map((row)=>({...row,tags:resolveCommunityTags(row)})):rows;
+  return NextResponse.json({rows:withTags,viewerId:identity?.user.id??null,authRequired:false});
 }
 
 export async function POST(request:NextRequest){
