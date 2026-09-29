@@ -267,57 +267,62 @@ function PhotoPlate({
   neonateHidden: boolean;
 }) {
   return (
-    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-black/70 shadow-[0_0_60px_rgba(45,212,191,.12)]">
-      {snake.photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={snake.photo}
-          alt="Serpent on the dais"
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,.08),transparent_70%)] px-6 text-center">
-          <span className="text-5xl text-teal-200/30">?</span>
-          <p className="text-[13px] font-bold uppercase tracking-[0.25em] text-teal-100/60">
-            {snake.name}
-          </p>
-          <p className="text-[11px] italic leading-snug text-white/35">
-            its portrait is still on the way
-          </p>
-        </div>
-      )}
+    <>
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-black/70 shadow-[0_0_60px_rgba(45,212,191,.12)]">
+        {snake.photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={snake.photo}
+            alt="Serpent on the dais"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,.08),transparent_70%)] px-6 text-center">
+            <span className="text-5xl text-teal-200/30">?</span>
+            <p className="text-[13px] font-bold uppercase tracking-[0.25em] text-teal-100/60">
+              {snake.name}
+            </p>
+            <p className="text-[11px] italic leading-snug text-white/35">
+              its portrait is still on the way
+            </p>
+          </div>
+        )}
 
-      {/* specimen tag — the neonate color stays hidden while Round One
-          is undecided, or the wager would answer itself */}
-      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 py-1 backdrop-blur-sm">
-        <span
-          className="inline-block h-2.5 w-2.5 rounded-full"
-          style={
-            neonateHidden
-              ? { background: "rgba(255,255,255,.35)", boxShadow: "none" }
-              : {
-                  background: snake.neonate === "red" ? "#ef4444" : "#facc15",
-                  boxShadow: `0 0 8px ${snake.neonate === "red" ? "#ef4444" : "#facc15"}`,
-                }
-          }
-        />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">
-          Neonate: {neonateHidden ? "?" : snake.neonate}
+        {/* scan frame */}
+        <div className="pointer-events-none absolute inset-3" aria-hidden>
+          <span className="ss-corner left-0 top-0 border-l-2 border-t-2 border-teal-300/80" />
+          <span className="ss-corner right-0 top-0 border-r-2 border-t-2 border-teal-300/80" />
+          <span className="ss-corner bottom-0 left-0 border-b-2 border-l-2 border-teal-300/80" />
+          <span className="ss-corner bottom-0 right-0 border-b-2 border-r-2 border-teal-300/80" />
+          {probing && !reducedMotion && <span className="ss-laser" />}
+          {probing && reducedMotion && (
+            <span className="absolute inset-x-0 top-1/2 h-0.5 bg-teal-300/80" />
+          )}
+        </div>
+      </div>
+
+      {/* specimen tag — sits below the photo now, never covering it. The
+          neonate color stays hidden while Round One is undecided, or the
+          wager would answer itself */}
+      <div className="mt-2 flex items-center gap-2">
+        <span className="flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 py-1 backdrop-blur-sm">
+          <span
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={
+              neonateHidden
+                ? { background: "rgba(255,255,255,.35)", boxShadow: "none" }
+                : {
+                    background: snake.neonate === "red" ? "#ef4444" : "#facc15",
+                    boxShadow: `0 0 8px ${snake.neonate === "red" ? "#ef4444" : "#facc15"}`,
+                  }
+            }
+          />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">
+            Neonate: {neonateHidden ? "?" : snake.neonate}
+          </span>
         </span>
       </div>
-
-      {/* scan frame */}
-      <div className="pointer-events-none absolute inset-3" aria-hidden>
-        <span className="ss-corner left-0 top-0 border-l-2 border-t-2 border-teal-300/80" />
-        <span className="ss-corner right-0 top-0 border-r-2 border-t-2 border-teal-300/80" />
-        <span className="ss-corner bottom-0 left-0 border-b-2 border-l-2 border-teal-300/80" />
-        <span className="ss-corner bottom-0 right-0 border-b-2 border-r-2 border-teal-300/80" />
-        {probing && !reducedMotion && <span className="ss-laser" />}
-        {probing && reducedMotion && (
-          <span className="absolute inset-x-0 top-1/2 h-0.5 bg-teal-300/80" />
-        )}
-      </div>
-    </div>
+    </>
   );
 }
 
