@@ -8,6 +8,7 @@ import {
   SNAKES,
   bankForMode,
   ceremonyOrder,
+  pileSortDeal,
   sortHousesForMode,
 } from "../src/lib/snake-sorting.js";
 
@@ -123,5 +124,15 @@ describe("snake-sorting neonate round data", () => {
     const classic = ceremonyOrder("ceremony", 10);
     assert.equal(classic.length, 10);
     assert.ok(classic.every((s) => s.house !== "designer"));
+  });
+
+  it("pile-sort deals only photographed serpents", () => {
+    for (let i = 0; i < 25; i++) {
+      const deal = pileSortDeal();
+      assert.ok(deal.length > 0 && deal.length <= 8);
+      assert.ok(deal.every((s) => s.photo));
+      const ids = deal.map((s) => s.id);
+      assert.equal(new Set(ids).size, ids.length);
+    }
   });
 });

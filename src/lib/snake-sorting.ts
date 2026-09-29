@@ -556,6 +556,17 @@ export function speedBonus(ms: number): number {
 export const BEST_CEREMONY_KEY = "snake_sorting_best_ceremony_v1";
 export const BEST_ENDLESS_KEY = "snake_sorting_best_endless_v1";
 export const BEST_WILDCARD_KEY = "snake_sorting_best_wildcard_v1";
+export const PILE_BEST_KEY = "snake_sorting_best_piles_v1";
+
+/* ------------------------- Pile-sort mode (photo piles) ------------------------- */
+export const PILE_SORT_COUNT = 8;
+export const PILE_CORRECT_POINTS = 100;
+export const PILE_WRONG_PENALTY = 25;
+
+/** Deal for the pile-sort mode: only serpents with photos on the table. */
+export function pileSortDeal(count: number = PILE_SORT_COUNT): SortingSnake[] {
+  return shuffle(SNAKES.filter((s) => s.photo)).slice(0, count);
+}
 
 export function readBest(key: string): number {
   try {

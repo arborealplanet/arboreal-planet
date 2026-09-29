@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import SnakePileSort from "./SnakePileSort";
 import {
   BEST_CEREMONY_KEY,
   BEST_ENDLESS_KEY,
@@ -371,6 +372,7 @@ function useBestScore(key: string): readonly [number, (v: number) => void] {
 export function SnakeSorting() {
   const [phase, setPhase] = useState<Phase>("title");
   const [mode, setMode] = useState<Mode>("ceremony");
+  const [pileMode, setPileMode] = useState(false);
   const [order, setOrder] = useState<SortingSnake[]>([]);
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -794,8 +796,12 @@ export function SnakeSorting() {
         @keyframes ss-bracket { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
       `}</style>
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-6 pt-4">
-        {phase === "title" ? (
+      <div
+        className={`relative mx-auto flex min-h-dvh w-full flex-col px-4 pb-6 pt-4 ${pileMode ? "max-w-2xl" : "max-w-md"}`}
+      >
+        {pileMode ? (
+          <SnakePileSort onExit={() => setPileMode(false)} />
+        ) : phase === "title" ? (
           <TitleScreen
             bestCeremony={bestCeremony}
             bestEndless={bestEndless}
@@ -803,6 +809,7 @@ export function SnakeSorting() {
             showHow={showHow}
             setShowHow={setShowHow}
             onStart={startGame}
+            onPileStart={() => setPileMode(true)}
           />
         ) : phase === "results" ? (
           <ResultsScreen
@@ -1211,6 +1218,7 @@ function TitleScreen({
   showHow,
   setShowHow,
   onStart,
+  onPileStart,
 }: {
   bestCeremony: number;
   bestEndless: number;
@@ -1218,6 +1226,7 @@ function TitleScreen({
   showHow: boolean;
   setShowHow: React.Dispatch<React.SetStateAction<boolean>>;
   onStart: (m: Mode) => void;
+  onPileStart: () => void;
 }) {
   return (
     <div className="ss-rise flex flex-col items-center pt-6 text-center">
@@ -1283,6 +1292,16 @@ function TitleScreen({
           🃏 Wildcard · hard mode
           <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
             10 serpents · designer blood walks the dais · a 5th option lurks
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onPileStart}
+          className="w-full rounded-2xl border border-teal-300/30 bg-teal-950/50 px-4 py-3 text-[14px] font-black uppercase tracking-wider text-teal-100 backdrop-blur-sm transition active:scale-95"
+        >
+          🖐️ Pile sort
+          <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
+            8 photos on the table · drag each serpent onto its house pile
           </span>
         </button>
         {(bestCeremony > 0 || bestEndless > 0 || bestWildcard > 0) && (
