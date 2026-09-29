@@ -154,22 +154,7 @@ export const SNAKES: SortingSnake[] = [
     lesson:
       "Heavy black scaling on an island animal is the Azurea signature. Biak and Numfor are the only island localities in the game — and Biak babies hatch red or yellow, so color alone never settles it.",
   },
-  {
-    id: "sulfur",
-    name: "“Sulfur”",
-    house: "azurea",
-    locality: "Numfor",
-    neonate: "yellow",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — and at two years old it is STILL glowing yellow." },
-      { probe: "crown", label: "Head", text: "Broken black bands march across the crown like stitching." },
-      { probe: "origin", label: "Homeland", text: "A small island off the north coast, ringed by reef." },
-    ],
-    deepScan: "Yellow retention plus black banding on a small island off the north coast. Island black on island blood — pure Azurea.",
-    lesson:
-      "Yellow retention with black banding on an island animal: House Azurea. The yellow tempted many keepers toward Viridis — but Viridis lives far to the south, never on these islands.",
-  },
+
   {
     id: "coal",
     name: "“Coal”",
@@ -318,38 +303,7 @@ export const SNAKES: SortingSnake[] = [
     lesson:
       "The cruelest trap in the ceremony: a red baby with black edging, straight out of the Azurea playbook. But Azurea never touches the mainland — Cyclops is northern ground, and the blue ghosting under the black is pure Utaraensis.",
   },
-  {
-    id: "highblue",
-    name: "“Highblue”",
-    house: "utaraensis",
-    locality: "Wamena",
-    neonate: "yellow",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Adult scales", text: "Adult green with an electric-blue dorsal stripe you could see from the next valley." },
-      { probe: "crown", label: "Head", text: "Clean white markings run along the lips like war paint." },
-      { probe: "origin", label: "Homeland", text: "A highland valley — cool nights, moss thick as carpet." },
-    ],
-    deepScan: "Highland valley, electric blue stripe, white lips. Even in the mountains, the blue stripe never lies.",
-    lesson:
-      "Wamena sits high and cool, but the animal still wears the northern signature: blue stripe plus high white. House Utaraensis, highland division.",
-  },
-  {
-    id: "saffron",
-    name: "“Saffron”",
-    house: "pulcher",
-    locality: "Kofiau",
-    neonate: "yellow",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Neonate scales", text: "Lemon-yellow neonate — not a single fleck of red anywhere." },
-      { probe: "crown", label: "Head", text: "A faint blue wash ghosts across the crown." },
-      { probe: "origin", label: "Homeland", text: "A tiny island clutch, far to the west, reachable only by boat." },
-    ],
-    deepScan: "Far-west island, yellow baby, blue wash on the crown. They hatch yellow every time out there — and that blue wash is pure Pulcher.",
-    lesson:
-      "The trap of the ceremony! A yellow neonate screams Viridis — but Kofiau pulcher hatch yellow every single time. The blue wash on the crown and the far-west island give it away: House Pulcher.",
-  },
+
   {
     id: "topaz",
     name: "“Topaz”",
@@ -367,22 +321,7 @@ export const SNAKES: SortingSnake[] = [
     lesson:
       "Clean yellow retention with blue tones is what western breeders prize most — the defining Pulcher combination, from the Bird's Head lowlands around Sorong.",
   },
-  {
-    id: "cinder",
-    name: "“Cinder”",
-    house: "pulcher",
-    locality: "Arfak",
-    neonate: "red",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Neonate scales", text: "Red neonate with blue flecks scattered across the dorsum like sparks." },
-      { probe: "crown", label: "Head", text: "Dark crown edged in unmistakable blue." },
-      { probe: "origin", label: "Homeland", text: "Mountain slopes in the western ranges, clouds caught in the canopy." },
-    ],
-    deepScan: "Red baby, blue-flecked dorsum, western mountain slopes. The blue edging on a western animal settles it.",
-    lesson:
-      "Red neonate, western mountains, blue edging everywhere — House Pulcher. Azurea wears black where Pulcher wears blue.",
-  },
+
   {
     id: "copper",
     name: "“Copper”",
@@ -545,56 +484,9 @@ export const SNAKES: SortingSnake[] = [
     lesson:
       "Scattered white without a pattern still reads southern — the Aru Viridis look, fern division.",
   },
-  /* ---- Wildcard division: designer morphs and hybrid crosses. Only the
-     wildcard hard mode deals these; the classic ceremony never sees them. ---- */
-  {
-    id: "mimic",
-    name: "“Mimic”",
-    house: "designer",
-    locality: "Captive Bred",
-    neonate: "yellow",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — extreme white patches blooming far too early." },
-      { probe: "crown", label: "Head", text: "A white-washed crown, pigment breaking apart like frost." },
-      { probe: "origin", label: "Homeland", text: "Hatched in a rack, not a rainforest — the paperwork says 'project'." },
-    ],
-    deepScan: "Yellow baby, extreme white, captive-bred. No wild locality claims this blood — Designer.",
-    lesson:
-      "No island, no mainland, no southern wilds — this blood was mixed in a tub. When the field marks refuse every map, call the wildcard: Designer / Hybrid.",
-  },
-  {
-    id: "chimera",
-    name: "“Chimera”",
-    house: "designer",
-    locality: "Captive Bred",
-    neonate: "red",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Neonate scales", text: "Red neonate — but the black edging stops mid-body and gives way to blue." },
-      { probe: "crown", label: "Head", text: "Half dark cap, half blue wash — two houses fighting on one head." },
-      { probe: "origin", label: "Homeland", text: "The breeder's notes list two localities. Both. At once." },
-    ],
-    deepScan: "Red baby, mixed signals, project paperwork. Two bloodlines in one skin — Designer.",
-    lesson:
-      "Azurea's black on the front half, Pulcher's blue on the back — no wild snake wears two houses at once. That is the tell: Designer / Hybrid.",
-  },
-  {
-    id: "specter",
-    name: "“Specter”",
-    house: "designer",
-    locality: "Captive Bred",
-    neonate: "yellow",
-    photo: null,
-    clues: [
-      { probe: "scales", label: "Neonate scales", text: "Yellow neonate holding ghost-white into adulthood — long past when wild yellows green out." },
-      { probe: "crown", label: "Head", text: "A pale, washed-out crown — three generations of selection staring back at you." },
-      { probe: "origin", label: "Homeland", text: "Bred for the trait, not the place." },
-    ],
-    deepScan: "Yellow baby that never greens out, line-bred pale. A trait, not a locality — Designer.",
-    lesson:
-      "Wild yellows green out; this one was bred not to. When the animal is a trait instead of a place, the house is Designer / Hybrid.",
-  },
+  /* ---- Wildcard division: designer morphs and hybrid crosses join here as
+     their photos arrive. Only the wildcard hard mode deals these; the
+     classic ceremony never sees them. ---- */
 ];
 
 /* ------------------------------ Hat dialogue ----------------------------- */

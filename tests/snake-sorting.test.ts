@@ -99,8 +99,9 @@ describe("snake-sorting neonate round data", () => {
     const designer = HOUSES.find((h) => h.id === "designer");
     assert.ok(designer, "designer house missing");
     assert.deepEqual(designer.localities, ["Captive Bred"]);
+    // Designer animals join the roster as their photos arrive — the house
+    // stands ready even when the division is empty.
     const wild = SNAKES.filter((s) => s.house === "designer");
-    assert.ok(wild.length >= 2, "wildcard mode needs designer animals in the mix");
     for (const s of wild) {
       assert.equal(s.locality, "Captive Bred");
       assert.ok(s.neonate === "red" || s.neonate === "yellow");
@@ -116,20 +117,22 @@ describe("snake-sorting neonate round data", () => {
     const endless = bankForMode("endless");
     assert.ok(endless.every((s) => s.house !== "designer"));
     const wild = bankForMode("wildcard");
-    assert.ok(wild.some((s) => s.house === "designer"));
+    assert.equal(wild.length, SNAKES.length);
     assert.equal(sortHousesForMode("ceremony").length, 4);
     assert.equal(sortHousesForMode("endless").length, 4);
     assert.equal(sortHousesForMode("wildcard").length, 5);
     assert.ok(sortHousesForMode("wildcard").some((h) => h.id === "designer"));
   });
 
-  it("wildcard ceremonies guarantee designer animals in the mix", () => {
+  it("wildcard ceremonies include every available designer (up to two)", () => {
+    const wildCount = SNAKES.filter((s) => s.house === "designer").length;
     for (let i = 0; i < 25; i++) {
       const order = ceremonyOrder("wildcard", 10);
       assert.equal(order.length, 10);
-      assert.ok(
-        order.filter((s) => s.house === "designer").length >= 2,
-        "a wildcard ceremony shipped without its teeth",
+      assert.equal(
+        order.filter((s) => s.house === "designer").length,
+        Math.min(2, wildCount),
+        "a wildcard ceremony dropped a designer it promised",
       );
     }
     const classic = ceremonyOrder("ceremony", 10);
