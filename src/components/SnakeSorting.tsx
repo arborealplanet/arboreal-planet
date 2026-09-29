@@ -278,13 +278,11 @@ function PhotoPlate({
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,.08),transparent_70%)] px-6 text-center">
           <span className="text-5xl text-teal-200/30">?</span>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-teal-100/50">
-            Snake photo
+          <p className="text-[13px] font-bold uppercase tracking-[0.25em] text-teal-100/60">
+            {snake.name}
           </p>
-          <p className="text-[11px] leading-snug text-white/35">
-            Photo pending — drop{" "}
-            <code className="text-teal-200/60">{snake.id}.webp</code> into
-            /arcade/snake-sorting/snakes/
+          <p className="text-[11px] italic leading-snug text-white/35">
+            its portrait is still on the way
           </p>
         </div>
       )}
@@ -387,6 +385,9 @@ export function SnakeSorting() {
   const [probed, setProbed] = useState<ProbeKind[]>([]);
   const [probing, setProbing] = useState<ProbeKind | null>(null);
   const [deepUsed, setDeepUsed] = useState<boolean>(false);
+  /* Field notes: revealed probe clues collapse behind a toggle so the
+     player can reclaim screen space on small phones. */
+  const [notesOpen, setNotesOpen] = useState<boolean>(true);
   const [earlyBonus, setEarlyBonus] = useState(0);
   const [localityOptions, setLocalityOptions] = useState<string[]>([]);
   const [pickedHouse, setPickedHouse] = useState<HouseId | null>(null);
@@ -468,6 +469,7 @@ export function SnakeSorting() {
     setProbed([]);
     setProbing(null);
     setDeepUsed(false);
+    setNotesOpen(true);
     setEarlyBonus(0);
     setPickedHouse(null);
     setPickedLocality(null);
@@ -877,9 +879,22 @@ export function SnakeSorting() {
                 />
               </div>
 
-              {/* clue chips */}
+              {/* field notes — revealed clues collapse behind a toggle */}
               {probed.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 overflow-hidden rounded-xl border border-teal-200/25 bg-teal-950/40 backdrop-blur-sm">
+                  <button
+                    type="button"
+                    onClick={() => setNotesOpen((o) => !o)}
+                    aria-expanded={notesOpen}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left transition active:scale-[0.99]"
+                  >
+                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-teal-200">
+                      📋 Field notes ({probed.length}{deepUsed ? " + scan" : ""})
+                    </span>
+                    <span className="text-[12px] text-teal-200/70">{notesOpen ? "▾" : "▸"}</span>
+                  </button>
+                  {notesOpen && (
+                    <div className="flex flex-wrap gap-2 px-3 pb-3">
                   {probed.map((k) => {
                     const clue = snake.clues.find((c) => c.probe === k);
                     if (!clue) return null;
@@ -903,6 +918,8 @@ export function SnakeSorting() {
                       <p className="text-[12px] leading-snug text-violet-50/90">
                         {snake.deepScan}
                       </p>
+                    </div>
+                  )}
                     </div>
                   )}
                 </div>
@@ -1121,6 +1138,8 @@ function RevealPanel({
   const house = HOUSE_BY_ID[snake.house];
   const total =
     gain.neonate + gain.house + gain.speed + gain.streakBonus + gain.earlyBonus + gain.locality;
+  /* Score breakdown stays collapsed until tapped — the total is the headline. */
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   return (
     <div className="ss-rise relative overflow-hidden rounded-2xl border border-white/12 bg-black/65 p-4 text-center backdrop-blur-sm">
       {correct && !reducedMotion && <Sparkles color={house.color} seed={snake.id.length} />}
@@ -1135,16 +1154,28 @@ function RevealPanel({
       </p>
 
       {correct ? (
-        <div className="mx-auto mt-2 max-w-[240px] space-y-1 text-[13px]">
-          {gain.neonate > 0 && <GainRow label="Neonate wager" value={gain.neonate} />}
-          <GainRow label="House claimed" value={gain.house} />
-          {gain.speed > 0 && <GainRow label="Swift call" value={gain.speed} />}
-          {gain.streakBonus > 0 && <GainRow label="Streak bonus" value={gain.streakBonus} />}
-          {gain.earlyBonus > 0 && <GainRow label="Early call" value={gain.earlyBonus} />}
-          {gain.locality > 0 && <GainRow label="Native haunts" value={gain.locality} />}
-          <div className="border-t border-white/10 pt-1">
-            <GainRow label="Total" value={total} bold />
-          </div>
+        <div className="mx-auto mt-2 max-w-[240px] text-[13px]">
+          <button
+            type="button"
+            onClick={() => setBreakdownOpen((o) => !o)}
+            aria-expanded={breakdownOpen}
+            className="flex w-full items-center justify-between rounded-lg px-1 py-1 transition active:scale-[0.99]"
+          >
+            <span className="font-bold text-white/85">+{total} pts</span>
+            <span className="text-[11px] text-white/50">
+              {breakdownOpen ? "▾ breakdown" : "▸ breakdown"}
+            </span>
+          </button>
+          {breakdownOpen && (
+            <div className="space-y-1 pt-1">
+              {gain.neonate > 0 && <GainRow label="Neonate wager" value={gain.neonate} />}
+              <GainRow label="House claimed" value={gain.house} />
+              {gain.speed > 0 && <GainRow label="Swift call" value={gain.speed} />}
+              {gain.streakBonus > 0 && <GainRow label="Streak bonus" value={gain.streakBonus} />}
+              {gain.earlyBonus > 0 && <GainRow label="Early call" value={gain.earlyBonus} />}
+              {gain.locality > 0 && <GainRow label="Native haunts" value={gain.locality} />}
+            </div>
+          )}
         </div>
       ) : (
         <div className="mt-2 rounded-xl border border-white/10 bg-white/[.04] p-3 text-left">
