@@ -5,7 +5,6 @@ import {
   HOUSES,
   PILE_BEST_KEY,
   PILE_CORRECT_POINTS,
-  PILE_WRONG_PENALTY,
   pileSortDeal,
   readBest,
   writeBest,
@@ -36,23 +35,14 @@ function blip(freq: number, dur = 0.09, type: OscillatorType = "sine", delay = 0
     /* audio unavailable — the game plays on silently */
   }
 }
-const chime = () => {
-  blip(660);
-  blip(880, 0.12, "sine", 0.08);
-};
-const thud = () => blip(150, 0.16, "sawtooth");
 const pop = () => blip(520, 0.08, "triangle");
 
-const PRAISE = [
-  "Into the pile it goes!",
-  "The Hat nods approvingly.",
-  "Clean sorting, keeper.",
-  "Straight to its kin!",
-];
-const SNARK = [
-  "Not {house}… back to the Hat's brim with that one.",
-  "The Hat shakes its brim — no.",
-  "A bold pile, keeper — and a wrong one.",
+/* The Hat accepts every placement and reveals nothing until the tally. */
+const ACCEPT_LINES = [
+  "The Hat accepts it. It reveals nothing.",
+  "Placed. The Hat's brim twitches… or does it?",
+  "Into the pile. True or false — you'll learn at the tally.",
+  "The Hat keeps your secret.",
 ];
 const DRAW_LINES = [
   "The Hat rummages… a serpent emerges!",
@@ -60,7 +50,6 @@ const DRAW_LINES = [
   "Out it slides — sort it true, keeper.",
 ];
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const fill = (t: string, house: string) => t.replace("{house}", house);
 const shortHouse = (id: HouseId) =>
   HOUSES.find((h) => h.id === id)?.name.replace("House ", "") ?? id;
 
@@ -81,9 +70,9 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
   const [remaining, setRemaining] = useState<SortingSnake[]>(order);
   const [drawn, setDrawn] = useState<SortingSnake | null>(null);
   const [placed, setPlaced] = useState<Record<string, HouseId>>({});
-  const [misses, setMisses] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [finished, setFinished] = useState(false);
   const [timeBonus, setTimeBonus] = useState(0);
@@ -91,7 +80,6 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     "Tap the Hat — eight serpents wait inside. The Hat is watching…",
   );
   const [hatMood, setHatMood] = useState<HatMood>("idle");
-  const [shakeId, setShakeId] = useState<string | null>(null);
   const [best, setBest] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -164,9 +152,9 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     syncRemaining([...fresh]);
     setDrawn(null);
     setPlaced({});
-    setMisses({});
     setSelected(null);
     setScore(0);
+    setCorrectCount(0);
     setElapsed(0);
     elapsedRef.current = 0;
     setFinished(false);
@@ -180,47 +168,44 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setHatLine("A fresh Hat, full of serpents. Tap it.");
   };
 
+  /* A placement is final — right or wrong, the Hat keeps its counsel
+     until every serpent is piled, then tallies the truth. */
   const place = (snakeId: string, houseId: HouseId) => {
     if (finished || placed[snakeId]) return;
     const snake = order.find((s) => s.id === snakeId);
     if (!snake) return;
-    if (houseId === snake.house) {
-      const next = { ...placed, [snakeId]: houseId };
-      setPlaced(next);
-      setScore((s) => s + PILE_CORRECT_POINTS);
-      setSelected(null);
-      setDrawn(null);
-      chime();
-      setHatMood("happy");
-      calmHat(700, "happy");
-      if (Object.keys(next).length >= order.length) {
-        const secs = elapsedRef.current;
-        const bonus = Math.max(0, 150 - secs);
-        setTimeBonus(bonus);
-        setElapsed(secs);
-        const final = score + PILE_CORRECT_POINTS + bonus;
-        const prev = readBest(PILE_BEST_KEY);
-        setBest(Math.max(prev, final));
-        if (final > prev) {
-          writeBest(PILE_BEST_KEY, final);
-          setIsNewBest(true);
-        }
-        setFinished(true);
-        setHatLine("The Hat is empty! It bows to your eye, keeper.");
-      } else {
-        setHatLine(pick(PRAISE));
-        /* The Hat offers the next serpent after a beat. */
-        window.setTimeout(dealOne, 750);
+    const next = { ...placed, [snakeId]: houseId };
+    setPlaced(next);
+    setSelected(null);
+    setDrawn(null);
+    pop();
+    setHatMood("happy");
+    calmHat(700, "happy");
+    if (Object.keys(next).length >= order.length) {
+      const correct = order.filter((s) => next[s.id] === s.house).length;
+      const secs = elapsedRef.current;
+      const bonus = Math.max(0, 150 - secs);
+      setTimeBonus(bonus);
+      setElapsed(secs);
+      setCorrectCount(correct);
+      const final = correct * PILE_CORRECT_POINTS + bonus;
+      setScore(final);
+      const prev = readBest(PILE_BEST_KEY);
+      setBest(Math.max(prev, final));
+      if (final > prev) {
+        writeBest(PILE_BEST_KEY, final);
+        setIsNewBest(true);
       }
+      setFinished(true);
+      setHatLine(
+        correct === order.length
+          ? "A perfect sorting! The Hat bows to your eye, keeper."
+          : `The Hat tallies: ${correct} of ${order.length} true.`,
+      );
     } else {
-      setMisses((m) => ({ ...m, [snakeId]: (m[snakeId] ?? 0) + 1 }));
-      setScore((s) => Math.max(0, s - PILE_WRONG_PENALTY));
-      setShakeId(snakeId);
-      window.setTimeout(() => setShakeId((cur) => (cur === snakeId ? null : cur)), 350);
-      setHatMood("no");
-      calmHat(500, "no");
-      thud();
-      setHatLine(fill(pick(SNARK), shortHouse(houseId)));
+      setHatLine(pick(ACCEPT_LINES));
+      /* The Hat offers the next serpent after a beat. */
+      window.setTimeout(dealOne, 750);
     }
   };
 
@@ -309,8 +294,6 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
         .hat-no { animation: hat-no .4s ease; }
         @keyframes hat-deal { 0% { transform: translateY(-26px) scale(.65); opacity: 0; } 60% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
         .hat-deal { animation: hat-deal .45s ease-out; }
-        @keyframes pile-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
-        .pile-shake { animation: pile-shake .3s ease; }
         @keyframes pile-drop { 0% { transform: scale(1.3); opacity: .3; } 100% { transform: scale(1); opacity: 1; } }
         .pile-drop { animation: pile-drop .3s ease-out; }
         @keyframes pile-lift { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-8px) scale(1.03); } }
@@ -352,7 +335,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
         </p>
         <div className="flex items-center gap-2 text-[12px] font-bold">
           <span className="rounded-full border border-white/15 bg-black/60 px-2.5 py-1 text-amber-200">
-            {score}
+            {Object.keys(placed).length}/{order.length}
           </span>
           <span className="rounded-full border border-white/15 bg-black/60 px-2.5 py-1 text-white/60">
             {fmt(elapsed)}
@@ -401,8 +384,8 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                     if (e.detail === 0) setSelected((cur) => (cur === drawn.id ? null : drawn.id));
                   }}
                   className={`hat-deal relative w-full max-w-[220px] touch-none select-none overflow-hidden rounded-2xl border bg-black/70 transition active:scale-95 ${
-                    shakeId === drawn.id ? "pile-shake" : ""
-                  } ${drag?.id === drawn.id ? "opacity-30" : ""} ${
+                    drag?.id === drawn.id ? "opacity-30" : ""
+                  } ${
                     selected === drawn.id
                       ? "pile-lift border-amber-200/80 shadow-[0_0_24px_rgba(251,191,36,.35)]"
                       : "border-white/10"
@@ -419,11 +402,6 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                   {selected === drawn.id && (
                     <span className="absolute left-2 top-2 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black">
                       In the Hat&apos;s grip — tap a pile
-                    </span>
-                  )}
-                  {(misses[drawn.id] ?? 0) > 0 && (
-                    <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-red-300">
-                      ✗ {misses[drawn.id]}
                     </span>
                   )}
                 </button>
@@ -498,9 +476,14 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
         /* Results */
         <div className="ss-rise rounded-2xl border border-white/10 bg-black/65 p-4 text-center backdrop-blur-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-teal-200/70">
-            Hat emptied
+            The Hat&apos;s tally
           </p>
-          <p className="mt-1 text-4xl font-black text-amber-200">{score + timeBonus}</p>
+          <p className="mt-1 text-4xl font-black text-amber-200">
+            {correctCount}<span className="text-xl text-white/40">/{order.length}</span>
+          </p>
+          <p className="mt-0.5 text-[13px] font-bold text-white/60">
+            {Math.round((correctCount / Math.max(1, order.length)) * 100)}% true · {score} pts
+          </p>
           {isNewBest && <p className="mt-1 text-[13px] font-bold text-emerald-300">✦ New best ✦</p>}
           <div className="mx-auto mt-3 grid max-w-[320px] grid-cols-3 gap-2 text-[12px]">
             <div className="rounded-xl border border-white/10 bg-white/[.04] p-2">
@@ -512,13 +495,8 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
               <p className="text-white/45">speed bonus</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[.04] p-2">
-              <p className="font-black text-white/90">
-                {Math.round(
-                  (order.filter((s) => !(misses[s.id] > 0)).length / Math.max(1, order.length)) * 100,
-                )}
-                %
-              </p>
-              <p className="text-white/45">first-try rate</p>
+              <p className="font-black text-white/90">{correctCount * PILE_CORRECT_POINTS}</p>
+              <p className="text-white/45">sort points</p>
             </div>
           </div>
           <ul className="mt-3 space-y-1.5 text-left">
@@ -535,7 +513,6 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                   <span className="font-semibold text-white/90">Serpent {i + 1}</span>
                   <span className="truncate text-white/50">
                     {ok ? shortHouse(was) : `piled ${shortHouse(was)}, was ${shortHouse(s.house)}`}
-                    {(misses[s.id] ?? 0) > 0 && ` · ✗${misses[s.id]}`}
                   </span>
                 </li>
               );
