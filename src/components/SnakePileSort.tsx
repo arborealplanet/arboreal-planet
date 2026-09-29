@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
   HOUSES,
   PILE_BEST_KEY,
@@ -60,6 +60,13 @@ const shortHouse = (id: HouseId) =>
 
 const PILE_HOUSES = HOUSES.filter((h) => h.id !== "designer");
 
+/* The Sorting Hat is the cursor for the whole pile table. Hotspot sits near
+   the hat's curled tip so it feels like the Hat itself is doing the pointing. */
+const HAT_CURSOR = `url("/arcade/snake-sorting/sorting-hat-cursor.png") 52 10, auto`;
+
+type DragState = { id: string; x: number; y: number };
+const DRAG_THRESHOLD = 10;
+
 export default function SnakePileSort({ onExit }: { onExit: () => void }) {
   const [deal, setDeal] = useState<SortingSnake[]>(() => pileSortDeal());
   const [placed, setPlaced] = useState<Record<string, HouseId>>({});
@@ -75,7 +82,13 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
   const [shakeId, setShakeId] = useState<string | null>(null);
   const [best, setBest] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [hoverPile, setHoverPile] = useState<HouseId | null>(null);
   const elapsedRef = useRef(0);
+  /* Refs mirror the drag lifecycle so pointer handlers always see fresh state. */
+  const downRef = useRef<{ id: string; x: number; y: number; pid: number } | null>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const pileRefs = useRef<Partial<Record<HouseId, HTMLDivElement | null>>>({});
 
   useEffect(() => {
     if (finished) return;
@@ -85,6 +98,21 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     }, 1000);
     return () => window.clearInterval(id);
   }, [finished]);
+
+  /* Escape sets a carried serpent gently back down. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && dragRef.current) {
+        dragRef.current = null;
+        setDrag(null);
+        setHoverPile(null);
+        downRef.current = null;
+        setHatLine("The Hat sets it gently back down.");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const reset = () => {
     setDeal(pileSortDeal());
@@ -97,6 +125,10 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setFinished(false);
     setTimeBonus(0);
     setIsNewBest(false);
+    dragRef.current = null;
+    setDrag(null);
+    setHoverPile(null);
+    downRef.current = null;
     setHatLine("A fresh table. The Hat cracks its brim…");
   };
 
@@ -137,15 +169,81 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     }
   };
 
+  const pileAt = (x: number, y: number): HouseId | null => {
+    for (const h of PILE_HOUSES) {
+      const el = pileRefs.current[h.id];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return h.id;
+    }
+    return null;
+  };
+
+  const setDragBoth = (d: DragState | null) => {
+    dragRef.current = d;
+    setDrag(d);
+    if (!d) setHoverPile(null);
+  };
+
+  const onCardPointerDown = (e: ReactPointerEvent<HTMLButtonElement>, id: string) => {
+    if (finished || placed[id]) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    downRef.current = { id, x: e.clientX, y: e.clientY, pid: e.pointerId };
+  };
+
+  const onCardPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = downRef.current;
+    if (!d || e.pointerId !== d.pid) return;
+    if (!dragRef.current) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < DRAG_THRESHOLD) return;
+      const nd = { id: d.id, x: e.clientX, y: e.clientY };
+      dragRef.current = nd;
+      setDrag(nd);
+      setSelected(null);
+      setHatLine("The Hat has it — drop it on its true pile…");
+    } else {
+      const nd = { id: d.id, x: e.clientX, y: e.clientY };
+      dragRef.current = nd;
+      setDrag(nd);
+    }
+    setHoverPile(pileAt(e.clientX, e.clientY));
+  };
+
+  const onCardPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = downRef.current;
+    if (!d || e.pointerId !== d.pid) return;
+    downRef.current = null;
+    const wasDrag = dragRef.current;
+    setDragBoth(null);
+    if (wasDrag) {
+      const hp = pileAt(e.clientX, e.clientY);
+      if (hp) place(d.id, hp);
+      else setHatLine("Dropped on the floor — the Hat pretends not to see.");
+    } else {
+      /* A tap without movement toggles the pick-up selection. */
+      setSelected((cur) => (cur === d.id ? null : d.id));
+    }
+  };
+
+  const onCardPointerCancel = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = downRef.current;
+    if (!d || e.pointerId !== d.pid) return;
+    downRef.current = null;
+    setDragBoth(null);
+  };
+
   const table = deal.filter((s) => !placed[s.id]);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const dragSnake = drag ? deal.find((s) => s.id === drag.id) : undefined;
 
   return (
-    <div className="ss-rise mx-auto flex w-full max-w-2xl flex-col px-4 pb-6 pt-4">
+    <div
+      className="pile-sort-hat ss-rise mx-auto flex w-full max-w-2xl flex-col px-4 pb-6 pt-4"
+      style={{ cursor: HAT_CURSOR }}
+      onDragStart={(e) => e.preventDefault()}
+    >
       <style>{`
-        .pile-card { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cpath d='M22 3 L33 27 L11 27 Z' fill='%237c3aed' stroke='%234c1d95' stroke-width='2'/%3E%3Cellipse cx='22' cy='30' rx='15' ry='5' fill='%235b21b6' stroke='%233b0764' stroke-width='2'/%3E%3Cpath d='M22 3 l4 7 -8 0 z' fill='%23fbbf24'/%3E%3Ccircle cx='22' cy='16' r='2.5' fill='%23fde68a'/%3E%3Ccircle cx='16.5' cy='22' r='1.8' fill='%23fde68a'/%3E%3C/svg%3E") 22 3, grab; }
-        .pile-card:active { cursor: grabbing; }
-        .pile-armed { cursor: pointer; }
+        .pile-sort-hat, .pile-sort-hat * { cursor: ${HAT_CURSOR}; }
         @keyframes pile-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
         .pile-shake { animation: pile-shake .3s ease; }
         @keyframes pile-drop { 0% { transform: scale(1.3); opacity: .3; } 100% { transform: scale(1); opacity: 1; } }
@@ -153,6 +251,25 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
         @keyframes pile-lift { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-8px) scale(1.03); } }
         .pile-lift { animation: pile-lift .18s ease-out both; }
       `}</style>
+
+      {/* The carried serpent follows the Hat around. */}
+      {drag && dragSnake?.photo && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed left-0 top-0 z-[80]"
+          style={{
+            transform: `translate(${drag.x}px, ${drag.y}px) translate(-50%, -115%) rotate(-5deg)`,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={dragSnake.photo}
+            alt=""
+            draggable={false}
+            className="h-24 w-32 rounded-xl border-2 border-amber-200/90 object-cover shadow-[0_18px_50px_rgba(0,0,0,.65)]"
+          />
+        </div>
+      )}
 
       {/* HUD */}
       <header className="mb-3 flex items-center justify-between gap-2">
@@ -186,9 +303,13 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {PILE_HOUSES.map((h) => {
               const inPile = deal.filter((s) => placed[s.id] === h.id);
+              const hot = hoverPile === h.id;
               return (
                 <div
                   key={h.id}
+                  ref={(el) => {
+                    pileRefs.current[h.id] = el;
+                  }}
                   role="button"
                   tabIndex={0}
                   aria-label={`${h.name} pile`}
@@ -199,17 +320,14 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                       place(selected, h.id);
                     }
                   }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    place(e.dataTransfer.getData("text/plain"), h.id);
-                  }}
                   className={`rounded-2xl border bg-black/60 p-2.5 backdrop-blur-sm transition ${
-                    selected
-                      ? "pile-armed animate-pulse border-amber-200/60"
-                      : "border-white/12"
+                    hot
+                      ? "scale-[1.04] border-amber-200 shadow-[0_0_28px_rgba(251,191,36,.45)]"
+                      : selected
+                        ? "pile-armed animate-pulse border-amber-200/60"
+                        : "border-white/12"
                   }`}
-                  style={{ boxShadow: `inset 0 0 0 1px ${h.glow}` }}
+                  style={{ boxShadow: hot ? undefined : `inset 0 0 0 1px ${h.glow}` }}
                 >
                   <p className="text-center text-[12px] font-black" style={{ color: h.color }}>
                     {h.name.replace("House ", "")}
@@ -224,6 +342,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                         key={s.id}
                         src={s.photo ?? ""}
                         alt=""
+                        draggable={false}
                         className="pile-drop h-10 w-10 rounded-lg border border-white/20 object-cover"
                       />
                     ))}
@@ -243,19 +362,30 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
               <button
                 key={s.id}
                 type="button"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("text/plain", s.id);
-                  setSelected(null);
+                onPointerDown={(e) => onCardPointerDown(e, s.id)}
+                onPointerMove={onCardPointerMove}
+                onPointerUp={onCardPointerUp}
+                onPointerCancel={onCardPointerCancel}
+                onClick={(e) => {
+                  /* Keyboard activation only — pointer taps are handled on pointer-up. */
+                  if (e.detail === 0) setSelected((cur) => (cur === s.id ? null : s.id));
                 }}
-                onClick={() => setSelected((cur) => (cur === s.id ? null : s.id))}
-                className={`pile-card relative overflow-hidden rounded-2xl border bg-black/70 transition active:scale-95 ${
+                className={`relative touch-none select-none overflow-hidden rounded-2xl border bg-black/70 transition active:scale-95 ${
                   shakeId === s.id ? "pile-shake" : ""
-                } ${selected === s.id ? "pile-lift border-amber-200/80 shadow-[0_0_24px_rgba(251,191,36,.35)]" : "border-white/10"}`}
+                } ${drag?.id === s.id ? "opacity-30" : ""} ${
+                  selected === s.id
+                    ? "pile-lift border-amber-200/80 shadow-[0_0_24px_rgba(251,191,36,.35)]"
+                    : "border-white/10"
+                }`}
                 aria-label="Unsorted serpent — drag it to its house pile, or tap to pick it up"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.photo ?? ""} alt="Serpent awaiting sorting" className="aspect-[4/3] w-full object-cover" draggable={false} />
+                <img
+                  src={s.photo ?? ""}
+                  alt="Serpent awaiting sorting"
+                  className="aspect-[4/3] w-full object-cover"
+                  draggable={false}
+                />
                 {selected === s.id && (
                   <span className="absolute left-2 top-2 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black">
                     In the Hat&apos;s grip — tap a pile
@@ -270,7 +400,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
             ))}
           </div>
           <p className="mt-3 text-center text-[11px] text-white/35">
-            Drag a serpent onto its house pile — or tap it, then tap a pile.
+            Drag a serpent onto its house pile — or tap it, then tap a pile. The Hat is your cursor.
           </p>
         </>
       ) : (
@@ -310,7 +440,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                     {ok ? "✓" : "✗"}
                   </span>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.photo ?? ""} alt="" className="h-8 w-8 rounded-lg object-cover" />
+                  <img src={s.photo ?? ""} alt="" draggable={false} className="h-8 w-8 rounded-lg object-cover" />
                   <span className="font-semibold text-white/90">Serpent {i + 1}</span>
                   <span className="truncate text-white/50">
                     {ok ? shortHouse(was) : `piled ${shortHouse(was)}, was ${shortHouse(s.house)}`}
