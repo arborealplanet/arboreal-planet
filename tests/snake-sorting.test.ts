@@ -74,6 +74,8 @@ describe("snake-sorting neonate round data", () => {
       { id: "prairie", house: "pulcher", locality: "Manokwari", neonate: "yellow" },
       { id: "pip", house: "pulcher", locality: "Manokwari", neonate: "yellow" },
       { id: "ghost", house: "viridis", locality: "Aru", neonate: "yellow" },
+      { id: "fern", house: "viridis", locality: "Aru", neonate: "yellow" },
+      { id: "zephyr", house: "utaraensis", locality: "Jayapura", neonate: "yellow" },
     ] as const;
     for (const e of expected) {
       const s = SNAKES.find((x) => x.id === e.id);

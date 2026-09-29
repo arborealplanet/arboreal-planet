@@ -253,6 +253,22 @@ export const SNAKES: SortingSnake[] = [
       "Blue striping down the back with high white markings is the Utaraensis signature — the blue stripe never lies.",
   },
   {
+    id: "zephyr",
+    name: "“Zephyr”",
+    house: "utaraensis",
+    locality: "Jayapura",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/zephyr.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A yellow neonate — the blue vertebral stripe thin and broken by wind-blown gaps." },
+      { probe: "crown", label: "Head", text: "A clean green crown, white only at the lip line." },
+      { probe: "origin", label: "Homeland", text: "Jayapura bay — north-coast humidity, mist off the water." },
+    ],
+    deepScan: "North coast, yellow baby, thin broken blue stripe. Utaraensis, Jayapura.",
+    lesson:
+      "Even a thin, broken blue stripe marks the north-coast house — Jayapura answers to Utaraensis.",
+  },
+  {
     id: "lumen",
     name: "“Lumen”",
     house: "utaraensis",
@@ -508,6 +524,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Southern islands, yellow baby, white thread on powder blue. Viridis, Aru.",
     lesson:
       "The white vertebral thread over blue-green is the Aru Viridis signature — the southern house, willow division.",
+  },
+  {
+    id: "fern",
+    name: "“Fern”",
+    house: "viridis",
+    locality: "Aru",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/fern.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A yellow neonate — white spots scattered like fallen petals, no clear pattern." },
+      { probe: "crown", label: "Head", text: "A green crown, white flecks dusting the snout." },
+      { probe: "origin", label: "Homeland", text: "Aru Islands — the far southern archipelago." },
+    ],
+    deepScan: "Southern islands, yellow baby, scattered white petals. Viridis, Aru.",
+    lesson:
+      "Scattered white without a pattern still reads southern — the Aru Viridis look, fern division.",
   },
   /* ---- Wildcard division: designer morphs and hybrid crosses. Only the
      wildcard hard mode deals these; the classic ceremony never sees them. ---- */
