@@ -16,7 +16,10 @@
  * (subspecies) call, then the native-haunts (locality) bonus.
  */
 
-export type HouseId = "azurea" | "utaraensis" | "pulcher" | "viridis";
+export type HouseId = "azurea" | "utaraensis" | "pulcher" | "viridis" | "designer";
+
+/** Game modes: the classic ceremony, the endless night, and the wildcard hard mode. */
+export type GameMode = "ceremony" | "endless" | "wildcard";
 
 export interface House {
   id: HouseId;
@@ -83,6 +86,19 @@ export const HOUSES: House[] = [
     localities: ["Aru", "Merauke"],
     marks:
       "The southern house — a true species apart. High white AND high black together is the classic look. Aru and Merauke neonates are always yellow.",
+  },
+  {
+    id: "designer",
+    name: "House Designer / Hybrid",
+    taxon: "Morelia × designer",
+    shortTaxon: "M. × designer",
+    color: "#c084fc",
+    glow: "rgba(192,132,252,.45)",
+    motto: "Bred in racks, not rainforests.",
+    region: "Captive Bred",
+    localities: ["Captive Bred"],
+    marks:
+      "The wildcard house. Line-bred designer morphs and hybrid crosses — no wild map claims them. When the field marks refuse every homeland, call the wildcard.",
   },
 ];
 
@@ -357,6 +373,56 @@ export const SNAKES: SortingSnake[] = [
     lesson:
       "When a southern animal goes this pale, there is no mistaking it: extreme high white from Aru is House Viridis, the ghost division.",
   },
+  /* ---- Wildcard division: designer morphs and hybrid crosses. Only the
+     wildcard hard mode deals these; the classic ceremony never sees them. ---- */
+  {
+    id: "mimic",
+    name: "“Mimic”",
+    house: "designer",
+    locality: "Captive Bred",
+    neonate: "yellow",
+    photo: null,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — extreme white patches blooming far too early." },
+      { probe: "crown", label: "Head", text: "A white-washed crown, pigment breaking apart like frost." },
+      { probe: "origin", label: "Homeland", text: "Hatched in a rack, not a rainforest — the paperwork says 'project'." },
+    ],
+    deepScan: "Yellow baby, extreme white, captive-bred. No wild locality claims this blood — Designer.",
+    lesson:
+      "No island, no mainland, no southern wilds — this blood was mixed in a tub. When the field marks refuse every map, call the wildcard: Designer / Hybrid.",
+  },
+  {
+    id: "chimera",
+    name: "“Chimera”",
+    house: "designer",
+    locality: "Captive Bred",
+    neonate: "red",
+    photo: null,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Red neonate — but the black edging stops mid-body and gives way to blue." },
+      { probe: "crown", label: "Head", text: "Half dark cap, half blue wash — two houses fighting on one head." },
+      { probe: "origin", label: "Homeland", text: "The breeder's notes list two localities. Both. At once." },
+    ],
+    deepScan: "Red baby, mixed signals, project paperwork. Two bloodlines in one skin — Designer.",
+    lesson:
+      "Azurea's black on the front half, Pulcher's blue on the back — no wild snake wears two houses at once. That is the tell: Designer / Hybrid.",
+  },
+  {
+    id: "specter",
+    name: "“Specter”",
+    house: "designer",
+    locality: "Captive Bred",
+    neonate: "yellow",
+    photo: null,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Yellow neonate holding ghost-white into adulthood — long past when wild yellows green out." },
+      { probe: "crown", label: "Head", text: "A pale, washed-out crown — three generations of selection staring back at you." },
+      { probe: "origin", label: "Homeland", text: "Bred for the trait, not the place." },
+    ],
+    deepScan: "Yellow baby that never greens out, line-bred pale. A trait, not a locality — Designer.",
+    lesson:
+      "Wild yellows green out; this one was bred not to. When the animal is a trait instead of a place, the house is Designer / Hybrid.",
+  },
 ];
 
 /* ------------------------------ Hat dialogue ----------------------------- */
@@ -418,6 +484,7 @@ export const HAT_LINES = {
     utaraensis: "The blue stripe never lies — northern blood, through and through!",
     pulcher: "Western gold, blue-kissed! A true Pulcher!",
     viridis: "Ancient southern lines — the one true Viridis!",
+    designer: "No map, no homeland — this blood was mixed by human hands! A true wildcard!",
   } as Record<HouseId, string>,
   wrongHouse: [
     "Oof. Even a blind skink saw that one coming.",
@@ -488,6 +555,7 @@ export function speedBonus(ms: number): number {
 
 export const BEST_CEREMONY_KEY = "snake_sorting_best_ceremony_v1";
 export const BEST_ENDLESS_KEY = "snake_sorting_best_endless_v1";
+export const BEST_WILDCARD_KEY = "snake_sorting_best_wildcard_v1";
 
 export function readBest(key: string): number {
   try {
@@ -514,4 +582,31 @@ export function shuffle<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+/** Serpents eligible for a mode: the wildcard division only walks in hard mode. */
+export function bankForMode(mode: GameMode): SortingSnake[] {
+  return mode === "wildcard"
+    ? [...SNAKES]
+    : SNAKES.filter((s) => s.house !== "designer");
+}
+
+/** Sort options for a mode: the 5th option only exists in wildcard hard mode. */
+export function sortHousesForMode(mode: GameMode): House[] {
+  return mode === "wildcard" ? HOUSES : HOUSES.filter((h) => h.id !== "designer");
+}
+
+/**
+ * Build a ceremony order. Wildcard hard mode guarantees at least two
+ * designer animals in the mix — otherwise the 5th option would be a
+ * decoration instead of a threat.
+ */
+export function ceremonyOrder(mode: GameMode, count: number): SortingSnake[] {
+  if (mode === "wildcard") {
+    const wild = shuffle(SNAKES.filter((s) => s.house === "designer"));
+    const pure = shuffle(SNAKES.filter((s) => s.house !== "designer"));
+    const guaranteed = wild.slice(0, Math.min(2, wild.length));
+    return shuffle([...guaranteed, ...pure.slice(0, Math.max(0, count - guaranteed.length))]);
+  }
+  return shuffle(bankForMode(mode)).slice(0, count);
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   BEST_CEREMONY_KEY,
   BEST_ENDLESS_KEY,
+  BEST_WILDCARD_KEY,
   CEREMONY_SNAKES,
   DEEP_SCAN_COST,
   EARLY_BONUS_PER_PROBE,
@@ -16,12 +17,15 @@ import {
   NEONATE_POINTS,
   PROBE_META,
   RANKS,
-  SNAKES,
+  bankForMode,
+  ceremonyOrder,
   rankFor,
   readBest,
   shuffle,
+  sortHousesForMode,
   speedBonus,
   writeBest,
+  type GameMode,
   type HouseId,
   type ProbeKind,
   type SortingSnake,
@@ -37,7 +41,7 @@ type Phase =
   | "reveal"
   | "results";
 
-type Mode = "ceremony" | "endless";
+type Mode = GameMode;
 
 const ASSET = "/arcade/snake-sorting";
 
@@ -266,7 +270,7 @@ function PhotoPlate({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={snake.photo}
-          alt={`Specimen ${snake.name}`}
+          alt="Serpent on the dais"
           className="h-full w-full object-cover"
         />
       ) : (
@@ -276,7 +280,7 @@ function PhotoPlate({
             Snake photo
           </p>
           <p className="text-[11px] leading-snug text-white/35">
-            Specimen {snake.name} — drop{" "}
+            Photo pending — drop{" "}
             <code className="text-teal-200/60">{snake.id}.webp</code> into
             /arcade/snake-sorting/snakes/
           </p>
@@ -330,7 +334,6 @@ interface Gain {
 
 interface RecapEntry {
   snakeId: string;
-  name: string;
   neonate: "correct" | "wrong" | "skipped" | null;
   pickedHouse: HouseId;
   house: HouseId;
@@ -396,6 +399,7 @@ export function SnakeSorting() {
   const [isNewBest, setIsNewBest] = useState(false);
   const [bestCeremony, setBestCeremony] = useBestScore(BEST_CEREMONY_KEY);
   const [bestEndless, setBestEndless] = useBestScore(BEST_ENDLESS_KEY);
+  const [bestWildcard, setBestWildcard] = useBestScore(BEST_WILDCARD_KEY);
   const [muted, setMuted] = useState(() => {
     try {
       return window.localStorage.getItem(MUTE_KEY) === "1";
@@ -518,9 +522,9 @@ export function SnakeSorting() {
   const startGame = (m: Mode) => {
     timeouts.current.forEach((t) => window.clearTimeout(t));
     timeouts.current = [];
-    const shuffled = shuffle(SNAKES);
     setMode(m);
-    const newOrder = m === "ceremony" ? shuffled.slice(0, CEREMONY_SNAKES) : shuffled;
+    const newOrder =
+      m === "endless" ? shuffle(bankForMode(m)) : ceremonyOrder(m, CEREMONY_SNAKES);
     setOrder(newOrder);
     setIdx(0);
     setScoreBoth(0);
@@ -544,7 +548,7 @@ export function SnakeSorting() {
     resetSnakeState();
     const lastIdx = order.length - 1;
     let next: SortingSnake;
-    if (mode === "ceremony") {
+    if (mode !== "endless") {
       if (idx >= lastIdx) {
         finishGame();
         return;
@@ -553,7 +557,7 @@ export function SnakeSorting() {
       setIdx(idx + 1);
     } else {
       if (idx >= lastIdx) {
-        const reshuffled = shuffle(SNAKES);
+        const reshuffled = shuffle(bankForMode("endless"));
         setOrder(reshuffled);
         setIdx(0);
         next = reshuffled[0];
@@ -569,10 +573,12 @@ export function SnakeSorting() {
 
   const finishGame = () => {
     const finalScore = scoreRef.current;
-    const prevBest = mode === "ceremony" ? bestCeremony : bestEndless;
+    const prevBest =
+      mode === "ceremony" ? bestCeremony : mode === "wildcard" ? bestWildcard : bestEndless;
     if (finalScore > prevBest) {
       setIsNewBest(true);
       if (mode === "ceremony") setBestCeremony(finalScore);
+      else if (mode === "wildcard") setBestWildcard(finalScore);
       else setBestEndless(finalScore);
     }
     const r = rankFor(finalScore);
@@ -646,7 +652,6 @@ export function SnakeSorting() {
       ...r,
       {
         snakeId: snake.id,
-        name: snake.name,
         neonate: neonateState === "pending" ? null : neonateState,
         pickedHouse: id,
         house: snake.house,
@@ -737,7 +742,7 @@ export function SnakeSorting() {
     }
   };
 
-  const totalSnakes = mode === "ceremony" ? order.length : undefined;
+  const totalSnakes = mode === "endless" ? undefined : order.length;
   const accuracy =
     houseAttempts > 0 ? Math.round((housesCorrect / houseAttempts) * 100) : 0;
 
@@ -794,6 +799,7 @@ export function SnakeSorting() {
           <TitleScreen
             bestCeremony={bestCeremony}
             bestEndless={bestEndless}
+            bestWildcard={bestWildcard}
             showHow={showHow}
             setShowHow={setShowHow}
             onStart={startGame}
@@ -819,9 +825,9 @@ export function SnakeSorting() {
               {/* HUD */}
               <header className="mb-3 flex items-center justify-between gap-2">
                 <div className="rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur-sm">
-                  {mode === "ceremony"
-                    ? `Serpent ${idx + 1} / ${totalSnakes}`
-                    : `#${idx + 1} · Endless`}
+                  {mode === "endless"
+                    ? `#${idx + 1} · Endless`
+                    : `Serpent ${idx + 1} / ${totalSnakes}`}
                 </div>
                 <div className="flex items-center gap-2">
                   {streak >= 2 && (
@@ -1006,12 +1012,12 @@ export function SnakeSorting() {
                       <span className="text-amber-200">+{speedBonus(sortTick * 250)}</span>
                     </p>
                     <div className="grid grid-cols-2 gap-2.5">
-                      {HOUSES.map((h) => (
+                      {sortHousesForMode(mode).map((h) => (
                         <button
                           key={h.id}
                           type="button"
                           onClick={() => pickHouse(h.id)}
-                          className="group rounded-2xl border border-white/12 bg-black/60 p-3 text-left backdrop-blur-sm transition active:scale-95 hover:border-white/30"
+                          className={`group rounded-2xl border border-white/12 bg-black/60 p-3 text-left backdrop-blur-sm transition active:scale-95 hover:border-white/30 ${h.id === "designer" ? "col-span-2 border-violet-300/25" : ""}`}
                           style={{ boxShadow: `inset 0 0 0 1px ${h.glow}, 0 0 18px transparent` }}
                         >
                           <div className="flex items-center gap-2.5">
@@ -1050,7 +1056,7 @@ export function SnakeSorting() {
                     localityWasCorrect={localityWasCorrect}
                     localityOptions={localityOptions}
                     onPickLocality={pickLocality}
-                    isLastSnake={mode === "ceremony" && idx >= order.length - 1}
+                    isLastSnake={mode !== "endless" && idx >= order.length - 1}
                     onContinue={continueFromReveal}
                     reducedMotion={reducedMotion}
                   />
@@ -1201,12 +1207,14 @@ function GainRow({ label, value, bold }: { label: string; value: number; bold?: 
 function TitleScreen({
   bestCeremony,
   bestEndless,
+  bestWildcard,
   showHow,
   setShowHow,
   onStart,
 }: {
   bestCeremony: number;
   bestEndless: number;
+  bestWildcard: number;
   showHow: boolean;
   setShowHow: React.Dispatch<React.SetStateAction<boolean>>;
   onStart: (m: Mode) => void;
@@ -1232,7 +1240,7 @@ function TitleScreen({
         them, call their House — native haunts are pure bonus.
       </p>
 
-      <div className="mt-4 grid w-full grid-cols-4 gap-1.5">
+      <div className="mt-4 grid w-full grid-cols-5 gap-1.5">
         {HOUSES.map((h) => (
           <div
             key={h.id}
@@ -1240,7 +1248,7 @@ function TitleScreen({
           >
             <Crest house={h.id} size={30} />
             <p className="text-[10px] font-bold" style={{ color: h.color }}>
-              {h.name.replace("House ", "")}
+              {h.id === "designer" ? "Wildcard" : h.name.replace("House ", "")}
             </p>
           </div>
         ))}
@@ -1267,13 +1275,29 @@ function TitleScreen({
             Sort until 3 wrong calls end the night
           </span>
         </button>
-        {(bestCeremony > 0 || bestEndless > 0) && (
+        <button
+          type="button"
+          onClick={() => onStart("wildcard")}
+          className="w-full rounded-2xl border border-fuchsia-300/30 bg-fuchsia-950/50 px-4 py-3 text-[14px] font-black uppercase tracking-wider text-fuchsia-100 backdrop-blur-sm transition active:scale-95"
+        >
+          🃏 Wildcard · hard mode
+          <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
+            10 serpents · designer blood walks the dais · a 5th option lurks
+          </span>
+        </button>
+        {(bestCeremony > 0 || bestEndless > 0 || bestWildcard > 0) && (
           <p className="text-[12px] text-white/50">
             Best ceremony: <span className="font-bold text-amber-200">{bestCeremony}</span>
             {bestEndless > 0 && (
               <>
                 {" · "}Best endless:{" "}
                 <span className="font-bold text-violet-200">{bestEndless}</span>
+              </>
+            )}
+            {bestWildcard > 0 && (
+              <>
+                {" · "}Best wildcard:{" "}
+                <span className="font-bold text-fuchsia-200">{bestWildcard}</span>
               </>
             )}
           </p>
@@ -1378,7 +1402,7 @@ function ResultsScreen({
 
       <div className="mt-4 grid w-full grid-cols-2 gap-2">
         {[
-          ["Houses sorted", `${housesCorrect} / ${mode === "ceremony" ? totalSnakes : "∞"}`],
+          ["Houses sorted", `${housesCorrect} / ${mode === "endless" ? "∞" : totalSnakes}`],
           ["Best streak", `🔥 ${bestStreak}`],
           ["True locals", `${localitiesCorrect} / ${localitiesOffered}`],
           ["House accuracy", `${accuracy}%`],
@@ -1401,7 +1425,7 @@ function ResultsScreen({
           onClick={() => setShowRecap(true)}
           className="mt-4 w-full rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 text-[12px] font-bold uppercase tracking-[0.2em] text-white/60 backdrop-blur-sm transition active:scale-95"
         >
-          {`▸ ${mode === "ceremony" ? "Ceremony recap" : "Night's tally"} (${recap.length})`}
+          {`▸ ${mode === "ceremony" ? "Ceremony recap" : mode === "wildcard" ? "Wildcard tally" : "Night's tally"} (${recap.length})`}
         </button>
       )}
       {showRecap && recap.length > 0 && (
@@ -1415,7 +1439,7 @@ function ResultsScreen({
           >
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/45">
-                {mode === "ceremony" ? "Ceremony recap" : "Night's tally"}
+                {mode === "ceremony" ? "Ceremony recap" : mode === "wildcard" ? "Wildcard tally" : "Night's tally"}
               </p>
               <button
                 type="button"
@@ -1434,7 +1458,7 @@ function ResultsScreen({
                 >
                   {e.houseCorrect ? "✓" : "✗"}
                 </span>
-                <span className="shrink-0 font-semibold text-white/90">{e.name}</span>
+                <span className="shrink-0 font-semibold text-white/90">Serpent {i + 1}</span>
                 <span className="truncate text-white/50">
                   {e.neonate === "correct"
                     ? "neo ✓ · "

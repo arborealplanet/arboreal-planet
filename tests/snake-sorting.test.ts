@@ -1,9 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  HAT_LINES,
+  HOUSES,
   HOUSE_BY_ID,
   NEONATE_POINTS,
   SNAKES,
+  bankForMode,
+  ceremonyOrder,
+  sortHousesForMode,
 } from "../src/lib/snake-sorting.js";
 
 describe("snake-sorting neonate round data", () => {
@@ -76,5 +81,47 @@ describe("snake-sorting neonate round data", () => {
   it("snake ids are unique", () => {
     const ids = SNAKES.map((s) => s.id);
     assert.equal(new Set(ids).size, ids.length);
+  });
+
+  it("the wildcard division exists for hard mode", () => {
+    const designer = HOUSES.find((h) => h.id === "designer");
+    assert.ok(designer, "designer house missing");
+    assert.deepEqual(designer.localities, ["Captive Bred"]);
+    const wild = SNAKES.filter((s) => s.house === "designer");
+    assert.ok(wild.length >= 2, "wildcard mode needs designer animals in the mix");
+    for (const s of wild) {
+      assert.equal(s.locality, "Captive Bred");
+      assert.ok(s.neonate === "red" || s.neonate === "yellow");
+      assert.ok(s.clues.length === 3 && s.deepScan.length > 0 && s.lesson.length > 0);
+    }
+    assert.ok(HAT_LINES.correctHouse.designer.length > 0);
+  });
+
+  it("banks and sort options respect the mode", () => {
+    const classic = bankForMode("ceremony");
+    assert.ok(classic.length > 0);
+    assert.ok(classic.every((s) => s.house !== "designer"));
+    const endless = bankForMode("endless");
+    assert.ok(endless.every((s) => s.house !== "designer"));
+    const wild = bankForMode("wildcard");
+    assert.ok(wild.some((s) => s.house === "designer"));
+    assert.equal(sortHousesForMode("ceremony").length, 4);
+    assert.equal(sortHousesForMode("endless").length, 4);
+    assert.equal(sortHousesForMode("wildcard").length, 5);
+    assert.ok(sortHousesForMode("wildcard").some((h) => h.id === "designer"));
+  });
+
+  it("wildcard ceremonies guarantee designer animals in the mix", () => {
+    for (let i = 0; i < 25; i++) {
+      const order = ceremonyOrder("wildcard", 10);
+      assert.equal(order.length, 10);
+      assert.ok(
+        order.filter((s) => s.house === "designer").length >= 2,
+        "a wildcard ceremony shipped without its teeth",
+      );
+    }
+    const classic = ceremonyOrder("ceremony", 10);
+    assert.equal(classic.length, 10);
+    assert.ok(classic.every((s) => s.house !== "designer"));
   });
 });
