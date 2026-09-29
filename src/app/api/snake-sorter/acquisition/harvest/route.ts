@@ -60,10 +60,13 @@ export async function POST(request: NextRequest) {
   const openSources = await invokeHarvester("snake-sorter-harvest-open-sources", identity.token, limit);
 
   if (!openSources.ok) {
+    // Surface the edge function's real status (e.g. 404 when the function is
+    // not deployed) instead of masking everything as a 502.
+    const status = openSources.status >= 400 && openSources.status < 600 ? openSources.status : 502;
     return NextResponse.json({
       error: "Open-source harvest failed.",
       open_sources: openSources.data,
-    }, { status: Math.max(openSources.status, 502) });
+    }, { status });
   }
 
   return NextResponse.json({

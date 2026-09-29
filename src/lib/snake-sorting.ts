@@ -11,9 +11,10 @@
  * public/arcade/snake-sorting/snakes/ and set `photo` below.
  *
  * Ceremony flow per serpent: a Round One neonate-color wager (Red or
- * Yellow, small points — skipped for House Viridis, which hatches only
- * yellow), then Scales / Crown / Origin probes, then the House
- * (subspecies) call, then the native-haunts (locality) bonus.
+ * Yellow, small points — skipped only when the photo visibly shows a
+ * neonate, since the color is right there), then Scales / Crown / Origin
+ * probes, then the House (subspecies) call, then the native-haunts
+ * (locality) bonus.
  */
 
 export type HouseId = "azurea" | "utaraensis" | "pulcher" | "viridis" | "designer";
@@ -623,10 +624,6 @@ export const HAT_LINES = {
   neonateWrong: [
     "{picked}, you say? No — this serpent hatched {actual}. The probes will teach you.",
     "A miss! {actual} was its first color. No shame — the wager was only ever small.",
-  ],
-  viridisSkip: [
-    "House Viridis hatches only yellow babes — no wager on this one, keeper. Straight to the probes.",
-    "A southern serpent — Viridis babes are yellow, every last one. No wager here; on to the probes.",
   ],
   neonateVisible: [
     "A babe on the dais — its first color is right there before your eyes. No wager on this one, keeper; straight to the probes.",

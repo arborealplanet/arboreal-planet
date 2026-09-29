@@ -20,7 +20,7 @@ function positiveInt(value: FormDataEntryValue | null) {
 }
 
 // source_media_url is ALWAYS the listing page URL — never a CDN/image URL
-// (contract §7/§10). Screenshots only; no fetching remote image bytes.
+// (contract §2). Screenshots only; no fetching remote image bytes.
 function validListingPageUrl(raw: string | null) {
   if (!raw) return true;
   try {

@@ -107,25 +107,33 @@ export async function PATCH(request: NextRequest) {
     "pending";
   const acquisitionStage =
     reviewStatus === "approved" ? "biologically_approved" :
-    reviewStatus === "rejected" ? "awaiting_review" :
+    reviewStatus === "rejected" ? "rejected" :
     "awaiting_review";
 
-  await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(id)}`,
-    {
-      method: "PATCH",
-      headers: {
-        ...headers(identity.token),
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
+  let stageSyncWarning: string | null = null;
+  try {
+    const stageSyncResponse = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_acquisition_candidates?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...headers(identity.token),
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          biological_review_status: biologicalStatus,
+          acquisition_stage: acquisitionStage,
+        }),
+        cache: "no-store",
       },
-      body: JSON.stringify({
-        biological_review_status: biologicalStatus,
-        acquisition_stage: acquisitionStage,
-      }),
-      cache: "no-store",
-    },
-  ).catch(() => undefined);
+    );
+    if (!stageSyncResponse.ok) {
+      stageSyncWarning = "Review recorded, but the candidate stage could not be updated.";
+    }
+  } catch {
+    stageSyncWarning = "Review recorded, but the candidate stage could not be updated.";
+  }
 
-  return NextResponse.json({ ok: true, candidate });
+  return NextResponse.json({ ok: true, candidate, ...(stageSyncWarning ? { stage_sync_warning: stageSyncWarning } : {}) });
 }

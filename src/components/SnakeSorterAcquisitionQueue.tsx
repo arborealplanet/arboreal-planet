@@ -384,6 +384,7 @@ export function SnakeSorterAcquisitionQueue({
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) setMessage(data.error ?? "Could not update candidate.");
+    else if (data.stage_sync_warning) setMessage(String(data.stage_sync_warning));
     await load();
     setBusy("");
   }

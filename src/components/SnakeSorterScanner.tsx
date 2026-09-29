@@ -199,6 +199,22 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   const [nearestNeighbors, setNearestNeighbors] = useState(true);
   const [conservativeMode, setConservativeMode] = useState(true);
   const [frameSampling, setFrameSampling] = useState("balanced");
+  const [inferenceConfigured, setInferenceConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/snake-sorter/inference-status", { cache: "no-store" })
+      .then((response) => response.json().catch(() => ({})))
+      .then((data) => {
+        if (!cancelled) setInferenceConfigured(data?.configured === true);
+      })
+      .catch(() => {
+        if (!cancelled) setInferenceConfigured(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -720,7 +736,11 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
         {!analysisResult ? (
           <div className="mt-5 rounded-[24px] border border-dashed border-white/[.08] bg-black/[.06] p-8 text-center">
             <div className="text-sm font-semibold text-white/34">No classification result yet</div>
-            <div className="mt-2 text-xs leading-5 text-white/20">The capture/preprocessing pipeline is active. This panel will populate automatically when the production vision model is connected.</div>
+            {inferenceConfigured === false ? (
+              <div className="mt-2 text-xs leading-5 text-amber-100/45">The vision model is not connected yet, so scans are recorded but cannot return identifications. Capture and preprocessing are ready — connect the private inference service to enable results.</div>
+            ) : (
+              <div className="mt-2 text-xs leading-5 text-white/20">Run an identification above. The capture and preprocessing pipeline is active; this panel fills in when the analysis returns.</div>
+            )}
           </div>
         ) : (
           <div className="mt-5 grid gap-5 xl:grid-cols-[.9fr_1.1fr]">

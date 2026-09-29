@@ -72,14 +72,18 @@ export async function POST(request: NextRequest) {
 
   let analysisRunId: string | null = null;
   let activeModelId: string | null = null;
+  let activeModelVersion: string | null = null;
+  let registryLookupOk = false;
 
   const activeModelResponse = await fetch(
-    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_model_versions?status=eq.active&select=id&limit=1`,
+    `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_model_versions?status=eq.active&select=id,version&limit=1`,
     { headers: restHeaders(identity.token), cache: "no-store" }
   );
   if (activeModelResponse.ok) {
-    const rows = await activeModelResponse.json() as Array<{ id: string }>;
+    registryLookupOk = true;
+    const rows = await activeModelResponse.json() as Array<{ id: string; version?: string | null }>;
     activeModelId = rows[0]?.id ?? null;
+    activeModelVersion = rows[0]?.version ?? null;
   }
 
   const historyResponse = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs`, {
@@ -136,7 +140,27 @@ export async function POST(request: NextRequest) {
 
   if (engineResponse.status === "ready") {
     const servingModelId = engineResponse.result.modelRegistryId ?? null;
-    if (!activeModelId || !servingModelId || servingModelId !== activeModelId) {
+    const servingModelVersion = engineResponse.result.modelVersion ?? null;
+    // Only claim a registry mismatch when the registry was actually read and
+    // an active model is known. A failed lookup (or no active model) is a
+    // different, honest error — never a "mismatch".
+    const registryModelKnown = registryLookupOk && activeModelId !== null;
+    const servingMatchesRegistry =
+      registryModelKnown &&
+      ((servingModelId !== null && (servingModelId === activeModelId || servingModelId === activeModelVersion)) ||
+        (servingModelId === null && servingModelVersion !== null && servingModelVersion === activeModelVersion));
+    if (!servingMatchesRegistry) {
+      const errorCode = !registryLookupOk
+        ? "model_registry_unavailable"
+        : activeModelId === null
+          ? "no_active_model"
+          : "model_registry_mismatch";
+      const errorMessage =
+        errorCode === "model_registry_unavailable"
+          ? "The active model could not be verified in the Snake Sorter registry, so this scan was not accepted."
+          : errorCode === "no_active_model"
+            ? "No model is marked active in the Snake Sorter registry, so this scan was not accepted."
+            : "The inference service is not serving the model currently marked active in Snake Sorter.";
       if (analysisRunId) {
         await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_analysis_runs?id=eq.${encodeURIComponent(analysisRunId)}`, {
           method: "PATCH",
@@ -147,15 +171,16 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             status: "error",
-            error_code: "model_registry_mismatch",
+            error_code: errorCode,
             request_duration_ms: requestDurationMs,
             inference_duration_ms: inferenceDurationMs,
             completed_at: completedAt,
             result_payload: {
-              error: "model_registry_mismatch",
+              error: errorCode,
               active_model_id: activeModelId,
+              active_model_version: activeModelVersion,
               serving_model_id: servingModelId,
-              serving_model_version: engineResponse.result.modelVersion,
+              serving_model_version: servingModelVersion,
             },
           }),
           cache: "no-store",
@@ -163,11 +188,12 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({
-        error: "model_registry_mismatch",
-        message: "The inference service is not serving the model currently marked active in Snake Sorter.",
+        error: errorCode,
+        message: errorMessage,
         active_model_id: activeModelId,
+        active_model_version: activeModelVersion,
         serving_model_id: servingModelId,
-        serving_model_version: engineResponse.result.modelVersion,
+        serving_model_version: servingModelVersion,
         analysis_run_id: analysisRunId,
       }, { status: 503 });
     }

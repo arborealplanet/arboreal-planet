@@ -1354,7 +1354,7 @@ function TitleScreen({
       {showHow && (
         <div className="ss-rise mt-2 w-full space-y-2 rounded-2xl border border-white/10 bg-black/55 p-4 text-left backdrop-blur-sm">
           {[
-            ["① Wager", `Red or yellow? Call the serpent's neonate color before a single probe, +${NEONATE_POINTS}. House Viridis hatches only yellow — no wager there.`],
+            ["① Wager", `Red or yellow? Call the serpent's neonate color before a single probe, +${NEONATE_POINTS}. Every house faces the wager — even Viridis.`],
             ["② Probe", "Tap Scales, Crown and Origin to reveal the serpent's field marks."],
             ["③ Sort", "Call its House — Azurea, Utaraensis, Pulcher or Viridis. Faster calls earn up to +50. Certain? Call early for +25 per unrevealed probe (blind call: +75)."],
             ["④ Localize", `Native haunts: after a correct sort, name the homeland this blood is believed to hail from, +${LOCALITY_POINTS} — pure bonus points.`],
