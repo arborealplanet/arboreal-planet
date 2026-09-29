@@ -3,7 +3,7 @@ import { ReptileTrivia } from "@/components/ReptileTrivia";
 export const metadata = {
   title: "Reptile Trivia",
   description:
-    "A Reptile Trivia mini-game: ten questions on green tree pythons, snake biology, husbandry, and Arboreal Planet lore.",
+    "A Reptile Trivia mini-game: ten questions per round across six difficulty modes, covering tree pythons, tree boas, monitors, vipers, geckos, snake biology, husbandry, and Arboreal Planet lore.",
 };
 
 export default function ReptileTriviaPage() {

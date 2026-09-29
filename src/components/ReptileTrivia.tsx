@@ -4,11 +4,14 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   QUESTIONS_PER_ROUND,
   QUESTION_SECONDS,
+  TRIVIA_MODES,
   buildRound,
+  modeDef,
   rankFor,
   readBestScore,
   scoreFor,
   writeBestScore,
+  type TriviaMode,
   type TriviaQuestion,
 } from "@/lib/reptile-trivia";
 
@@ -18,6 +21,11 @@ const LETTERS = ["A", "B", "C", "D"];
 
 const CATEGORY_STYLES: Record<string, string> = {
   "Green Tree Pythons": "border-emerald-300/20 bg-emerald-300/[.07] text-emerald-200",
+  "Emerald Tree Boas": "border-teal-300/20 bg-teal-300/[.07] text-teal-200",
+  "Tree Monitors": "border-orange-300/20 bg-orange-300/[.07] text-orange-200",
+  "Boiga & Cat Snakes": "border-violet-300/20 bg-violet-300/[.07] text-violet-200",
+  "Arboreal Vipers": "border-red-300/20 bg-red-300/[.07] text-red-200",
+  "Arboreal Geckos": "border-indigo-300/20 bg-indigo-300/[.07] text-indigo-200",
   "Snake Biology": "border-sky-300/20 bg-sky-300/[.07] text-sky-200",
   Husbandry: "border-amber-200/20 bg-amber-200/[.07] text-amber-100",
   "Arboreal Planet": "border-fuchsia-300/20 bg-fuchsia-300/[.07] text-fuchsia-200",
@@ -29,8 +37,8 @@ function subscribeReducedMotion(onChange: () => void) {
   return () => query.removeEventListener("change", onChange);
 }
 
-function difficultyLabel(d: 1 | 2 | 3) {
-  return d === 1 ? "Easy" : d === 2 ? "Medium" : "Spicy";
+function difficultyLabel(d: TriviaQuestion["difficulty"]) {
+  return modeDef(TRIVIA_MODES.find((m) => m.difficulty === d)?.id ?? "normal").label;
 }
 
 export function ReptileTrivia() {
@@ -48,6 +56,7 @@ export function ReptileTrivia() {
   const [secondsLeft, setSecondsLeft] = useState(QUESTION_SECONDS);
   const [best, setBest] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [mode, setMode] = useState<TriviaMode>("normal");
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reducedMotion = useSyncExternalStore(
@@ -82,7 +91,7 @@ export function ReptileTrivia() {
   }, [phase, qi]);
 
   function start() {
-    setQuestions(buildRound());
+    setQuestions(buildRound(mode));
     setQi(0);
     setScore(0);
     setStreak(0);
@@ -93,9 +102,14 @@ export function ReptileTrivia() {
     setEliminated([]);
     setFiftyUsed(false);
     setSecondsLeft(QUESTION_SECONDS);
-    setBest(readBestScore());
+    setBest(readBestScore(mode));
     setIsNewBest(false);
     setPhase("question");
+  }
+
+  function backToIntro() {
+    setBest(readBestScore(mode));
+    setPhase("intro");
   }
 
   function pick(i: number) {
@@ -129,7 +143,7 @@ export function ReptileTrivia() {
     if (isLast) {
       const newBest = score > best;
       if (newBest) {
-        writeBestScore(score);
+        writeBestScore(mode, score);
         setBest(score);
       }
       setIsNewBest(newBest && score > 0);
@@ -161,8 +175,9 @@ export function ReptileTrivia() {
           Reptile Trivia
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/55">
-          Ten questions, fifteen seconds each. Green tree pythons, snake biology,
-          husbandry — and a little Arboreal Planet lore.
+          Ten questions, fifteen seconds each — across tree pythons, tree boas,
+          monitors, vipers, geckos, and more. Pick a difficulty, from canopy
+          basics to taxonomy deep cuts.
         </p>
       </div>
 
@@ -172,10 +187,38 @@ export function ReptileTrivia() {
           <h2 className="text-lg font-semibold text-white">How it works</h2>
           <ul className="mt-4 space-y-2 text-sm leading-6 text-white/55">
             <li>· {QUESTIONS_PER_ROUND} questions per round, {QUESTION_SECONDS} seconds on the clock.</li>
-            <li>· Harder questions pay more — speed and streaks pay extra.</li>
-            <li>· One 50/50 lifeline per round. Use it wisely.</li>
+            <li>· Pick a difficulty — harder modes ask tougher questions and pay more.</li>
+            <li>· Speed and streaks pay extra. One 50/50 lifeline per round.</li>
             <li>· Every answer comes with a quick explanation, so you learn as you play.</li>
           </ul>
+          <h3 className="mt-6 text-sm font-bold uppercase tracking-[.14em] text-white/45">
+            Choose difficulty
+          </h3>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {TRIVIA_MODES.map((m) => {
+              const active = m.id === mode;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    setMode(m.id);
+                    setBest(readBestScore(m.id));
+                  }}
+                  className={`rounded-2xl border px-3 py-3 text-left transition active:scale-[.98] ${
+                    active
+                      ? "border-emerald-300/60 bg-emerald-300/[.1]"
+                      : "border-white/[.08] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"
+                  }`}
+                >
+                  <div className={`text-sm font-bold ${active ? "text-emerald-100" : "text-white/80"}`}>
+                    {m.label}
+                  </div>
+                  <div className="mt-1 text-[11px] leading-4 text-white/45">{m.blurb}</div>
+                </button>
+              );
+            })}
+          </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {Object.keys(CATEGORY_STYLES).map((c) => (
               <span
@@ -196,7 +239,7 @@ export function ReptileTrivia() {
             onClick={start}
             className="mt-6 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
           >
-            Start round
+            Start {modeDef(mode).label} round
           </button>
         </div>
       )}
@@ -348,12 +391,12 @@ export function ReptileTrivia() {
         <div className="mx-auto mt-8 max-w-xl">
           <div className="rounded-[26px] border border-white/[.07] bg-white/[.02] p-6 text-center sm:p-8">
             <div className="text-[10px] font-bold uppercase tracking-[.2em] text-amber-100/60">
-              Final rank
+              {modeDef(mode).label} · Final rank
             </div>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-.02em] text-white">
-              {rankFor(score).title}
+              {rankFor(score, mode).title}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-white/55">{rankFor(score).blurb}</p>
+            <p className="mt-2 text-sm leading-6 text-white/55">{rankFor(score, mode).blurb}</p>
             <p className="mt-4 text-5xl font-bold tabular-nums text-emerald-200">
               {score.toLocaleString()}
             </p>
@@ -392,6 +435,13 @@ export function ReptileTrivia() {
               className="mt-6 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
             >
               Play again
+            </button>
+            <button
+              type="button"
+              onClick={backToIntro}
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-white/[.03] px-6 py-3 text-sm font-bold text-white/60 transition hover:bg-white/[.06] hover:text-white"
+            >
+              Change difficulty
             </button>
           </div>
         </div>
