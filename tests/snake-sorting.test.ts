@@ -76,6 +76,13 @@ describe("snake-sorting neonate round data", () => {
       { id: "ghost", house: "viridis", locality: "Aru", neonate: "yellow" },
       { id: "fern", house: "viridis", locality: "Aru", neonate: "yellow" },
       { id: "zephyr", house: "utaraensis", locality: "Jayapura", neonate: "yellow" },
+      { id: "yapen-1", house: "utaraensis", locality: "Yapen", neonate: "yellow" },
+      { id: "sorong-2", house: "pulcher", locality: "Sorong", neonate: "red" },
+      { id: "aru-5", house: "viridis", locality: "Aru", neonate: "yellow" },
+      { id: "merauke-2", house: "viridis", locality: "Merauke", neonate: "yellow" },
+      { id: "merauke-3", house: "viridis", locality: "Merauke", neonate: "yellow" },
+      { id: "merauke-4", house: "viridis", locality: "Merauke", neonate: "yellow" },
+      { id: "cyclops-3", house: "utaraensis", locality: "Cyclops", neonate: "red" },
     ] as const;
     for (const e of expected) {
       const s = SNAKES.find((x) => x.id === e.id);
@@ -141,12 +148,12 @@ describe("snake-sorting neonate round data", () => {
   });
 
   it("visible neonates are flagged so the wager is skipped", () => {
-    for (const id of ["spark", "ash", "pip"]) {
+    for (const id of ["spark", "ash", "pip", "yapen-1", "merauke-2", "merauke-3"]) {
       const s = SNAKES.find((x) => x.id === id);
       assert.ok(s, `${id} missing`);
       assert.equal(s.isNeonate, true);
     }
-    assert.ok(SNAKES.filter((s) => s.isNeonate).length === 3);
+    assert.ok(SNAKES.filter((s) => s.isNeonate).length === 6);
   });
 
   it("the alternate photo never shares a lineup with its twin", () => {

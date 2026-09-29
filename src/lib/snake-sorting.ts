@@ -58,7 +58,7 @@ export const HOUSES: House[] = [
     glow: "rgba(52,211,153,.45)",
     motto: "Sharp eyes, northern skies.",
     region: "Northern Mainland",
-    localities: ["Cyclops", "Jayapura", "Lereh", "Wamena"],
+    localities: ["Cyclops", "Jayapura", "Lereh", "Wamena", "Yapen"],
     marks:
       "The northern house. Blue striping down the dorsum and high white markings are the signature — the blue stripe never lies.",
   },
@@ -303,6 +303,39 @@ export const SNAKES: SortingSnake[] = [
     lesson:
       "The cruelest trap in the ceremony: a red baby with black edging, straight out of the Azurea playbook. But Azurea never touches the mainland — Cyclops is northern ground, and the blue ghosting under the black is pure Utaraensis.",
   },
+  {
+    id: "cyclops-3",
+    name: "Cyclops",
+    house: "utaraensis",
+    locality: "Cyclops",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/cyclops-3.webp",
+    clues: [
+      { probe: "scales", label: "Adult scales", text: "Deep green coils, blue washing the flanks, white-gold flecks scattered throughout." },
+      { probe: "crown", label: "Head", text: "A broad green crown — gold dusting the snout, blue creeping up the neck." },
+      { probe: "origin", label: "Homeland", text: "Foothills rising steep behind the north coast." },
+    ],
+    deepScan: "Red-hatched, blue-flanked adult from the steep north-coast foothills. Northern mainland blood: Utaraensis.",
+    lesson:
+      "A red baby turned blue-flanked northern adult — the Cyclops Utaraensis arc.",
+  },
+  {
+    id: "yapen-1",
+    name: "Yapen",
+    house: "utaraensis",
+    locality: "Yapen",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/yapen-1.webp",
+    isNeonate: true,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — rust-red markings traced in white, scattered like broken chain links." },
+      { probe: "crown", label: "Head", text: "A yellow crown with rust-red bleeding back from the eyes." },
+      { probe: "origin", label: "Homeland", text: "A small island off New Guinea's north coast — isolated canopy, monsoon winds." },
+    ],
+    deepScan: "Yellow baby, white-traced red markings, a northern island isolate. The far north keeps its own: Utaraensis.",
+    lesson:
+      "White-traced red on a yellow neonate from a northern island — the Yapen signature, House Utaraensis.",
+  },
 
   {
     id: "topaz",
@@ -320,6 +353,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Yellow retention plus blue bleeding down the neck, Bird's Head lowlands. Western gold, blue-kissed: Pulcher.",
     lesson:
       "Clean yellow retention with blue tones is what western breeders prize most — the defining Pulcher combination, from the Bird's Head lowlands around Sorong.",
+  },
+  {
+    id: "sorong-2",
+    name: "Sorong",
+    house: "pulcher",
+    locality: "Sorong",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/sorong-2.webp",
+    clues: [
+      { probe: "scales", label: "Adult scales", text: "Blue-green coils wound tight — the red baby long gone, but the island blue stayed." },
+      { probe: "crown", label: "Head", text: "Head buried deep in the coil — a blue-washed crown glimpsed between the loops." },
+      { probe: "origin", label: "Homeland", text: "Lowland forest on the western peninsula — hot, wet Bird's Head country." },
+    ],
+    deepScan: "Red-hatched, blue-washed adult from the western peninsula lowlands. Only one house wears that combination: Pulcher.",
+    lesson:
+      "A red-hatched baby that kept its blue into adulthood — the Sorong Pulcher signature.",
   },
 
   {
@@ -437,6 +486,56 @@ export const SNAKES: SortingSnake[] = [
       "The southernmost blood in the game. Heavy black lateral blotching with white lips near Merauke is House Viridis at its most classic.",
   },
   {
+    id: "merauke-2",
+    name: "Merauke",
+    house: "viridis",
+    locality: "Merauke",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/merauke-2.webp",
+    isNeonate: true,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Yellow neonate — dark dorsal dashes marching down a gold back." },
+      { probe: "crown", label: "Head", text: "A gold crown, dark flecks reaching all the way to the snout." },
+      { probe: "origin", label: "Homeland", text: "Far southern lowlands — swamp forest near the south coast." },
+    ],
+    deepScan: "Yellow baby, dark-marked, deep southern lowlands. Viridis, no contest.",
+    lesson:
+      "Dark-marked yellow neonate from the deep south — Merauke Viridis.",
+  },
+  {
+    id: "merauke-3",
+    name: "Merauke",
+    house: "viridis",
+    locality: "Merauke",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/merauke-3.webp",
+    isNeonate: true,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "Yellow hatchling — still half in the egg, rust saddles already painted on." },
+      { probe: "crown", label: "Head", text: "A tiny gold crown pushing out of the shell." },
+      { probe: "origin", label: "Homeland", text: "A southern clutch — lowland swamp forest at the bottom of the island." },
+    ],
+    deepScan: "Yellow straight out of the egg, from a deep-southern clutch. Viridis.",
+    lesson:
+      "Yellow hatchlings in a southern clutch — Merauke Viridis, straight from the shell.",
+  },
+  {
+    id: "merauke-4",
+    name: "Merauke",
+    house: "viridis",
+    locality: "Merauke",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/merauke-4.webp",
+    clues: [
+      { probe: "scales", label: "Adult scales", text: "Green coils with a dotted white line running down the spine." },
+      { probe: "crown", label: "Head", text: "A calm green crown, dark eyes, white lips." },
+      { probe: "origin", label: "Homeland", text: "Forest edge near the southern savanna — hot, bright, far south." },
+    ],
+    deepScan: "Yellow-hatched, white-dotted green adult from the far southern edge. The southernmost house: Viridis.",
+    lesson:
+      "White vertebral dots on a southern green adult — Merauke Viridis.",
+  },
+  {
     id: "ghost",
     name: "“Ghost”",
     house: "viridis",
@@ -483,6 +582,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Southern islands, yellow baby, scattered white petals. Viridis.",
     lesson:
       "Scattered white without a pattern still reads southern — the Aru Viridis look, fern division.",
+  },
+  {
+    id: "aru-5",
+    name: "Aru",
+    house: "viridis",
+    locality: "Aru",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/aru-5.webp",
+    clues: [
+      { probe: "scales", label: "Adult scales", text: "Green coils dusted with white — southern confetti on every loop." },
+      { probe: "crown", label: "Head", text: "Head resting low in the coils — a calm green crown, pale lips." },
+      { probe: "origin", label: "Homeland", text: "A southern archipelago — low islands, monsoon winds." },
+    ],
+    deepScan: "Yellow-hatched, white-dusted green adult from the far southern islands. The ancient southern combination: Viridis.",
+    lesson:
+      "Yellow baby, white-dusted green, far southern islands — the Aru Viridis look.",
   },
   /* ---- Wildcard division: designer morphs and hybrid crosses join here as
      their photos arrive. Only the wildcard hard mode deals these; the
