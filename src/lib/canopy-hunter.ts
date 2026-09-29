@@ -31,14 +31,15 @@ export const TRAIL_SIGN_LABELS: Record<TrailSignKind, { label: string; hint: str
 
 /**
  * Roll the sign for the trail hiding tonight's python. Legendary signs are
- * rare: they mark a grove holding a primed, exceptional animal.
+ * rare: they mark a grove holding a primed, exceptional animal. Hot
+ * (intel-flagged) regions throw legendary signs twice as often.
  */
-export function rollPythonTrailSign(random: RandomFn = Math.random): TrailSignKind | null {
+export function rollPythonTrailSign(random: RandomFn = Math.random, hot = false): TrailSignKind | null {
   const r = random();
   if (r < 0.30) return null; // the canopy keeps quiet
   if (r < 0.55) return "rustle";
   if (r < 0.72) return "shed";
-  if (r < 0.90) return "tracks";
+  if (r < (hot ? 0.8 : 0.9)) return "tracks";
   return "legendary";
 }
 
@@ -64,6 +65,79 @@ export const GRAVID_GESTATION_MS = 24 * 60 * 60 * 1000;
  */
 export const EXPEDITION_FREE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 export const EXPEDITION_ENTRY_FEE = 2500;
+
+/* ------------------------------------------------------------------ */
+/* Permits, field intel, grove recovery                                */
+/* ------------------------------------------------------------------ */
+
+/** A targeting permit: choose your subspecies, hunt its region. */
+export const EXPEDITION_PERMIT_FEE = 6000;
+/** Permit nights run longer: two extra groves, two extra pythons. */
+export const PERMIT_GROVES = 6;
+/** Permit nights grant two specialist tools (lure or sure-grip). */
+export const PERMIT_TOKENS = 2;
+/** Hunted groves rest before they can be visited again. */
+export const REGION_RECOVERY_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** Subspecies → the region a permit for it hunts. */
+export const SUBSPECIES_REGION_ID: Record<CanopySubspecies, CanopyRegion["id"]> = {
+  "Morelia azurea azurea": "cenderawasih",
+  "Morelia azurea pulcher": "birds-head",
+  "Morelia azurea utaraensis": "highlands",
+  "Morelia viridis": "southern",
+};
+
+export function regionForSubspecies(sub: CanopySubspecies): CanopyRegion {
+  const region = CANOPY_REGIONS.find((r) => r.id === SUBSPECIES_REGION_ID[sub]);
+  if (!region) throw new Error(`No permit region for ${sub}`);
+  return region;
+}
+
+/** FNV-1a — seeds the weekly intel draw. */
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = ((t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t) >>> 0;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Week key like "2026-W40" — the intel board's identity. */
+export function intelWeekKey(d: Date = new Date()): string {
+  const start = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - start.getTime()) / 86400000);
+  const week = Math.floor((days + start.getDay()) / 7);
+  return `${d.getFullYear()}-W${week}`;
+}
+
+/**
+ * Two hot regions per week, seeded — identical for every keeper.
+ * Hot regions throw legendary signs (trophy groves) twice as often.
+ */
+export function intelHotRegions(weekKey: string = intelWeekKey()): CanopyRegion[] {
+  const rand = mulberry32(hashStr(`intel:${weekKey}`));
+  const ids = CANOPY_REGIONS.map((r) => r.id);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids
+    .slice(0, 2)
+    .map((id) => CANOPY_REGIONS.find((r) => r.id === id))
+    .filter((r): r is CanopyRegion => !!r);
+}
 
 /**
  * One-shot intent: lets a screen outside the Keeper game (e.g. the home
@@ -452,20 +526,30 @@ export function generateWildSnake(
    * signature traits floored high. These are the night's trophy animals.
    */
   prime = false,
+  /**
+   * Permit nights: the keeper came hunting with intent. Signature traits
+   * roll floored at 30 and exceptional animals show up far more often —
+   * phenotype runs hot. Locality rarity is untouched: Kofiau stays a ghost.
+   */
+  permit = false,
 ): WildSnake {
   const { locality, neonateColor } = rollLocalityPhase(region, random);
   const subspecies = CANOPY_LOCALITY_SUBSPECIES[locality];
   const sex: CanopySex = random() < 0.5 ? "Male" : "Female";
   const stage = lifeStage ?? rollLifeStage(random);
 
-  const exceptional = prime || random() < 0.08;
+  const exceptional = prime || random() < (permit ? 0.2 : 0.08);
   // Regional trait lean mirrors the Keeper's preferred-trait rarity curve:
   // the region's signature traits roll the preferred distribution, every
   // other trait rolls the long-tail common distribution.
   const signature = (key: CanopyTraitKey) => region.traitLean.includes(key);
   const rollTrait = (key: CanopyTraitKey) => {
     const value = rollWildTrait(random, signature(key));
-    return prime && signature(key) ? Math.max(50, value) : value;
+    if (signature(key)) {
+      if (prime) return Math.max(50, value);
+      if (permit) return Math.max(30, value);
+    }
+    return value;
   };
   const traits: CanopyTraits = {
     highBlack: rollTrait("highBlack"),
@@ -499,7 +583,9 @@ export function generateWildSnake(
       : null,
     prime,
     gravid,
-    notes: `Caught in a Canopy Hunter ${region.name} expedition.`,
+    notes: permit
+      ? `Caught on a Canopy Hunter permit expedition — ${region.name}, targeting ${subspecies}.`
+      : `Caught in a Canopy Hunter ${region.name} expedition.`,
   };
 }
 

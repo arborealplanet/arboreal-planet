@@ -11,14 +11,21 @@ import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor, needsExtr
 import IntroCinematic from "@/components/IntroCinematic";
 import { CanopyHunter } from "@/components/CanopyHunter";
 import {
+  CANOPY_REGIONS,
   EXPEDITION_ENTRY_FEE,
   EXPEDITION_FREE_COOLDOWN_MS,
+  EXPEDITION_PERMIT_FEE,
   EXPEDITION_PYTHONS,
+  PERMIT_GROVES,
+  REGION_RECOVERY_MS,
+  SUBSPECIES_REGION_ID,
   consumeExpeditionOpenRequest,
   flightVideoForRegion,
-  rollRegion,
+  intelHotRegions,
+  regionForSubspecies,
   wildSnakeToKeeperSnake,
   type CanopyRegion,
+  type CanopySubspecies,
   type WildSnake,
 } from "@/lib/canopy-hunter";
 
@@ -184,6 +191,8 @@ type GameSave = {
   // Canopy Hunter expedition cadence (saved): next timestamp when the free
   // weekly expedition becomes available again.
   expeditionNextAt?: number;
+  /** Region id → timestamp when its groves finish recovering. */
+  regionRecovery?: Record<string, number>;
 };
 
 type RandomFn = () => number;
@@ -903,6 +912,12 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [expeditionOpen, setExpeditionOpen] = useState(false);
   const [expeditionEntered, setExpeditionEntered] = useState(false);
   const [expeditionNextAt, setExpeditionNextAt] = useState(0);
+  /** Grove recovery: region id → timestamp when it can be hunted again. */
+  const [regionRecovery, setRegionRecovery] = useState<Record<string, number>>({});
+  /** Permit flow: chosen subspecies, two-tap arm, and the active permit night. */
+  const [permitSubspecies, setPermitSubspecies] = useState<CanopySubspecies | null>(null);
+  const [permitArmed, setPermitArmed] = useState(false);
+  const [permitActive, setPermitActive] = useState(false);
   const [expeditionFeeArmed, setExpeditionFeeArmed] = useState(false);
   const expeditionFeeArmTimer = useRef<number | null>(null);
   const [expeditionResult, setExpeditionResult] = useState<string | null>(null);
@@ -1021,6 +1036,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     // Canopy Hunter expedition cadence. Older saves predate the field, so a
     // missing value means "free expedition available now".
     setExpeditionNextAt(typeof chosen.expeditionNextAt === "number" ? chosen.expeditionNextAt : 0);
+    setRegionRecovery(
+      chosen.regionRecovery && typeof chosen.regionRecovery === "object" ? chosen.regionRecovery : {},
+    );
   }, []);
 
   const storeEpoch = Math.floor(now / DAY_MS);
@@ -1210,6 +1228,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       clutchEstablished,
       cinematicSeen,
       expeditionNextAt,
+      regionRecovery,
       updatedAt,
     };
     latestSaveRef.current = save;
@@ -1228,7 +1247,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       }).catch(() => undefined);
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage, clutchEstablished, cinematicSeen, expeditionNextAt]);
+  }, [hydrated, cloudSave, started, cash, colony, tested, damId, sireId, clutch, clutchHistory, holdbacks, season, sales, transfers, enclosures, purchasedStoreIds, careerReputation, facilityRooms, facilityConstruction, breedingCycle, geneticTestsPending, femaleRecovery, seasonCarePaid, breedingMessage, clutchEstablished, cinematicSeen, expeditionNextAt, regionRecovery]);
 
   useEffect(() => {
     const flushLatestSave = () => {
@@ -1591,12 +1610,21 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const expeditionFreeReady = expeditionUnlimited || now >= expeditionNextAt;
   const expeditionFreeInDays = Math.max(1, Math.ceil((expeditionNextAt - now) / DAY_MS));
 
+  /** This week's field intel: two hot regions, identical for every keeper. */
+  const hotRegions = intelHotRegions();
+  const isHotRegion = (id: string) => hotRegions.some((r) => r.id === id);
+  const isRecovering = (id: string) => (regionRecovery[id] ?? 0) > now;
+  const recoveryInDays = (id: string) =>
+    Math.max(1, Math.ceil(((regionRecovery[id] ?? now) - now) / DAY_MS));
+
   function closeExpedition() {
     setExpeditionOpen(false);
     setExpeditionEntered(false);
     setExpeditionFeeArmed(false);
     setExpeditionRegion(null);
     setExpeditionFlightDone(false);
+    setPermitActive(false);
+    setPermitArmed(false);
   }
 
   // Back out of a finished run to the entry gate (free/paid). The gate —
@@ -1606,17 +1634,28 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     setExpeditionFeeArmed(false);
     setExpeditionRegion(null);
     setExpeditionFlightDone(false);
+    setPermitActive(false);
+    setPermitArmed(false);
   }
 
-  // Rolls tonight's destination, queues its flight intro, and marks the
-  // player as entered. Reduced-motion players skip the flight video.
-  function beginExpeditionFlight() {
-    setExpeditionRegion(rollRegion());
+  // Flies to a destination, queues its flight intro, and marks the player
+  // as entered. Reduced-motion players skip the flight video. The hunted
+  // region's groves go into recovery — no revisits for 3 days.
+  function beginExpeditionFlight(region: CanopyRegion) {
+    setExpeditionRegion(region);
+    setRegionRecovery((r) => ({ ...r, [region.id]: Date.now() + REGION_RECOVERY_MS }));
     const skipFlight =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setExpeditionFlightDone(skipFlight);
     setExpeditionEntered(true);
+  }
+
+  /** Random destination, skipping recovering regions when any are rested. */
+  function rollAvailableRegion(): CanopyRegion {
+    const rested = CANOPY_REGIONS.filter((r) => !isRecovering(r.id));
+    const pool = rested.length > 0 ? rested : CANOPY_REGIONS;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   // An expedition can catch up to EXPEDITION_PYTHONS snakes, so it only
@@ -1626,7 +1665,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     if (!started || !expeditionFreeReady || openSlots < EXPEDITION_PYTHONS) return;
     // Exempt accounts never burn the weekly cooldown — every trip is free.
     if (!expeditionUnlimited) setExpeditionNextAt(Date.now() + EXPEDITION_FREE_COOLDOWN_MS);
-    beginExpeditionFlight();
+    setPermitActive(false);
+    beginExpeditionFlight(rollAvailableRegion());
   }
 
   function enterExpeditionPaid() {
@@ -1640,7 +1680,31 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     }
     setCash((c) => c - EXPEDITION_ENTRY_FEE);
     setExpeditionFeeArmed(false);
-    beginExpeditionFlight();
+    setPermitActive(false);
+    beginExpeditionFlight(rollAvailableRegion());
+  }
+
+  /**
+   * Permit night: the keeper picks a subspecies and hunts its region —
+   * longer night (6 groves), trait-boosted animals, two specialist tools.
+   * Permits always cost, even on a free week. Two-tap to confirm.
+   */
+  function enterExpeditionPermit(sub: CanopySubspecies) {
+    if (!started || openSlots < PERMIT_GROVES) return;
+    const region = regionForSubspecies(sub);
+    if (isRecovering(region.id)) return;
+    if (cash < EXPEDITION_PERMIT_FEE) return;
+    if (permitSubspecies !== sub || !permitArmed) {
+      setPermitSubspecies(sub);
+      setPermitArmed(true);
+      if (expeditionFeeArmTimer.current !== null) window.clearTimeout(expeditionFeeArmTimer.current);
+      expeditionFeeArmTimer.current = window.setTimeout(() => setPermitArmed(false), 5000);
+      return;
+    }
+    setCash((c) => c - EXPEDITION_PERMIT_FEE);
+    setPermitArmed(false);
+    setPermitActive(true);
+    beginExpeditionFlight(region);
   }
 
   function handleExpeditionCatch(wilds: WildSnake[]) {
@@ -2225,6 +2289,81 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                     </button>
                   </div>
                 )}
+
+                {/* Field intel + permits */}
+                <div className="mt-6 rounded-2xl border border-white/[.07] bg-white/[.02] p-4">
+                  <p className="text-[11px] font-black uppercase tracking-[.16em] text-white/45">
+                    📡 Field intel — this week
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-white/65">
+                    🔥 Hot: {hotRegions.map((r) => r.name).join(" · ")} — trophy signs twice as common there.
+                  </p>
+                  {CANOPY_REGIONS.some((r) => isRecovering(r.id)) && (
+                    <p className="mt-1 text-xs leading-5 text-white/40">
+                      🌿 Recovering:{" "}
+                      {CANOPY_REGIONS.filter((r) => isRecovering(r.id))
+                        .map((r) => `${r.name} (${recoveryInDays(r.id)}d)`)
+                        .join(" · ")}
+                    </p>
+                  )}
+                  <p className="mt-3 text-[11px] font-black uppercase tracking-[.16em] text-amber-200/70">
+                    🎫 Targeting permit · {money(EXPEDITION_PERMIT_FEE)}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/50">
+                    Choose your subspecies — {PERMIT_GROVES} groves, trait-boosted animals, and 2 specialist tools (scent lure + sure grip). Rare localities stay rare.
+                  </p>
+                  {openSlots < PERMIT_GROVES && (
+                    <p className="mt-2 text-xs font-bold text-red-300/80">
+                      Permits bring home up to {PERMIT_GROVES} snakes — free up housing first.
+                    </p>
+                  )}
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    {(Object.keys(SUBSPECIES_REGION_ID) as CanopySubspecies[]).map((sub) => {
+                      const region = regionForSubspecies(sub);
+                      const recovering = isRecovering(region.id);
+                      const hot = isHotRegion(region.id);
+                      const selected = permitSubspecies === sub;
+                      const short = sub.replace("Morelia ", "").replace("azurea ", "a. ");
+                      return (
+                        <button
+                          key={sub}
+                          type="button"
+                          disabled={recovering || openSlots < PERMIT_GROVES || cash < EXPEDITION_PERMIT_FEE}
+                          onClick={() => enterExpeditionPermit(sub)}
+                          className={`rounded-xl border px-4 py-3 text-left transition active:scale-[.99] disabled:opacity-40 ${
+                            selected
+                              ? "border-amber-200/50 bg-amber-200/[.1]"
+                              : "border-white/10 bg-white/[.03] hover:bg-white/[.06]"
+                          }`}
+                        >
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold text-white/85">
+                              <em>{short}</em>
+                            </span>
+                            <span className="text-[11px] font-bold uppercase tracking-[.1em] text-white/40">
+                              {recovering ? `🌿 ${recoveryInDays(region.id)}d` : hot ? "🔥 hot" : region.name}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 block text-xs text-white/45">
+                            {region.name} — {region.tagline}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!permitSubspecies || openSlots < PERMIT_GROVES || cash < EXPEDITION_PERMIT_FEE || isRecovering(regionForSubspecies(permitSubspecies).id)}
+                    onClick={() => permitSubspecies && enterExpeditionPermit(permitSubspecies)}
+                    className="mt-3 w-full rounded-2xl bg-amber-200 px-6 py-4 text-base font-bold text-[#171106] transition hover:bg-amber-100 active:scale-[.99] disabled:opacity-30"
+                  >
+                    {!permitSubspecies
+                      ? "Pick a subspecies above"
+                      : permitArmed
+                        ? `Tap again to confirm — ${money(EXPEDITION_PERMIT_FEE)}`
+                        : `Buy permit & head out · ${money(EXPEDITION_PERMIT_FEE)}`}
+                  </button>
+                </div>
               </div>
             ) : expeditionEntered && expeditionRegion && !expeditionFlightDone ? (
               <div role="dialog" aria-modal="true" aria-label={`Flying to ${expeditionRegion.name}`} className="fixed inset-0 z-[70] bg-black">
@@ -2248,7 +2387,14 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
               </div>
             ) : (
               <div className="mt-4">
-                <CanopyHunter region={expeditionRegion} onCatch={handleExpeditionCatch} onClose={closeExpedition} onExitToGate={exitExpeditionToGate} />
+                <CanopyHunter
+                  region={expeditionRegion}
+                  permit={permitActive}
+                  hot={expeditionRegion ? isHotRegion(expeditionRegion.id) : false}
+                  onCatch={handleExpeditionCatch}
+                  onClose={closeExpedition}
+                  onExitToGate={exitExpeditionToGate}
+                />
               </div>
             )}
           </div>

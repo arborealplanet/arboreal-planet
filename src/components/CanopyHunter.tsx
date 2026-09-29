@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
-  EXPEDITION_PYTHONS,
   EXPEDITION_SEARCHES,
   EXPEDITION_RANK_LINES,
   CANOPY_LOCALITIES,
@@ -19,6 +18,8 @@ import {
   loadCanopyCodex,
   nightPhaseForLeg,
   nightfallForLeg,
+  PERMIT_GROVES,
+  PERMIT_TOKENS,
   randomEscapeLine,
   randomShedLine,
   recordCanopyCodex,
@@ -343,6 +344,8 @@ export function CanopyHunter({
   onClose,
   onExitToGate,
   region: regionProp,
+  permit = false,
+  hot = false,
 }: {
   onCatch: (wilds: WildSnake[]) => void;
   onClose: () => void;
@@ -350,7 +353,12 @@ export function CanopyHunter({
   onExitToGate: () => void;
   /** Pre-rolled expedition region (the flight intro already picked one). Falls back to rolling. */
   region?: CanopyRegion | null;
+  /** Permit night: longer run, trait-boosted animals, two specialist tools. */
+  permit?: boolean;
+  /** Intel-flagged region: legendary signs show up twice as often. */
+  hot?: boolean;
 }) {
+  const grovesPerExpedition = permit ? PERMIT_GROVES : GROVES_PER_EXPEDITION;
   const [phase, setPhase] = useState<Phase>("briefing");
   const [region, setRegion] = useState<CanopyRegion | null>(null);
   const [legs, setLegs] = useState<Leg[]>([]);
@@ -380,6 +388,8 @@ export function CanopyHunter({
   const [escapedSpots, setEscapedSpots] = useState<number[]>([]);
   const [journal, setJournal] = useState<string[]>([]);
   const [groveNote, setGroveNote] = useState<string | null>(null);
+  /** Permit tools remaining: each token is a scent lure or a sure grip. */
+  const [tokens, setTokens] = useState(permit ? PERMIT_TOKENS : 0);
   const [catchTree, setCatchTree] = useState<number | null>(null);
   const [zoneCenter, setZoneCenter] = useState(0.5);
   const [catchResolved, setCatchResolved] = useState(false);
@@ -434,25 +444,26 @@ export function CanopyHunter({
   }, [phase, catchResolved, period]);
 
   /* Auto-advance to results when every python is found. Searches refresh per
-     grove, so the night always runs all four groves. */
+     grove, so the night always runs every grove. */
   useEffect(() => {
     if (phase !== "trail" && phase !== "grove") return;
-    if (resolvedCount >= EXPEDITION_PYTHONS) {
+    if (resolvedCount >= grovesPerExpedition) {
       const t = setTimeout(() => setPhase("results"), 700);
       return () => clearTimeout(t);
     }
-  }, [phase, resolvedCount]);
+  }, [phase, resolvedCount, grovesPerExpedition]);
 
   function startExpedition() {
     // User gesture: the one safe moment to wake the Web Audio engine.
     startJungleMusic();
+    setTokens(permit ? PERMIT_TOKENS : 0);
     const expeditionRegion = regionProp ?? rollRegion();
     const regionTrees = CANOPY_REGION_TREES[expeditionRegion.id];
     const regionPlants = CANOPY_REGION_PLANTS[expeditionRegion.id];
     const treeVariants = regionTrees.length > 0 ? regionTrees.length : TREE_ARTS.length;
     const plantVariants = regionPlants.length;
     const nextLegs: Leg[] = [];
-    for (let g = 0; g < GROVES_PER_EXPEDITION; g += 1) {
+    for (let g = 0; g < grovesPerExpedition; g += 1) {
       const trailCount = pickTrailCount();
       const pythonTrail = Math.floor(Math.random() * trailCount);
       const trails: TrailOption[] = [];
@@ -481,7 +492,7 @@ export function CanopyHunter({
           pythonLifeStage,
           // The signs aren't always readable — some nights the canopy keeps
           // quiet, and cold trails sometimes lie with a stale shed.
-          sign: hidesPython ? rollPythonTrailSign() : rollEmptyTrailSign(),
+          sign: hidesPython ? rollPythonTrailSign(Math.random, hot) : rollEmptyTrailSign(),
         });
       }
       nextLegs.push({ trails });
@@ -542,6 +553,7 @@ export function CanopyHunter({
           Math.random,
           trail.pythonLifeStage,
           prime,
+          permit,
         );
         wildIdRef.current += 1;
         if (prime) {
@@ -605,10 +617,10 @@ export function CanopyHunter({
     log(`Grove ${legIndex + 1} — shed examined. ${clue}`);
   }
 
-  function grab() {
+  function grab(force = false) {
     if (phase !== "catch" || catchResolved || catchTree === null) return;
     const pos = sweepPos(performance.now() - sweepStartRef.current, period);
-    const success = Math.abs(pos - zoneCenter) <= zoneHalf;
+    const success = force || Math.abs(pos - zoneCenter) <= zoneHalf;
     const wild = groveWilds[catchTree];
     setCatchSuccess(success);
     setCatchResolved(true);
@@ -646,6 +658,47 @@ export function CanopyHunter({
     }
   }
 
+  /**
+   * Permit tool — scent lure. Draws the grove's python straight out: no
+   * search spent, straight to the catch. Deployable at any grove.
+   */
+  function deployLure() {
+    if (phase !== "grove" || tokens <= 0 || !grove) return;
+    const spot = grove.pythonSpot;
+    const wild = spot !== null ? groveWilds[spot] : undefined;
+    if (spot === null || !wild || bag.includes(wild) || escapedSpots.includes(spot)) return;
+    setTokens((t) => t - 1);
+    setCatchTree(spot);
+    setZoneCenter(rollZoneCenter());
+    setCatchResolved(false);
+    setCatchMessage(null);
+    setGroveNote(null);
+    log(`Grove ${legIndex + 1} — scent lure deployed. ${wild.name} slides out to investigate.`);
+    setPhase("catch");
+  }
+
+  /**
+   * Permit tool — sure grip. The grab cannot miss. Deployable at any catch.
+   */
+  function deploySureGrip() {
+    if (phase !== "catch" || catchResolved || tokens <= 0) return;
+    setTokens((t) => t - 1);
+    log(`Grove ${legIndex + 1} — sure grip. No mistakes this time.`);
+    grab(true);
+  }
+
+  /** Whether the scent lure has a live target in the current grove. */
+  const lureSpot = grove?.pythonSpot ?? null;
+  const lureWild = lureSpot !== null ? groveWilds[lureSpot] : undefined;
+  const canLure =
+    permit &&
+    phase === "grove" &&
+    tokens > 0 &&
+    lureWild !== undefined &&
+    !bag.includes(lureWild) &&
+    !escapedSpots.includes(lureSpot as number);
+  const canSureGrip = permit && phase === "catch" && !catchResolved && tokens > 0;
+
   function backToGrove() {
     setCatchTree(null);
     setPhase("grove");
@@ -653,7 +706,7 @@ export function CanopyHunter({
 
   function followTrail() {
     setGroveNote(null);
-    if (legIndex + 1 >= GROVES_PER_EXPEDITION) {
+    if (legIndex + 1 >= grovesPerExpedition) {
       log(`${nightPhaseForLeg(legIndex)} — the night ends.`);
       setPhase("results");
     } else {
@@ -756,21 +809,28 @@ export function CanopyHunter({
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(4,10,8,.92)_100%)]" />
             <div className="absolute bottom-3 left-5 right-5">
               <h2 className="text-lg font-semibold text-white">Expedition briefing</h2>
-              <p className="text-xs text-white/55">Four groves. One night. Your flashlight and your instincts.</p>
+              <p className="text-xs text-white/55">
+                {permit
+                  ? `Permit night — ${PERMIT_GROVES} groves, trait-boosted animals, and ${PERMIT_TOKENS} specialist tools.`
+                  : "Four groves. One night. Your flashlight and your instincts."}
+              </p>
             </div>
           </div>
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
-            <li>· {GROVES_PER_EXPEDITION} groves along the trail, {TREES_PER_GROVE} hiding spots each — search the tall trees and the undergrowth alike.</li>
+            <li>· {grovesPerExpedition} groves along the trail, {TREES_PER_GROVE} hiding spots each — search the tall trees and the undergrowth alike.</li>
             <li>· Each grove gives you {SEARCHES_PER_GROVE} searches — spend them wisely, then follow the trail to the next grove.</li>
-            <li>· {EXPEDITION_PYTHONS} pythons are hiding out there. At every fork, read the signs — rustling leaves, fresh sheds, heavy tracks. Cold trails sometimes lie.</li>
+            <li>· {grovesPerExpedition} pythons are hiding out there. At every fork, read the signs — rustling leaves, fresh sheds, heavy tracks. Cold trails sometimes lie.</li>
             <li>· Spot one and grab it before it slips away.</li>
             <li>· Not all ground is equal — common localities show themselves often, legendary ones are ghosts. In pulcher country expect Sorong; pray for Arfak.</li>
-            <li>· An enormous shed at a fork marks a trophy grove — something exceptional hunts there.</li>
+            <li>· An enormous shed at a fork marks a trophy grove — something exceptional hunts there.{hot ? " Intel says this region is hot tonight — trophy signs are twice as common." : ""}</li>
             <li>· Hunt by height: adults cruise the high branches — search the tall trees. Neonates hide low — check the undergrowth.</li>
             <li>· Each expedition heads to one of four regions — tonight&apos;s snakes all come from the same corner of New Guinea, and each region hunts under its own sky.</li>
             <li>· The night deepens as you go — Dusk, Nightfall, Deep night, Blue hour — and the snakes get warier (and quicker) the later it gets.</li>
             <li>· Chain clean grabs for a streak. Your night earns a hunter&apos;s rank, S through D.</li>
             <li>· Empty trees sometimes turn up fresh shed skins — examine one and it&apos;ll tell you what&apos;s hiding in the grove.</li>
+            {permit && (
+              <li>· Permit perks: this region&apos;s signature traits run hot (floored at 30) and exceptional animals show up far more often. You carry {PERMIT_TOKENS} specialist tools — a 🍃 scent lure draws a python out with no search spent, and an ✊ sure grip never misses. Spend them at any grove.</li>
+            )}
             <li>· Every bagged locality is inked into your codex — document all {CANOPY_LOCALITIES.length}.</li>
             <li>· Caught snakes head straight into your Keeper colony.</li>
           </ul>
@@ -789,7 +849,7 @@ export function CanopyHunter({
       {/* Trail — pseudo-3D third-person fork choice */}
       {phase === "trail" && (
         <div className="mt-8">
-          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} />
+          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} totalGroves={grovesPerExpedition} />
           <div className={`relative aspect-[4/3] overflow-hidden rounded-[26px] border border-white/[.07] transition-all duration-700 sm:aspect-[16/9] ${walking ? "scale-110 opacity-0" : "scale-100 opacity-100"}`}>
             <Image src={pathArtForTrailCount(currentTrails.length)} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
             <NightAtmosphere region={region} legIndex={legIndex} showBackdrop={false} />
@@ -841,7 +901,7 @@ export function CanopyHunter({
       {/* Grove — search the trees */}
       {phase === "grove" && grove && (
         <div className="mt-8">
-          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} grove />
+          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} grove totalGroves={grovesPerExpedition} />
           <div className="relative overflow-hidden rounded-[26px] border border-white/[.07]">
             {!groveBackdrop && (
               <Image src={PATH_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover brightness-[.38]" />
@@ -904,6 +964,23 @@ export function CanopyHunter({
               </button>
             </div>
           )}
+          {canLure && (
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={deployLure}
+                className="rounded-full border border-lime-300/30 bg-lime-300/[.07] px-5 py-2 text-xs font-bold uppercase tracking-[.14em] text-lime-100 transition hover:bg-lime-300/[.14] active:scale-95"
+              >
+                🍃 Deploy scent lure · {tokens} left
+              </button>
+              <p className="mt-1 text-[11px] text-white/35">Draws the python out — no search spent</p>
+            </div>
+          )}
+          {permit && tokens > 0 && !canLure && phase === "grove" && (
+            <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-[.16em] text-lime-200/50">
+              🍃 {tokens} {tokens === 1 ? "tool" : "tools"} left
+            </p>
+          )}
           {nightEvent === "sloughing" && (
             <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-[.16em] text-amber-200/60">
               Sloughing night — sheds everywhere, every one a clue
@@ -919,7 +996,7 @@ export function CanopyHunter({
             onClick={followTrail}
             className="mt-4 w-full rounded-2xl border border-emerald-300/25 bg-emerald-300/[.07] px-6 py-3.5 text-sm font-bold text-emerald-100 transition hover:bg-emerald-300/[.12] active:scale-[.99]"
           >
-            {legIndex + 1 >= GROVES_PER_EXPEDITION ? "Finish the expedition →" : "Follow the trail →"}
+            {legIndex + 1 >= grovesPerExpedition ? "Finish the expedition →" : "Follow the trail →"}
           </button>
           <p className="mt-3 text-center text-xs text-white/35">Tap a tree or the undergrowth to search it — or move on down the trail.</p>
         </div>
@@ -990,9 +1067,18 @@ export function CanopyHunter({
                     style={{ left: "0%" }}
                   />
                 </div>
+                {canSureGrip && (
+                  <button
+                    type="button"
+                    onClick={deploySureGrip}
+                    className="mb-3 w-full rounded-2xl border border-lime-300/30 bg-lime-300/[.07] px-6 py-3 text-sm font-bold uppercase tracking-[.12em] text-lime-100 transition hover:bg-lime-300/[.14] active:scale-[.99]"
+                  >
+                    ✊ Sure grip — cannot miss · {tokens} left
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={grab}
+                  onClick={() => grab()}
                   className="mt-5 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
                 >
                   GRAB
@@ -1047,7 +1133,7 @@ export function CanopyHunter({
               <>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3 text-[11px] font-semibold uppercase tracking-[.14em] text-white/50">
                   <span>
-                    Found · <span className="text-emerald-200">{bag.length}/{EXPEDITION_PYTHONS}</span>
+                    Found · <span className="text-emerald-200">{bag.length}/{grovesPerExpedition}</span>
                   </span>
                   <span>
                     Best streak · <span className="text-emerald-200">×{bestStreak}</span>
@@ -1228,6 +1314,7 @@ function TrailStatus({
   streak,
   phaseName,
   grove = false,
+  totalGroves,
 }: {
   region: CanopyRegion | null;
   legIndex: number;
@@ -1236,13 +1323,14 @@ function TrailStatus({
   streak: number;
   phaseName: string;
   grove?: boolean;
+  totalGroves: number;
 }) {
   return (
     <div className="mb-3 text-center">
       {region && (
         <>
           <div className="text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/60">
-            {grove ? `Grove ${legIndex + 1} of ${GROVES_PER_EXPEDITION}` : `Leg ${legIndex + 1} of ${GROVES_PER_EXPEDITION} — choose your path`} · {phaseName}
+            {grove ? `Grove ${legIndex + 1} of ${totalGroves}` : `Leg ${legIndex + 1} of ${totalGroves} — choose your path`} · {phaseName}
           </div>
           <div className="mt-1 text-lg font-semibold text-white">{region.name}</div>
           <p className="mt-0.5 text-xs text-white/40">{region.tagline}</p>
