@@ -11,6 +11,13 @@ export const curatedReptileNews: ReptileStory[] = [
     summary: "A protected Cardamom Mountains wetland safeguards wild Siamese crocodiles as Indigenous wardens and conservation partners monitor nests and restore the species.",
   },
   {
+    title: "Forty-nine musk turtles return to a restored Pennsylvania lake",
+    url: "https://www.wfmz.com/news/area/berks/reading-area/turtles-return-home-to-crystal-lake-after-restoration-project/article_ecc4068f-a07c-48b3-a0b4-0e0c358ead62.html",
+    publishedAt: "2026-09-28",
+    publisher: "WFMZ",
+    summary: "After rehabilitation during the Crystal Lake cleanup, 49 musk turtles were released back to their home habitat on September 27.",
+  },
+  {
     title: "A leatherback turtle returns to Malaysia's nesting beaches",
     url: "https://www.thestar.com.my/news/environment/2026/09/28/ecowatch-a-leatherback-returns---but-is-it-a-species-comeback",
     publishedAt: "2026-09-28",
