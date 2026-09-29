@@ -262,7 +262,7 @@ export const SNAKES: SortingSnake[] = [
     house: "viridis",
     locality: "Aru",
     neonate: "yellow",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/ivory.webp",
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Yellow neonate with bold white dorsal dashes like ivory inlay." },
       { probe: "crown", label: "Head", text: "High-white crown dusted with black speckles." },
