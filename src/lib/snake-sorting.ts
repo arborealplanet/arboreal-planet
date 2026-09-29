@@ -166,7 +166,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "Broken black bands march across the crown like stitching." },
       { probe: "origin", label: "Homeland", text: "A small island off the north coast, ringed by reef." },
     ],
-    deepScan: "Yellow retention plus black banding on a small north-coast island. That is Numfor — pure Azurea.",
+    deepScan: "Yellow retention plus black banding on a small island off the north coast. Island black on island blood — pure Azurea.",
     lesson:
       "Yellow retention with black banding on an island animal: House Azurea. The yellow tempted many keepers toward Viridis — but Viridis lives far to the south, never on these islands.",
   },
@@ -180,9 +180,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "Deep red neonate; black edging on every single dorsal scale." },
       { probe: "crown", label: "Head", text: "A near-solid black cap covers the head." },
-      { probe: "origin", label: "Homeland", text: "Canopy over Biak Island — the big island of the Cenderawasih group." },
+      { probe: "origin", label: "Homeland", text: "Canopy over the big island of the Cenderawasih group — sea air, moss on every branch." },
     ],
-    deepScan: "Biak Island. The black cap and black-edged scales scream the island house.",
+    deepScan: "The black cap and black-edged scales scream the island house.",
     lesson:
       "High black is the Azurea hallmark. When the whole crown goes dark on a Biak animal, the Hat barely has to think.",
   },
@@ -196,9 +196,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A cherry-red neonate — the black dorsal markings broken into rough, rusty blocks." },
       { probe: "crown", label: "Head", text: "Head washed rust-red, dark only along the jawline." },
-      { probe: "origin", label: "Homeland", text: "Biak Island canopy, salt wind off the Cenderawasih sea." },
+      { probe: "origin", label: "Homeland", text: "Island canopy, salt wind off the Cenderawasih sea." },
     ],
-    deepScan: "Red baby, broken black blocks down the spine, Biak Island. The island house again.",
+    deepScan: "Red baby, broken black blocks down the spine. The island house again.",
     lesson:
       "Azurea's island animals all wear black — but Biak splits them three ways by pattern. Broken dorsal blocks on red: Azurea, Biak division.",
   },
@@ -214,9 +214,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A fire-red neonate — fine black speckling dusted over every scale." },
       { probe: "crown", label: "Head", text: "A tiny crown, already going dark at the snout." },
-      { probe: "origin", label: "Homeland", text: "Fresh from a Biak clutch — still on the perch it hatched on." },
+      { probe: "origin", label: "Homeland", text: "Fresh from an island clutch — still on the perch it hatched on." },
     ],
-    deepScan: "Neonate on the perch, red with black dusting, island clutch. Azurea, Biak.",
+    deepScan: "Neonate on the perch, red with black dusting, island clutch. Azurea.",
     lesson:
       "A visible neonate means no wager — the Hat reads the baby straight. Red with black dusting from an island clutch: House Azurea.",
   },
@@ -231,9 +231,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A smoky red neonate — the black markings blurred like ash over embers." },
       { probe: "crown", label: "Head", text: "A dusky crown, dark smudges behind the eyes." },
-      { probe: "origin", label: "Homeland", text: "A Biak clutch, photographed days out of the egg." },
+      { probe: "origin", label: "Homeland", text: "An island clutch, photographed days out of the egg." },
     ],
-    deepScan: "Days old, smoky red, blurred black marks, Biak. The island house.",
+    deepScan: "Days old, smoky red, blurred black marks. The island house.",
     lesson:
       "Blurred, ashy black on a red neonate is Azurea's island fingerprint — Biak division.",
   },
@@ -263,9 +263,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A yellow neonate — the blue vertebral stripe thin and broken by wind-blown gaps." },
       { probe: "crown", label: "Head", text: "A clean green crown, white only at the lip line." },
-      { probe: "origin", label: "Homeland", text: "Jayapura bay — north-coast humidity, mist off the water." },
+      { probe: "origin", label: "Homeland", text: "A bay on the north coast — humid air, mist off the water." },
     ],
-    deepScan: "North coast, yellow baby, thin broken blue stripe. Utaraensis, Jayapura.",
+    deepScan: "North coast, yellow baby, thin broken blue stripe. Utaraensis.",
     lesson:
       "Even a thin, broken blue stripe marks the north-coast house — Jayapura answers to Utaraensis.",
   },
@@ -281,7 +281,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "Clean green crown, white lips just beginning to show." },
       { probe: "origin", label: "Homeland", text: "Lowland forest on the north coast, rivers slow and wide." },
     ],
-    deepScan: "Yellow baby, blue seam on the dorsum, northern lowlands. Lereh — northern blood, Utaraensis.",
+    deepScan: "Yellow baby, blue seam on the dorsum, northern lowlands. Northern blood, Utaraensis.",
     lesson:
       "The yellow tempted you south toward Viridis — but the blue seam never lies, and Lereh is northern ground. House Utaraensis.",
   },
@@ -297,7 +297,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "Pale snout with white flecks dusting the crown." },
       { probe: "origin", label: "Homeland", text: "Foothills rising steep behind the north coast." },
     ],
-    deepScan: "A yellow baby flashing high white this early, from the Cyclops foothills. Northern mainland blood — Utaraensis.",
+    deepScan: "A yellow baby flashing high white this early, from the steep foothills behind the north coast. Northern mainland blood — Utaraensis.",
     lesson:
       "Yellow hatchlings come from every house — that is the trap. But high white this early, blue tones on the crown, and the Cyclops foothills of the northern mainland: only House Utaraensis wears that combination.",
   },
@@ -313,7 +313,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "A dark cap over the crown — but blue ghosts beneath the black." },
       { probe: "origin", label: "Homeland", text: "Foothills rising steep behind the north coast." },
     ],
-    deepScan: "Red baby, black-edged scales, Cyclops foothills. The black tempted you toward Azurea — but island black never touches the mainland. Northern blood: Utaraensis.",
+    deepScan: "Red baby, black-edged scales, steep north-coast foothills. The black tempted you toward Azurea — but island black never touches the mainland. Northern blood: Utaraensis.",
     lesson:
       "The cruelest trap in the ceremony: a red baby with black edging, straight out of the Azurea playbook. But Azurea never touches the mainland — Cyclops is northern ground, and the blue ghosting under the black is pure Utaraensis.",
   },
@@ -345,7 +345,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "A faint blue wash ghosts across the crown." },
       { probe: "origin", label: "Homeland", text: "A tiny island clutch, far to the west, reachable only by boat." },
     ],
-    deepScan: "Far-west island, yellow baby, blue wash on the crown. Kofiau hatch yellow every time — and that blue wash is pure Pulcher.",
+    deepScan: "Far-west island, yellow baby, blue wash on the crown. They hatch yellow every time out there — and that blue wash is pure Pulcher.",
     lesson:
       "The trap of the ceremony! A yellow neonate screams Viridis — but Kofiau pulcher hatch yellow every single time. The blue wash on the crown and the far-west island give it away: House Pulcher.",
   },
@@ -393,7 +393,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "A rust-red crown washed with blue at the edges." },
       { probe: "origin", label: "Homeland", text: "Coastal lowlands on the Bird's Head — sea air, mangrove at the forest edge." },
     ],
-    deepScan: "Red baby, blue dashes down the spine, Bird's Head coast. Manokwari — western blood, Pulcher.",
+    deepScan: "Red baby, blue dashes down the spine, Bird's Head coast. Western blood, Pulcher.",
     lesson:
       "Red tempted you toward Azurea — but Azurea wears black where Pulcher wears blue. Coastal Bird's Head with blue dashes: House Pulcher, the Manokwari division.",
   },
@@ -407,7 +407,7 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A honey-gold neonate — sky-blue vertebral dashes marching down the spine." },
       { probe: "crown", label: "Head", text: "A golden crown, blue dusting at the temples." },
-      { probe: "origin", label: "Homeland", text: "Bird's Head coast — the Manokwari lowlands." },
+      { probe: "origin", label: "Homeland", text: "Bird's Head coast — western lowlands, salt on the wind." },
     ],
     deepScan: "Yellow baby, blue dashes, Bird's Head coast. Pulcher's golden division.",
     lesson:
@@ -423,9 +423,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A pale yellow neonate — the blue dashes stretched into long desert streaks." },
       { probe: "crown", label: "Head", text: "A sand-pale crown, faint blue at the jaw." },
-      { probe: "origin", label: "Homeland", text: "Manokwari — western New Guinea, sea-level forest." },
+      { probe: "origin", label: "Homeland", text: "Western New Guinea — sea-level forest, salt on the wind." },
     ],
-    deepScan: "Pale yellow, long blue streaks, Manokwari. Pulcher again.",
+    deepScan: "Pale yellow, long blue streaks, western lowlands. Pulcher again.",
     lesson:
       "Long blue streaks instead of dashes — still the Bird's Head coast, still House Pulcher.",
   },
@@ -439,9 +439,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A yellow neonate with bold blue chevrons marching down the back." },
       { probe: "crown", label: "Head", text: "A broad golden crown, blue edging along the lips." },
-      { probe: "origin", label: "Homeland", text: "Manokwari lowlands — the western door of New Guinea." },
+      { probe: "origin", label: "Homeland", text: "Western lowlands — the western door of New Guinea." },
     ],
-    deepScan: "Yellow baby, blue chevrons, western lowlands. Pulcher, Manokwari.",
+    deepScan: "Yellow baby, blue chevrons, western lowlands. Pulcher.",
     lesson:
       "Chevrons or dashes, the blue-on-gold of the Bird's Head coast always answers to House Pulcher.",
   },
@@ -456,7 +456,7 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A butter-yellow neonate — tiny blue flecks scattered like seed." },
       { probe: "crown", label: "Head", text: "A small bright crown, barely any dark yet." },
-      { probe: "origin", label: "Homeland", text: "A Manokwari clutch — still curled where it hatched." },
+      { probe: "origin", label: "Homeland", text: "A western clutch — still curled where it hatched." },
     ],
     deepScan: "A visible neonate, butter-yellow with blue flecks, Bird's Head. Pulcher.",
     lesson:
@@ -490,7 +490,7 @@ export const SNAKES: SortingSnake[] = [
       { probe: "crown", label: "Head", text: "Black-speckled head with striking white lips." },
       { probe: "origin", label: "Homeland", text: "Forest edge near the southern savanna, hot and bright." },
     ],
-    deepScan: "Southern savanna edge, heavy black blotching, white lips. Merauke — the southernmost house.",
+    deepScan: "Southern savanna edge, heavy black blotching, white lips. The southernmost house.",
     lesson:
       "The southernmost blood in the game. Heavy black lateral blotching with white lips near Merauke is House Viridis at its most classic.",
   },
@@ -504,9 +504,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Juvenile scales", text: "A near-white juvenile — black vertebral dashes floating on ivory." },
       { probe: "crown", label: "Head", text: "A pale, ghost-like crown, barely any dark at all." },
-      { probe: "origin", label: "Homeland", text: "Aru Islands — the southern archipelago." },
+      { probe: "origin", label: "Homeland", text: "A southern archipelago — low islands, monsoon winds." },
     ],
-    deepScan: "Extreme high white from the Aru archipelago. Only the southern house washes out this pale.",
+    deepScan: "Extreme high white from the southern archipelago. Only the southern house washes out this pale.",
     lesson:
       "When a southern animal goes this pale, there is no mistaking it: extreme high white from Aru is House Viridis, the ghost division.",
   },
@@ -520,9 +520,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A yellow neonate with a thin white vertebral thread over powder-blue flanks." },
       { probe: "crown", label: "Head", text: "A crown brushed willow-green, faint white lips." },
-      { probe: "origin", label: "Homeland", text: "Aru Islands — the far southern archipelago." },
+      { probe: "origin", label: "Homeland", text: "The far southern archipelago — low islands on a wide sea." },
     ],
-    deepScan: "Southern islands, yellow baby, white thread on powder blue. Viridis, Aru.",
+    deepScan: "Southern islands, yellow baby, white thread on powder blue. Viridis.",
     lesson:
       "The white vertebral thread over blue-green is the Aru Viridis signature — the southern house, willow division.",
   },
@@ -536,9 +536,9 @@ export const SNAKES: SortingSnake[] = [
     clues: [
       { probe: "scales", label: "Neonate scales", text: "A yellow neonate — white spots scattered like fallen petals, no clear pattern." },
       { probe: "crown", label: "Head", text: "A green crown, white flecks dusting the snout." },
-      { probe: "origin", label: "Homeland", text: "Aru Islands — the far southern archipelago." },
+      { probe: "origin", label: "Homeland", text: "The far southern archipelago — low islands on a wide sea." },
     ],
-    deepScan: "Southern islands, yellow baby, scattered white petals. Viridis, Aru.",
+    deepScan: "Southern islands, yellow baby, scattered white petals. Viridis.",
     lesson:
       "Scattered white without a pattern still reads southern — the Aru Viridis look, fern division.",
   },
