@@ -1948,7 +1948,24 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
           <div className="text-[10px] font-black uppercase tracking-[.14em] text-emerald-100/45">Operations Queue</div>
           <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {breedingCycle ? <div className="rounded-xl border border-amber-200/10 p-3"><div className="text-xs font-bold text-amber-100/65">{BREEDING_STAGES.find((stage) => stage.id === breedingCycle.stage)?.label}</div><div className="mt-1 text-[10px] text-white/35">{colony.find((animal) => animal.id === breedingCycle.damId)?.name ?? breedingCycle.damId} × {colony.find((animal) => animal.id === breedingCycle.sireId)?.name ?? breedingCycle.sireId} · {remainingTime(breedingCycle.completesAt - now)}</div></div> : null}
-            {gravidFemales.map((animal) => <div key={animal.id} className="rounded-xl border border-pink-300/10 p-3"><div className="text-xs font-bold text-pink-100/65">Gravid — wild clutch coming</div><div className="mt-1 text-[10px] text-white/35">{animal.name} · lays in {remainingTime(Math.max(0, (animal.gravidLaysAt ?? now) - now))}</div></div>)}
+            {gravidFemales.map((animal) => {
+              const laysAt = animal.gravidLaysAt ?? now;
+              const waitReason = laysAt > now
+                ? `lays in ${remainingTime(laysAt - now)}`
+                : clutch
+                  ? "waiting — finish the current clutch first"
+                  : breedingCycle
+                    ? "waiting — breeding cycle in progress"
+                    : !breederInitials
+                      ? "waiting — set breeder initials"
+                      : "laying…";
+              return (
+                <div key={animal.id} className="rounded-xl border border-pink-300/10 p-3">
+                  <div className="text-xs font-bold text-pink-100/65">Gravid — wild clutch coming</div>
+                  <div className="mt-1 text-[10px] text-white/35">{animal.name} · {waitReason}</div>
+                </div>
+              );
+            })}
             {geneticTestsPending.map((job) => <div key={job.snakeId} className="rounded-xl border border-sky-300/10 p-3"><div className="text-xs font-bold text-sky-100/65">Genetic Test</div><div className="mt-1 text-[10px] text-white/35">{colony.find((animal) => animal.id === job.snakeId)?.name ?? job.snakeId} · {remainingTime(job.completesAt - now)}</div></div>)}
             {facilityConstruction ? <div className="rounded-xl border border-emerald-300/10 p-3"><div className="text-xs font-bold text-emerald-100/65">Construction</div><div className="mt-1 text-[10px] text-white/35">{ROOM_EXPANSIONS.find((room) => room.id === facilityConstruction.roomId)?.name ?? facilityConstruction.roomId} · {remainingTime(facilityConstruction.completesAt - now)}</div></div> : null}
           </div>
