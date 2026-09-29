@@ -121,6 +121,10 @@ export interface SortingSnake {
   locality: string;
   neonate: "red" | "yellow";
   photo: string | null;
+  /** Alternate photo of the same animal — the deal picks one per game, never both. */
+  photoAlt?: string | null;
+  /** True when the photo visibly shows a neonate — the neonate wager is skipped. */
+  isNeonate?: boolean;
   clues: ProbeClue[];
   deepScan: string;
   lesson: string;
@@ -180,6 +184,57 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Biak Island. The black cap and black-edged scales scream the island house.",
     lesson:
       "High black is the Azurea hallmark. When the whole crown goes dark on a Biak animal, the Hat barely has to think.",
+  },
+  {
+    id: "rust",
+    name: "“Rust”",
+    house: "azurea",
+    locality: "Biak",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/rust.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A cherry-red neonate — the black dorsal markings broken into rough, rusty blocks." },
+      { probe: "crown", label: "Head", text: "Head washed rust-red, dark only along the jawline." },
+      { probe: "origin", label: "Homeland", text: "Biak Island canopy, salt wind off the Cenderawasih sea." },
+    ],
+    deepScan: "Red baby, broken black blocks down the spine, Biak Island. The island house again.",
+    lesson:
+      "Azurea's island animals all wear black — but Biak splits them three ways by pattern. Broken dorsal blocks on red: Azurea, Biak division.",
+  },
+  {
+    id: "spark",
+    name: "“Spark”",
+    house: "azurea",
+    locality: "Biak",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/spark.webp",
+    photoAlt: "/arcade/snake-sorting/snakes/spark-alt.webp",
+    isNeonate: true,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A fire-red neonate — fine black speckling dusted over every scale." },
+      { probe: "crown", label: "Head", text: "A tiny crown, already going dark at the snout." },
+      { probe: "origin", label: "Homeland", text: "Fresh from a Biak clutch — still on the perch it hatched on." },
+    ],
+    deepScan: "Neonate on the perch, red with black dusting, island clutch. Azurea, Biak.",
+    lesson:
+      "A visible neonate means no wager — the Hat reads the baby straight. Red with black dusting from an island clutch: House Azurea.",
+  },
+  {
+    id: "ash",
+    name: "“Ash”",
+    house: "azurea",
+    locality: "Biak",
+    neonate: "red",
+    photo: "/arcade/snake-sorting/snakes/ash.webp",
+    isNeonate: true,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A smoky red neonate — the black markings blurred like ash over embers." },
+      { probe: "crown", label: "Head", text: "A dusky crown, dark smudges behind the eyes." },
+      { probe: "origin", label: "Homeland", text: "A Biak clutch, photographed days out of the egg." },
+    ],
+    deepScan: "Days old, smoky red, blurred black marks, Biak. The island house.",
+    lesson:
+      "Blurred, ashy black on a red neonate is Azurea's island fingerprint — Biak division.",
   },
   {
     id: "glacier",
@@ -326,6 +381,71 @@ export const SNAKES: SortingSnake[] = [
       "Red tempted you toward Azurea — but Azurea wears black where Pulcher wears blue. Coastal Bird's Head with blue dashes: House Pulcher, the Manokwari division.",
   },
   {
+    id: "amber",
+    name: "“Amber”",
+    house: "pulcher",
+    locality: "Manokwari",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/amber.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A honey-gold neonate — sky-blue vertebral dashes marching down the spine." },
+      { probe: "crown", label: "Head", text: "A golden crown, blue dusting at the temples." },
+      { probe: "origin", label: "Homeland", text: "Bird's Head coast — the Manokwari lowlands." },
+    ],
+    deepScan: "Yellow baby, blue dashes, Bird's Head coast. Pulcher's golden division.",
+    lesson:
+      "Yellow tempts toward Utaraensis — but blue dashes on the Bird's Head coast belong to Pulcher. Manokwari division.",
+  },
+  {
+    id: "dune",
+    name: "“Dune”",
+    house: "pulcher",
+    locality: "Manokwari",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/dune.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A pale yellow neonate — the blue dashes stretched into long desert streaks." },
+      { probe: "crown", label: "Head", text: "A sand-pale crown, faint blue at the jaw." },
+      { probe: "origin", label: "Homeland", text: "Manokwari — western New Guinea, sea-level forest." },
+    ],
+    deepScan: "Pale yellow, long blue streaks, Manokwari. Pulcher again.",
+    lesson:
+      "Long blue streaks instead of dashes — still the Bird's Head coast, still House Pulcher.",
+  },
+  {
+    id: "prairie",
+    name: "“Prairie”",
+    house: "pulcher",
+    locality: "Manokwari",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/prairie.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A yellow neonate with bold blue chevrons marching down the back." },
+      { probe: "crown", label: "Head", text: "A broad golden crown, blue edging along the lips." },
+      { probe: "origin", label: "Homeland", text: "Manokwari lowlands — the western door of New Guinea." },
+    ],
+    deepScan: "Yellow baby, blue chevrons, western lowlands. Pulcher, Manokwari.",
+    lesson:
+      "Chevrons or dashes, the blue-on-gold of the Bird's Head coast always answers to House Pulcher.",
+  },
+  {
+    id: "pip",
+    name: "“Pip”",
+    house: "pulcher",
+    locality: "Manokwari",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/pip.webp",
+    isNeonate: true,
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A butter-yellow neonate — tiny blue flecks scattered like seed." },
+      { probe: "crown", label: "Head", text: "A small bright crown, barely any dark yet." },
+      { probe: "origin", label: "Homeland", text: "A Manokwari clutch — still curled where it hatched." },
+    ],
+    deepScan: "A visible neonate, butter-yellow with blue flecks, Bird's Head. Pulcher.",
+    lesson:
+      "No wager on a visible baby — but the blue flecks give it away anyway. Manokwari: House Pulcher.",
+  },
+  {
     id: "ivory",
     name: "“Ivory”",
     house: "viridis",
@@ -363,7 +483,7 @@ export const SNAKES: SortingSnake[] = [
     house: "viridis",
     locality: "Aru",
     neonate: "yellow",
-    photo: null,
+    photo: "/arcade/snake-sorting/snakes/ghost.webp",
     clues: [
       { probe: "scales", label: "Juvenile scales", text: "A near-white juvenile — black vertebral dashes floating on ivory." },
       { probe: "crown", label: "Head", text: "A pale, ghost-like crown, barely any dark at all." },
@@ -372,6 +492,22 @@ export const SNAKES: SortingSnake[] = [
     deepScan: "Extreme high white from the Aru archipelago. Only the southern house washes out this pale.",
     lesson:
       "When a southern animal goes this pale, there is no mistaking it: extreme high white from Aru is House Viridis, the ghost division.",
+  },
+  {
+    id: "willow",
+    name: "“Willow”",
+    house: "viridis",
+    locality: "Aru",
+    neonate: "yellow",
+    photo: "/arcade/snake-sorting/snakes/willow.webp",
+    clues: [
+      { probe: "scales", label: "Neonate scales", text: "A yellow neonate with a thin white vertebral thread over powder-blue flanks." },
+      { probe: "crown", label: "Head", text: "A crown brushed willow-green, faint white lips." },
+      { probe: "origin", label: "Homeland", text: "Aru Islands — the far southern archipelago." },
+    ],
+    deepScan: "Southern islands, yellow baby, white thread on powder blue. Viridis, Aru.",
+    lesson:
+      "The white vertebral thread over blue-green is the Aru Viridis signature — the southern house, willow division.",
   },
   /* ---- Wildcard division: designer morphs and hybrid crosses. Only the
      wildcard hard mode deals these; the classic ceremony never sees them. ---- */
@@ -459,6 +595,10 @@ export const HAT_LINES = {
   viridisSkip: [
     "House Viridis hatches only yellow babes — no wager on this one, keeper. Straight to the probes.",
     "A southern serpent — Viridis babes are yellow, every last one. No wager here; on to the probes.",
+  ],
+  neonateVisible: [
+    "A babe on the dais — its first color is right there before your eyes. No wager on this one, keeper; straight to the probes.",
+    "The neonate sits before you, plain as day. No points for calling what you can see — on to the probes.",
   ],
   probeDone: [
     "Noted... noted. What else shall we examine?",
@@ -567,7 +707,9 @@ export const PILE_WRONG_PENALTY = 25;
 
 /** Deal for the pile-sort mode: only serpents with photos on the table. */
 export function pileSortDeal(count: number = PILE_SORT_COUNT): SortingSnake[] {
-  return shuffle(SNAKES.filter((s) => s.photo)).slice(0, count);
+  return shuffle(SNAKES.filter((s) => s.photo))
+    .slice(0, count)
+    .map(photoForDeal);
 }
 
 export function readBest(key: string): number {
@@ -610,6 +752,15 @@ export function sortHousesForMode(mode: GameMode): House[] {
 }
 
 /**
+ * When a serpent carries an alternate photo of the same animal, the deal
+ * picks one for this game — the two never share a lineup.
+ */
+export function photoForDeal(s: SortingSnake): SortingSnake {
+  if (s.photoAlt && Math.random() < 0.5) return { ...s, photo: s.photoAlt };
+  return s;
+}
+
+/**
  * Build a ceremony order. Wildcard hard mode guarantees at least two
  * designer animals in the mix — otherwise the 5th option would be a
  * decoration instead of a threat.
@@ -619,7 +770,9 @@ export function ceremonyOrder(mode: GameMode, count: number): SortingSnake[] {
     const wild = shuffle(SNAKES.filter((s) => s.house === "designer"));
     const pure = shuffle(SNAKES.filter((s) => s.house !== "designer"));
     const guaranteed = wild.slice(0, Math.min(2, wild.length));
-    return shuffle([...guaranteed, ...pure.slice(0, Math.max(0, count - guaranteed.length))]);
+    return shuffle([...guaranteed, ...pure.slice(0, Math.max(0, count - guaranteed.length))]).map(
+      photoForDeal,
+    );
   }
-  return shuffle(bankForMode(mode)).slice(0, count);
+  return shuffle(bankForMode(mode)).slice(0, count).map(photoForDeal);
 }

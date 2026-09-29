@@ -27,7 +27,7 @@ describe("snake-sorting neonate round data", () => {
     }
   });
 
-  it("house viridis hatches only yellow (wager exclusion holds)", () => {
+  it("house viridis hatches only yellow", () => {
     const viridis = SNAKES.filter((s) => s.house === "viridis");
     assert.ok(viridis.length > 0);
     for (const s of viridis) {
@@ -65,6 +65,15 @@ describe("snake-sorting neonate round data", () => {
       { id: "tempest", house: "utaraensis", locality: "Cyclops", neonate: "red" },
       { id: "copper", house: "pulcher", locality: "Manokwari", neonate: "red" },
       { id: "lumen", house: "utaraensis", locality: "Lereh", neonate: "yellow" },
+      { id: "willow", house: "viridis", locality: "Aru", neonate: "yellow" },
+      { id: "rust", house: "azurea", locality: "Biak", neonate: "red" },
+      { id: "amber", house: "pulcher", locality: "Manokwari", neonate: "yellow" },
+      { id: "dune", house: "pulcher", locality: "Manokwari", neonate: "yellow" },
+      { id: "spark", house: "azurea", locality: "Biak", neonate: "red" },
+      { id: "ash", house: "azurea", locality: "Biak", neonate: "red" },
+      { id: "prairie", house: "pulcher", locality: "Manokwari", neonate: "yellow" },
+      { id: "pip", house: "pulcher", locality: "Manokwari", neonate: "yellow" },
+      { id: "ghost", house: "viridis", locality: "Aru", neonate: "yellow" },
     ] as const;
     for (const e of expected) {
       const s = SNAKES.find((x) => x.id === e.id);
@@ -124,6 +133,29 @@ describe("snake-sorting neonate round data", () => {
     const classic = ceremonyOrder("ceremony", 10);
     assert.equal(classic.length, 10);
     assert.ok(classic.every((s) => s.house !== "designer"));
+  });
+
+  it("visible neonates are flagged so the wager is skipped", () => {
+    for (const id of ["spark", "ash", "pip"]) {
+      const s = SNAKES.find((x) => x.id === id);
+      assert.ok(s, `${id} missing`);
+      assert.equal(s.isNeonate, true);
+    }
+    assert.ok(SNAKES.filter((s) => s.isNeonate).length === 3);
+  });
+
+  it("the alternate photo never shares a lineup with its twin", () => {
+    const spark = SNAKES.find((x) => x.id === "spark");
+    assert.ok(spark?.photoAlt, "spark needs its alternate photo");
+    const seen = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      const deal = ceremonyOrder("ceremony", 10);
+      const cards = deal.filter((s) => s.id === "spark");
+      assert.ok(cards.length <= 1, "both spark photos in one lineup");
+      for (const c of cards) if (c.photo) seen.add(c.photo);
+    }
+    assert.ok(seen.has(spark.photo!), "primary spark photo never dealt");
+    assert.ok(seen.has(spark.photoAlt!), "alternate spark photo never dealt");
   });
 
   it("pile-sort deals only photographed serpents", () => {

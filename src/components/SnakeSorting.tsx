@@ -478,12 +478,13 @@ export function SnakeSorting() {
   };
 
   /* Round One: the neonate-color wager, before a single probe is spent.
-     House Viridis is excluded — it hatches only yellow, so there is no
-     wager to make. */
+     Skipped only when the photo visibly shows a neonate — the color is
+     right there, so there is no wager to make. Every house, Viridis
+     included, faces the wager on adult photos. */
   const enterNeonate = (s: SortingSnake) => {
-    if (s.house === "viridis") {
+    if (s.isNeonate) {
       setNeonateState("skipped");
-      setHatLine(pick(HAT_LINES.viridisSkip));
+      setHatLine(pick(HAT_LINES.neonateVisible));
       synth.tick();
       later(1700, enterScan);
       return;
