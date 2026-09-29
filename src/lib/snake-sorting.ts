@@ -751,6 +751,72 @@ export function pileSortDeal(count: number = PILE_SORT_COUNT): SortingSnake[] {
     .map(photoForDeal);
 }
 
+/* ------------------------------------------------------------------ */
+/* Daily Hat challenge — one fixed deal per calendar day, identical    */
+/* for every keeper. A hint from the Hat costs points, once per game.  */
+/* ------------------------------------------------------------------ */
+
+export const PILE_HINT_COST = 50;
+
+/** FNV-1a string hash — turns a date key into a numeric seed. */
+export function hashSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Deterministic PRNG so the daily deal shuffles identically everywhere. */
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = ((t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t) >>> 0;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function seededShuffle<T>(arr: T[], rand: () => number): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Local calendar day as "YYYY-MM-DD" — the daily deal's identity. */
+export function dailyDealKey(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+/** "2026-09-29" -> "Sep 29" for display. */
+export function prettyDailyKey(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  if (!y || !m || !d) return key;
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function dailyBestKey(key: string): string {
+  return `${PILE_BEST_KEY}:daily:${key}`;
+}
+
+export function pileSortDailyDeal(key: string, count: number = PILE_SORT_COUNT): SortingSnake[] {
+  const rand = mulberry32(hashSeed(`pile-daily:${key}`));
+  return seededShuffle(
+    SNAKES.filter((s) => s.photo),
+    rand,
+  )
+    .slice(0, count)
+    .map(photoForDeal);
+}
+
 export function readBest(key: string): number {
   try {
     const raw = window.localStorage.getItem(key);

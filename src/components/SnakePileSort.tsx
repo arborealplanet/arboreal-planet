@@ -5,7 +5,11 @@ import {
   HOUSES,
   PILE_BEST_KEY,
   PILE_CORRECT_POINTS,
+  PILE_HINT_COST,
+  dailyBestKey,
+  pileSortDailyDeal,
   pileSortDeal,
+  prettyDailyKey,
   readBest,
   writeBest,
   type HouseId,
@@ -65,19 +69,34 @@ type DragState = { id: string; x: number; y: number };
 type HatMood = "idle" | "dealing" | "happy" | "no";
 const DRAG_THRESHOLD = 10;
 
-export default function SnakePileSort({ onExit }: { onExit: () => void }) {
-  const [order, setOrder] = useState<SortingSnake[]>(() => pileSortDeal());
+export default function SnakePileSort({
+  onExit,
+  mode = "classic",
+  dailyKey,
+}: {
+  onExit: () => void;
+  mode?: "classic" | "daily";
+  dailyKey?: string;
+}) {
+  const isDaily = mode === "daily" && !!dailyKey;
+  const bestKey = isDaily && dailyKey ? dailyBestKey(dailyKey) : PILE_BEST_KEY;
+  const dealFor = () => (isDaily && dailyKey ? pileSortDailyDeal(dailyKey) : pileSortDeal());
+  const [order, setOrder] = useState<SortingSnake[]>(() => dealFor());
   const [remaining, setRemaining] = useState<SortingSnake[]>(order);
   const [drawn, setDrawn] = useState<SortingSnake | null>(null);
   const [placed, setPlaced] = useState<Record<string, HouseId>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
+  const [hintUsed, setHintUsed] = useState(false);
+  const [hintOut, setHintOut] = useState<HouseId | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [finished, setFinished] = useState(false);
   const [timeBonus, setTimeBonus] = useState(0);
   const [hatLine, setHatLine] = useState(
-    "Tap the Hat — eight serpents wait inside. The Hat is watching…",
+    isDaily
+      ? "The Daily Hat — the same eight serpents for every keeper today. No hints from yesterday's players…"
+      : "Tap the Hat — eight serpents wait inside. The Hat is watching…",
   );
   const [hatMood, setHatMood] = useState<HatMood>("idle");
   const [best, setBest] = useState(0);
@@ -147,7 +166,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
   };
 
   const reset = () => {
-    const fresh = pileSortDeal();
+    const fresh = dealFor();
     setOrder(fresh);
     syncRemaining([...fresh]);
     setDrawn(null);
@@ -155,6 +174,8 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setSelected(null);
     setScore(0);
     setCorrectCount(0);
+    setHintUsed(false);
+    setHintOut(null);
     setElapsed(0);
     elapsedRef.current = 0;
     setFinished(false);
@@ -168,6 +189,21 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setHatLine("A fresh Hat, full of serpents. Tap it.");
   };
 
+  /* Once per game, the Hat will whisper one wrong house — for a price. */
+  const askHat = () => {
+    if (finished || hintUsed || !drawn) return;
+    const wrong = PILE_HOUSES.map((h) => h.id).filter((id) => id !== drawn.house);
+    const out = wrong[Math.floor(Math.random() * wrong.length)];
+    setHintOut(out);
+    setHintUsed(true);
+    setHatMood("dealing");
+    calmHat(650, "dealing");
+    pop();
+    setHatLine(
+      `The Hat leans close… "Not ${shortHouse(out)}, keeper. That wisdom costs ${PILE_HINT_COST}."`,
+    );
+  };
+
   /* A placement is final — right or wrong, the Hat keeps its counsel
      until every serpent is piled, then tallies the truth. */
   const place = (snakeId: string, houseId: HouseId) => {
@@ -178,6 +214,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
     setPlaced(next);
     setSelected(null);
     setDrawn(null);
+    setHintOut(null);
     pop();
     setHatMood("happy");
     calmHat(700, "happy");
@@ -188,12 +225,12 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
       setTimeBonus(bonus);
       setElapsed(secs);
       setCorrectCount(correct);
-      const final = correct * PILE_CORRECT_POINTS + bonus;
+      const final = Math.max(0, correct * PILE_CORRECT_POINTS + bonus - (hintUsed ? PILE_HINT_COST : 0));
       setScore(final);
-      const prev = readBest(PILE_BEST_KEY);
+      const prev = readBest(bestKey);
       setBest(Math.max(prev, final));
       if (final > prev) {
-        writeBest(PILE_BEST_KEY, final);
+        writeBest(bestKey, final);
         setIsNewBest(true);
       }
       setFinished(true);
@@ -331,7 +368,7 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
           ← Hat
         </button>
         <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-teal-200/80">
-          🎩 Pile sort
+          {isDaily && dailyKey ? `🎩 Daily · ${prettyDailyKey(dailyKey)}` : "🎩 Pile sort"}
         </p>
         <div className="flex items-center gap-2 text-[12px] font-bold">
           <span className="rounded-full border border-white/15 bg-black/60 px-2.5 py-1 text-amber-200">
@@ -404,6 +441,11 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
                       In the Hat&apos;s grip — tap a pile
                     </span>
                   )}
+                  {hintOut && (
+                    <span className="absolute bottom-2 left-2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-bold text-violet-200">
+                      🚫 Not {shortHouse(hintOut)}
+                    </span>
+                  )}
                 </button>
               ) : (
                 <p className="px-3 text-center text-[12px] italic text-white/35">
@@ -412,6 +454,24 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
               )}
             </div>
           </div>
+
+          {/* Ask the Hat — one whisper per game, for a price. */}
+          {!finished && drawn && (
+            <div className="mt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={askHat}
+                disabled={hintUsed}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] backdrop-blur-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 ${
+                  hintUsed
+                    ? "border-white/10 bg-black/60 text-white/40"
+                    : "border-violet-300/40 bg-violet-950/60 text-violet-100"
+                }`}
+              >
+                {hintUsed ? "🎩 The Hat has spoken" : `🎩 Ask the Hat · −${PILE_HINT_COST}`}
+              </button>
+            </div>
+          )}
 
           {/* House piles */}
           <p className="mt-4 text-center text-[11px] uppercase tracking-[0.25em] text-white/40">
@@ -499,6 +559,11 @@ export default function SnakePileSort({ onExit }: { onExit: () => void }) {
               <p className="text-white/45">sort points</p>
             </div>
           </div>
+          {hintUsed && (
+            <p className="mt-2 text-[12px] italic text-violet-200/70">
+              −{PILE_HINT_COST} pts — the Hat&apos;s wisdom isn&apos;t free
+            </p>
+          )}
           <ul className="mt-3 space-y-1.5 text-left">
             {order.map((s, i) => {
               const was = placed[s.id];

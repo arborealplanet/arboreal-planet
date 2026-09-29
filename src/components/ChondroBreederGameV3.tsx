@@ -830,6 +830,33 @@ function CollapsibleGameSection({
   );
 }
 
+/* One node in the lineage tree — tap to re-root the tree on that animal. */
+function LineageNode({
+  animal,
+  highlight,
+  onPick,
+}: {
+  animal: Snake;
+  highlight?: boolean;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <button
+      onClick={() => onPick(animal.id)}
+      className={`min-w-[118px] max-w-[150px] rounded-xl border p-2.5 text-left transition active:scale-95 ${
+        highlight
+          ? "border-amber-200/60 bg-amber-200/[.08] shadow-[0_0_24px_rgba(251,191,36,.25)]"
+          : "border-white/[.08] bg-white/[.03] hover:border-white/20"
+      }`}
+    >
+      <div className="truncate text-[13px] font-bold text-white/90">{animal.name || "Unnamed"}</div>
+      <div className="mt-0.5 text-[10px] text-white/40">
+        {animal.sex === "Female" ? "♀" : "♂"} · {animal.locality} · Gen {animal.generation}
+      </div>
+    </button>
+  );
+}
+
 export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameScreen } = {}) {
   const [resetMenuOpen, setResetMenuOpen] = useState(false);
   const [resetArmed, setResetArmed] = useState(false);
@@ -920,6 +947,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [initialsPrompt, setInitialsPrompt] = useState(false);
   const [initialsStatus, setInitialsStatus] = useState("");
   const [selectedSnakeId, setSelectedSnakeId] = useState<string | null>(null);
+  const [lineageRootId, setLineageRootId] = useState<string | null>(null);
   const [storeIndex, setStoreIndex] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [cloudSave, setCloudSave] = useState(false);
@@ -1032,6 +1060,44 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const selectedOffspring = selectedAnimal
     ? [...knownSnakes.values()].filter((animal) => animal.parentIds.includes(selectedAnimal.id))
     : [];
+
+  /* Lineage tree for the modal: two generations up, the root, two down. */
+  const lineageTree = useMemo(() => {
+    if (!lineageRootId) return null;
+    const root = knownSnakes.get(lineageRootId);
+    if (!root) return null;
+    const get = (id: string) => knownSnakes.get(id);
+    const parents = root.parentIds.map(get).filter((a): a is Snake => !!a);
+    const seenUp = new Set<string>();
+    const grandparents = parents
+      .flatMap((p) => p.parentIds.map(get).filter((a): a is Snake => !!a))
+      .filter((a) => {
+        if (seenUp.has(a.id)) return false;
+        seenUp.add(a.id);
+        return true;
+      });
+    const children = [...knownSnakes.values()].filter((a) => a.parentIds.includes(lineageRootId));
+    const seenDown = new Set<string>();
+    const grandchildren = children
+      .flatMap((c) => [...knownSnakes.values()].filter((a) => a.parentIds.includes(c.id)))
+      .filter((a) => {
+        if (a.id === lineageRootId || seenDown.has(a.id)) return false;
+        seenDown.add(a.id);
+        return true;
+      });
+    const mateGroups: { mate: Snake | null; babies: Snake[] }[] = [];
+    for (const baby of children) {
+      const mateId = baby.parentIds.find((id) => id !== lineageRootId);
+      const mate = mateId ? get(mateId) ?? null : null;
+      let group = mateGroups.find((g) => (g.mate?.id ?? null) === (mate?.id ?? null));
+      if (!group) {
+        group = { mate, babies: [] };
+        mateGroups.push(group);
+      }
+      group.babies.push(baby);
+    }
+    return { root, parents, grandparents, mateGroups, grandchildren };
+  }, [lineageRootId, knownSnakes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2022,6 +2088,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/30">Pedigree</div>
                   {selectedParents.length ? <div className="mt-3 grid grid-cols-2 gap-2">{selectedParents.map((parent) => <button key={parent.id} onClick={() => setSelectedSnakeId(parent.id)} className="rounded-xl border border-white/[.06] p-3 text-left"><div className="text-[9px] uppercase text-white/25">{parent.sex === "Female" ? "Dam" : "Sire"}</div><div className="mt-1 truncate text-sm font-semibold text-white/65">{parent.name}</div><div className="mt-1 text-[9px] text-white/25">{parent.locality} · Gen {parent.generation}</div></button>)}</div> : <div className="mt-3 text-sm text-white/28">Foundation animal · no recorded parents</div>}
                   {selectedOffspring.length ? <div className="mt-5"><div className="text-[9px] font-bold uppercase tracking-[.11em] text-white/25">Offspring ({selectedOffspring.length})</div><div className="mt-2 flex flex-wrap gap-2">{selectedOffspring.map((baby) => <button key={baby.id} onClick={() => setSelectedSnakeId(baby.id)} className="rounded-lg border border-amber-200/10 px-3 py-2 text-xs text-amber-100/60">{baby.name}</button>)}</div></div> : null}
+                  <button onClick={() => setLineageRootId(selectedAnimal.id)} className="mt-4 w-full rounded-xl border border-emerald-300/20 bg-emerald-300/[.05] px-4 py-2.5 text-xs font-bold text-emerald-100/70 transition active:scale-95">🌳 Open full lineage tree</button>
                 </div>
                 <div className="rounded-2xl border border-white/[.06] p-4">
                   <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/30">Locality pedigree</div>
@@ -2032,6 +2099,68 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   <div className="mt-3 space-y-2">{Object.entries(selectedAnimal.ancestry).map(([name, percent]) => <div key={name}><div className="flex justify-between gap-3 text-xs text-white/45"><span>{name}</span><span>{percent}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/[.05]"><div className="h-full rounded-full bg-emerald-300/55" style={{ width: `${percent}%` }} /></div></div>)}</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Lineage tree — two generations up and down from the root animal.
+          Tap any node to re-root the tree there. */}
+      {lineageTree ? (
+        <div role="dialog" aria-modal="true" aria-label={`Lineage tree · ${lineageTree.root.name}`} onClick={(event) => { if (event.target === event.currentTarget) setLineageRootId(null); }} className="fixed inset-0 z-[60] overflow-y-auto bg-black/85 p-3 backdrop-blur-sm sm:p-6">
+          <div className="mx-auto max-w-3xl rounded-[30px] border border-white/[.09] bg-[#09120e] p-5 shadow-2xl sm:p-7">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="section-kicker">Lineage tree</div>
+                <h2 className="mt-2 text-2xl font-semibold">{lineageTree.root.name || "Unnamed snake"}</h2>
+              </div>
+              <button onClick={() => setLineageRootId(null)} className="rounded-xl border border-white/[.09] px-4 py-2 text-sm font-bold text-white/60">Close</button>
+            </div>
+            <div className="mt-6 flex flex-col items-center gap-1">
+              {lineageTree.grandparents.length ? (
+                <>
+                  <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Grandparents</div>
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    {lineageTree.grandparents.map((a) => <LineageNode key={a.id} animal={a} onPick={setLineageRootId} />)}
+                  </div>
+                  <div className="my-1 h-5 w-px bg-white/15" aria-hidden />
+                </>
+              ) : null}
+              {lineageTree.parents.length ? (
+                <>
+                  <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Parents</div>
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    {lineageTree.parents.map((a) => <LineageNode key={a.id} animal={a} onPick={setLineageRootId} />)}
+                  </div>
+                  <div className="my-1 h-5 w-px bg-white/15" aria-hidden />
+                </>
+              ) : (
+                <p className="mb-1 text-[11px] italic text-white/30">Foundation animal — no recorded parents</p>
+              )}
+              <LineageNode animal={lineageTree.root} highlight onPick={setLineageRootId} />
+              {lineageTree.mateGroups.length ? <div className="my-1 h-5 w-px bg-white/15" aria-hidden /> : null}
+              {lineageTree.mateGroups.map((group, gi) => (
+                <div key={group.mate?.id ?? `unknown-${gi}`} className="flex w-full flex-col items-center">
+                  <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">
+                    Offspring{group.mate ? <> × {group.mate.name || "Unnamed"}</> : null} ({group.babies.length})
+                  </div>
+                  <div className="mt-2 flex max-w-full flex-wrap justify-center gap-2">
+                    {group.babies.slice(0, 12).map((a) => <LineageNode key={a.id} animal={a} onPick={setLineageRootId} />)}
+                    {group.babies.length > 12 ? <div className="self-center text-[11px] text-white/35">+{group.babies.length - 12} more</div> : null}
+                  </div>
+                  {gi < lineageTree.mateGroups.length - 1 ? <div className="my-3 h-px w-16 bg-white/10" aria-hidden /> : null}
+                </div>
+              ))}
+              {lineageTree.grandchildren.length ? (
+                <>
+                  <div className="my-1 h-5 w-px bg-white/15" aria-hidden />
+                  <div className="text-[10px] font-black uppercase tracking-[.15em] text-white/30">Grand-offspring ({lineageTree.grandchildren.length})</div>
+                  <div className="mt-2 flex max-w-full flex-wrap justify-center gap-2">
+                    {lineageTree.grandchildren.slice(0, 12).map((a) => <LineageNode key={a.id} animal={a} onPick={setLineageRootId} />)}
+                    {lineageTree.grandchildren.length > 12 ? <div className="self-center text-[11px] text-white/35">+{lineageTree.grandchildren.length - 12} more</div> : null}
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

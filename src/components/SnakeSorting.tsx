@@ -21,6 +21,9 @@ import {
   WILDCARD_ENABLED,
   bankForMode,
   ceremonyOrder,
+  dailyBestKey,
+  dailyDealKey,
+  prettyDailyKey,
   rankFor,
   readBest,
   shuffle,
@@ -376,7 +379,9 @@ function useBestScore(key: string): readonly [number, (v: number) => void] {
 export function SnakeSorting() {
   const [phase, setPhase] = useState<Phase>("title");
   const [mode, setMode] = useState<Mode>("ceremony");
-  const [pileMode, setPileMode] = useState(false);
+  const [pileMode, setPileMode] = useState<null | "classic" | "daily">(null);
+  const todayKey = dailyDealKey();
+  const bestDaily = readBest(dailyBestKey(todayKey));
   const [order, setOrder] = useState<SortingSnake[]>([]);
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -810,7 +815,11 @@ export function SnakeSorting() {
         className={`relative mx-auto flex min-h-dvh w-full flex-col px-4 pb-6 pt-4 ${pileMode ? "max-w-2xl" : "max-w-md"}`}
       >
         {pileMode ? (
-          <SnakePileSort onExit={() => setPileMode(false)} />
+          <SnakePileSort
+            mode={pileMode}
+            dailyKey={todayKey}
+            onExit={() => setPileMode(null)}
+          />
         ) : phase === "title" ? (
           <TitleScreen
             bestCeremony={bestCeremony}
@@ -821,7 +830,10 @@ export function SnakeSorting() {
             showCredits={showCredits}
             setShowCredits={setShowCredits}
             onStart={startGame}
-            onPileStart={() => setPileMode(true)}
+            onPileStart={() => setPileMode("classic")}
+            onDailyStart={() => setPileMode("daily")}
+            bestDaily={bestDaily}
+            todayLabel={prettyDailyKey(todayKey)}
           />
         ) : phase === "results" ? (
           <ResultsScreen
@@ -1262,6 +1274,9 @@ function TitleScreen({
   setShowCredits,
   onStart,
   onPileStart,
+  onDailyStart,
+  bestDaily,
+  todayLabel,
 }: {
   bestCeremony: number;
   bestEndless: number;
@@ -1272,6 +1287,9 @@ function TitleScreen({
   setShowCredits: React.Dispatch<React.SetStateAction<boolean>>;
   onStart: (m: Mode) => void;
   onPileStart: () => void;
+  onDailyStart: () => void;
+  bestDaily: number;
+  todayLabel: string;
 }) {
   const titleHouses = WILDCARD_ENABLED ? HOUSES : HOUSES.filter((h) => h.id !== "designer");
   return (
@@ -1347,9 +1365,20 @@ function TitleScreen({
           onClick={onPileStart}
           className="w-full rounded-2xl border border-teal-300/30 bg-teal-950/50 px-4 py-3 text-[14px] font-black uppercase tracking-wider text-teal-100 backdrop-blur-sm transition active:scale-95"
         >
-          🖐️ Pile sort
+          🎩 Pile sort
           <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
-            8 photos on the table · drag each serpent onto its house pile
+            The Hat deals 8 serpents · drag each onto its house pile
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onDailyStart}
+          className="w-full rounded-2xl border border-violet-300/30 bg-violet-950/50 px-4 py-3 text-[14px] font-black uppercase tracking-wider text-violet-100 backdrop-blur-sm transition active:scale-95"
+        >
+          📅 Daily Hat · {todayLabel}
+          <span className="block text-[11px] font-bold normal-case tracking-normal opacity-70">
+            Same 8 serpents for every keeper today
+            {bestDaily > 0 ? ` · your best: ${bestDaily}` : " · new deal each day"}
           </span>
         </button>
         {(bestCeremony > 0 || bestEndless > 0 || (WILDCARD_ENABLED && bestWildcard > 0)) && (

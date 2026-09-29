@@ -24,7 +24,7 @@ const sellers = [
     name: "Elleman Family Reptiles",
     logo: "/sellers/elleman-family-reptiles.webp",
     logoAlt: "Elleman Family Reptiles logo — an orange snake over gothic lettering",
-    blurb: "Green tree pythons and more. Browse their animals on MorphMarket.",
+    blurb: "Red tail boa morphs, tree monitors, green tree pythons and more. Browse their animals on MorphMarket.",
     href: "https://www.morphmarket.com/stores/jere000/",
   },
 ] as const;
