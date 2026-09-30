@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
-import { consumeStockRotated, isHankScaleMuted, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
+import { consumeStockRotated, isHankScaleMuted, playHankScaleHalloweenLine, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
 
 // Halloween loop variants of Hank behind the haunted counter — same
 // three-clip crossfade as the standard shop, swapping to the spooky set.
@@ -103,9 +103,10 @@ export function ArborealKeeperReptiShopHalloween({ navCollapsed = false }: { nav
     return () => { active = false; };
   }, []);
 
-  // Hank Scale voice line per tip index (HANK_TIPS order).
-  const TIP_LINES = [3, 4, 5, 6, 7, 22];
-  const VIEW_LINES: Record<View, number> = { animals: 2, enclosures: 3, market: 6 };
+  // Halloween Hank Scale voice line per tip index (HANK_TIPS order) — the
+  // separate snake-hill-halloween audio set. Flipping back to the default
+  // theme renders the default shop, which keeps the original line-xx.mp3 set.
+  const TIP_LINES = [1, 2, 3, 4, 5, 6];
 
   useEffect(() => {
     const onMuteChange = () => setMuted(isHankScaleMuted());
@@ -119,26 +120,15 @@ export function ArborealKeeperReptiShopHalloween({ navCollapsed = false }: { nav
     setHankScaleMuted(next);
   }
 
-  function hasReturningSave(): boolean {
-    try {
-      const raw = window.localStorage.getItem("arboreal_chondro_breeder_v2");
-      if (!raw) return false;
-      const parsed = JSON.parse(raw) as { colony?: unknown };
-      return Array.isArray(parsed?.colony) && parsed.colony.length > 0;
-    } catch {
-      return false;
-    }
-  }
-
   function handleTipClick() {
     const next = (tip + 1) % HANK_TIPS.length;
     setTip(next);
     if (!introducedRef.current) {
       introducedRef.current = true;
-      // Returning keepers get the welcome-back line; new players get the intro.
-      playHankScaleLine(hasReturningSave() ? 17 : 1);
+      // Halloween greeting (new and returning keepers alike) — the spooky set.
+      playHankScaleHalloweenLine(1);
     } else {
-      playHankScaleLine(TIP_LINES[next]);
+      playHankScaleHalloweenLine(TIP_LINES[next]);
     }
   }
 
@@ -152,8 +142,17 @@ export function ArborealKeeperReptiShopHalloween({ navCollapsed = false }: { nav
       return copy;
     });
     // After a daily stock rotation, the animals tab gets the fresh-stock
-    // greeting instead of the standard one — once.
-    playHankScaleLine(next === "animals" && consumeStockRotated() ? 11 : VIEW_LINES[next]);
+    // greeting instead of the standard one — once. Market and enclosures
+    // views use the Halloween audio set; animals keeps the standard line.
+    if (next === "animals" && consumeStockRotated()) {
+      playHankScaleLine(11);
+    } else if (next === "animals") {
+      playHankScaleLine(2);
+    } else if (next === "enclosures") {
+      playHankScaleHalloweenLine(4);
+    } else {
+      playHankScaleHalloweenLine(5);
+    }
   }
 
   // Tips only advance when the keeper taps the tip row — no auto-scroll.
