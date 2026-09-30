@@ -177,7 +177,7 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
   // Mobile scrolls vertically as one page (Hank video, pills, inventory at
   // natural height); sm+ keeps the fixed-height panel with internal carousels.
   return (
-    <div className={`mx-auto flex ${navCollapsed ? "h-[calc(100dvh-66px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-72px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]" : "h-[calc(100dvh-164px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]"} w-full max-w-5xl flex-col overflow-y-auto overscroll-contain px-4 py-3 transition-[height] duration-300 sm:overflow-hidden sm:px-6`}>
+    <div className={`mx-auto flex ${navCollapsed ? "h-[calc(100dvh-66px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-72px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]" : "h-[calc(100dvh-164px-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-170px-env(safe-area-inset-bottom))]"} w-full max-w-5xl lg:max-w-7xl flex-col overflow-y-auto overscroll-contain px-4 py-3 transition-[height] duration-300 sm:overflow-hidden sm:px-6`}>
       {/* Sprite QA — production tool, admins only, parked above the tip bar on the right */}
       {isAdmin && !qaOpen ? (
       <>
@@ -209,7 +209,7 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
         title="Ask Hank for another tip"
         className="mb-2 flex w-full flex-none items-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.96] px-3 py-2 text-left shadow-[0_10px_30px_rgba(0,0,0,.35)]"
       >
-        <span className="min-w-0 flex-1 text-[11px] leading-4 text-[#0a120d] sm:text-[12px]">
+        <span className="min-w-0 flex-1 text-[11px] leading-4 text-[#0a120d] sm:text-[12px] lg:text-sm lg:leading-5">
           <span className="font-semibold">Hank says:</span> {HANK_TIPS[tip]}
         </span>
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
@@ -245,13 +245,13 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
               type="button"
               onClick={() => selectView(v.id)}
               aria-current={selected ? "true" : undefined}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[8px] font-black uppercase tracking-[.05em] transition sm:text-[9px] ${
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[8px] font-black uppercase tracking-[.05em] transition sm:text-[9px] lg:py-2 lg:pl-1.5 lg:pr-3 lg:text-[11px] ${
                 selected
                   ? "border-emerald-200/70 bg-gradient-to-b from-emerald-300 to-emerald-400 text-[#04120a] shadow-[0_0_18px_rgba(52,211,153,.45)] ring-1 ring-inset ring-white/40"
                   : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
               }`}
               >
-                <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 shrink-0 rounded-full object-cover" />
+                <Image src={v.thumb} alt="" width={28} height={28} className="h-3.5 w-3.5 shrink-0 rounded-full object-cover lg:h-5 lg:w-5" />
                 <span className="truncate">
                   <span className="sm:hidden">{v.shortLabel}</span>
                   <span className="hidden sm:inline">{v.label}</span>
@@ -285,7 +285,7 @@ export function ArborealKeeperReptiShop({ navCollapsed = false }: { navCollapsed
       {qaOpen && isAdmin ? (
         <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Sprite QA">
           <button type="button" aria-label="Close sprite QA" onClick={() => setQaOpen(false)} className="absolute inset-0 cursor-default bg-black/72 backdrop-blur-sm" />
-          <div className="relative flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#071009] sm:rounded-[28px]">
+          <div className="relative flex max-h-[90dvh] w-full max-w-3xl lg:max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#071009] sm:rounded-[28px]">
             <div className="flex items-start justify-between gap-3 border-b border-white/[.06] p-4 sm:p-5">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[.17em] text-violet-200/50">Production tool</div>
