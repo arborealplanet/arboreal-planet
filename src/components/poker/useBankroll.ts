@@ -7,6 +7,13 @@ export type PokerGame = "holdem" | "blackjack" | "draw";
 const DEMO_KEY = "snake-poker-demo-bankroll";
 const DEMO_START = 1000;
 
+/** Lifesap burned per arcade token at the cashier. */
+export const CONVERT_RATE = 100;
+/** Lifesap that must remain in the stack after a conversion. */
+export const CONVERT_KEEP_MIN = 500;
+/** Max lifesap convertible in one call. */
+export const CONVERT_MAX = 10000;
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -27,6 +34,12 @@ export interface Bankroll {
   /** Settle an open round with the total lifesap to credit (incl. returned stake). */
   settleBet: (roundId: string, payout: number, opts?: { risked?: number; bet?: number }) => Promise<void>;
   rebuy: (roundId: string, amount: number) => Promise<void>;
+  /**
+   * Cashier: burn `amount` lifesap for later token credit. Amount must be a
+   * positive multiple of CONVERT_RATE; at least KEEP_MIN lifesap stays in the
+   * stack. Returns the new lifesap balance.
+   */
+  convert: (amount: number) => Promise<number>;
   refresh: () => Promise<void>;
   resetDemo: () => void;
 }
@@ -131,5 +144,35 @@ export function useBankroll(): Bankroll {
     setBalanceBoth(DEMO_START);
   }, [setBalanceBoth]);
 
-  return { signedIn, balance, loading, error, placeBet, settleBet, rebuy, refresh, resetDemo };
+  const convert = useCallback(
+    async (amount: number): Promise<number> => {
+      const a = Math.floor(amount);
+      if (!Number.isFinite(a) || a <= 0 || a % CONVERT_RATE !== 0) {
+        throw new Error(`Conversion amount must be a positive multiple of ${CONVERT_RATE}.`);
+      }
+      if (a > CONVERT_MAX) {
+        throw new Error(`Max ${CONVERT_MAX.toLocaleString()} lifesap per conversion.`);
+      }
+      if (signedIn) {
+        const data = await api<{ balance: number }>("/api/poker/convert", {
+          method: "POST",
+          body: JSON.stringify({ amount: a }),
+        });
+        setBalanceBoth(data.balance);
+        return data.balance;
+      }
+      if (balanceRef.current - a < CONVERT_KEEP_MIN) {
+        throw new Error(
+          `Keep at least ${CONVERT_KEEP_MIN} lifesap in your stack — reset your demo bankroll below to keep playing.`
+        );
+      }
+      const next = balanceRef.current - a;
+      window.localStorage.setItem(DEMO_KEY, String(next));
+      setBalanceBoth(next);
+      return next;
+    },
+    [signedIn, setBalanceBoth]
+  );
+
+  return { signedIn, balance, loading, error, placeBet, settleBet, rebuy, refresh, resetDemo, convert };
 }

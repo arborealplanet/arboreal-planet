@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
+import { PokerCashier } from "@/components/poker/PokerCashier";
 import { isSfxMuted, playSfx, setSfxMuted, unlockAudio } from "@/lib/poker/sfx";
 
 const GAMES = [
@@ -40,7 +41,7 @@ const GAMES = [
 ];
 
 export function SnakePokerLobby() {
-  const { signedIn, balance, loading, resetDemo } = useBankroll();
+  const { signedIn, balance, loading, resetDemo, convert } = useBankroll();
   const [muted, setMuted] = useState(() => isSfxMuted());
   const [tokens, setTokens] = useState<{ tokens?: Array<{ status: string }> } | null>(null);
 
@@ -120,6 +121,8 @@ export function SnakePokerLobby() {
             </div>
           )}
         </div>
+
+        <PokerCashier balance={balance} loading={loading} convert={convert} />
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {GAMES.map((g) => (
