@@ -10,6 +10,7 @@ import { ArborealKeeperAdHero } from "@/components/ArborealKeeperAdHero";
 import IntroCinematic from "@/components/IntroCinematic";
 import { ArborealKeeperFacilityOverview } from "@/components/ArborealKeeperFacilityOverview";
 import { ArborealKeeperReptiShop } from "@/components/ArborealKeeperReptiShop";
+import { ArborealKeeperReptiShopHalloween } from "@/components/ArborealKeeperReptiShopHalloween";
 import { ChondroBreederGameV3, hasSeenIntroCinematic } from "@/components/ChondroBreederGameV3";
 import { ChondroBreederManagementView } from "@/components/ChondroBreederCommandCenter";
 import { ChondroBreederSubspeciesPhenotypes } from "@/components/ChondroBreederSubspeciesPhenotypes";
@@ -104,6 +105,20 @@ export function ChondroBreederWorkspace() {
   // missing nav; collapsing lasts only for the session. Desktop keeps the
   // dock always visible.
   const [navCollapsed, setNavCollapsed] = useState(false);
+  // Seasonal shop theme: the owner can flip the Arboreal Keeper shop to its
+  // Halloween reskin from the owner console. Fetched once on mount; any
+  // failure keeps the standard shop.
+  const [shopTheme, setShopTheme] = useState<"default" | "halloween">("default");
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/site-settings?key=shop_theme", { cache: "no-store" })
+      .then((response) => response.json().catch(() => null))
+      .then((data) => {
+        if (active && data && data.value === "halloween") setShopTheme("halloween");
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   function toggleNavCollapsed() {
     setNavCollapsed((prev) => !prev);
   }
@@ -154,7 +169,11 @@ export function ChondroBreederWorkspace() {
 
       <main>
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
-        {view === "market" ? <ArborealKeeperReptiShop navCollapsed={navCollapsed} /> : coreViews.has(view) ? <CoreGameScreen view={view as "breeding" | "colony" | "clutches"} /> : null}
+        {view === "market" ? (
+          shopTheme === "halloween"
+            ? <ArborealKeeperReptiShopHalloween navCollapsed={navCollapsed} />
+            : <ArborealKeeperReptiShop navCollapsed={navCollapsed} />
+        ) : coreViews.has(view) ? <CoreGameScreen view={view as "breeding" | "colony" | "clutches"} /> : null}
         {view === "career" ? (
           <SecondaryScreen active={active} onBack={() => openView("home")}>
             <section className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">

@@ -11,6 +11,7 @@ import { AdminReferenceEditor } from "@/components/AdminReferenceEditor";
 import { AdminSellerVerification } from "@/components/AdminSellerVerification";
 import { OwnerConsoleOverview } from "@/components/OwnerConsoleOverview";
 import { OwnerRoleManager } from "@/components/OwnerRoleManager";
+import { OwnerShopThemeSwitch } from "@/components/OwnerShopThemeSwitch";
 import { fetchOwnProfile, getServerIdentity } from "@/lib/supabase-auth";
 
 const adminSections=[
@@ -36,6 +37,7 @@ export default async function AdminPage(){
 
     <nav aria-label="Admin sections" className="mx-auto mb-8 flex max-w-7xl gap-2 overflow-x-auto px-5 sm:px-6">
       {isOwner&&<a href="#team" className="shrink-0 rounded-xl border border-amber-300/15 bg-amber-300/[.035] px-4 py-2.5 text-[10px] font-black uppercase tracking-[.08em] text-amber-100/60 transition hover:bg-amber-300/[.055]">Team</a>}
+      {isOwner&&<a href="#seasonal" className="shrink-0 rounded-xl border border-amber-300/15 bg-amber-300/[.035] px-4 py-2.5 text-[10px] font-black uppercase tracking-[.08em] text-amber-100/60 transition hover:bg-amber-300/[.055]">Seasonal</a>}
       {adminSections.map(([label,id])=><a key={id} href={`#${id}`} className="shrink-0 rounded-xl border border-white/[.07] bg-white/[.02] px-4 py-2.5 text-[10px] font-black uppercase tracking-[.08em] text-white/45 transition hover:border-emerald-300/18 hover:text-emerald-100/70">{label}</a>)}
     </nav>
 
@@ -46,6 +48,15 @@ export default async function AdminPage(){
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Promote trusted accounts to moderator or admin without exposing private account data. The owner role itself is protected and cannot be assigned or changed from this interface.</p>
       </div>
       <OwnerRoleManager/>
+    </section>}
+
+    {isOwner&&<section id="seasonal" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
+      <div className="mb-5 rounded-3xl border border-amber-300/12 bg-amber-300/[.025] p-6">
+        <div className="text-[10px] font-black uppercase tracking-[.14em] text-amber-100/55">Seasonal</div>
+        <h2 className="mt-3 text-2xl font-semibold">Seasonal shop theme</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/38">Flip the Arboreal Keeper shop between its standard look and the Halloween reskin — haunted storefront loop, spooky Hank tips and orange-and-purple accents. The switch takes effect for every keeper immediately.</p>
+      </div>
+      <OwnerShopThemeSwitch/>
     </section>}
 
     {isOwner&&<section id="members" className="scroll-mt-28 mx-auto max-w-7xl px-5 pb-12 sm:px-6">
