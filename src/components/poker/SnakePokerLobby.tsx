@@ -41,7 +41,7 @@ const GAMES = [
 ];
 
 export function SnakePokerLobby() {
-  const { signedIn, balance, loading, resetDemo, convert } = useBankroll();
+  const { signedIn, balance, loading, resetDemo, convert, claimBailout } = useBankroll();
   const [muted, setMuted] = useState(() => isSfxMuted());
   const [tokens, setTokens] = useState<{ tokens?: Array<{ status: string }> } | null>(null);
 
@@ -122,7 +122,7 @@ export function SnakePokerLobby() {
           )}
         </div>
 
-        <PokerCashier balance={balance} loading={loading} signedIn={signedIn} convert={convert} />
+        <PokerCashier balance={balance} loading={loading} signedIn={signedIn} convert={convert} claimBailout={claimBailout} />
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {GAMES.map((g) => (

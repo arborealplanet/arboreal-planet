@@ -13,6 +13,10 @@ export const CONVERT_RATE = 100;
 export const CONVERT_KEEP_MIN = 500;
 /** Max lifesap convertible in one call. */
 export const CONVERT_MAX = 10000;
+/** Bailout is offered when the stack falls under this. */
+export const BAILOUT_THRESHOLD = 100;
+/** Bailout tops the stack up to this. */
+export const BAILOUT_TOPUP = 500;
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -42,6 +46,11 @@ export interface Bankroll {
    * lifesap balance.
    */
   convert: (amount: number) => Promise<number>;
+  /**
+   * Bailout: signed-in keepers busted under BAILOUT_THRESHOLD can top back up
+   * to 500 lifesap once per day. Returns the new lifesap balance.
+   */
+  claimBailout: () => Promise<number>;
   refresh: () => Promise<void>;
   resetDemo: () => void;
 }
@@ -168,5 +177,14 @@ export function useBankroll(): Bankroll {
     [signedIn, setBalanceBoth]
   );
 
-  return { signedIn, balance, loading, error, placeBet, settleBet, rebuy, refresh, resetDemo, convert };
+  const claimBailout = useCallback(async (): Promise<number> => {
+    if (!signedIn) {
+      throw new Error("Sign in to claim the daily bailout.");
+    }
+    const data = await api<{ balance: number }>("/api/poker/bailout", { method: "POST" });
+    setBalanceBoth(data.balance);
+    return data.balance;
+  }, [signedIn, setBalanceBoth]);
+
+  return { signedIn, balance, loading, error, placeBet, settleBet, rebuy, refresh, resetDemo, convert, claimBailout };
 }

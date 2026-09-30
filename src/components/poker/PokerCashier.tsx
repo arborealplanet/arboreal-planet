@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { addTokens, getTokenBalance } from "@/lib/arcade";
-import { CONVERT_KEEP_MIN, CONVERT_MAX, CONVERT_RATE } from "@/components/poker/useBankroll";
+import { BAILOUT_THRESHOLD, BAILOUT_TOPUP, CONVERT_KEEP_MIN, CONVERT_MAX, CONVERT_RATE } from "@/components/poker/useBankroll";
 import { playSfx, unlockAudio } from "@/lib/poker/sfx";
 
 const CHUNKS = [500, 1000, 2500];
@@ -13,11 +13,13 @@ interface Props {
   loading: boolean;
   signedIn: boolean | null;
   convert: (amount: number) => Promise<number>;
+  claimBailout: () => Promise<number>;
 }
 
-export function PokerCashier({ balance, loading, signedIn, convert }: Props) {
+export function PokerCashier({ balance, loading, signedIn, convert, claimBailout }: Props) {
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
+  const [bailoutBusy, setBailoutBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [tokenBalance, setTokenBalance] = useState(() => getTokenBalance());
 
@@ -53,6 +55,24 @@ export function PokerCashier({ balance, loading, signedIn, convert }: Props) {
     customAmount % CONVERT_RATE === 0 &&
     customAmount <= CONVERT_MAX &&
     balance - customAmount >= CONVERT_KEEP_MIN;
+
+  const busted = signedIn === true && !loading && balance < BAILOUT_THRESHOLD;
+
+  const doBailout = async () => {
+    setMsg(null);
+    setBailoutBusy(true);
+    try {
+      unlockAudio();
+      await claimBailout();
+      playSfx("win");
+      setMsg({ ok: true, text: `Bailout claimed — back up to ${BAILOUT_TOPUP} lifesap. Get back on the felt!` });
+    } catch (e) {
+      playSfx("lose");
+      setMsg({ ok: false, text: e instanceof Error ? e.message : "Bailout failed." });
+    } finally {
+      setBailoutBusy(false);
+    }
+  };
 
   return (
     <div className="mt-4 rounded-2xl border border-amber-200/15 bg-black/45 p-4">
@@ -109,6 +129,20 @@ export function PokerCashier({ balance, loading, signedIn, convert }: Props) {
           </Link>
         )}
       </div>
+      {busted && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-red-300/25 bg-red-950/40 p-3">
+          <p className="text-xs text-red-100/90">
+            Busted! Claim today's bailout to get back in the game.
+          </p>
+          <button
+            disabled={bailoutBusy}
+            onClick={() => void doBailout()}
+            className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-black transition hover:bg-emerald-400 disabled:opacity-50"
+          >
+            {bailoutBusy ? "Claiming…" : `Claim ${BAILOUT_TOPUP} lifesap`}
+          </button>
+        </div>
+      )}
       {msg && (
         <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</p>
       )}
