@@ -1091,16 +1091,30 @@ export function CanopyHunter({
                 {canSureGrip && (
                   <button
                     type="button"
+                    onPointerDown={(e) => {
+                      if (e.pointerType !== "mouse") {
+                        e.preventDefault();
+                        deploySureGrip();
+                      }
+                    }}
                     onClick={deploySureGrip}
-                    className="mb-3 w-full rounded-2xl border border-lime-300/30 bg-lime-300/[.07] px-6 py-3 text-sm font-bold uppercase tracking-[.12em] text-lime-100 transition hover:bg-lime-300/[.14] active:scale-[.99]"
+                    className="mb-3 w-full touch-manipulation select-none rounded-2xl border border-lime-300/30 bg-lime-300/[.07] px-6 py-3 text-sm font-bold uppercase tracking-[.12em] text-lime-100 transition hover:bg-lime-300/[.14] active:scale-[.99]"
                   >
                     ✊ Sure grip — cannot miss · {tokens} left
                   </button>
                 )}
                 <button
                   type="button"
+                  onPointerDown={(e) => {
+                    // Timing-critical: fire on press, not on release, and
+                    // suppress the emulated click so grab() runs exactly once.
+                    if (e.pointerType !== "mouse") {
+                      e.preventDefault();
+                      grab();
+                    }
+                  }}
                   onClick={() => grab()}
-                  className="mt-5 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
+                  className="mt-5 w-full touch-manipulation select-none rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
                 >
                   GRAB
                 </button>
