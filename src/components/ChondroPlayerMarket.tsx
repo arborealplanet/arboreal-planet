@@ -217,7 +217,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
   function mineCarouselCard(listing: Listing) {
     const animal = listing.snake;
     return (
-      <article key={listing.id} className="w-[66%] shrink-0 snap-start rounded-2xl border border-amber-200/10 bg-black/14 p-2.5 sm:w-[230px]">
+      <article key={listing.id} className="w-[66%] shrink-0 snap-start rounded-2xl border border-amber-200/10 bg-black/14 p-2.5 sm:w-[230px] lg:w-[300px]">
         {marketIcon(animal)}
         <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
         <div className="mt-1 flex items-center justify-between gap-2">
@@ -232,7 +232,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
     const animal = listing.snake;
     const cannotBuy = busy !== null || cash < listing.price || openSlots <= 0;
     return (
-      <article key={listing.id} className="w-[66%] shrink-0 snap-start rounded-2xl border border-white/[.06] bg-black/12 p-2.5 sm:w-[230px]">
+      <article key={listing.id} className="w-[66%] shrink-0 snap-start rounded-2xl border border-white/[.06] bg-black/12 p-2.5 sm:w-[230px] lg:w-[300px]">
         {marketIcon(animal)}
         <div className="mt-2 truncate text-[13px] font-bold text-white/78">{animal.name}</div>
         <div className="mt-2 flex items-center justify-between gap-2">
