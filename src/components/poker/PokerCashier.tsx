@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { addTokens } from "@/lib/arcade";
+import { useEffect, useState } from "react";
+import { addTokens, getTokenBalance } from "@/lib/arcade";
 import { CONVERT_KEEP_MIN, CONVERT_MAX, CONVERT_RATE } from "@/components/poker/useBankroll";
 import { playSfx, unlockAudio } from "@/lib/poker/sfx";
 
@@ -19,6 +19,13 @@ export function PokerCashier({ balance, loading, signedIn, convert }: Props) {
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [tokenBalance, setTokenBalance] = useState(() => getTokenBalance());
+
+  useEffect(() => {
+    const sync = () => setTokenBalance(getTokenBalance());
+    window.addEventListener("arcade-balance", sync);
+    return () => window.removeEventListener("arcade-balance", sync);
+  }, []);
 
   const doConvert = async (amount: number) => {
     setMsg(null);
@@ -52,7 +59,8 @@ export function PokerCashier({ balance, loading, signedIn, convert }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-bold text-amber-100">💱 Cashier — lifesap → arcade tokens</h2>
         <p className="text-xs text-emerald-100/60">
-          {CONVERT_RATE} lifesap = 1 🪙 · keeps {CONVERT_KEEP_MIN} in your stack
+          {CONVERT_RATE} lifesap = 1 🪙 · you hold {tokenBalance.toLocaleString()} 🪙 · keeps{" "}
+          {CONVERT_KEEP_MIN} in your stack
         </p>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
