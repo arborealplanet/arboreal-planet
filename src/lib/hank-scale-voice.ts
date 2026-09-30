@@ -4,6 +4,7 @@
 // rejects the play() promise) so lines can be wired before their MP3 lands.
 
 const BASE = "/hatchery/game/voice/snake-hill";
+const HALLOWEEN_BASE = "/hatchery/game/voice/snake-hill-halloween";
 const MUTE_KEY = "hank-scale-voice-muted";
 
 // Line number -> audio file. All 28 lines have MP3s in place.
@@ -72,6 +73,25 @@ export function playHankScaleLine(n: number): void {
   const file = LINE_FILES[n];
   if (!file) return;
   playHankScaleSrc(`${BASE}/${file}`);
+}
+
+// Halloween shop lines (snake-hill-halloween/halloween-1..6.mp3), matching
+// the HANK_TIPS order in ArborealKeeperReptiShopHalloween.tsx. Only the
+// Halloween shop plays these; the default shop keeps the 28 original lines.
+const HALLOWEEN_LINE_FILES: Record<number, string> = {
+  1: "halloween-1.mp3", // haunted shop greeting
+  2: "halloween-2.mp3", // night owls tip
+  3: "halloween-3.mp3", // black-cat morph tip
+  4: "halloween-4.mp3", // pumpkin enclosures tip
+  5: "halloween-5.mp3", // player market tip
+  6: "halloween-6.mp3", // holdbacks tip
+};
+
+/** Play a Halloween Hank Scale voice line by number (1-6). Stops any line already playing. */
+export function playHankScaleHalloweenLine(n: number): void {
+  const file = HALLOWEEN_LINE_FILES[n];
+  if (!file) return;
+  playHankScaleSrc(`${HALLOWEEN_BASE}/${file}`);
 }
 
 /** Play any Hank Scale audio file by public path (e.g. site section intros). */
