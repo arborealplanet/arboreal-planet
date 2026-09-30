@@ -1,3 +1,4 @@
+import { ArcadeToasts } from "@/components/arcade/ArcadeToasts";
 import { SnakePokerLobby } from "@/components/poker/SnakePokerLobby";
 
 export const metadata = {
@@ -10,6 +11,7 @@ export default function SnakePokerPage() {
   return (
     <main className="min-h-dvh bg-[#04120a]">
       <SnakePokerLobby />
+          <ArcadeToasts />
     </main>
   );
 }

@@ -15,6 +15,7 @@ import {
   type HouseId,
   type SortingSnake,
 } from "@/lib/snake-sorting";
+import { addTokens, recordScore, reportArcadeEvent } from "@/lib/arcade";
 
 /* Tiny local bleeps — the pile table has its own voice. */
 function blip(freq: number, dur = 0.09, type: OscillatorType = "sine", delay = 0) {
@@ -239,6 +240,11 @@ export default function SnakePileSort({
           ? "A perfect sorting! The Hat bows to your eye, keeper."
           : `The Hat tallies: ${correct} of ${order.length} true.`,
       );
+      // Arcade meta-system: tokens, leaderboard, achievements, quests.
+      const tokens = Math.min(16, correct * 2);
+      if (tokens > 0) addTokens(tokens, `Pile Sort — ${correct}/${order.length} true`);
+      recordScore("pile", final, `${correct}/${order.length}`);
+      reportArcadeEvent({ type: "pile-complete", correct, total: order.length, score: final });
     } else {
       setHatLine(pick(ACCEPT_LINES));
       /* The Hat offers the next serpent after a beat. */

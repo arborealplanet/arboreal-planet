@@ -50,6 +50,7 @@ import {
   stopJungleMusic,
 } from "@/lib/jungle-ambience";
 import { playHankScaleLine } from "@/lib/hank-scale-voice";
+import { addTokens, recordScore, reportArcadeEvent } from "@/lib/arcade";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
 type Phase = "briefing" | "trail" | "grove" | "catch" | "results";
@@ -452,6 +453,26 @@ export function CanopyHunter({
       return () => clearTimeout(t);
     }
   }, [phase, resolvedCount, grovesPerExpedition]);
+
+  /* Arcade meta-system: award tokens + leaderboard + achievements once per night. */
+  const arcadeAwardedRef = useRef<unknown>(null);
+  useEffect(() => {
+    if (phase !== "results" || arcadeAwardedRef.current === legs) return;
+    arcadeAwardedRef.current = legs;
+    const primeCount = bag.filter((w) => w.prime).length;
+    const s = scoreExpedition(bag.length, bestStreak, escapedCount, totalSearchesUsed, primeCount);
+    const tokensEarned = { S: 25, A: 18, B: 12, C: 8, D: 5 }[s.rank] as number;
+    addTokens(tokensEarned, `Canopy Hunter — ${s.rank}-rank expedition`);
+    recordScore("hunter", s.points, `${s.rank}-rank`);
+    reportArcadeEvent({
+      type: "hunt-complete",
+      rank: s.rank,
+      caught: bag.length,
+      prime: primeCount,
+      newCodex: newCodexAdds.length,
+      codexTotal: codex.length,
+    });
+  }, [phase, legs, bag, bestStreak, escapedCount, totalSearchesUsed, newCodexAdds.length, codex.length]);
 
   function startExpedition() {
     // User gesture: the one safe moment to wake the Web Audio engine.

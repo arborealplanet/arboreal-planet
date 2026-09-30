@@ -35,6 +35,7 @@ import {
   type ProbeKind,
   type SortingSnake,
 } from "@/lib/snake-sorting";
+import { addTokens, recordScore, reportArcadeEvent } from "@/lib/arcade";
 
 type Phase =
   | "title"
@@ -429,6 +430,7 @@ export function SnakeSorting() {
   const sortTick = useSyncExternalStore(subscribeSortTick, getSortTick, getSortTick);
   const mutedRef = useRef(false);
   const scoreRef = useRef(0);
+  const awardedRef = useRef(false);
   const synth = useSynth(mutedRef);
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -537,6 +539,7 @@ export function SnakeSorting() {
   };
 
   const startGame = (m: Mode) => {
+    awardedRef.current = false;
     timeouts.current.forEach((t) => window.clearTimeout(t));
     timeouts.current = [];
     setMode(m);
@@ -612,6 +615,14 @@ export function SnakeSorting() {
     setHatLine(`${r.title}. ${farewell}`);
     setPhase("results");
     synth.sparkle();
+    // Arcade meta-system: tokens, leaderboard, achievements, quests.
+    if (!awardedRef.current) {
+      awardedRef.current = true;
+      const tokens = Math.min(25, Math.floor(finalScore / 100));
+      if (mode === "ceremony" && tokens > 0) addTokens(tokens, `Snake Sorter — ${finalScore.toLocaleString()} pts`);
+      if (mode === "ceremony") recordScore("sorting", finalScore, r.title);
+      reportArcadeEvent({ type: "sorting-complete", score: finalScore, rank: r.title, mode });
+    }
   };
 
   const probe = (kind: ProbeKind) => {

@@ -1,5 +1,9 @@
 import Image from "next/image";
 import GameCard from "./GameCard";
+import { ArcadeHub, TokenChip } from "@/components/arcade/ArcadeHub";
+import { ArcadeToasts } from "@/components/arcade/ArcadeToasts";
+import { DailyTrivia } from "@/components/arcade/DailyTrivia";
+import { DailyBlackjack } from "@/components/arcade/DailyBlackjack";
 
 const keeperSteps = [
   { title: "1 · BUILD", text: "Start with limited facility capacity, compatible enclosures and an operating budget." },
@@ -50,9 +54,12 @@ export default function ArcadePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-4 pt-6 sm:px-6">
-        <div className="inline-flex rounded-full border border-amber-200/15 bg-amber-200/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">Virtual animals only</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-full border border-amber-200/15 bg-amber-200/[.05] px-4 py-2 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/65">Virtual animals only</div>
+          <TokenChip />
+        </div>
         <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-[-.03em] text-white sm:text-4xl">Keeper games built around long-term progression.</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-white/55">Arboreal Planet&apos;s Arcade is home to Arboreal Keeper — a Green Tree Python breeding and keeper game built around animals, locality projects, lineages, enclosures, offspring and long-term progression.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-white/55">Arboreal Planet&apos;s Arcade is home to Arboreal Keeper — a Green Tree Python breeding and keeper game built around animals, locality projects, lineages, enclosures, offspring and long-term progression. Every arcade game pays out <span className="font-bold text-amber-100">🪙 arcade tokens</span>, spendable in the Keeper on expedition permits, extra trips and cash.</p>
       </section>
 
       {/* One compact card per game — details collapse underneath */}
@@ -99,14 +106,35 @@ export default function ArcadePage() {
         </div>
       </section>
 
+      {/* Daily challenges — seeded, identical for every keeper */}
+      <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
+        <div className="section-kicker">Daily challenges</div>
+        <h2 className="mt-3 text-2xl font-semibold text-white">Fresh every day, same for everyone.</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">One seeded trivia round and one seeded blackjack shoe per day. Finishing them counts toward your daily quests.</p>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <DailyTrivia />
+          <DailyBlackjack />
+        </div>
+      </section>
+
+      {/* Arcade meta-system: wallet, quests, leaderboards, trophies */}
+      <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
+        <div className="section-kicker">Arcade meta</div>
+        <h2 className="mt-3 text-2xl font-semibold text-white">Your arcade, your progress.</h2>
+        <div className="mt-5">
+          <ArcadeHub />
+        </div>
+      </section>
+
       <section className="border-t border-white/[.06] bg-black/[.12]">
         <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6">
-          <div className="section-kicker">Arcade achievements</div>
+          <div className="section-kicker">Keeper achievements</div>
           <h2 className="mt-3 text-2xl font-semibold">Achievements track long-term progress.</h2>
           <div className="mt-5 flex flex-wrap gap-2">{achievements.map((item) => <span key={item} className="rounded-full border border-amber-200/10 bg-amber-200/[.025] px-3 py-2 text-[11px] font-semibold text-amber-100/45">{item}</span>)}</div>
           <p className="mt-5 text-xs leading-5 text-white/28">Game rarity, virtual prices and progression are game systems only and do not represent real biological rarity or market value.</p>
         </div>
       </section>
+      <ArcadeToasts />
     </main>
   );
 }

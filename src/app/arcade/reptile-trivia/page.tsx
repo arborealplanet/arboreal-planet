@@ -1,3 +1,4 @@
+import { ArcadeToasts } from "@/components/arcade/ArcadeToasts";
 import { ReptileTrivia } from "@/components/ReptileTrivia";
 
 export const metadata = {
@@ -10,6 +11,7 @@ export default function ReptileTriviaPage() {
   return (
     <main className="min-h-screen bg-[#04120c]">
       <ReptileTrivia />
+          <ArcadeToasts />
     </main>
   );
 }

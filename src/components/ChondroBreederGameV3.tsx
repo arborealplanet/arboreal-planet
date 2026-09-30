@@ -28,6 +28,16 @@ import {
   type CanopySubspecies,
   type WildSnake,
 } from "@/lib/canopy-hunter";
+import {
+  getTokenBalance,
+  spendTokens as arcadeSpendTokens,
+} from "@/lib/arcade";
+import { ArcadeToasts } from "@/components/arcade/ArcadeToasts";
+
+/** Arcade-token prices at the expedition gate. */
+const TOKEN_EXTRA_EXPEDITION = 50;
+const TOKEN_PERMIT = 120;
+const TOKEN_CASH_RATE = 50; // $ per token on exchange
 
 /**
  * Player-scoped intro-cinematic flag. Mirrored in localStorage so it survives
@@ -920,6 +930,19 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [permitActive, setPermitActive] = useState(false);
   const [expeditionFeeArmed, setExpeditionFeeArmed] = useState(false);
   const expeditionFeeArmTimer = useRef<number | null>(null);
+  /** Pay for expeditions/permits with arcade tokens instead of cash. */
+  const [payWithTokens, setPayWithTokens] = useState(false);
+  const [tokenBal, setTokenBal] = useState(0);
+  const refreshTokens = () => setTokenBal(getTokenBalance());
+  useEffect(() => {
+    refreshTokens();
+    window.addEventListener("arcade-balance", refreshTokens);
+    window.addEventListener("focus", refreshTokens);
+    return () => {
+      window.removeEventListener("arcade-balance", refreshTokens);
+      window.removeEventListener("focus", refreshTokens);
+    };
+  }, []);
   const [expeditionResult, setExpeditionResult] = useState<string | null>(null);
   // Founder/testing exemption: unlimited free expeditions. Checked
   // server-side via /api/canopy-hunter/status so it follows the account,
@@ -1671,16 +1694,23 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
 
   function enterExpeditionPaid() {
     if (!started || expeditionFreeReady || openSlots < EXPEDITION_PYTHONS) return;
-    if (cash < EXPEDITION_ENTRY_FEE) return;
+    if (payWithTokens) {
+      if (getTokenBalance() < TOKEN_EXTRA_EXPEDITION) return;
+    } else if (cash < EXPEDITION_ENTRY_FEE) return;
     if (!expeditionFeeArmed) {
       setExpeditionFeeArmed(true);
       if (expeditionFeeArmTimer.current !== null) window.clearTimeout(expeditionFeeArmTimer.current);
       expeditionFeeArmTimer.current = window.setTimeout(() => setExpeditionFeeArmed(false), 5000);
       return;
     }
-    setCash((c) => c - EXPEDITION_ENTRY_FEE);
+    if (payWithTokens) {
+      if (!arcadeSpendTokens(TOKEN_EXTRA_EXPEDITION, "Extra expedition")) return;
+    } else {
+      setCash((c) => c - EXPEDITION_ENTRY_FEE);
+    }
     setExpeditionFeeArmed(false);
     setPermitActive(false);
+    refreshTokens();
     beginExpeditionFlight(rollAvailableRegion());
   }
 
@@ -1693,7 +1723,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     if (!started || openSlots < PERMIT_GROVES) return;
     const region = regionForSubspecies(sub);
     if (isRecovering(region.id)) return;
-    if (cash < EXPEDITION_PERMIT_FEE) return;
+    if (payWithTokens) {
+      if (getTokenBalance() < TOKEN_PERMIT) return;
+    } else if (cash < EXPEDITION_PERMIT_FEE) return;
     if (permitSubspecies !== sub || !permitArmed) {
       setPermitSubspecies(sub);
       setPermitArmed(true);
@@ -1701,9 +1733,14 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       expeditionFeeArmTimer.current = window.setTimeout(() => setPermitArmed(false), 5000);
       return;
     }
-    setCash((c) => c - EXPEDITION_PERMIT_FEE);
+    if (payWithTokens) {
+      if (!arcadeSpendTokens(TOKEN_PERMIT, `Targeting permit — ${sub}`)) return;
+    } else {
+      setCash((c) => c - EXPEDITION_PERMIT_FEE);
+    }
     setPermitArmed(false);
     setPermitActive(true);
+    refreshTokens();
     beginExpeditionFlight(region);
   }
 
@@ -1950,6 +1987,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
 
   return (
     <BreederGameScreenContext.Provider value={screen}>
+    <ArcadeToasts />
     <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 sm:py-8">
       {expeditionResult ? (
         <div role="status" className="mb-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.06] p-4">
@@ -2253,6 +2291,27 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   Head into the night canopy for a field expedition. Search the trees, grab the
                   green tree pythons you find, and bring them home to your colony.
                 </p>
+                {/* Arcade token wallet + payment toggle */}
+                <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200/20 bg-amber-200/[.05] p-3">
+                  <span className="text-sm font-black text-amber-100">🪙 {tokenBal.toLocaleString()}</span>
+                  <span className="text-xs text-white/50">arcade tokens — earn them playing the arcade games</span>
+                  <div className="ml-auto flex items-center gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setPayWithTokens(false)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-black uppercase tracking-[.08em] transition ${!payWithTokens ? "bg-emerald-300 text-[#06100c]" : "text-white/50 hover:text-white/80"}`}
+                    >
+                      Cash
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayWithTokens(true)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-black uppercase tracking-[.08em] transition ${payWithTokens ? "bg-amber-200 text-[#171106]" : "text-white/50 hover:text-white/80"}`}
+                    >
+                      🪙 Tokens
+                    </button>
+                  </div>
+                </div>
                 {openSlots < EXPEDITION_PYTHONS ? (
                   <div role="status" className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/[.06] p-4 text-sm leading-6 text-red-100/80">
                     Not enough room for an expedition — it can catch up to {EXPEDITION_PYTHONS} snakes
@@ -2281,11 +2340,13 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                     </div>
                     <button
                       type="button"
-                      disabled={cash < EXPEDITION_ENTRY_FEE}
+                      disabled={payWithTokens ? tokenBal < TOKEN_EXTRA_EXPEDITION : cash < EXPEDITION_ENTRY_FEE}
                       onClick={enterExpeditionPaid}
                       className="mt-4 w-full rounded-2xl border border-amber-200/25 bg-amber-200/[.07] px-6 py-4 text-base font-bold text-amber-100 transition hover:bg-amber-200/[.12] disabled:opacity-30"
                     >
-                      {expeditionFeeArmed ? `Tap again to confirm — ${money(EXPEDITION_ENTRY_FEE)}` : `Extra expedition · ${money(EXPEDITION_ENTRY_FEE)}`}
+                      {expeditionFeeArmed
+                        ? `Tap again to confirm — ${payWithTokens ? `${TOKEN_EXTRA_EXPEDITION} 🪙` : money(EXPEDITION_ENTRY_FEE)}`
+                        : `Extra expedition · ${payWithTokens ? `${TOKEN_EXTRA_EXPEDITION} 🪙` : money(EXPEDITION_ENTRY_FEE)}`}
                     </button>
                   </div>
                 )}
@@ -2307,7 +2368,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                     </p>
                   )}
                   <p className="mt-3 text-[11px] font-black uppercase tracking-[.16em] text-amber-200/70">
-                    🎫 Targeting permit · {money(EXPEDITION_PERMIT_FEE)}
+                    🎫 Targeting permit · {payWithTokens ? `${TOKEN_PERMIT} 🪙` : money(EXPEDITION_PERMIT_FEE)}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-white/50">
                     Choose your subspecies — {PERMIT_GROVES} groves, trait-boosted animals, and 2 specialist tools (scent lure + sure grip). Rare localities stay rare.
@@ -2328,7 +2389,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                         <button
                           key={sub}
                           type="button"
-                          disabled={recovering || openSlots < PERMIT_GROVES || cash < EXPEDITION_PERMIT_FEE}
+                          disabled={recovering || openSlots < PERMIT_GROVES || (payWithTokens ? tokenBal < TOKEN_PERMIT : cash < EXPEDITION_PERMIT_FEE)}
                           onClick={() => enterExpeditionPermit(sub)}
                           className={`rounded-xl border px-4 py-3 text-left transition active:scale-[.99] disabled:opacity-40 ${
                             selected
@@ -2353,16 +2414,34 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   </div>
                   <button
                     type="button"
-                    disabled={!permitSubspecies || openSlots < PERMIT_GROVES || cash < EXPEDITION_PERMIT_FEE || isRecovering(regionForSubspecies(permitSubspecies).id)}
+                    disabled={!permitSubspecies || openSlots < PERMIT_GROVES || (payWithTokens ? tokenBal < TOKEN_PERMIT : cash < EXPEDITION_PERMIT_FEE) || isRecovering(regionForSubspecies(permitSubspecies).id)}
                     onClick={() => permitSubspecies && enterExpeditionPermit(permitSubspecies)}
                     className="mt-3 w-full rounded-2xl bg-amber-200 px-6 py-4 text-base font-bold text-[#171106] transition hover:bg-amber-100 active:scale-[.99] disabled:opacity-30"
                   >
                     {!permitSubspecies
                       ? "Pick a subspecies above"
                       : permitArmed
-                        ? `Tap again to confirm — ${money(EXPEDITION_PERMIT_FEE)}`
-                        : `Buy permit & head out · ${money(EXPEDITION_PERMIT_FEE)}`}
+                        ? `Tap again to confirm — ${payWithTokens ? `${TOKEN_PERMIT} 🪙` : money(EXPEDITION_PERMIT_FEE)}`
+                        : `Buy permit & head out · ${payWithTokens ? `${TOKEN_PERMIT} 🪙` : money(EXPEDITION_PERMIT_FEE)}`}
                   </button>
+                  {/* Token → cash exchange */}
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-white/[.07] bg-black/30 px-3 py-2.5">
+                    <span className="text-xs text-white/55">
+                      Flush with tokens? Exchange 10 🪙 → {money(10 * TOKEN_CASH_RATE)} operating cash.
+                    </span>
+                    <button
+                      type="button"
+                      disabled={tokenBal < 10}
+                      onClick={() => {
+                        if (!arcadeSpendTokens(10, "Token → cash exchange")) return;
+                        setCash((c) => c + 10 * TOKEN_CASH_RATE);
+                        refreshTokens();
+                      }}
+                      className="shrink-0 rounded-xl border border-amber-200/25 bg-amber-200/[.08] px-3 py-1.5 text-xs font-black uppercase tracking-[.08em] text-amber-100 transition hover:bg-amber-200/[.15] disabled:opacity-30"
+                    >
+                      Exchange
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : expeditionEntered && expeditionRegion && !expeditionFlightDone ? (

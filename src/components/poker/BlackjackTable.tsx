@@ -6,6 +6,7 @@ import { CardView } from "@/components/poker/CardView";
 import { ChipStack } from "@/components/poker/ChipStack";
 import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
+import { reportArcadeEvent } from "@/lib/arcade";
 import {
   bjApply,
   bjDealerPlay,
@@ -53,6 +54,7 @@ export function BlackjackTable() {
       setPhase("done");
       await settleBet(roundId, payout, { risked: r, bet: opening });
       setRoundId(null);
+      reportArcadeEvent({ type: "poker-hand", game: "blackjack", net: payout - r });
     },
     [settleBet]
   );

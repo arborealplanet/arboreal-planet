@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { CardView } from "@/components/poker/CardView";
 import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
+import { reportArcadeEvent } from "@/lib/arcade";
 import {
   dealDrawHand,
   doubleOrNothing,
@@ -97,6 +98,7 @@ export function DrawPoker() {
       await settleBet(roundId, payout, { risked: coins * DENOM, bet: coins * DENOM });
       setRoundId(null);
       setPhase("done");
+      reportArcadeEvent({ type: "poker-hand", game: "draw", net: payout - coins * DENOM });
       if (payout > 0) playSfx("win", payout);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not settle.");

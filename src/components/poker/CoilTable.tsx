@@ -6,6 +6,7 @@ import { CardView } from "@/components/poker/CardView";
 import { ChipStack } from "@/components/poker/ChipStack";
 import { TableFelt } from "@/components/poker/TableFelt";
 import { useBankroll } from "@/components/poker/useBankroll";
+import { reportArcadeEvent } from "@/lib/arcade";
 import {
   aiTakeTurn,
   applyAction,
@@ -226,6 +227,7 @@ export function CoilTable() {
       setRoundId(null);
       setTable(null);
       setPhase("over");
+      reportArcadeEvent({ type: "poker-hand", game: "holdem", net: heroStack - BUY_IN });
       playSfx("win", heroStack);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not cash out.");

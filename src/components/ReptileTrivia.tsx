@@ -14,6 +14,7 @@ import {
   type TriviaMode,
   type TriviaQuestion,
 } from "@/lib/reptile-trivia";
+import { addTokens, recordScore, reportArcadeEvent } from "@/lib/arcade";
 
 type Phase = "intro" | "question" | "reveal" | "results";
 
@@ -59,6 +60,7 @@ export function ReptileTrivia() {
   const [mode, setMode] = useState<TriviaMode>("normal");
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const awardedRef = useRef(false);
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -91,6 +93,7 @@ export function ReptileTrivia() {
   }, [phase, qi]);
 
   function start() {
+    awardedRef.current = false;
     setQuestions(buildRound(mode));
     setQi(0);
     setScore(0);
@@ -147,6 +150,20 @@ export function ReptileTrivia() {
         setBest(score);
       }
       setIsNewBest(newBest && score > 0);
+      // Arcade meta-system: tokens, leaderboard, achievements, quests.
+      if (!awardedRef.current) {
+        awardedRef.current = true;
+        const tokens = correctCount * 2 + (correctCount >= QUESTIONS_PER_ROUND ? 5 : 0);
+        if (tokens > 0) addTokens(tokens, `Reptile Trivia — ${correctCount}/${QUESTIONS_PER_ROUND}`);
+        recordScore("trivia", score, modeDef(mode).label);
+        reportArcadeEvent({
+          type: "trivia-complete",
+          correct: correctCount,
+          total: QUESTIONS_PER_ROUND,
+          score,
+          mode,
+        });
+      }
       setPhase("results");
       return;
     }
