@@ -4,6 +4,41 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "Afro-Asian sand snake documented in Kutch after 150 years",
+    url: "https://indianexpress.com/article/cities/ahmedabad/kutch-afro-asian-sand-snake-sighting-gujarat-wildlife-10899757/",
+    publishedAt: "2026-09-30",
+    publisher: "The Indian Express",
+    summary: "A forest officer photographed a Psammophis schokari in Gujarat's Kutch district, providing the first confirmed local record since 1872.",
+  },
+  {
+    title: "Georgia researchers seek the missing picture of male sea turtles",
+    url: "https://www.gpb.org/news/2026/09/29/georgia-scientists-snip-fins-figure-out-if-sea-turtle-males-are-in-trouble",
+    publishedAt: "2026-09-29",
+    publisher: "Georgia Public Broadcasting",
+    summary: "Scientists are using DNA from eggs and deceased hatchlings to estimate male loggerhead breeding as warming nesting beaches raise concerns about sex ratios.",
+  },
+  {
+    title: "First World Congress on Snakes opens in Sri Lanka",
+    url: "https://news.mongabay.com/2026/09/global-experts-gather-in-sri-lanka-for-historic-first-world-congress-on-snakes/",
+    publishedAt: "2026-09-30",
+    publisher: "Mongabay",
+    summary: "Researchers and conservationists from 25 countries are gathering to discuss snake biology, conservation, snakebite, and coexistence.",
+  },
+  {
+    title: "Canada's wildlife import checks leave gaps for reptile trafficking",
+    url: "https://news.mongabay.com/2026/09/illegal-wildlife-continues-to-slip-through-canadas-borders-experts-explain-how/",
+    publishedAt: "2026-09-30",
+    publisher: "Mongabay",
+    summary: "An investigation examines how animals taken illegally abroad can enter Canada's pet trade when their origin is difficult to verify.",
+  },
+  {
+    title: "Four endangered Asian brown giant tortoises hatch at Cincinnati Zoo",
+    url: "https://cincinnatizoo.org/four-tiny-tortoises-a-huge-conservation-win/",
+    publishedAt: "2026-09-29",
+    publisher: "Cincinnati Zoo",
+    summary: "Four hatchlings joined a coordinated breeding program aimed at maintaining genetic diversity in a species threatened by habitat loss and collection.",
+  },
+  {
     title: "Cambodia protects a genetic refuge for Siamese crocodiles",
     url: "https://www.theguardian.com/environment/2026/sep/29/cambodia-chorng-indigenous-communities-siamese-crocodile-endangered-conservation-aoe",
     publishedAt: "2026-09-29",
