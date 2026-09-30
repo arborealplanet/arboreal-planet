@@ -957,7 +957,7 @@ export function SnakeSorting() {
               <div className="mt-3 flex items-start gap-2.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`${ASSET}/sorting-hat.webp`}
+                  src={`${ASSET}/sorting-hat-v2.webp`}
                   alt="The Sorting Hat"
                   className="ss-float h-14 w-14 shrink-0 rounded-full border border-amber-200/30 object-cover shadow-[0_0_18px_rgba(251,191,36,.25)]"
                 />
@@ -1549,7 +1549,7 @@ function ResultsScreen({
       </p>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${ASSET}/sorting-hat.webp`}
+        src={`${ASSET}/sorting-hat-v2.webp`}
         alt="The Sorting Hat"
         className="ss-float mt-3 h-20 w-20 rounded-full border border-amber-200/30 object-cover shadow-[0_0_30px_rgba(251,191,36,.3)]"
       />
@@ -1653,7 +1653,7 @@ function ResultsScreen({
       <div className="mt-3 flex w-full items-start gap-2.5 text-left">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${ASSET}/sorting-hat.webp`}
+          src={`${ASSET}/sorting-hat-v2.webp`}
           alt=""
           className="h-12 w-12 shrink-0 rounded-full border border-amber-200/30 object-cover"
         />

@@ -62,9 +62,9 @@ const PILE_HOUSES = HOUSES.filter((h) => h.id !== "designer");
 
 /* The Sorting Hat is the cursor for the whole pile table (mouse users).
    Touch players get the Hat itself as a visible, tappable character instead. */
-const HAT_CURSOR = `url("/arcade/snake-sorting/sorting-hat-cursor.png") 52 10, auto`;
-const HAT_ART = "/arcade/snake-sorting/sorting-hat.png";
-const HAT_MINI = "/arcade/snake-sorting/sorting-hat-cursor.png";
+const HAT_CURSOR = `url("/arcade/snake-sorting/sorting-hat-cursor-v2.png") 52 10, auto`;
+const HAT_ART = "/arcade/snake-sorting/sorting-hat-v2.png";
+const HAT_MINI = "/arcade/snake-sorting/sorting-hat-cursor-v2.png";
 
 type DragState = { id: string; x: number; y: number };
 type HatMood = "idle" | "dealing" | "happy" | "no";
