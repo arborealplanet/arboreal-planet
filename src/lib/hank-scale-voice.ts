@@ -95,6 +95,17 @@ function playHankScaleSrc(src: string): void {
 
 const STOCK_ROTATED_KEY = "hank-scale-stock-rotated";
 
+
+/** Stop any Hank Scale voice line currently playing (e.g. when leaving the game). */
+export function stopHankScaleVoice(): void {
+  try {
+    current?.pause();
+  } catch {
+    // ignore
+  }
+  current = null;
+}
+
 /** Flag that shop stock rotated since the player last opened the animals tab. */
 export function markStockRotated(): void {
   if (typeof window === "undefined") return;
