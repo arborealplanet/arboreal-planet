@@ -892,16 +892,16 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 aria-label={`View details for ${enclosureDisplay[type].label}`}
                 onClick={() => setDetailEnclosure(type)}
                 onKeyDown={(event) => handleCardKeyDown(event, () => setDetailEnclosure(type))}
-                className={carousel ? "group w-full shrink-0 cursor-pointer snap-start overflow-hidden rounded-[20px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300 sm:w-[230px]" : "group cursor-pointer overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300"}
+                className={carousel ? "group w-full shrink-0 cursor-pointer snap-start overflow-hidden rounded-[20px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300 sm:w-[230px] lg:w-[300px]" : "group cursor-pointer overflow-hidden rounded-[22px] border border-white/[.07] bg-black/15 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-[0_14px_36px_rgba(52,211,153,.18)] focus-visible:outline-2 focus-visible:outline-emerald-300"}
               >
-                <div className={carousel ? "relative h-24 overflow-hidden border-b border-white/[.06] bg-black/25" : "relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25"}>
+                <div className={carousel ? "relative h-24 lg:h-32 overflow-hidden border-b border-white/[.06] bg-black/25" : "relative aspect-[16/8] overflow-hidden border-b border-white/[.06] bg-black/25"}>
                   {type === "Chondro Dojo Bin" ? (
                     <Image src="/hatchery/game/chondro-dojo-2-stack.webp" alt="Chondro Dojo 2 Stack — clear 64-quart tub enclosure in a wooden rack with a PVC pipe perch frame, water dish, mulch, and a red green tree python neonate" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center opacity-95 transition-transform duration-500 group-hover:scale-105" />
                   ) : (
                     <Image src="/hatchery/game/pvc-arboreal-enclosure.webp" alt="PVC Arboreal Enclosure — tall black PVC enclosure with perches and an adult green tree python" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center opacity-95 transition-transform duration-500 group-hover:scale-105" />
                   )}
                   <div className={carousel ? "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-3 pb-1.5 pt-6" : "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-4 pb-3 pt-10"}>
-                    <div className={carousel ? "text-[13px] font-semibold text-white" : "text-lg font-semibold text-white"}>{enclosureDisplay[type].label}</div>
+                    <div className={carousel ? "text-[13px] font-semibold text-white lg:text-[15px]" : "text-lg font-semibold text-white"}>{enclosureDisplay[type].label}</div>
                   </div>
                 </div>
                 {carousel ? (
@@ -1054,7 +1054,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
                 aria-label={`View details for ${offer.name}`}
                 onClick={() => setDetailOffer(offer)}
                 onKeyDown={(event) => handleCardKeyDown(event, () => setDetailOffer(offer))}
-                className={carousel ? `group w-full shrink-0 cursor-pointer snap-start rounded-2xl border p-2.5 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[230px] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}` : `group w-[82%] shrink-0 cursor-pointer snap-start rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}
+                className={carousel ? `group w-full shrink-0 cursor-pointer snap-start rounded-2xl border p-2.5 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[230px] lg:w-[300px] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}` : `group w-[82%] shrink-0 cursor-pointer snap-start rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300/30 hover:shadow-[0_14px_36px_rgba(125,211,252,.16)] focus-visible:outline-2 focus-visible:outline-sky-300 sm:w-[48%] lg:w-[calc((100%-1.5rem)/3)] ${offer.featured ? "keeper-featured border-amber-200/25 bg-amber-200/[.035]" : "border-white/[.06] bg-black/10"}`}
               >
                 <div className="relative">
                 <div className="transition-transform duration-300 group-hover:scale-[1.03]">
@@ -1117,7 +1117,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
           })}
         </div>
 
-        {status ? <div role="status" className={carousel ? "mt-1 truncate text-[11px] text-sky-100/65" : "mt-3 text-xs text-sky-100/65"}>{status}</div> : null}
+        {status ? <div role="status" className={carousel ? "mt-1 truncate text-[11px] text-sky-100/65 lg:text-xs" : "mt-3 text-xs text-sky-100/65"}>{status}</div> : null}
       </section>
       ) : null}
 
