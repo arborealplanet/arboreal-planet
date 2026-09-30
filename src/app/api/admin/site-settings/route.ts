@@ -32,8 +32,9 @@ export async function PUT(request: NextRequest) {
       Accept: "application/json",
       Prefer: "resolution=merge-duplicates,return=representation",
     },
-    // value is jsonb: a JSON-encoded string keeps the row a clean scalar.
-    body: JSON.stringify({ key, value: JSON.stringify(value), updated_at: new Date().toISOString() }),
+    // value is stored directly: the outer JSON.stringify already produces a
+    // valid jsonb scalar — encoding it again would double-wrap the string.
+    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
     cache: "no-store",
   });
   const rows = (await response.json().catch(() => null)) as Array<{ key: string; value: unknown }> | null;
