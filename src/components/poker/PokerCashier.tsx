@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { addTokens } from "@/lib/arcade";
 import { CONVERT_KEEP_MIN, CONVERT_MAX, CONVERT_RATE } from "@/components/poker/useBankroll";
@@ -10,10 +11,11 @@ const CHUNKS = [500, 1000, 2500];
 interface Props {
   balance: number;
   loading: boolean;
+  signedIn: boolean | null;
   convert: (amount: number) => Promise<number>;
 }
 
-export function PokerCashier({ balance, loading, convert }: Props) {
+export function PokerCashier({ balance, loading, signedIn, convert }: Props) {
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -54,35 +56,50 @@ export function PokerCashier({ balance, loading, convert }: Props) {
         </p>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {CHUNKS.map((c) => {
-          const afford = !loading && balance - c >= CONVERT_KEEP_MIN;
-          return (
-            <button
-              key={c}
-              disabled={!afford || busy !== null}
-              onClick={() => void doConvert(c)}
-              className="rounded-full border border-amber-200/25 bg-amber-950/40 px-4 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200/60 disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              {busy === c ? "Converting…" : `${c.toLocaleString()} → ${c / CONVERT_RATE} 🪙`}
-            </button>
-          );
-        })}
-        <div className="flex items-center gap-2">
-          <input
-            value={custom}
-            onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, ""))}
-            placeholder={`Custom (×${CONVERT_RATE})`}
-            inputMode="numeric"
-            className="w-32 rounded-full border border-emerald-200/20 bg-black/60 px-3 py-1.5 text-xs text-emerald-100 placeholder:text-emerald-100/30"
-          />
-          <button
-            disabled={!customValid || busy !== null}
-            onClick={() => void doConvert(customAmount)}
-            className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-35"
+        {signedIn ? (
+          <>
+            {CHUNKS.map((c) => {
+              const afford = !loading && balance - c >= CONVERT_KEEP_MIN;
+              return (
+                <button
+                  key={c}
+                  disabled={!afford || busy !== null}
+                  onClick={() => void doConvert(c)}
+                  className="rounded-full border border-amber-200/25 bg-amber-950/40 px-4 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200/60 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  {busy === c ? "Converting…" : `${c.toLocaleString()} → ${c / CONVERT_RATE} 🪙`}
+                </button>
+              );
+            })}
+            <div className="flex items-center gap-2">
+              <input
+                value={custom}
+                onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, ""))}
+                placeholder={`Custom (×${CONVERT_RATE})`}
+                inputMode="numeric"
+                className="w-32 rounded-full border border-emerald-200/20 bg-black/60 px-3 py-1.5 text-xs text-emerald-100 placeholder:text-emerald-100/30"
+              />
+              <button
+                disabled={!customValid || busy !== null}
+                onClick={() => void doConvert(customAmount)}
+                className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                {busy === customAmount ? "…" : `Convert${customValid ? ` → ${customAmount / CONVERT_RATE} 🪙` : ""}`}
+              </button>
+            </div>
+          </>
+        ) : (
+          <Link
+            href="/enter"
+            onClick={() => {
+              unlockAudio();
+              playSfx("click");
+            }}
+            className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-black transition hover:bg-emerald-400"
           >
-            {busy === customAmount ? "…" : `Convert${customValid ? ` → ${customAmount / CONVERT_RATE} 🪙` : ""}`}
-          </button>
-        </div>
+            Sign in to convert lifesap
+          </Link>
+        )}
       </div>
       {msg && (
         <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</p>

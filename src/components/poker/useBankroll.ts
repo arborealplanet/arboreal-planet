@@ -35,9 +35,11 @@ export interface Bankroll {
   settleBet: (roundId: string, payout: number, opts?: { risked?: number; bet?: number }) => Promise<void>;
   rebuy: (roundId: string, amount: number) => Promise<void>;
   /**
-   * Cashier: burn `amount` lifesap for later token credit. Amount must be a
-   * positive multiple of CONVERT_RATE; at least KEEP_MIN lifesap stays in the
-   * stack. Returns the new lifesap balance.
+   * Cashier: burn `amount` lifesap for later token credit. Signed-in accounts
+   * only — demo bankrolls are resettable, so converting them would mint
+   * infinite tokens. Amount must be a positive multiple of CONVERT_RATE;
+   * at least CONVERT_KEEP_MIN lifesap stays in the stack. Returns the new
+   * lifesap balance.
    */
   convert: (amount: number) => Promise<number>;
   refresh: () => Promise<void>;
@@ -147,29 +149,21 @@ export function useBankroll(): Bankroll {
   const convert = useCallback(
     async (amount: number): Promise<number> => {
       const a = Math.floor(amount);
+      if (!signedIn) {
+        throw new Error("Sign in to convert lifesap — demo bankrolls can't be converted.");
+      }
       if (!Number.isFinite(a) || a <= 0 || a % CONVERT_RATE !== 0) {
         throw new Error(`Conversion amount must be a positive multiple of ${CONVERT_RATE}.`);
       }
       if (a > CONVERT_MAX) {
         throw new Error(`Max ${CONVERT_MAX.toLocaleString()} lifesap per conversion.`);
       }
-      if (signedIn) {
-        const data = await api<{ balance: number }>("/api/poker/convert", {
-          method: "POST",
-          body: JSON.stringify({ amount: a }),
-        });
-        setBalanceBoth(data.balance);
-        return data.balance;
-      }
-      if (balanceRef.current - a < CONVERT_KEEP_MIN) {
-        throw new Error(
-          `Keep at least ${CONVERT_KEEP_MIN} lifesap in your stack — reset your demo bankroll below to keep playing.`
-        );
-      }
-      const next = balanceRef.current - a;
-      window.localStorage.setItem(DEMO_KEY, String(next));
-      setBalanceBoth(next);
-      return next;
+      const data = await api<{ balance: number }>("/api/poker/convert", {
+        method: "POST",
+        body: JSON.stringify({ amount: a }),
+      });
+      setBalanceBoth(data.balance);
+      return data.balance;
     },
     [signedIn, setBalanceBoth]
   );

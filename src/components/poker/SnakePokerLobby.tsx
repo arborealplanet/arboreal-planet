@@ -122,7 +122,7 @@ export function SnakePokerLobby() {
           )}
         </div>
 
-        <PokerCashier balance={balance} loading={loading} convert={convert} />
+        <PokerCashier balance={balance} loading={loading} signedIn={signedIn} convert={convert} />
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {GAMES.map((g) => (
