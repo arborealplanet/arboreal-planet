@@ -25,10 +25,39 @@ const COSTUME_CLIPS = [
   "/hatchery/game/bunn-shop-loop-costume-c.mp4",
 ];
 
+// One-shot costume intro: Hank tugs the skull bowtie's string and its teeth
+// chatter (with the sound Gage picked). Plays once when the costume shop is
+// entered, then hands off to the silent COSTUME_CLIPS for the rest of the visit.
+const COSTUME_INTRO_CLIP = "/hatchery/game/bunn-shop-costume-bowtie-intro.mp4";
+
 function ShopLoopVideo({ costume = false }: { costume?: boolean }) {
   const clips = costume ? COSTUME_CLIPS : SHOP_CLIPS;
   const [clip, setClip] = useState(0);
+  const [introPlaying, setIntroPlaying] = useState(costume);
   const refs = useRef<Array<HTMLVideoElement | null>>([]);
+  const introRef = useRef<HTMLVideoElement | null>(null);
+
+  // The intro carries audio, so browsers may block its first autoplay attempt
+  // until the keeper interacts — retry on the next tap/keypress, which is how
+  // players arrive in the shop anyway. If it can't play at all, skip ahead to
+  // the loops rather than leaving a frozen poster up.
+  useEffect(() => {
+    if (!costume || !introPlaying) return;
+    const video = introRef.current;
+    if (!video) return;
+    const attempt = () => {
+      void video.play().catch(() => {});
+    };
+    attempt();
+    window.addEventListener("pointerdown", attempt);
+    window.addEventListener("keydown", attempt);
+    return () => {
+      window.removeEventListener("pointerdown", attempt);
+      window.removeEventListener("keydown", attempt);
+    };
+  }, [costume, introPlaying]);
+
+  const finishIntro = () => setIntroPlaying(false);
 
   const advance = () => {
     const next = (clip + 1) % clips.length;
@@ -40,6 +69,27 @@ function ShopLoopVideo({ costume = false }: { costume?: boolean }) {
     refs.current[clip]?.pause();
     setClip(next);
   };
+
+  if (costume && introPlaying) {
+    return (
+      <video
+        ref={introRef}
+        autoPlay
+        playsInline
+        preload="auto"
+        disablePictureInPicture
+        poster="/hatchery/game/bunn-shop-counter-costume.webp"
+        onEnded={finishIntro}
+        onError={finishIntro}
+        onClick={() => {
+          void introRef.current?.play().catch(() => {});
+        }}
+        className="absolute inset-0 h-full w-full object-cover [object-position:center_35%]"
+      >
+        <source src={COSTUME_INTRO_CLIP} type="video/mp4" />
+      </video>
+    );
+  }
 
   return (
     <>
