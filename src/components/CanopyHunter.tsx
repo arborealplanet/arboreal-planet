@@ -45,11 +45,13 @@ import {
   type WildSnake,
 } from "@/lib/canopy-hunter";
 import {
-  isJungleMuted,
-  setJungleMuted,
-  startJungleMusic,
-  stopJungleMusic,
-} from "@/lib/jungle-ambience";
+  CANOPY_THEME_SRC,
+  CANOPY_THEME_VOLUME,
+  isGameMusicMuted,
+  playGameMusic,
+  setGameMusicMuted,
+  stopGameMusic,
+} from "@/lib/game-music";
 import { playHankScaleLine } from "@/lib/hank-scale-voice";
 import { addTokens, getTokenBalance, recordScore, reportArcadeEvent, spendTokens } from "@/lib/arcade";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
@@ -492,7 +494,14 @@ export function CanopyHunter({
   const [catchSuccess, setCatchSuccess] = useState(false);
   const [sent, setSent] = useState(false);
   const [walking, setWalking] = useState(false);
-  const [jungleMuted, setJungleMutedState] = useState<boolean>(() => isJungleMuted());
+  const [musicMuted, setMusicMuted] = useState<boolean>(() => isGameMusicMuted());
+
+  // Keep the toggle in sync with the shared game-music mute (e.g. flipped in the shop).
+  useEffect(() => {
+    const onMuteChange = () => setMusicMuted(isGameMusicMuted());
+    window.addEventListener("game-music-mute-changed", onMuteChange);
+    return () => window.removeEventListener("game-music-mute-changed", onMuteChange);
+  }, []);
 
   const markerRef = useRef<HTMLDivElement>(null);
   const sweepStartRef = useRef(0);
@@ -519,9 +528,9 @@ export function CanopyHunter({
     setJournal((j) => [...j, line]);
   }
 
-  /* Jungle music lives as long as the expedition modal does. */
+  /* The expedition theme lives as long as the expedition modal does. */
   useEffect(() => () => {
-    stopJungleMusic();
+    stopGameMusic();
   }, []);
 
   /* Marker sweep while the catch is live. */
@@ -580,8 +589,10 @@ export function CanopyHunter({
   }, [phase, legs, bag, bestStreak, escapedCount, totalSearchesUsed, newCodexAdds.length, codex.length]);
 
   function startExpedition() {
-    // User gesture: the one safe moment to wake the Web Audio engine.
-    startJungleMusic();
+    // User gesture: the one safe moment to start audio. The expedition theme
+    // usually already started with the flight video — this is a no-op then,
+    // and covers players who skipped the flight (reduced motion).
+    playGameMusic(CANOPY_THEME_SRC, CANOPY_THEME_VOLUME);
     setTokens(permit ? PERMIT_TOKENS : 0);
     const expeditionRegion = regionProp ?? rollRegion();
     const regionTrees = CANOPY_REGION_TREES[expeditionRegion.id];
@@ -960,11 +971,12 @@ export function CanopyHunter({
     setSent(true);
   }
 
-  function toggleJungleMuted() {
-    const next = !jungleMuted;
-    setJungleMuted(next);
-    setJungleMutedState(next);
-    if (!next && phase !== "briefing") startJungleMusic();
+  function toggleMusicMuted() {
+    const next = !musicMuted;
+    setMusicMuted(next);
+    setGameMusicMuted(next);
+    // Unmuting mid-expedition picks the theme back up right away.
+    if (!next) playGameMusic(CANOPY_THEME_SRC, CANOPY_THEME_VOLUME);
   }
 
   const currentWild = catchTree !== null ? groveWilds[catchTree] : undefined;
@@ -1000,25 +1012,6 @@ export function CanopyHunter({
 
       {/* Header */}
       <div className="relative text-center">
-        <button
-          type="button"
-          onClick={toggleJungleMuted}
-          aria-label={jungleMuted ? "Unmute jungle music" : "Mute jungle music"}
-          title={jungleMuted ? "Unmute jungle music" : "Mute jungle music"}
-          className="absolute left-0 top-0 z-10 rounded-full border border-white/10 bg-black/60 p-2 text-white/60 transition hover:bg-white/[.1] hover:text-white"
-        >
-          {jungleMuted ? (
-            <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
-              <path d="M2 6v4h3l4 3V3L5 6H2z" fill="currentColor" />
-              <path d="M11 5l4 6M15 5l-4 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
-              <path d="M2 6v4h3l4 3V3L5 6H2z" fill="currentColor" />
-              <path d="M11 5.5a3.5 3.5 0 010 5M12.8 3.8a6 6 0 010 8.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
-            </svg>
-          )}
-        </button>
         <button
           type="button"
           onClick={onClose}
@@ -1082,6 +1075,15 @@ export function CanopyHunter({
               className="w-full rounded-2xl bg-emerald-300 px-6 py-4 text-base font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
             >
               Start expedition
+            </button>
+            <button
+              type="button"
+              onClick={toggleMusicMuted}
+              aria-pressed={!musicMuted}
+              className="mx-auto mt-4 flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-4 py-2 text-xs font-bold text-white/60 transition hover:bg-white/[.08] hover:text-white"
+            >
+              <span aria-hidden="true">{musicMuted ? "🔇" : "🎵"}</span>
+              {musicMuted ? "Game music: off everywhere" : "Game music: on"}
             </button>
           </div>
         </div>

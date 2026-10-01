@@ -5,6 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
 import { consumeStockRotated, isHankScaleMuted, playHankScaleHalloweenLine, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
+import {
+  HALLOWEEN_COSTUME_THEME_SRC,
+  HALLOWEEN_THEME_SRC,
+  SHOP_THEME_VOLUME,
+  isGameMusicMuted,
+  playGameMusic,
+  setGameMusicMuted,
+  stopGameMusic,
+} from "@/lib/game-music";
 
 // Halloween loop variants of Hank behind the haunted counter — same
 // three-clip crossfade as the standard shop, swapping to the spooky set.
@@ -149,7 +158,37 @@ export function ArborealKeeperReptiShopHalloween({ navCollapsed = false, costume
   const [qaOpen, setQaOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [muted, setMuted] = useState(() => isHankScaleMuted());
+  const [musicMuted, setMusicMuted] = useState(() => isGameMusicMuted());
   const introducedRef = useRef(false);
+
+  // Halloween shop music: the spooky theme normally, the costume variant
+  // when the Hank Costume toggle is on. Flipping the costume mid-visit
+  // crossfades to the matching track; leaving the shop stops the music.
+  useEffect(() => {
+    playGameMusic(
+      costume ? HALLOWEEN_COSTUME_THEME_SRC : HALLOWEEN_THEME_SRC,
+      SHOP_THEME_VOLUME
+    );
+  }, [costume]);
+  useEffect(() => () => stopGameMusic(), []);
+
+  useEffect(() => {
+    const onMusicMuteChange = () => setMusicMuted(isGameMusicMuted());
+    window.addEventListener("game-music-mute-changed", onMusicMuteChange);
+    return () => window.removeEventListener("game-music-mute-changed", onMusicMuteChange);
+  }, []);
+
+  function toggleMusicMute() {
+    const next = !musicMuted;
+    setMusicMuted(next);
+    setGameMusicMuted(next);
+    if (!next) {
+      playGameMusic(
+        costume ? HALLOWEEN_COSTUME_THEME_SRC : HALLOWEEN_THEME_SRC,
+        SHOP_THEME_VOLUME
+      );
+    }
+  }
 
   // Sprite QA is a production tool — only admins ever see the button or panel.
   useEffect(() => {
@@ -289,6 +328,15 @@ export function ArborealKeeperReptiShopHalloween({ navCollapsed = false, costume
           className="absolute bottom-2 right-2 z-10 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur-sm hover:bg-black/75 hover:text-white"
         >
           {muted ? "🔇" : "🔊"}
+        </button>
+        <button
+          type="button"
+          onClick={toggleMusicMute}
+          title={musicMuted ? "Unmute game music" : "Mute game music"}
+          aria-label={musicMuted ? "Unmute game music" : "Mute game music"}
+          className="absolute bottom-2 right-[54px] z-10 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur-sm hover:bg-black/75 hover:text-white"
+        >
+          {musicMuted ? "🎵🚫" : "🎵"}
         </button>
       </div>
 

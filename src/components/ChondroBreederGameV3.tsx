@@ -11,6 +11,11 @@ import { CHONDRO_SPECIES_PROFILE, growthCostFor, growthRequirementFor, needsExtr
 import IntroCinematic from "@/components/IntroCinematic";
 import { CanopyHunter } from "@/components/CanopyHunter";
 import {
+  CANOPY_THEME_SRC,
+  CANOPY_THEME_VOLUME,
+  playGameMusic,
+} from "@/lib/game-music";
+import {
   CANOPY_REGIONS,
   EXPEDITION_ENTRY_FEE,
   EXPEDITION_FREE_COOLDOWN_MS,
@@ -1680,6 +1685,8 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setExpeditionFlightDone(skipFlight);
     setExpeditionEntered(true);
+    // The expedition theme fades in with the flight and carries through the hunt.
+    playGameMusic(CANOPY_THEME_SRC, CANOPY_THEME_VOLUME);
   }
 
   /** Random destination, skipping recovering regions when any are rested. */
@@ -2462,6 +2469,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   muted
                   playsInline
                   preload="auto"
+                  onPlay={() => playGameMusic(CANOPY_THEME_SRC, CANOPY_THEME_VOLUME)}
                   onEnded={() => setExpeditionFlightDone(true)}
                 />
                 <button

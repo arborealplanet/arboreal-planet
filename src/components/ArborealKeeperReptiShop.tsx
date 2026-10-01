@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChondroBreederExpandedShop } from "@/components/ChondroBreederExpandedShop";
 import { ChondroPlayerMarket } from "@/components/ChondroPlayerMarket";
 import { consumeStockRotated, isHankScaleMuted, playHankScaleLine, setHankScaleMuted } from "@/lib/hank-scale-voice";
+import { isShopMusicMuted, setShopMusicMuted, startShopMusic, stopShopMusic } from "@/lib/shop-music";
 
 // Three blink variants of Hank's idle loop in the Verdant Vivarium shop.
 // Every clip opens and closes on the same eyes-open pose, so cutting
@@ -99,6 +100,7 @@ export function ArborealKeeperReptiShop({ navCollapsed = false, costume = false 
   const [qaOpen, setQaOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [muted, setMuted] = useState(() => isHankScaleMuted());
+  const [musicMuted, setMusicMuted] = useState(() => isShopMusicMuted());
   const introducedRef = useRef(false);
 
   // Sprite QA is a production tool — only admins ever see the button or panel.
@@ -128,6 +130,25 @@ export function ArborealKeeperReptiShop({ navCollapsed = false, costume = false 
     setMuted(next);
     setHankScaleMuted(next);
   }
+
+  function toggleMusicMute() {
+    const next = !musicMuted;
+    setMusicMuted(next);
+    setShopMusicMuted(next);
+  }
+
+  // Hank's shop theme: start on mount (deferred to first gesture if autoplay
+  // blocks it), fade out when leaving the shop.
+  useEffect(() => {
+    startShopMusic();
+    return () => stopShopMusic();
+  }, []);
+
+  useEffect(() => {
+    const onMusicMuteChange = () => setMusicMuted(isShopMusicMuted());
+    window.addEventListener("game-music-mute-changed", onMusicMuteChange);
+    return () => window.removeEventListener("game-music-mute-changed", onMusicMuteChange);
+  }, []);
 
   function hasReturningSave(): boolean {
     try {
@@ -232,6 +253,15 @@ export function ArborealKeeperReptiShop({ navCollapsed = false, costume = false 
         <div className="absolute inset-0">
           <ShopLoopVideo key={costume ? "costume" : "standard"} costume={costume} />
         </div>
+        <button
+          type="button"
+          onClick={toggleMusicMute}
+          title={musicMuted ? "Unmute shop music" : "Mute shop music"}
+          aria-label={musicMuted ? "Unmute shop music" : "Mute shop music"}
+          className="absolute bottom-2 right-[54px] z-10 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur-sm hover:bg-black/75 hover:text-white"
+        >
+          {musicMuted ? "🔇" : "🎵"}
+        </button>
         <button
           type="button"
           onClick={toggleMute}
