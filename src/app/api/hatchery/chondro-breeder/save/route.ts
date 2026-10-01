@@ -51,6 +51,21 @@ async function claimTargetedBonus(token: string) {
   } catch {}
 }
 
+// Founder/testing allowlist: unlimited snake housing spaces. Any lookup
+// failure falls back to the standard enclosure-based capacity rule.
+async function hasUnlimitedSpaces(token: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/rpc/keeper_has_unlimited_spaces`, {
+      method: "POST",
+      headers: apiHeaders(token),
+      body: "{}",
+      cache: "no-store",
+    });
+    if (!response.ok) return false;
+    return (await response.json().catch(() => false)) === true;
+  } catch { return false; }
+}
+
 async function fetchPlayerRole(userId: string, token: string): Promise<string | null> {
   try {
     const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role&limit=1`, {
@@ -140,9 +155,10 @@ export async function PUT(request: NextRequest) {
   // truth the shop UI uses (@/lib/chondro-facility-limits): chondros of any
   // life stage can live in a Chondro Dojo Bin, so the check is total colony
   // size against total animal capacity — no adult-to-PVC assignment.
+  // Accounts on the unlimited-spaces allowlist skip this check entirely.
   if (Array.isArray(state.colony) && state.enclosures && typeof state.enclosures === "object" && !Array.isArray(state.enclosures)) {
     const capacity = animalHousingCapacity(state.enclosures as Record<string, number>);
-    if (state.colony.length > capacity) {
+    if (state.colony.length > capacity && !(await hasUnlimitedSpaces(identity.token))) {
       return NextResponse.json(
         { error: `This save has more animals (${state.colony.length}) than your enclosures can house (${capacity}). Add enclosures or rehome animals before saving.` },
         { status: 400 },
