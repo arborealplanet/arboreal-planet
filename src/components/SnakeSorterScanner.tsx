@@ -134,6 +134,76 @@ function assessVideoFrame(video: HTMLVideoElement): LiveQuality | null {
   return assessCanvasQuality(canvas);
 }
 
+type SampledCandidate = {
+  time: number;
+  score: number;
+  signature: Float32Array | null;
+};
+
+// 16x16 grayscale fingerprint of a frame, used to spot near-duplicates so a
+// long static stretch of video does not waste evidence slots on copies.
+function frameSignature(canvas: HTMLCanvasElement): Float32Array | null {
+  const size = 16;
+  const thumb = document.createElement("canvas");
+  thumb.width = size;
+  thumb.height = size;
+  const context = thumb.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(canvas, 0, 0, size, size);
+  const { data } = context.getImageData(0, 0, size, size);
+  const signature = new Float32Array(size * size);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    signature[p] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+  }
+  return signature;
+}
+
+function signatureDistance(a: Float32Array, b: Float32Array) {
+  let total = 0;
+  const count = Math.min(a.length, b.length);
+  if (!count) return Number.POSITIVE_INFINITY;
+  for (let i = 0; i < count; i++) total += Math.abs(a[i] - b[i]);
+  return total / count;
+}
+
+async function seekVideoTo(video: HTMLVideoElement, time: number) {
+  video.currentTime = time;
+  await new Promise<void>((resolve) => {
+    const done = () => resolve();
+    video.onseeked = done;
+    window.setTimeout(done, 1200);
+  });
+}
+
+async function resolveVideoDuration(video: HTMLVideoElement) {
+  if (Number.isFinite(video.duration) && video.duration > 0) return video.duration;
+  // Some in-browser recordings report an infinite duration until the playhead
+  // is forced to the end once. Probe for the real duration before giving up.
+  const probed = await new Promise<number>((resolve) => {
+    const done = () => resolve(Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0);
+    video.ondurationchange = done;
+    window.setTimeout(done, 1500);
+    try {
+      video.currentTime = 1e7;
+    } catch {
+      done();
+    }
+  });
+  if (probed > 0) {
+    await seekVideoTo(video, 0);
+    return probed;
+  }
+  try {
+    if (video.seekable && video.seekable.length > 0) {
+      const end = video.seekable.end(video.seekable.length - 1);
+      if (Number.isFinite(end) && end > 0) return end;
+    }
+  } catch {
+    // Seekable ranges are best-effort only.
+  }
+  return 1;
+}
+
 async function sampleVideo(file: File, mode: string, sourceIndex: number) {
   const requested = mode === "dense" ? 8 : mode === "keyframes" ? 3 : 5;
   const url = URL.createObjectURL(file);
@@ -144,18 +214,56 @@ async function sampleVideo(file: File, mode: string, sourceIndex: number) {
     video.src = url;
     await new Promise<void>((resolve, reject) => {
       video.onloadedmetadata = () => resolve();
-      video.onerror = () => reject(new Error("Could not read video metadata"));
+      video.onerror = () => reject(new Error(`This browser could not read "${file.name}". Some phone clips (for example iPhone .mov / HEVC) need converting to MP4 before they can be scanned.`));
     });
-    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
-    const times = Array.from({ length: requested }, (_, i) => duration * ((i + 1) / (requested + 1)));
+    if (!video.videoWidth || !video.videoHeight) {
+      throw new Error(`"${file.name}" has no readable video track. Try an MP4 or WebM clip, or add still photos instead.`);
+    }
+    const duration = await resolveVideoDuration(video);
+
+    // Oversample the clip, score every candidate frame with the same quality
+    // check used for the live camera, then keep the sharpest distinct frames
+    // instead of blindly trusting evenly spaced timestamps.
+    const candidateCount = Math.min(24, requested * 3);
+    const analysisCanvas = document.createElement("canvas");
+    analysisCanvas.width = 320;
+    analysisCanvas.height = Math.max(90, Math.round(320 * video.videoHeight / video.videoWidth));
+    const candidates: SampledCandidate[] = [];
+    for (let i = 0; i < candidateCount; i++) {
+      const time = Math.min(Math.max(duration * ((i + 1) / (candidateCount + 1)), 0), Math.max(0, duration - 0.05));
+      await seekVideoTo(video, time);
+      if (!video.videoWidth || !video.videoHeight) continue;
+      const context = analysisCanvas.getContext("2d");
+      if (!context) continue;
+      context.drawImage(video, 0, 0, analysisCanvas.width, analysisCanvas.height);
+      const quality = assessCanvasQuality(analysisCanvas);
+      candidates.push({ time, score: quality.score, signature: frameSignature(analysisCanvas) });
+    }
+
+    const duplicateThreshold = 4;
+    const ranked = [...candidates].sort((a, b) => b.score - a.score);
+    const kept: SampledCandidate[] = [];
+    for (const candidate of ranked) {
+      if (kept.length >= requested) break;
+      let nearDuplicate = false;
+      if (candidate.signature) {
+        const signature = candidate.signature;
+        nearDuplicate = kept.some((other) => {
+          const otherSignature = other.signature;
+          return otherSignature !== null && signatureDistance(signature, otherSignature) < duplicateThreshold;
+        });
+      }
+      if (!nearDuplicate) kept.push(candidate);
+    }
+    for (const candidate of ranked) {
+      if (kept.length >= Math.min(requested, candidates.length)) break;
+      if (!kept.includes(candidate)) kept.push(candidate);
+    }
+    kept.sort((a, b) => a.time - b.time);
+
     const frames: File[] = [];
-    for (let i = 0; i < times.length; i++) {
-      video.currentTime = Math.min(Math.max(times[i], 0), Math.max(0, duration - 0.05));
-      await new Promise<void>((resolve) => {
-        const done = () => resolve();
-        video.onseeked = done;
-        window.setTimeout(done, 1200);
-      });
+    for (let i = 0; i < kept.length; i++) {
+      await seekVideoTo(video, kept[i].time);
       if (!video.videoWidth || !video.videoHeight) continue;
       const size = fitSize(video.videoWidth, video.videoHeight);
       const canvas = document.createElement("canvas");
@@ -200,6 +308,8 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   const [conservativeMode, setConservativeMode] = useState(true);
   const [frameSampling, setFrameSampling] = useState("balanced");
   const [inferenceConfigured, setInferenceConfigured] = useState<boolean | null>(null);
+  const [intakeNotice, setIntakeNotice] = useState("");
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,6 +330,8 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const assetsRef = useRef<ScanAsset[]>([]);
+  const assetVideoRefs = useRef(new Map<string, HTMLVideoElement>());
+  const resultRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     assetsRef.current = assets;
@@ -254,6 +366,21 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
     return () => window.clearInterval(timer);
   }, [cameraOpen]);
 
+  useEffect(() => {
+    if (analysisStatus === "ready") resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [analysisStatus]);
+
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const files = Array.from(event.clipboardData?.files ?? []);
+      if (files.length) addFiles(files, "upload");
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [assets.length]);
+
   const totals = useMemo(() => ({
     images: assets.filter((a) => a.kind === "image").length,
     videos: assets.filter((a) => a.kind === "video").length,
@@ -284,8 +411,9 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   }
 
   function addFiles(files: File[], source: ScanAsset["source"]) {
-    const accepted = files
-      .filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"))
+    const media = files.filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"));
+    const unsupported = files.length - media.length;
+    const accepted = media
       .slice(0, Math.max(0, 20 - assets.length))
       .map((file): ScanAsset => ({
         id: crypto.randomUUID(),
@@ -295,6 +423,12 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
         previewUrl: URL.createObjectURL(file),
         viewType: "auto",
       }));
+    const skipped = unsupported + (media.length - accepted.length);
+    setIntakeNotice(
+      skipped > 0
+        ? `${skipped} file${skipped === 1 ? "" : "s"} skipped — Snake Sorter takes photos and videos only, up to 20 items per snake.`
+        : "",
+    );
     setAssets((current) => [...current, ...accepted]);
     setAnalysisStatus("idle");
     setAnalysisMessage("");
@@ -315,6 +449,7 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   function clearAssets() {
     assets.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
     setAssets([]);
+    setIntakeNotice("");
     setAnalysisStatus("idle");
     setAnalysisMessage("");
     setAnalysisResult(null);
@@ -325,6 +460,23 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   function updateAssetView(id: string, viewType: ScanView) {
     setAssets((current) => current.map((asset) => asset.id === id ? { ...asset, viewType } : asset));
     invalidateAnalysis();
+  }
+
+  async function grabCurrentFrame(id: string) {
+    const video = assetVideoRefs.current.get(id);
+    if (!video || video.readyState < 2 || !video.videoWidth) {
+      setIntakeNotice("Play or pause the video on the frame you want first, then grab it.");
+      return;
+    }
+    const { width, height } = fitSize(video.videoWidth, video.videoHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(video, 0, 0, width, height);
+    const file = await canvasToFile(canvas, `snake-frame-${Date.now()}.jpg`);
+    addFiles([file], "upload");
   }
 
   async function openCamera() {
@@ -409,7 +561,11 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
   }
 
   async function runAnalysis() {
-    if (!assets.length) return;
+    if (!assets.length) {
+      setAnalysisStatus("error");
+      setAnalysisMessage("Add at least one photo or video of the snake first, then run the scan.");
+      return;
+    }
     setAnalysisStatus("preparing");
     setAnalysisMessage("Extracting and normalizing evidence frames in your browser…");
 
@@ -427,7 +583,7 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
         }
       }
 
-      if (!evidence.length) throw new Error("No usable analysis frames could be prepared.");
+      if (!evidence.length) throw new Error("None of that media could be turned into usable frames. Try a clearer photo, or a shorter MP4 clip of the snake.");
 
       const form = new FormData();
       evidence.forEach(({ file, viewType }) => {
@@ -593,7 +749,12 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
-        <section className="panel rounded-[28px] p-5 sm:p-6">
+        <section
+          className={`panel rounded-[28px] p-5 sm:p-6 ${dragActive ? "ring-2 ring-sky-300/40" : ""}`}
+          onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(e) => { e.preventDefault(); setDragActive(false); addFiles(Array.from(e.dataTransfer.files), "upload"); }}
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="section-kicker">Analysis media</div>
@@ -605,16 +766,19 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
             </div>
           </div>
 
+          {intakeNotice && <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.04] p-3 text-xs leading-5 text-amber-100/60">{intakeNotice}</div>}
+          {dragActive && <div className="mt-4 rounded-2xl border border-sky-300/25 bg-sky-300/[.06] p-3 text-center text-xs font-bold text-sky-100/70">Drop photos or videos to add them</div>}
+
           {assets.length === 0 ? (
             <div className="mt-5 grid min-h-52 place-items-center rounded-[24px] border border-dashed border-white/[.09] bg-black/[.08] p-8 text-center">
-              <div><div className="text-3xl text-white/18">◇</div><div className="mt-3 text-sm font-semibold text-white/38">Add media of one snake to begin</div><div className="mt-2 text-xs leading-5 text-white/22">Use several angles when possible: head, dorsal pattern, lateral pattern, full body and tail.</div></div>
+              <div><div className="text-3xl text-white/18">◇</div><div className="mt-3 text-sm font-semibold text-white/38">Add media of one snake to begin</div><div className="mt-2 text-xs leading-5 text-white/22">Use several angles when possible: head, dorsal pattern, lateral pattern, full body and tail. You can also drag &amp; drop files here, or paste a copied image anywhere on this page.</div></div>
             </div>
           ) : (
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {assets.map((asset) => (
                 <div key={asset.id} className="group overflow-hidden rounded-2xl border border-white/[.07] bg-black/15">
                   <div className="relative aspect-[4/3] bg-black/25">
-                    {asset.kind === "image" ? <img src={asset.previewUrl} alt="" className="h-full w-full object-contain" /> : <video src={asset.previewUrl} controls preload="metadata" className="h-full w-full object-contain" />}
+                    {asset.kind === "image" ? <img src={asset.previewUrl} alt="" className="h-full w-full object-contain" /> : <video ref={(el) => { if (el) assetVideoRefs.current.set(asset.id, el); else assetVideoRefs.current.delete(asset.id); }} src={asset.previewUrl} controls preload="metadata" className="h-full w-full object-contain" />}
                     <button type="button" onClick={() => removeAsset(asset.id)} className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-sm text-white/65 opacity-80 hover:text-white">×</button>
                   </div>
                   <div className="p-3">
@@ -623,6 +787,11 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
                     <select value={asset.viewType} onChange={(e) => updateAssetView(asset.id, e.target.value as ScanView)} className="mt-2 w-full rounded-xl border border-white/[.06] bg-black/20 px-2 py-1.5 text-[9px] text-white/45 outline-none">
                       <option value="auto">View: auto-detect</option><option value="full_body">Full body</option><option value="head">Head</option><option value="dorsal">Dorsal</option><option value="left_lateral">Left lateral</option><option value="right_lateral">Right lateral</option><option value="tail">Tail</option><option value="other">Other</option>
                     </select>
+                    {asset.kind === "video" && (
+                      <button type="button" onClick={() => void grabCurrentFrame(asset.id)} className="mt-2 w-full rounded-xl border border-violet-300/15 bg-violet-300/[.05] px-2 py-1.5 text-[9px] font-bold text-violet-100/60 transition hover:bg-violet-300/[.12]">
+                        Use current frame as photo
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -722,7 +891,7 @@ export function SnakeSorterScanner({ onReferenceAdded, canManageReferences = tru
         </aside>
       </div>
 
-      <section className="panel rounded-[28px] p-5 sm:p-6">
+      <section ref={resultRef} className="panel rounded-[28px] p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="section-kicker">Identification result</div>
