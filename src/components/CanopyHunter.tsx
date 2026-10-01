@@ -900,7 +900,7 @@ export function CanopyHunter({
               </div>
             ))}
             {/* Third-person hunter (keyed art, fully opaque) */}
-            <div className="absolute bottom-1 left-1/2 z-10 h-32 w-24 -translate-x-1/2 sm:h-40 sm:w-32">
+            <div className="pointer-events-none absolute bottom-1 left-1/2 z-10 h-32 w-24 -translate-x-1/2 sm:h-40 sm:w-32">
               <Image src={EXPLORER_ART} alt="" aria-hidden="true" fill sizes="96px" draggable={false} className="object-contain" />
             </div>
             {/* Foreground foliage frames the shot */}
