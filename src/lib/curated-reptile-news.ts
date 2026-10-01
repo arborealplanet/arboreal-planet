@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "Machine learning identifies the Burmese pythons managers should target",
+    url: "https://phys.org/news/2026-10-python-index-large-females-key.html",
+    publishedAt: "2026-10-01",
+    publisher: "Phys.org",
+    summary: "University of Florida researchers created a weighted removal index showing that targeting large reproductive females—especially during high-value winter periods—could make invasive-python control in South Florida more effective.",
+  },
+  {
     title: "X-ray scans dethrone a fossil long called the world's oldest reptile",
     url: "https://phys.org/news/2026-09-fossil-world-oldest-reptile-dethroned.html",
     publishedAt: "2026-09-30",
