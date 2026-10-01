@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "X-ray scans dethrone a fossil long called the world's oldest reptile",
+    url: "https://phys.org/news/2026-09-fossil-world-oldest-reptile-dethroned.html",
+    publishedAt: "2026-09-30",
+    publisher: "Phys.org",
+    summary: "New scans revealed internal gills, a primitive skull, and thousands of tiny teeth in Westlothiana, showing that the 345-million-year-old animal was an aquatic or amphibious stem tetrapod rather than an early reptile.",
+  },
+  {
     title: "Afro-Asian sand snake documented in Kutch after 150 years",
     url: "https://indianexpress.com/article/cities/ahmedabad/kutch-afro-asian-sand-snake-sighting-gujarat-wildlife-10899757/",
     publishedAt: "2026-09-30",
