@@ -4,6 +4,8 @@ import { ArcadeHub, TokenChip } from "@/components/arcade/ArcadeHub";
 import { ArcadeToasts } from "@/components/arcade/ArcadeToasts";
 import { DailyTrivia } from "@/components/arcade/DailyTrivia";
 import { DailyBlackjack } from "@/components/arcade/DailyBlackjack";
+import { RedeemCodeCard } from "@/components/arcade/RedeemCodeCard";
+
 
 const keeperSteps = [
   { title: "1 · BUILD", text: "Start with limited facility capacity, compatible enclosures and an operating budget." },
@@ -123,6 +125,16 @@ export default function ArcadePage() {
         <h2 className="mt-3 text-2xl font-semibold text-white">Your arcade, your progress.</h2>
         <div className="mt-5">
           <ArcadeHub />
+        </div>
+      </section>
+
+      {/* Event codes — owner-run events hand out codes for keeper rewards */}
+      <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
+        <div className="section-kicker">Event codes</div>
+        <h2 className="mt-3 text-2xl font-semibold text-white">Special drops for special days.</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">When an event is running, codes go out to the community — each keeper can claim one once.</p>
+        <div className="mt-5 max-w-2xl">
+          <RedeemCodeCard />
         </div>
       </section>
 
