@@ -3,7 +3,7 @@ import { SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 // Public feature flags. Keys are allowlisted so this route can never
 // leak arbitrary settings rows.
-const ALLOWED_KEYS = new Set(["shop_theme"]);
+const ALLOWED_KEYS = new Set(["shop_theme", "hank_costume"]);
 
 export async function GET(request: NextRequest) {
   const key = (request.nextUrl.searchParams.get("key") ?? "").trim();
