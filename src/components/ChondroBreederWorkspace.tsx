@@ -119,6 +119,20 @@ export function ChondroBreederWorkspace() {
       .catch(() => {});
     return () => { active = false; };
   }, []);
+  // Hank's costume is its own owner toggle (site setting hank_costume),
+  // separate from the shop theme: flipping it swaps Hank's shop loops to
+  // the Captain Spaulding set in whichever shop is showing.
+  const [hankCostume, setHankCostume] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/site-settings?key=hank_costume", { cache: "no-store" })
+      .then((response) => response.json().catch(() => null))
+      .then((data) => {
+        if (active && data && data.value === "on") setHankCostume(true);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   function toggleNavCollapsed() {
     setNavCollapsed((prev) => !prev);
   }
@@ -171,8 +185,8 @@ export function ChondroBreederWorkspace() {
         {view === "home" ? <BreederHome onOpen={openView} /> : null}
         {view === "market" ? (
           shopTheme === "halloween"
-            ? <ArborealKeeperReptiShopHalloween navCollapsed={navCollapsed} />
-            : <ArborealKeeperReptiShop navCollapsed={navCollapsed} />
+            ? <ArborealKeeperReptiShopHalloween navCollapsed={navCollapsed} costume={hankCostume} />
+            : <ArborealKeeperReptiShop navCollapsed={navCollapsed} costume={hankCostume} />
         ) : coreViews.has(view) ? <CoreGameScreen view={view as "breeding" | "colony" | "clutches"} /> : null}
         {view === "career" ? (
           <SecondaryScreen active={active} onBack={() => openView("home")}>
