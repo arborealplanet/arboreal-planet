@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomUUID } from "node:crypto";
-import { fetchOwnProfile, getServerIdentity, getSnakeSorterAccess, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 export const runtime = "nodejs";
 
@@ -40,12 +40,14 @@ function storagePath(path: string) {
 
 type Identity = Awaited<ReturnType<typeof getServerIdentity>>;
 
-async function sorterIdentity(): Promise<(NonNullable<Identity> & { isOwner: boolean }) | null> {
+// Any signed-in Arboreal Planet user may supply data. Owner-granted
+// membership (snake_sorter_members) is only required to ACCESS Snake
+// Sorter data — the contribution endpoints are the one supply-only door.
+async function contributorIdentity(): Promise<(NonNullable<Identity> & { isOwner: boolean }) | null> {
   const identity = await getServerIdentity();
   if (!identity) return null;
-  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
-  if (!access.allowed) return null;
-  return { ...identity, isOwner: access.isOwner };
+  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
+  return { ...identity, isOwner: profile?.role === "owner" };
 }
 
 async function ownerIdentity(): Promise<(NonNullable<Identity>) | null> {
@@ -85,9 +87,10 @@ type ContributionRow = {
   created_at: string;
 };
 
-// GET: owner sees everything (optional ?status=), members see their own rows.
+// GET: owner sees everything (optional ?status=), everyone else sees
+// only their own rows.
 export async function GET(request: NextRequest) {
-  const identity = await sorterIdentity();
+  const identity = await contributorIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const h = restHeaders(identity.token);
 
@@ -126,11 +129,12 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST: members (scanner+) upload images/videos. Everything lands as
+// POST: any signed-in user uploads images/videos (supply-only — uploading
+// grants no access to Snake Sorter data). Everything lands as
 // pending_review — promotion into the reference library happens only via
 // the owner review PATCH below.
 export async function POST(request: NextRequest) {
-  const identity = await sorterIdentity();
+  const identity = await contributorIdentity();
   if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const form = await request.formData().catch(() => null);
@@ -270,17 +274,17 @@ type ReviewBody = {
 // library; video originals stay in the contributions bucket, labeled and
 // linked to the new/existing reference animal for future frame extraction.
 export async function PATCH(request: NextRequest) {
-  const identity = await ownerIdentity();
-  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const body = await request.json().catch(() => ({})) as ReviewBody;
 
   const id = text(body.id, 100);
   const action = String(body.action ?? "");
 
-  // Members may withdraw their own pending contributions via a dedicated
-  // RPC (atomic: the pending check and the status flip happen together).
+  // Contributors may withdraw their own pending contributions via a
+  // dedicated RPC (atomic: the pending check and the status flip happen
+  // together; the RPC itself enforces ownership, so any signed-in
+  // contributor can use it — no membership required).
   if (action === "withdraw") {
-    const memberIdentity = await sorterIdentity();
+    const memberIdentity = await contributorIdentity();
     if (!memberIdentity) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (!/^[0-9a-f-]{36}$/i.test(id)) {
       return NextResponse.json({ error: "Invalid review request." }, { status: 400 });
@@ -300,6 +304,10 @@ export async function PATCH(request: NextRequest) {
     }
     return NextResponse.json({ ok: true, status: "withdrawn" });
   }
+
+  // Everything below is owner review.
+  const identity = await ownerIdentity();
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !["approve", "reject"].includes(action)) {
     return NextResponse.json({ error: "Invalid review request." }, { status: 400 });
