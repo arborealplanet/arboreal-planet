@@ -83,6 +83,21 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
   const [save, setSave] = useState<SaveState>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  // Founder/testing allowlist: unlimited snake housing spaces, checked
+  // server-side via /api/canopy-hunter/status so it follows the account.
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [marketLoaded, setMarketLoaded] = useState(false); const [refreshing, setRefreshing] = useState(false);
   const emptyAnnouncedRef = useRef(false);
 
@@ -150,7 +165,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
     return () => window.clearTimeout(timer);
   }, [marketLoaded, available.length]);
   const cash = Math.max(0, Number(save.cash ?? 0));
-  const capacity = animalHousingCapacity(save.enclosures);
+  const capacity = unlimitedSpaces ? Number.POSITIVE_INFINITY : animalHousingCapacity(save.enclosures);
   const openSlots = Math.max(0, capacity - (save.colony?.length ?? 0));
 
   async function buy(listing: Listing) {
@@ -270,7 +285,7 @@ export function ChondroPlayerMarket({ bare, layout }: { bare?: boolean; layout?:
         <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
           <span className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-2.5 py-1 font-black uppercase tracking-[.08em] text-emerald-100/60">Virtual only</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Cash {money(cash)}</span>
-          <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">Open animal spaces {openSlots}</span>
+          <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{unlimitedSpaces ? "Unlimited animal spaces" : `Open animal spaces ${openSlots}`}</span>
           <span className="rounded-full border border-amber-200/10 px-2.5 py-1 text-amber-100/48">{mine.length} your listing{mine.length === 1 ? "" : "s"}</span>
           <span className="rounded-full border border-white/[.06] px-2.5 py-1 text-white/38">{available.length} from other breeders</span>
         </div>

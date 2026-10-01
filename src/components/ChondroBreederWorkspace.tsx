@@ -293,12 +293,16 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
   // Founder/testing exemption: unlimited free expeditions, checked
   // server-side so it follows the account, not the device.
   const [expeditionUnlimited, setExpeditionUnlimited] = useState(false);
+  // Founder/testing allowlist: unlimited snake housing spaces (same fetch).
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/canopy-hunter/status", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled && data?.unlimited === true) setExpeditionUnlimited(true);
+        if (cancelled) return;
+        if (data?.unlimited === true) setExpeditionUnlimited(true);
+        if (data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
       })
       .catch(() => {});
     return () => {
@@ -317,12 +321,13 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
     requestExpeditionOpen();
     onOpen("colony");
   }
+  const housingBlocked = expedition.blocked && !unlimitedSpaces;
   const expeditionLabel = expeditionUnlimited
-    ? expedition.blocked
+    ? housingBlocked
       ? "Unlimited expeditions — free up housing space first."
       : "Unlimited free expeditions — tap to head out."
     : expedition.freeReady
-      ? expedition.blocked
+      ? housingBlocked
         ? "Free expedition ready — needs housing space first."
         : "Free expedition ready — tap to head out."
       : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`;
@@ -353,7 +358,7 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                 <span className="mt-1 block text-sm font-bold leading-5 text-white/85">{expeditionLabel}</span>
               </span>
               <span className="shrink-0 rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-bold text-[#06100c] transition group-hover:bg-emerald-200">
-                {expedition.blocked ? "Fix housing" : "Head out"}
+                {housingBlocked ? "Fix housing" : "Head out"}
               </span>
             </button>
           ) : null}

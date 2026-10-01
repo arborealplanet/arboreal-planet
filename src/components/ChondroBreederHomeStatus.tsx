@@ -62,6 +62,21 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
   const [market, setMarket] = useState<MarketPayload>({});
   const [conservation, setConservation] = useState<ConservationPayload>({});
   const [now, setNow] = useState(0); const [claiming, setClaiming] = useState(false); const [claimMessage, setClaimMessage] = useState("");
+  // Founder/testing allowlist: unlimited snake housing spaces, checked
+  // server-side via /api/canopy-hunter/status so it follows the account.
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -96,7 +111,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
   }, []);
 
   const colony = useMemo(() => save.colony ?? [], [save.colony]);
-  const capacity = animalHousingCapacity(save.enclosures);
+  const capacity = unlimitedSpaces ? Number.POSITIVE_INFINITY : animalHousingCapacity(save.enclosures);
   const activeClutch = Array.isArray(save.clutch?.offspring) ? save.clutch!.offspring!.length : 0;
   const cycle = save.breedingCycle ?? null;
   const pendingTests = save.geneticTestsPending ?? [];
@@ -152,7 +167,7 @@ export function ChondroBreederHomeStatus({ onOpen }: { onOpen: (view: CoreView) 
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
         <StatusStat label="Game cash" value={money(Number(save.cash ?? 0))} />
-        <StatusStat label="Virtual colony" value={`${colony.length}/${capacity}`} />
+        <StatusStat label="Virtual colony" value={`${colony.length}/${unlimitedSpaces ? "∞" : capacity}`} />
         <StatusStat label="Season" value={String(save.season ?? 1)} />
         <StatusStat label="Pending tests" value={String(pendingTests.length)} />
       </div>

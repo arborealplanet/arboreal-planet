@@ -51,6 +51,21 @@ function needsAttention(animal: Animal) {
 export function ChondroColonyOverview() {
   const [save, setSave] = useState<Save>({});
   const [filter, setFilter] = useState<Filter>("all");
+  // Founder/testing allowlist: unlimited snake housing spaces, checked
+  // server-side via /api/canopy-hunter/status so it follows the account.
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -74,7 +89,7 @@ export function ChondroColonyOverview() {
   const colony = useMemo(() => save.colony ?? [], [save.colony]);
   const facilityCapacity = roomCapacityFromSave(save);
   const footprint = enclosureFootprint(save.enclosures);
-  const animalCapacity = animalHousingCapacity(save.enclosures);
+  const animalCapacity = unlimitedSpaces ? Number.POSITIVE_INFINITY : animalHousingCapacity(save.enclosures);
   const adults = colony.filter((animal) => animal.lifeStage === "Adult");
   const ready = adults.filter((animal) => animalReady(animal, save));
   const attention = colony.filter(needsAttention);
@@ -100,7 +115,7 @@ export function ChondroColonyOverview() {
           <Metric label="Breeding ready" value={ready.length} detail="Adult, healthy and available" good />
           <Metric label="Needs testing" value={untested.length} detail="Game genetics still hidden" />
           <Metric label="Needs attention" value={attention.length} detail="Fair condition or Nido positive" warn={attention.length > 0} />
-          <Metric label="Virtual housing" value={`${colony.length}/${animalCapacity}`} detail={`${footprint}/${facilityCapacity} facility slots used · ${Math.max(0, animalCapacity - colony.length)} virtual animal spaces open`} />
+          <Metric label="Virtual housing" value={`${colony.length}/${unlimitedSpaces ? "∞" : animalCapacity}`} detail={`${footprint}/${facilityCapacity} facility slots used · ${unlimitedSpaces ? "unlimited virtual animal spaces" : `${Math.max(0, animalCapacity - colony.length)} virtual animal spaces open`}`} />
         </div>
 
         <div className="p-4 sm:p-5">

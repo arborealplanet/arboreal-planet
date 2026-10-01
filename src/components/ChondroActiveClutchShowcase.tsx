@@ -44,6 +44,21 @@ function dispatchClutchAction(action: ClutchAction, snakeId?: string) {
 
 export function ChondroActiveClutchShowcase() {
   const [save, setSave] = useState<Save>({});
+  // Founder/testing allowlist: unlimited snake housing spaces, checked
+  // server-side via /api/canopy-hunter/status so it follows the account.
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -72,7 +87,7 @@ export function ChondroActiveClutchShowcase() {
   const establishmentCost = 150 + offspring.length * 75;
   const holdbackCount = holdbacks.size;
   const marketCount = Math.max(0, offspring.length - holdbackCount);
-  const animalCapacity = animalHousingCapacity(save.enclosures);
+  const animalCapacity = unlimitedSpaces ? Number.POSITIVE_INFINITY : animalHousingCapacity(save.enclosures);
   const colonyCount = save.colony?.length ?? 0;
   const holdbackCapacity = Math.max(0, animalCapacity - colonyCount);
   const holdbackSpacesLeft = Math.max(0, holdbackCapacity - holdbackCount);
@@ -90,7 +105,7 @@ export function ChondroActiveClutchShowcase() {
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="rounded-full border border-emerald-300/12 bg-emerald-300/[.035] px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] text-emerald-100/60">Virtual only</div>
-            {save.clutchEstablished ? <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] ${overCapacity ? "border-red-300/20 bg-red-300/[.05] text-red-100/75" : "border-white/[.08] text-white/42"}`}>{overCapacity ? `${excessHoldbacks} over capacity` : `${holdbackSpacesLeft} holdback space${holdbackSpacesLeft === 1 ? "" : "s"} left`}</div> : null}
+            {save.clutchEstablished ? <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.1em] ${overCapacity ? "border-red-300/20 bg-red-300/[.05] text-red-100/75" : "border-white/[.08] text-white/42"}`}>{unlimitedSpaces ? "Unlimited holdback spaces" : overCapacity ? `${excessHoldbacks} over capacity` : `${holdbackSpacesLeft} holdback space${holdbackSpacesLeft === 1 ? "" : "s"} left`}</div> : null}
             <div className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[.13em] ${save.clutchEstablished ? "border-emerald-300/18 bg-emerald-300/[.045] text-emerald-100/70" : "border-amber-200/18 bg-amber-200/[.045] text-amber-100/70"}`}>
               {save.clutchEstablished ? "Established" : "Establishment pending"}
             </div>

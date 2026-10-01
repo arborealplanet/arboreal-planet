@@ -950,6 +950,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const [expeditionUnlimited, setExpeditionUnlimited] = useState(false);
   // River Port Stop private playtest gate, same server-side pattern.
   const [portStopEnabled, setPortStopEnabled] = useState(false);
+  // Founder/testing allowlist: unlimited snake housing spaces, same
+  // server-side pattern (also enforced in the save API).
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/canopy-hunter/status", { cache: "no-store" })
@@ -958,6 +961,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         if (cancelled) return;
         if (data?.unlimited === true) setExpeditionUnlimited(true);
         if (data?.portDev === true) setPortStopEnabled(true);
+        if (data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
       })
       .catch(() => {});
     return () => {
@@ -1073,7 +1077,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const nextRefresh = (storeEpoch + 1) * DAY_MS;
   const installedEnclosureCount = enclosureFootprint(enclosures);
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms });
-  const capacity = animalHousingCapacity(enclosures);
+  const capacity = unlimitedSpaces ? Number.POSITIVE_INFINITY : animalHousingCapacity(enclosures);
   const openSlots = Math.max(0, capacity - colony.length);
   const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedEnclosureCount);
   const females = colony.filter((a) => a.sex === "Female" && a.lifeStage === "Adult" && Number(femaleRecovery[a.id] ?? 0) <= season);
@@ -1752,7 +1756,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
     if (!started) return;
     // Defensive re-check: the gate requires EXPEDITION_PYTHONS open slots,
     // and this refuses to drop animals if capacity somehow shrank mid-run.
-    const freeSlots = Math.max(0, animalHousingCapacity(enclosures) - colony.length);
+    const freeSlots = unlimitedSpaces ? Number.MAX_SAFE_INTEGER : Math.max(0, animalHousingCapacity(enclosures) - colony.length);
     if (wilds.length > freeSlots) return;
     const nowStamp = Date.now();
     const imports = wilds.map((wild, i) =>
@@ -2047,7 +2051,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
         </div>
         <div className="rounded-xl border border-white/[.06] bg-black/15 px-3 py-2">
           <div className="text-[8px] uppercase tracking-[.12em] text-white/22">Capacity</div>
-          <div className="mt-0.5 text-sm font-semibold text-white/62">{colony.length}/{capacity}</div>
+          <div className="mt-0.5 text-sm font-semibold text-white/62">{colony.length}/{unlimitedSpaces ? "∞" : capacity}</div>
         </div>
         <div className="relative">
           <button

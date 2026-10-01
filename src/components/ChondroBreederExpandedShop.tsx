@@ -494,6 +494,21 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   const carousel = layout === "carousel";
   const [save, setSave] = useState<GameSave | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
+  // Founder/testing allowlist: unlimited snake housing spaces, checked
+  // server-side via /api/canopy-hunter/status so it follows the account.
+  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/canopy-hunter/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [conservation, setConservation] = useState<ConservationRow[]>([]);
   const [seed, setSeed] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
@@ -695,15 +710,16 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
   }
   const purchased = useMemo(() => new Set(save?.purchasedStoreIds ?? []), [save?.purchasedStoreIds]);
   const installedFootprint = enclosureFootprint(save?.enclosures);
-  const capacity = animalHousingCapacity(save?.enclosures);
+  const capacity = unlimitedSpaces ? Number.POSITIVE_INFINITY : animalHousingCapacity(save?.enclosures);
   const physicalRoomCapacity = roomCapacityFromSave({ facilityRooms: save?.facilityRooms });
   const roomEnclosureSlots = Math.max(0, physicalRoomCapacity - installedFootprint);
   const colony = save?.colony ?? [];
   // Housing rule v2 (owner-confirmed): chondros of any life stage can live in
   // a Chondro Dojo Bin — adults do NOT require PVC. Any open animal slot works.
-  const openSlots = openAnimalSlots(save?.enclosures, colony.length);
+  const openSlots = unlimitedSpaces ? Number.POSITIVE_INFINITY : openAnimalSlots(save?.enclosures, colony.length);
 
   function housingAvailableFor(offer: Offer) {
+    if (unlimitedSpaces) return true;
     // Species-aware by design: every offer in this shop is a chondro, so any
     // open slot works, adult or not. canHouseAnimal is the shared rule with
     // the save API's server-side enforcement.
@@ -847,7 +863,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
         {carousel ? (
           <div className="flex flex-none items-center justify-between gap-2">
             <div className="truncate text-[10px] font-black uppercase tracking-[.16em] text-emerald-100/55">Enclosures</div>
-            <div className="shrink-0 text-[10px] text-emerald-100/45">{openSlots} open animal spaces</div>
+            <div className="shrink-0 text-[10px] text-emerald-100/45">{unlimitedSpaces ? "Unlimited animal spaces" : `${openSlots} open animal spaces`}</div>
           </div>
         ) : (
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -858,7 +874,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
           </div>
           <div className="rounded-xl border border-white/[.07] bg-black/15 px-4 py-2 text-right">
             <div className="text-[9px] font-black uppercase tracking-[.13em] text-white/32">Animal capacity</div>
-            <div className="mt-1 text-sm font-black text-emerald-100/72">{capacity} total · {openSlots} open</div>
+            <div className="mt-1 text-sm font-black text-emerald-100/72">{unlimitedSpaces ? "Unlimited spaces" : `${capacity} total · ${openSlots} open`}</div>
           </div>
         </div>
         )}
@@ -973,7 +989,7 @@ export function ChondroBreederExpandedShop({ section, layout }: { section?: "qa"
 
         <div className="mt-4 flex items-center justify-between gap-3 text-[10px] text-white/32">
           <span>Swipe to browse all {visibleOffers.length} listing{visibleOffers.length === 1 ? "" : "s"}</span>
-          <span>{openSlots} open animal space{openSlots === 1 ? "" : "s"} · cash {money(save.cash)}</span>
+          <span>{unlimitedSpaces ? "Unlimited animal spaces" : `${openSlots} open animal space${openSlots === 1 ? "" : "s"}`} · cash {money(save.cash)}</span>
         </div>
         </>
         )}
