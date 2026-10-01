@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerIdentity, getSnakeSorterAccess, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
 
 function storagePath(path: string) {
   return path.split("/").map(encodeURIComponent).join("/");
@@ -8,8 +8,10 @@ function storagePath(path: string) {
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const identity = await getServerIdentity();
   if (!identity) return new NextResponse("Not found", { status: 404 });
-  const access = await getSnakeSorterAccess(identity.token, identity.user.id);
-  if (!access.allowed) return new NextResponse("Not found", { status: 404 });
+  // Supply-only door: any signed-in contributor may preview their own
+  // media; the owner may preview everything. No membership required.
+  const profile = await fetchOwnProfile(identity.token, identity.user.id) as { role?: string } | null;
+  const isOwner = profile?.role === "owner";
 
   const { id } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse("Not found", { status: 404 });
@@ -22,7 +24,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const rows = response.ok ? await response.json() as Array<{ contributor_user_id: string; storage_path: string; mime_type: string }> : [];
   const row = rows[0];
   if (!row?.storage_path) return new NextResponse("Not found", { status: 404 });
-  if (!access.isOwner && row.contributor_user_id !== identity.user.id) {
+  if (!isOwner && row.contributor_user_id !== identity.user.id) {
     return new NextResponse("Not found", { status: 404 });
   }
 
