@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { isHankScaleMuted } from "@/lib/hank-scale-voice";
+
+// Hank's spoken closer over the final welcome scene — he signs off on the
+// whole unboxing sequence. Plays once per cinematic view, honoring the
+// persisted Hank voice mute; a started line plays out over the handoff into
+// the game rather than cutting off mid-chuckle.
+const INTRO_CLOSING_LINE_SRC = "/cutscene/intro-closing-line.mp3";
+
 type KenBurns = "push" | "drift" | "package" | "rise";
 
 type CinematicScene = {
@@ -39,8 +47,8 @@ function useReducedMotion() {
 /**
  * The "$30,000 win" intro cinematic: staged stills + CSS Ken Burns, stitched
  * with gold-flash cross-dissolves, HTML overlay copy (never baked into art).
- * Silent by default — no audio, no generated voice. Reduced-motion clients get
- * static stills with manual advance and no timers.
+ * Silent until the final scene, where Hank delivers one spoken closing line.
+ * Reduced-motion clients get static stills with manual advance and no timers.
  */
 const SCENES: CinematicScene[] = [
   {
@@ -110,6 +118,7 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
   const reducedMotion = useReducedMotion();
   const busyRef = useRef(false);
   const timersRef = useRef<number[]>([]);
+  const closingAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const scene = SCENES[index];
   const isLast = index === SCENES.length - 1;
@@ -169,6 +178,45 @@ export default function IntroCinematic({ onDone }: { onDone: () => void }) {
     timersRef.current.push(timer);
     return () => window.clearTimeout(timer);
   }, [index, reducedMotion, advance]);
+
+  // Hank's closing line plays once when the welcome scene arrives. If the
+  // browser blocks audio until a fresh gesture, the next tap or keypress
+  // retries it (the same arrival pattern as the costume shop intro). A line
+  // that has started is left to finish even as the cinematic hands off into
+  // the game; one that never started is discarded on unmount.
+  useEffect(() => {
+    if (scene.id !== "welcome" || closingAudioRef.current) return;
+    if (isHankScaleMuted()) return;
+    const audio = new Audio(INTRO_CLOSING_LINE_SRC);
+    closingAudioRef.current = audio;
+    let started = false;
+    const detach = () => {
+      window.removeEventListener("pointerdown", attempt);
+      window.removeEventListener("keydown", attempt);
+    };
+    const attempt = () => {
+      if (started) return;
+      void audio
+        .play()
+        .then(() => {
+          started = true;
+          detach();
+        })
+        .catch(() => {
+          // Autoplay blocked — the gesture listeners below retry.
+        });
+    };
+    attempt();
+    window.addEventListener("pointerdown", attempt);
+    window.addEventListener("keydown", attempt);
+    return () => {
+      detach();
+      if (!started) {
+        audio.pause();
+        closingAudioRef.current = null;
+      }
+    };
+  }, [scene.id]);
 
   // Escape skips, like the game's other dialogs.
   useEffect(() => {
