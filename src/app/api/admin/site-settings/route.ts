@@ -13,6 +13,7 @@ async function ownerIdentity() {
 // written through this route.
 const ALLOWED: Record<string, string[]> = {
   shop_theme: ["default", "halloween"],
+  hank_costume: ["off", "on"],
 };
 
 export async function PUT(request: NextRequest) {
