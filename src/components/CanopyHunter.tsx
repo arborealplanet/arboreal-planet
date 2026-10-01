@@ -37,6 +37,7 @@ import {
   type CanopyLifeStage,
   type CanopyLocality,
   type CanopyRegion,
+  type CanopySex,
   type ExpeditionRank,
   type GroveSpot,
   type NightEventKind,
@@ -50,10 +51,83 @@ import {
   stopJungleMusic,
 } from "@/lib/jungle-ambience";
 import { playHankScaleLine } from "@/lib/hank-scale-voice";
-import { addTokens, recordScore, reportArcadeEvent } from "@/lib/arcade";
+import { addTokens, getTokenBalance, recordScore, reportArcadeEvent, spendTokens } from "@/lib/arcade";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 
-type Phase = "briefing" | "trail" | "grove" | "catch" | "results";
+type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
+
+/* ------------------------------------------------------------------ */
+/* River port (Phase 1 playtest — gated behind portStopEnabled)        */
+/* ------------------------------------------------------------------ */
+
+type PortPanel = "trader" | "board" | "boatman" | null;
+type PortItemId = "lantern-oil" | "scent-lure" | "sure-grip" | "local-intel";
+
+interface PortItem {
+  id: PortItemId;
+  name: string;
+  cost: number;
+  desc: string;
+  emoji: string;
+  iconSrc?: string;
+}
+
+interface PortBounty {
+  locality: CanopyLocality;
+  sex: CanopySex;
+}
+
+const PORT_NIGHT_ART = "/arcade/canopy-hunter/port-river-night.webp";
+const PORT_TRADER_CARD = "/arcade/canopy-hunter/port-trader.webp";
+const PORT_BOATMAN_CARD = "/arcade/canopy-hunter/port-boatman-card.webp";
+const PORT_STALL_ART = "/arcade/canopy-hunter/port-prop-trader-stall.webp";
+const PORT_HUNTER_ART = "/arcade/canopy-hunter/sprite-hunter-port-back.webp";
+
+/** Trader stock — three of the four are on the table each visit; buy at most two. */
+const PORT_ITEMS: PortItem[] = [
+  {
+    id: "lantern-oil",
+    name: "Lantern Oil",
+    cost: 4,
+    desc: "+1 search in the next grove",
+    emoji: "🏮",
+    iconSrc: "/arcade/canopy-hunter/icon-lantern-oil.webp",
+  },
+  {
+    id: "scent-lure",
+    name: "Scent Lure",
+    cost: 10,
+    desc: "A lure charge for the next grove",
+    emoji: "🍃",
+  },
+  {
+    id: "sure-grip",
+    name: "Sure Grip",
+    cost: 10,
+    desc: "Next grab cannot miss",
+    emoji: "✊",
+  },
+  {
+    id: "local-intel",
+    name: "Local Intel",
+    cost: 6,
+    desc: "The next fork tells the truth — and whispers the python's height",
+    emoji: "🧭",
+  },
+];
+
+const BOATMAN_LINES: Record<string, string> = {
+  cenderawasih:
+    "“The Cenderawasih swallows whole rivers and gives back snakes. Biak boys hunt it by lamplight — you'd fit right in.”",
+  "birds-head":
+    "“Bird's Head rain comes sideways and stays. The Arfak road's drowned to the axles — take my boat or stay poor.”",
+  highlands:
+    "“Highlands boats ride low and slow. Cyclops throws boulders at strangers, but the snakes don't mind strangers.”",
+  southern:
+    "“Southern water's black as tea and twice as strong. Merauke men swear the Aru pythons swim — I don't ask.”",
+  default:
+    "“River's kind tonight, hunter. Next leg's darker than the last — keep your lamp dry.”",
+};
 
 const SWEEP_MS = 1200;
 const ZONE_HALF = 0.11; // 22% green zone
@@ -347,6 +421,7 @@ export function CanopyHunter({
   region: regionProp,
   permit = false,
   hot = false,
+  portStopEnabled = false,
 }: {
   onCatch: (wilds: WildSnake[]) => void;
   onClose: () => void;
@@ -358,6 +433,8 @@ export function CanopyHunter({
   permit?: boolean;
   /** Intel-flagged region: legendary signs show up twice as often. */
   hot?: boolean;
+  /** River Port Stop private playtest (server-gated per account). */
+  portStopEnabled?: boolean;
 }) {
   const grovesPerExpedition = permit ? PERMIT_GROVES : GROVES_PER_EXPEDITION;
   const [phase, setPhase] = useState<Phase>("briefing");
@@ -391,6 +468,23 @@ export function CanopyHunter({
   const [groveNote, setGroveNote] = useState<string | null>(null);
   /** Permit tools remaining: each token is a scent lure or a sure grip. */
   const [tokens, setTokens] = useState(permit ? PERMIT_TOKENS : 0);
+  /* River port stop (gated playtest) — rolled fresh each expedition. */
+  const [portVisited, setPortVisited] = useState(false);
+  const [portPanel, setPortPanel] = useState<PortPanel>(null);
+  const [portStock, setPortStock] = useState<PortItem[]>([]);
+  const [portSold, setPortSold] = useState<PortItemId[]>([]);
+  const [portBought, setPortBought] = useState(0);
+  const [portBounty, setPortBounty] = useState<PortBounty | null>(null);
+  const [portBountyTaken, setPortBountyTaken] = useState(false);
+  /** +1 searches in the next grove (lantern oil). */
+  const [portBonusSearches, setPortBonusSearches] = useState(0);
+  /** Port-bought tool charges, usable by any expedition type. */
+  const [portLures, setPortLures] = useState(0);
+  const [portGrips, setPortGrips] = useState(0);
+  /** Local intel: next fork tells the truth + whispers the python's height. */
+  const [portIntel, setPortIntel] = useState(false);
+  const [tokenBal, setTokenBal] = useState<number>(() => getTokenBalance());
+  const bountyPaidRef = useRef(false);
   const [catchTree, setCatchTree] = useState<number | null>(null);
   const [zoneCenter, setZoneCenter] = useState(0.5);
   const [catchResolved, setCatchResolved] = useState(false);
@@ -447,7 +541,7 @@ export function CanopyHunter({
   /* Auto-advance to results when every python is found. Searches refresh per
      grove, so the night always runs every grove. */
   useEffect(() => {
-    if (phase !== "trail" && phase !== "grove") return;
+    if (phase !== "trail" && phase !== "grove" && phase !== "port") return;
     if (resolvedCount >= grovesPerExpedition) {
       const t = setTimeout(() => setPhase("results"), 700);
       return () => clearTimeout(t);
@@ -463,6 +557,17 @@ export function CanopyHunter({
     const s = scoreExpedition(bag.length, bestStreak, escapedCount, totalSearchesUsed, primeCount);
     const tokensEarned = { S: 25, A: 18, B: 12, C: 8, D: 5 }[s.rank] as number;
     addTokens(tokensEarned, `Canopy Hunter — ${s.rank}-rank expedition`);
+    /* River port bounty: pays once, only if the board's snake was bagged. */
+    if (portBountyTaken && portBounty && !bountyPaidRef.current) {
+      bountyPaidRef.current = true;
+      const hasBounty = bag.some(
+        (w) => w.locality === portBounty.locality && w.sex === portBounty.sex,
+      );
+      if (hasBounty) {
+        addTokens(5, "Canopy Hunter — river port bounty");
+        log(`River port bounty paid — ${portBounty.sex} ${portBounty.locality} delivered. +5 tokens.`);
+      }
+    }
     recordScore("hunter", s.points, `${s.rank}-rank`);
     reportArcadeEvent({
       type: "hunt-complete",
@@ -553,6 +658,20 @@ export function CanopyHunter({
     setCatchMessage(null);
     setSent(false);
     setWalking(false);
+    /* River port resets — one visit per expedition, stock re-rolled. */
+    setPortVisited(false);
+    setPortPanel(null);
+    setPortStock([]);
+    setPortSold([]);
+    setPortBought(0);
+    setPortBounty(null);
+    setPortBountyTaken(false);
+    setPortBonusSearches(0);
+    setPortLures(0);
+    setPortGrips(0);
+    setPortIntel(false);
+    bountyPaidRef.current = false;
+    setTokenBal(getTokenBalance());
     setPhase("trail");
   }
 
@@ -589,7 +708,18 @@ export function CanopyHunter({
       setGrove(trail);
       setGroveWilds(wilds);
       setSearched(Array(TREES_PER_GROVE).fill(false));
-      setSearchesLeft(SEARCHES_PER_GROVE);
+      /* Lantern oil: the next grove searches brighter. */
+      setSearchesLeft(SEARCHES_PER_GROVE + portBonusSearches);
+      if (portBonusSearches > 0) setPortBonusSearches(0);
+      /* Local intel whispers the python's height for this grove. */
+      if (portIntel && trail.pythonSpot !== null && trail.pythonLifeStage) {
+        setGroveNote(
+          trail.pythonLifeStage === "Adult"
+            ? "Your local intel whispers: something heavy moved up high here."
+            : "Your local intel whispers: look low — something young hides in the undergrowth.",
+        );
+        setPortIntel(false);
+      }
       setCatchTree(null);
       setCatchResolved(false);
       setCatchMessage(null);
@@ -679,16 +809,31 @@ export function CanopyHunter({
     }
   }
 
+  /** Total tool charges: permit tokens double as both tools; port-bought
+   *  charges work on any expedition. Permit tokens are spent first. */
+  const lureCharges = (permit ? tokens : 0) + portLures;
+  const gripCharges = (permit ? tokens : 0) + portGrips;
+
+  function spendToolCharge(kind: "lure" | "grip") {
+    if (permit && tokens > 0) {
+      setTokens((t) => t - 1);
+    } else if (kind === "lure") {
+      setPortLures((n) => Math.max(0, n - 1));
+    } else {
+      setPortGrips((n) => Math.max(0, n - 1));
+    }
+  }
+
   /**
-   * Permit tool — scent lure. Draws the grove's python straight out: no
-   * search spent, straight to the catch. Deployable at any grove.
+   * Scent lure. Draws the grove's python straight out: no search spent,
+   * straight to the catch. Deployable at any grove.
    */
   function deployLure() {
-    if (phase !== "grove" || tokens <= 0 || !grove) return;
+    if (phase !== "grove" || lureCharges <= 0 || !grove) return;
     const spot = grove.pythonSpot;
     const wild = spot !== null ? groveWilds[spot] : undefined;
     if (spot === null || !wild || bag.includes(wild) || escapedSpots.includes(spot)) return;
-    setTokens((t) => t - 1);
+    spendToolCharge("lure");
     setCatchTree(spot);
     setZoneCenter(rollZoneCenter());
     setCatchResolved(false);
@@ -699,11 +844,11 @@ export function CanopyHunter({
   }
 
   /**
-   * Permit tool — sure grip. The grab cannot miss. Deployable at any catch.
+   * Sure grip. The grab cannot miss. Deployable at any catch.
    */
   function deploySureGrip() {
-    if (phase !== "catch" || catchResolved || tokens <= 0) return;
-    setTokens((t) => t - 1);
+    if (phase !== "catch" || catchResolved || gripCharges <= 0) return;
+    spendToolCharge("grip");
     log(`Grove ${legIndex + 1} — sure grip. No mistakes this time.`);
     grab(true);
   }
@@ -712,28 +857,100 @@ export function CanopyHunter({
   const lureSpot = grove?.pythonSpot ?? null;
   const lureWild = lureSpot !== null ? groveWilds[lureSpot] : undefined;
   const canLure =
-    permit &&
     phase === "grove" &&
-    tokens > 0 &&
+    lureCharges > 0 &&
     lureWild !== undefined &&
     !bag.includes(lureWild) &&
     !escapedSpots.includes(lureSpot as number);
-  const canSureGrip = permit && phase === "catch" && !catchResolved && tokens > 0;
+  const canSureGrip = phase === "catch" && !catchResolved && gripCharges > 0;
 
   function backToGrove() {
     setCatchTree(null);
     setPhase("grove");
   }
 
+  function advanceLeg() {
+    setLegIndex((n) => n + 1);
+    setGrove(null);
+    setPhase("trail");
+  }
+
+  /** The river port: once per expedition, after the middle grove. */
   function followTrail() {
     setGroveNote(null);
     if (legIndex + 1 >= grovesPerExpedition) {
       log(`${nightPhaseForLeg(legIndex)} — the night ends.`);
       setPhase("results");
+      return;
+    }
+    const portLeg = permit ? 2 : 1;
+    if (portStopEnabled && !portVisited && legIndex === portLeg && region) {
+      setPortVisited(true);
+      setPortStock(rollPortStock());
+      setPortBounty(rollPortBounty(region));
+      setPortPanel(null);
+      log(`${nightPhaseForLeg(legIndex)} — the trail reaches a lantern-lit river port. Time to resupply.`);
+      setPhase("port");
+      return;
+    }
+    advanceLeg();
+  }
+
+  /** Leave the port for the next leg. Pushing on skips the stalls and earns
+   *  the bat-swarm ambush (wider green zone) in the next grove. */
+  function castOff(pushOn = false) {
+    setPortPanel(null);
+    if (pushOn) {
+      setBatSwarm(true);
+      log("You push past the port into deep night — a fruit-bat swarm crosses overhead. The snakes won't hear you coming.");
     } else {
-      setLegIndex((n) => n + 1);
-      setGrove(null);
-      setPhase("trail");
+      log("You cast off from the river port, lanterns shrinking behind you.");
+    }
+    advanceLeg();
+  }
+
+  /** Trader stock: three of the four goods are on the table each visit. */
+  function rollPortStock(): PortItem[] {
+    const items = [...PORT_ITEMS];
+    for (let i = items.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items.slice(0, 3);
+  }
+
+  /** One bounty per visit, drawn from tonight's region. */
+  function rollPortBounty(r: CanopyRegion): PortBounty {
+    return {
+      locality: r.localities[Math.floor(Math.random() * r.localities.length)],
+      sex: Math.random() < 0.5 ? "Male" : "Female",
+    };
+  }
+
+  function buyPortItem(item: PortItem) {
+    if (portBought >= 2 || portSold.includes(item.id)) return;
+    if (!spendTokens(item.cost, `Canopy Hunter river port — ${item.name}`)) return;
+    setTokenBal(getTokenBalance());
+    setPortSold((s) => [...s, item.id]);
+    setPortBought((n) => n + 1);
+    if (item.id === "lantern-oil") setPortBonusSearches((n) => n + 1);
+    if (item.id === "scent-lure") setPortLures((n) => n + 1);
+    if (item.id === "sure-grip") setPortGrips((n) => n + 1);
+    if (item.id === "local-intel") setPortIntel(true);
+    log(`River port — bought ${item.name} for ${item.cost} tokens.`);
+  }
+
+  /** Shed trade: one fresh shed for +4 tokens, or for local intel. */
+  function tradeShed(forIntel: boolean) {
+    if (sheds <= 0) return;
+    setSheds((n) => n - 1);
+    if (forIntel) {
+      setPortIntel(true);
+      log("River port — traded a fresh shed for local intel.");
+    } else {
+      addTokens(4, "Canopy Hunter river port — shed trade");
+      setTokenBal(getTokenBalance());
+      log("River port — traded a fresh shed for 4 tokens.");
     }
   }
 
@@ -852,6 +1069,9 @@ export function CanopyHunter({
             {permit && (
               <li>· Permit perks: this region&apos;s signature traits run hot (floored at 30) and exceptional animals show up far more often. You carry {PERMIT_TOKENS} specialist tools — a 🍃 scent lure draws a python out with no search spent, and an ✊ sure grip never misses. Spend them at any grove.</li>
             )}
+            {portStopEnabled && (
+              <li>· Halfway through the night the trail reaches a lantern-lit river port — trade excess shed skins, buy a little edge, and check the notice board before you cast off.</li>
+            )}
             <li>· Every bagged locality is inked into your codex — document all {CANOPY_LOCALITIES.length}.</li>
             <li>· Caught snakes head straight into your Keeper colony.</li>
           </ul>
@@ -897,6 +1117,11 @@ export function CanopyHunter({
                 >
                   <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">{trail.label}</span>
                 </button>
+                {portIntel && trail.pythonSpot !== null && (
+                  <div className="mt-1 whitespace-nowrap rounded-full border border-sky-200/30 bg-sky-300/[.08] px-3 py-1 text-center text-[10px] font-bold text-sky-100">
+                    🧭 Intel: the python took this trail
+                  </div>
+                )}
               </div>
             ))}
             {/* Third-person hunter (keyed art, fully opaque) */}
@@ -992,14 +1217,14 @@ export function CanopyHunter({
                 onClick={deployLure}
                 className="rounded-full border border-lime-300/30 bg-lime-300/[.07] px-5 py-2 text-xs font-bold uppercase tracking-[.14em] text-lime-100 transition hover:bg-lime-300/[.14] active:scale-95"
               >
-                🍃 Deploy scent lure · {tokens} left
+                🍃 Deploy scent lure · {lureCharges} left
               </button>
               <p className="mt-1 text-[11px] text-white/35">Draws the python out — no search spent</p>
             </div>
           )}
-          {permit && tokens > 0 && !canLure && phase === "grove" && (
+          {lureCharges > 0 && !canLure && phase === "grove" && (
             <p className="mt-3 text-center text-[11px] font-bold uppercase tracking-[.16em] text-lime-200/50">
-              🍃 {tokens} {tokens === 1 ? "tool" : "tools"} left
+              🍃 {lureCharges} {permit ? (lureCharges === 1 ? "tool" : "tools") : lureCharges === 1 ? "scent lure ready" : "scent lures ready"}
             </p>
           )}
           {nightEvent === "sloughing" && (
@@ -1020,6 +1245,181 @@ export function CanopyHunter({
             {legIndex + 1 >= grovesPerExpedition ? "Finish the expedition →" : "Follow the trail →"}
           </button>
           <p className="mt-3 text-center text-xs text-white/35">Tap a tree or the undergrowth to search it — or move on down the trail.</p>
+        </div>
+      )}
+
+      {/* River port — resupply stop (gated playtest) */}
+      {phase === "port" && (
+        <div className="mt-8">
+          <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} totalGroves={grovesPerExpedition} />
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-white/[.07] sm:aspect-[16/9]">
+            <Image src={PORT_NIGHT_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
+            <NightAtmosphere region={region} legIndex={legIndex} showBackdrop={false} />
+            {/* The hunter waits on the dock, flashlight down */}
+            <div className="pointer-events-none absolute bottom-0 left-1/2 z-10 h-40 w-28 -translate-x-1/2 sm:h-56 sm:w-36">
+              <Image src={PORT_HUNTER_ART} alt="" aria-hidden="true" fill sizes="144px" draggable={false} className="object-contain object-bottom" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setPortPanel("trader")}
+              className="absolute bottom-[34%] left-[4%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
+            >
+              <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">🧺 Trader&apos;s stall</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPortPanel("board")}
+              className="absolute bottom-[52%] left-[24%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
+            >
+              <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">📌 Notice board</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPortPanel("boatman")}
+              className="absolute bottom-[30%] right-[4%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
+            >
+              <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">⛵ The boatman</span>
+            </button>
+          </div>
+          <p className="mt-4 text-center text-xs text-white/35">
+            A lantern-lit river port, halfway into the night. Resupply, check the board — and cast off when you&apos;re ready.
+          </p>
+          <p className="mt-2 text-center">
+            <span className="inline-block rounded-full border border-amber-200/25 bg-amber-200/[.07] px-4 py-1.5 text-xs font-bold text-amber-100">
+              🪙 {tokenBal} tokens
+            </span>
+          </p>
+
+          {portPanel === "trader" && (
+            <div className="relative mt-4 overflow-hidden rounded-[26px] border border-white/[.07] bg-white/[.02]">
+              <div className="relative h-24 sm:h-32">
+                <Image src={PORT_STALL_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,rgba(4,10,8,.88)_100%)]" />
+              </div>
+              <div className="relative flex gap-4 p-5">
+                <div className="relative h-36 w-28 shrink-0 overflow-hidden rounded-2xl border border-white/10">
+                  <Image src={PORT_TRADER_CARD} alt="The river port trader" fill sizes="112px" draggable={false} className="object-cover object-top" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-white">The river trader</h3>
+                  <p className="mt-1 text-sm leading-6 text-white/50">
+                    &ldquo;Evening, hunter. I stock what the river lets through. Buy what you need — shelf&apos;s slimming fast.&rdquo;
+                  </p>
+                  <p className="mt-2 text-[11px] font-bold uppercase tracking-[.16em] text-white/40">
+                    {2 - portBought} {2 - portBought === 1 ? "buy" : "buys"} left tonight
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2 px-5 pb-2 sm:grid-cols-3">
+                {portStock.map((item) => {
+                  const sold = portSold.includes(item.id);
+                  const limited = portBought >= 2;
+                  const poor = tokenBal < item.cost;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => buyPortItem(item)}
+                      disabled={sold || limited || poor}
+                      className="rounded-2xl border border-white/[.08] bg-black/30 p-4 text-left transition hover:border-amber-200/40 hover:bg-black/45 active:scale-[.98] disabled:opacity-45"
+                    >
+                      <span className="flex items-center gap-2">
+                        {item.iconSrc ? (
+                          <span className="relative h-10 w-10 shrink-0">
+                            <Image src={item.iconSrc} alt="" aria-hidden="true" fill sizes="40px" draggable={false} className="object-contain" />
+                          </span>
+                        ) : (
+                          <span className="text-2xl" aria-hidden="true">{item.emoji}</span>
+                        )}
+                        <span className="text-sm font-bold text-white">{item.name}</span>
+                      </span>
+                      <span className="mt-1.5 block text-xs leading-5 text-white/45">{item.desc}</span>
+                      <span className="mt-2 block text-xs font-black uppercase tracking-[.12em] text-amber-100">
+                        {sold ? "Sold" : limited ? "Two's the limit" : poor ? `${item.cost} tokens — short` : `${item.cost} tokens`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {sheds > 0 ? (
+                <div className="flex flex-wrap gap-2 px-5 pb-5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => tradeShed(false)}
+                    className="rounded-full border border-amber-200/30 bg-amber-200/[.07] px-4 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-95"
+                  >
+                    Trade a shed → +4 tokens ({sheds} in hand)
+                  </button>
+                  {!portIntel && (
+                    <button
+                      type="button"
+                      onClick={() => tradeShed(true)}
+                      className="rounded-full border border-sky-200/30 bg-sky-300/[.07] px-4 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-300/[.14] active:scale-95"
+                    >
+                      Trade a shed → local intel
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="px-5 pb-5 pt-1 text-xs italic text-white/35">
+                  Bring me a fresh shed skin next time, hunter — I pay good metal for those.
+                </p>
+              )}
+            </div>
+          )}
+
+          {portPanel === "board" && portBounty && (
+            <div className="mt-4 rounded-[26px] border border-dashed border-amber-200/25 bg-amber-100/[.04] p-6 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">📌 Pinned to the notice board</p>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/70">
+                Wanted tonight: a <span className="font-bold text-white">{portBounty.sex} {portBounty.locality}</span> python.
+                Bring one in before the expedition ends — <span className="font-bold text-amber-100">5 tokens</span> on delivery.
+              </p>
+              {portBountyTaken ? (
+                <p className="mt-3 text-xs font-bold text-emerald-200/80">✓ You&apos;ve taken this bounty — it pays at the end of the night.</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPortBountyTaken(true);
+                    log(`River port — took the notice-board bounty: ${portBounty.sex} ${portBounty.locality} tonight.`);
+                  }}
+                  className="mt-4 rounded-2xl border border-amber-200/30 bg-amber-200/[.08] px-6 py-3 text-sm font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-[.99]"
+                >
+                  Take the bounty
+                </button>
+              )}
+            </div>
+          )}
+
+          {portPanel === "boatman" && (
+            <div className="mt-4 flex gap-4 rounded-[26px] border border-white/[.07] bg-white/[.02] p-5">
+              <div className="relative h-32 w-28 shrink-0 overflow-hidden rounded-2xl border border-white/10">
+                <Image src={PORT_BOATMAN_CARD} alt="The river boatman" fill sizes="112px" draggable={false} className="object-cover object-top" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-white">The boatman</h3>
+                <p className="mt-1 text-sm italic leading-6 text-white/55">
+                  {BOATMAN_LINES[region?.id ?? "default"] ?? BOATMAN_LINES.default}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => castOff()}
+                  className="mt-4 w-full rounded-2xl bg-emerald-300 px-6 py-3.5 text-sm font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
+                >
+                  Cast off →
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => castOff(true)}
+            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[.04] px-6 py-3.5 text-sm font-bold text-white/80 transition hover:bg-white/[.08] active:scale-[.99]"
+          >
+            Push on into deep night → <span className="font-normal text-white/45">(bat-swarm edge next grove)</span>
+          </button>
         </div>
       )}
 
@@ -1100,7 +1500,7 @@ export function CanopyHunter({
                     onClick={deploySureGrip}
                     className="mb-3 w-full touch-manipulation select-none rounded-2xl border border-lime-300/30 bg-lime-300/[.07] px-6 py-3 text-sm font-bold uppercase tracking-[.12em] text-lime-100 transition hover:bg-lime-300/[.14] active:scale-[.99]"
                   >
-                    ✊ Sure grip — cannot miss · {tokens} left
+                    ✊ Sure grip — cannot miss · {gripCharges} left
                   </button>
                 )}
                 <button

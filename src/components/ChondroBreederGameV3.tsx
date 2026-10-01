@@ -948,12 +948,16 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   // server-side via /api/canopy-hunter/status so it follows the account,
   // not the device. A failed lookup simply keeps the standard entry model.
   const [expeditionUnlimited, setExpeditionUnlimited] = useState(false);
+  // River Port Stop private playtest gate, same server-side pattern.
+  const [portStopEnabled, setPortStopEnabled] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/canopy-hunter/status", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled && data?.unlimited === true) setExpeditionUnlimited(true);
+        if (cancelled) return;
+        if (data?.unlimited === true) setExpeditionUnlimited(true);
+        if (data?.portDev === true) setPortStopEnabled(true);
       })
       .catch(() => {});
     return () => {
@@ -2470,6 +2474,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   region={expeditionRegion}
                   permit={permitActive}
                   hot={expeditionRegion ? isHotRegion(expeditionRegion.id) : false}
+                  portStopEnabled={portStopEnabled}
                   onCatch={handleExpeditionCatch}
                   onClose={closeExpedition}
                   onExitToGate={exitExpeditionToGate}
