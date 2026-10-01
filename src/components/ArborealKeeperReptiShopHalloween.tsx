@@ -16,12 +16,22 @@ const SHOP_CLIPS = [
   "/hatchery/game/bunn-shop-loop-halloween-c.mp4",
 ];
 
-function ShopLoopVideo() {
+// Hank's Captain Spaulding costume loops — swapped in when the owner flips
+// the separate Hank Costume toggle (site setting hank_costume). Silent clips:
+// no audio track at all, so nothing plays over the shop voice lines.
+const COSTUME_CLIPS = [
+  "/hatchery/game/bunn-shop-loop-costume-a.mp4",
+  "/hatchery/game/bunn-shop-loop-costume-b.mp4",
+  "/hatchery/game/bunn-shop-loop-costume-c.mp4",
+];
+
+function ShopLoopVideo({ costume = false }: { costume?: boolean }) {
+  const clips = costume ? COSTUME_CLIPS : SHOP_CLIPS;
   const [clip, setClip] = useState(0);
   const refs = useRef<Array<HTMLVideoElement | null>>([]);
 
   const advance = () => {
-    const next = (clip + 1) % SHOP_CLIPS.length;
+    const next = (clip + 1) % clips.length;
     const upcoming = refs.current[next];
     if (upcoming) {
       upcoming.currentTime = 0;
@@ -33,7 +43,7 @@ function ShopLoopVideo() {
 
   return (
     <>
-      {SHOP_CLIPS.map((src, i) => {
+      {clips.map((src, i) => {
         const active = i === clip;
         return (
           <video
@@ -47,7 +57,7 @@ function ShopLoopVideo() {
             preload="auto"
             disablePictureInPicture
             aria-hidden={!active}
-            poster="/hatchery/game/bunn-shop-counter-halloween.webp"
+            poster={costume ? "/hatchery/game/bunn-shop-counter-costume.webp" : "/hatchery/game/bunn-shop-counter-halloween.webp"}
             onEnded={active ? advance : undefined}
             className={`absolute inset-0 h-full w-full object-cover [object-position:center_35%] transition-opacity duration-150 ${
               active ? "opacity-100" : "pointer-events-none opacity-0"
@@ -78,7 +88,7 @@ const VIEWS: Array<{ id: View; label: string; shortLabel: string; thumb: string 
   { id: "market", label: "Player Market", shortLabel: "Market", thumb: "/hatchery/game/dock/breed.webp" },
 ];
 
-export function ArborealKeeperReptiShopHalloween({ navCollapsed = false }: { navCollapsed?: boolean }) {
+export function ArborealKeeperReptiShopHalloween({ navCollapsed = false, costume = false }: { navCollapsed?: boolean; costume?: boolean }) {
   const [view, setView] = useState<View>("animals");
   // Keep visited tabs mounted (hidden) instead of remounting on every tab
   // switch: remounting wiped carousel scroll position and re-ran the shop
@@ -219,7 +229,7 @@ export function ArborealKeeperReptiShopHalloween({ navCollapsed = false }: { nav
           Mute tucked into the bottom-right corner. */}
       <div className="relative min-h-0 w-full h-56 flex-none overflow-hidden rounded-[24px] border border-orange-300/15 bg-black shadow-[0_24px_70px_rgba(0,0,0,.35)] sm:h-auto sm:flex-1">
         <div className="absolute inset-0">
-          <ShopLoopVideo />
+          <ShopLoopVideo key={costume ? "costume" : "standard"} costume={costume} />
         </div>
         <button
           type="button"
