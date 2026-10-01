@@ -151,7 +151,7 @@ export function ChondroConservationPartnerships() {
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState<Payload | null>(null);
   const [save, setSave] = useState<GameSave | null>(null);
-  const [selected, setSelected] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [mapSubspecies, setMapSubspecies] = useState<Subspecies>("Morelia azurea utaraensis");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -179,38 +179,59 @@ export function ChondroConservationPartnerships() {
 
   useEffect(() => { void load(); }, []);
 
-  const eligibleAnimals = useMemo(() => (save?.colony ?? []).filter(eligible), [save]);
-  const chosen = eligibleAnimals.find((snake) => snake.id === selected) ?? null;
+  const eligibleAnimals = useMemo(() => {
+    const list = (save?.colony ?? []).filter(eligible);
+    // Animals matching the program highlighted on the map come first.
+    return [...list.filter((s) => s.subspecies === mapSubspecies), ...list.filter((s) => s.subspecies !== mapSubspecies)];
+  }, [save, mapSubspecies]);
+  const selectedAnimals = useMemo(
+    () => eligibleAnimals.filter((snake) => snake.id && selectedIds.has(snake.id)),
+    [eligibleAnimals, selectedIds]
+  );
   const mapInfo = regionInfo[mapSubspecies];
   const mapStatus = statusFor(payload, mapSubspecies);
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function contribute() {
-    if (!chosen?.id || busy) return;
-    const label = chosen.name || chosen.id;
-    if (!window.confirm(`Transfer ${label} to the in-country conservation partnership? This permanently removes the animal from your active colony.`)) return;
+    if (!selectedAnimals.length || busy) return;
+    const total = selectedAnimals.length;
+    const names = selectedAnimals.map((s) => s.name || s.id).join(", ");
+    if (!window.confirm(`Transfer ${total} animal${total === 1 ? "" : "s"} to the in-country conservation partnership? This permanently removes them from your active colony.\n\n${names}`)) return;
     setBusy(true);
-    setStatus("Transferring animal to the conservation partnership…");
-    try {
-      const response = await fetch("/api/hatchery/chondro-breeder/conservation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ snakeId: chosen.id }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        setStatus(result.error ?? "That transfer could not be completed.");
-        return;
+    const done: { name: string; subspecies?: Subspecies }[] = [];
+    const failed: string[] = [];
+    for (const snake of selectedAnimals) {
+      setStatus(`Transferring ${done.length + failed.length + 1} of ${total}: ${snake.name || snake.id}…`);
+      try {
+        const response = await fetch("/api/hatchery/chondro-breeder/conservation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ snakeId: snake.id }),
+        });
+        const result = await response.json().catch(() => null);
+        if (!response.ok) failed.push(`${snake.name || snake.id} (${result?.error ?? "transfer failed"})`);
+        else done.push({ name: snake.name || String(snake.id), subspecies: snake.subspecies });
+      } catch {
+        failed.push(snake.name || String(snake.id));
       }
-      if (chosen.subspecies) setMapSubspecies(chosen.subspecies);
-      setStatus(`${label} entered the conservation partnership. Community import odds have been recalculated.`);
-      setSelected("");
-      await load();
-      window.dispatchEvent(new Event("chondro-conservation-updated"));
-    } catch {
-      setStatus("The conservation transfer could not be completed.");
-    } finally {
-      setBusy(false);
     }
+    const parts: string[] = [];
+    if (done.length) parts.push(`${done.length} animal${done.length === 1 ? "" : "s"} entered the conservation partnership: ${done.map((d) => d.name).join(", ")}. Community import odds have been recalculated.`);
+    if (failed.length) parts.push(`Could not transfer: ${failed.join("; ")}.`);
+    setStatus(parts.join(" "));
+    if (done[0]?.subspecies) setMapSubspecies(done[0].subspecies);
+    setSelectedIds(new Set());
+    await load();
+    window.dispatchEvent(new Event("chondro-conservation-updated"));
+    setBusy(false);
   }
 
   return (
@@ -290,15 +311,38 @@ export function ChondroConservationPartnerships() {
 
             <div className="mt-6 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
               <div className="rounded-2xl border border-white/[.06] p-5">
-                <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/30">Contribute an animal</div>
-                <p className="mt-2 text-sm leading-6 text-white/40">Eligible animals must be classified Pure and at least 99.9% of a single subspecies. Locality-mixed animals within that same subspecies still qualify.</p>
-                <select value={selected} onChange={(event) => setSelected(event.target.value)} className="mt-4 h-12 w-full rounded-xl border border-white/[.08] bg-black/30 px-3 text-sm text-white/70">
-                  <option value="">Choose an eligible animal</option>
-                  {eligibleAnimals.map((snake) => <option key={snake.id} value={snake.id}>{snake.name || snake.id} · {labels[snake.subspecies!]?.short ?? snake.subspecies} · {snake.locality ?? "pedigree unknown"} · Gen {snake.generation ?? 1}</option>)}
-                </select>
-                {chosen ? <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.02] p-3 text-xs text-white/42">Phenotype score {Math.round(Number(chosen.phenotypeScore ?? 0))} · {labels[chosen.subspecies!]?.full}</div> : null}
-                <button type="button" disabled={!chosen || busy || !payload?.authenticated} onClick={() => void contribute()} className="mt-4 rounded-xl bg-emerald-200 px-5 py-3 text-xs font-black text-[#102016] disabled:opacity-30">{busy ? "Transferring…" : "Send to conservation partnership"}</button>
-                {!eligibleAnimals.length ? <div className="mt-3 text-xs text-white/28">No eligible pure-subspecies animals are currently available in your colony.</div> : null}
+                <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/30">Contribute animals</div>
+                <p className="mt-2 text-sm leading-6 text-white/40">Eligible animals must be classified Pure and at least 99.9% of a single subspecies. Locality-mixed animals within that same subspecies still qualify. Tick any animals to send them together in one transfer — animals matching the program highlighted on the map are listed first.</p>
+                {eligibleAnimals.length ? (
+                  <>
+                    <div className="mt-4 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[.1em] text-white/35">
+                      <span>{selectedAnimals.length} of {eligibleAnimals.length} selected</span>
+                      <span className="flex gap-2">
+                        <button type="button" onClick={() => setSelectedIds(new Set(eligibleAnimals.map((s) => s.id!)))} className="rounded-full border border-white/10 px-2.5 py-1 transition hover:border-white/25 hover:text-white/70">Select all</button>
+                        <button type="button" onClick={() => setSelectedIds(new Set())} className="rounded-full border border-white/10 px-2.5 py-1 transition hover:border-white/25 hover:text-white/70">Clear</button>
+                      </span>
+                    </div>
+                    <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-white/[.07]">
+                      {eligibleAnimals.map((snake) => {
+                        const checked = selectedIds.has(snake.id!);
+                        return (
+                          <label key={snake.id} className={`flex cursor-pointer items-center gap-3 border-b border-white/[.04] px-3 py-2.5 text-xs transition last:border-b-0 ${checked ? "bg-emerald-300/[.06] text-white/80" : "text-white/50 hover:bg-white/[.02]"}`}>
+                            <input type="checkbox" checked={checked} onChange={() => toggleSelect(snake.id!)} className="h-4 w-4 shrink-0 accent-emerald-300" />
+                            <span className="min-w-0 flex-1 truncate">{snake.name || snake.id} <span className="text-white/30">· {snake.locality ?? "pedigree unknown"} · Gen {snake.generation ?? 1}</span></span>
+                            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${snake.subspecies === mapSubspecies ? "border-emerald-300/30 text-emerald-100/70" : "border-white/10 text-white/40"}`}>{labels[snake.subspecies!]?.short ?? snake.subspecies}</span>
+                            <span className="shrink-0 text-white/40">✦ {Math.round(Number(snake.phenotypeScore ?? 0))}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {selectedAnimals.length ? (
+                      <div className="mt-3 rounded-xl border border-emerald-300/10 bg-emerald-300/[.02] p-3 text-xs text-white/42">
+                        {selectedAnimals.length} animal{selectedAnimals.length === 1 ? "" : "s"} ready · average phenotype {Math.round(selectedAnimals.reduce((sum, s) => sum + Number(s.phenotypeScore ?? 0), 0) / selectedAnimals.length)} · {(Object.keys(regionInfo) as Subspecies[]).filter((sub) => selectedAnimals.some((s) => s.subspecies === sub)).map((sub) => `${labels[sub].short} ×${selectedAnimals.filter((s) => s.subspecies === sub).length}`).join(" · ")}
+                      </div>
+                    ) : null}
+                  </>
+                ) : <div className="mt-3 text-xs text-white/28">No eligible pure-subspecies animals are currently available in your colony.</div>}
+                <button type="button" disabled={!selectedAnimals.length || busy || !payload?.authenticated} onClick={() => void contribute()} className="mt-4 rounded-xl bg-emerald-200 px-5 py-3 text-xs font-black text-[#102016] disabled:opacity-30">{busy ? "Transferring…" : `Send ${selectedAnimals.length} animal${selectedAnimals.length === 1 ? "" : "s"} to conservation partnership`}</button>
                 {status ? <div role="status" className="mt-3 text-xs text-emerald-100/65">{status}</div> : null}
               </div>
 
@@ -306,8 +350,8 @@ export function ChondroConservationPartnerships() {
                 <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/30">Your conservation record</div>
                 <div className="mt-3 text-3xl font-semibold text-white/72">{payload?.own.length ?? 0}</div>
                 <div className="mt-1 text-xs text-white/30">animals contributed</div>
-                <div className="mt-4 space-y-2">
-                  {(payload?.own ?? []).slice(0, 5).map((item) => <div key={item.snake_id} className="rounded-xl border border-white/[.05] px-3 py-2 text-xs text-white/40"><span className="font-semibold text-emerald-100/60">{labels[item.subspecies]?.short}</span> · phenotype {Math.round(Number(item.phenotype_score))} · Gen {item.generation}</div>)}
+                <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
+                  {(payload?.own ?? []).map((item) => <div key={item.snake_id} className="rounded-xl border border-white/[.05] px-3 py-2 text-xs text-white/40"><span className="font-semibold text-emerald-100/60">{labels[item.subspecies]?.short}</span> · phenotype {Math.round(Number(item.phenotype_score))} · Gen {item.generation}</div>)}
                   {payload && !payload.own.length ? <div className="text-xs text-white/28">Your first qualifying contribution will appear here.</div> : null}
                 </div>
               </div>
