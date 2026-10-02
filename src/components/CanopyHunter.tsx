@@ -57,6 +57,7 @@ import { addTokens, getTokenBalance, recordScore, reportArcadeEvent, spendTokens
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
 import { PortTraderShop, type PortShopView } from "@/components/PortTraderShop";
 import type { PortTraderItem as PortItem, PortTraderItemId as PortItemId } from "@/components/PortTraderShop";
+import type { TrailFind } from "@/components/PortTraderShop";
 
 type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
 
@@ -107,6 +108,36 @@ const PORT_ITEMS: PortItem[] = [
     emoji: "🧭",
   },
 ];
+
+/** Trail pickups — glinting finds on the walk between groves. The trader buys them. */
+const TRAIL_FINDS: TrailFind[] = [
+  { id: "dead-leaf", name: "Dead Leaf", value: 1, icon: "/arcade/canopy-hunter/item-dead-leaf.webp" },
+  { id: "bark-pile", name: "Bark Shards", value: 1, icon: "/arcade/canopy-hunter/item-bark-pile.webp" },
+  { id: "rope-coil", name: "Rope Coil", value: 1, icon: "/arcade/canopy-hunter/item-rope-coil.webp" },
+  { id: "bamboo", name: "Bamboo Cuts", value: 1, icon: "/arcade/canopy-hunter/item-bamboo.webp" },
+  { id: "blue-rock", name: "River Stone", value: 1, icon: "/arcade/canopy-hunter/item-blue-rock.webp" },
+  { id: "black-rock", name: "Basalt Chunk", value: 1, icon: "/arcade/canopy-hunter/item-black-rock.webp" },
+  { id: "monstera", name: "Monstera Leaf", value: 2, icon: "/arcade/canopy-hunter/item-monstera.webp" },
+  { id: "green-berries", name: "Green Fig Cluster", value: 2, icon: "/arcade/canopy-hunter/item-green-berries.webp" },
+  { id: "red-berries", name: "Red Berry Sprig", value: 2, icon: "/arcade/canopy-hunter/item-red-berries.webp" },
+  { id: "feather", name: "Bird of Paradise Feather", value: 2, icon: "/arcade/canopy-hunter/item-feather.webp" },
+  { id: "mossy-log", name: "Mossy Log", value: 2, icon: "/arcade/canopy-hunter/item-mossy-log.webp" },
+  { id: "rope-nest", name: "Vine Nest", value: 2, icon: "/arcade/canopy-hunter/item-rope-nest.webp" },
+  { id: "pitcher-plant", name: "Pitcher Plant", value: 3, icon: "/arcade/canopy-hunter/item-pitcher-plant.webp" },
+  { id: "bromeliad", name: "Bromeliad Bloom", value: 3, icon: "/arcade/canopy-hunter/item-bromeliad.webp" },
+  { id: "orchid", name: "Moon Orchid", value: 3, icon: "/arcade/canopy-hunter/item-orchid.webp" },
+  { id: "shelf-fungi", name: "Shelf Fungi", value: 3, icon: "/arcade/canopy-hunter/item-shelf-fungi.webp" },
+  { id: "amber", name: "Amber Chunk", value: 3, icon: "/arcade/canopy-hunter/item-amber.webp" },
+  { id: "snake-shed", name: "Shed Skin", value: 3, icon: "/arcade/canopy-hunter/item-snake-shed.webp" },
+];
+
+/** Rarity-weighted find roll: commons show up most, rares are a treat. */
+function rollTrailFindId(): string {
+  const r = Math.random();
+  const tier = r < 0.6 ? 1 : r < 0.9 ? 2 : 3;
+  const pool = TRAIL_FINDS.filter((f) => f.value === tier);
+  return pool[Math.floor(Math.random() * pool.length)].id;
+}
 
 const BOATMAN_LINES: Record<string, string> = {
   cenderawasih:
@@ -444,6 +475,12 @@ export function CanopyHunter({
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [sheds, setSheds] = useState(0);
+  /** Trail finds pocketed this expedition (ids into TRAIL_FINDS). */
+  const [satchel, setSatchel] = useState<string[]>([]);
+  /** Glinting pickups on the trail, rolled once per leg. */
+  const [pickupRolls, setPickupRolls] = useState<
+    Record<number, Array<{ uid: string; findId: string; left: string; bottom: string }>>
+  >({});
   /** A found shed can be examined once for a clue about the grove. */
   const [canExamineShed, setCanExamineShed] = useState(false);
   /** Expedition-wide night event (sloughing season), rolled once per night. */
@@ -573,6 +610,13 @@ export function CanopyHunter({
     const s = scoreExpedition(bag.length, bestStreak, escapedCount, totalSearchesUsed, primeCount);
     const tokensEarned = { S: 25, A: 18, B: 12, C: 8, D: 5 }[s.rank] as number;
     addTokens(tokensEarned, `Canopy Hunter — ${s.rank}-rank expedition`);
+    /* Unsold trail finds are bought up at the expedition's end. */
+    if (satchel.length > 0) {
+      const total = satchel.reduce((n, id) => n + (TRAIL_FINDS.find((t) => t.id === id)?.value ?? 0), 0);
+      addTokens(total, "Canopy Hunter — trail finds sold");
+      log(`Trail finds sold at the expedition's end — +${total} tokens.`);
+      setSatchel([]);
+    }
     /* River port bounty: pays once, only if the board's snake was bagged. */
     if (portBountyTaken && portBounty && !bountyPaidRef.current) {
       bountyPaidRef.current = true;
@@ -655,6 +699,8 @@ export function CanopyHunter({
     setStreak(0);
     setBestStreak(0);
     setSheds(0);
+    setSatchel([]);
+    setPickupRolls({});
     setCanExamineShed(false);
     const event = rollNightEvent();
     setNightEvent(event);
@@ -958,6 +1004,27 @@ export function CanopyHunter({
     log(`River port — bought ${item.name} for ${item.cost} tokens.`);
   }
 
+  /** Pocket a glinting trail find. */
+  function collectFind(leg: number, uid: string, findId: string) {
+    setPickupRolls((rolls) => ({
+      ...rolls,
+      [leg]: (rolls[leg] ?? []).filter((p) => p.uid !== uid),
+    }));
+    setSatchel((prev) => [...prev, findId]);
+    const f = TRAIL_FINDS.find((t) => t.id === findId);
+    if (f) log(`Trail find pocketed — ${f.name} (worth ${f.value} ${f.value === 1 ? "token" : "tokens"} at the port).`);
+  }
+
+  /** Sell every trail find in the satchel to the port trader. */
+  function sellFinds() {
+    if (satchel.length === 0) return;
+    const total = satchel.reduce((n, id) => n + (TRAIL_FINDS.find((t) => t.id === id)?.value ?? 0), 0);
+    addTokens(total, "Canopy Hunter river port — trail finds");
+    setTokenBal(getTokenBalance());
+    log(`River port — sold ${satchel.length} trail ${satchel.length === 1 ? "find" : "finds"} for ${total} tokens.`);
+    setSatchel([]);
+  }
+
   /** Shed trade: one fresh shed for +4 tokens, or for local intel. */
   function tradeShed(forIntel: boolean) {
     if (sheds <= 0) return;
@@ -986,8 +1053,31 @@ export function CanopyHunter({
     if (!next) playGameMusic(CANOPY_THEME_SRC, CANOPY_THEME_VOLUME);
   }
 
+  /* Trail pickups: 1–2 glinting finds per walk between groves, rolled once per leg. */
+  useEffect(() => {
+    if (phase !== "trail") return;
+    setPickupRolls((rolls) => {
+      if (rolls[legIndex]) return rolls;
+      const count = Math.random() < 0.35 ? 2 : 1;
+      const spots = [
+        { left: "7%", bottom: "34%" },
+        { left: "80%", bottom: "44%" },
+      ];
+      const picks = Array.from({ length: count }, (_, i) => ({
+        uid: `leg${legIndex}-${i}-${Math.floor(Math.random() * 1e9)}`,
+        findId: rollTrailFindId(),
+        left: spots[i].left,
+        bottom: spots[i].bottom,
+      }));
+      return { ...rolls, [legIndex]: picks };
+    });
+  }, [phase, legIndex]);
+
   const currentWild = catchTree !== null ? groveWilds[catchTree] : undefined;
   const currentTrails = legs[legIndex]?.trails ?? [];
+  const satchelFinds = satchel
+    .map((id) => TRAIL_FINDS.find((t) => t.id === id))
+    .filter((f): f is TrailFind => Boolean(f));
   const bestFind =
     bag.length > 0
       ? bag.reduce((a, b) => (b.phenotypeScore > a.phenotypeScore ? b : a))
@@ -1160,6 +1250,33 @@ export function CanopyHunter({
             <div className="pointer-events-none absolute bottom-1 left-1/2 z-10 h-32 w-24 -translate-x-1/2 sm:h-40 sm:w-32">
               <Image src={EXPLORER_ART} alt="" aria-hidden="true" fill sizes="96px" draggable={false} className="object-contain" />
             </div>
+            {/* Glinting trail finds — tap to pocket */}
+            {(pickupRolls[legIndex] ?? []).map((p) => {
+              const f = TRAIL_FINDS.find((t) => t.id === p.findId);
+              if (!f) return null;
+              return (
+                <button
+                  key={p.uid}
+                  type="button"
+                  onClick={() => collectFind(legIndex, p.uid, p.findId)}
+                  disabled={walking}
+                  aria-label={`Pick up ${f.name}`}
+                  className="absolute z-10 w-12 animate-[pickup-glint_2.4s_ease-in-out_infinite] transition hover:scale-110 active:scale-95 disabled:opacity-60 sm:w-14"
+                  style={{ left: p.left, bottom: p.bottom }}
+                >
+                  <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-amber-200/25 blur-md" />
+                  <span className="relative block aspect-square">
+                    <Image src={f.icon} alt="" aria-hidden="true" fill sizes="56px" draggable={false} className="object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,.6)]" />
+                  </span>
+                  <span aria-hidden="true" className="absolute -right-1 -top-1 text-sm">✨</span>
+                </button>
+              );
+            })}
+            {satchel.length > 0 && (
+              <div className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-white/70 backdrop-blur-sm">
+                🎒 {satchel.length} {satchel.length === 1 ? "find" : "finds"}
+              </div>
+            )}
             {/* Foreground foliage frames the shot */}
             <Image src={FOREGROUND_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="pointer-events-none object-cover mix-blend-screen" />
             {walking && (
@@ -1314,6 +1431,8 @@ export function CanopyHunter({
               boughtCount={portBought}
               tokenBal={tokenBal}
               sheds={sheds}
+              finds={satchelFinds}
+              onSellFinds={sellFinds}
               intelTaken={portIntel}
               bounty={portBounty}
               bountyTaken={portBountyTaken}

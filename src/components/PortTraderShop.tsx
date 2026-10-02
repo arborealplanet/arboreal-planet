@@ -19,6 +19,14 @@ export interface PortTraderItem {
   iconSrc?: string;
 }
 
+/** A trail pickup the trader buys — id matches an item-*.webp icon. */
+export interface TrailFind {
+  id: string;
+  name: string;
+  value: number;
+  icon: string;
+}
+
 export interface PortTraderBounty {
   locality: string;
   sex: string;
@@ -243,12 +251,14 @@ export interface PortTraderShopProps {
   buyLimit?: number;
   tokenBal: number;
   sheds: number;
+  finds: TrailFind[];
   intelTaken: boolean;
   bounty: PortTraderBounty | null;
   bountyTaken: boolean;
   boatmanLine: string;
   onBuy: (item: PortTraderItem) => void;
   onTradeShed: (forIntel: boolean) => void;
+  onSellFinds: () => void;
   onTakeBounty: () => void;
   onCastOff: () => void;
 }
@@ -268,12 +278,14 @@ export function PortTraderShop({
   buyLimit = 2,
   tokenBal,
   sheds,
+  finds,
   intelTaken,
   bounty,
   bountyTaken,
   boatmanLine,
   onBuy,
   onTradeShed,
+  onSellFinds,
   onTakeBounty,
   onCastOff,
 }: PortTraderShopProps) {
@@ -421,6 +433,31 @@ export function PortTraderShop({
               Bring me a fresh shed skin next time, hunter — I pay good metal for those.
             </p>
           )}
+          {finds.length > 0 ? (
+            <div className="mt-4 border-t border-white/[.06] pt-4">
+              <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/40">
+                Trail finds — I pay metal for these too
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {finds.map((f) => (
+                  <span
+                    key={f.id + finds.indexOf(f)}
+                    title={`${f.name} · ${f.value} tokens`}
+                    className="relative h-11 w-11 overflow-hidden rounded-xl border border-white/10 bg-black/40"
+                  >
+                    <Image src={f.icon} alt={f.name} fill sizes="44px" draggable={false} className="object-contain" />
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={onSellFinds}
+                className="mt-3 rounded-full border border-amber-200/30 bg-amber-200/[.07] px-4 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-95"
+              >
+                Sell {finds.length} {finds.length === 1 ? "find" : "finds"} → +{finds.reduce((n, f) => n + f.value, 0)} tokens
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
