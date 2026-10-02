@@ -513,6 +513,76 @@ export async function PATCH(request: NextRequest) {
     createdMediaPath = destPath;
   }
 
+  // Videos: copy the auto-extracted frames into the reference library and
+  // register each as reference media for the animal. The frames live in the
+  // contributions bucket at <contributor>/frames/<contributionId>/.
+  if (row.media_type === "video") {
+    const framesPrefix = `${row.contributor_user_id}/frames/${row.id}/`;
+    const listRes = await fetch(
+      `${storageUrl}/object/list/snake-sorter-contributions`,
+      {
+        method: "POST",
+        headers: { ...h, "Content-Type": "application/json" },
+        body: JSON.stringify({ prefix: framesPrefix, limit: 16 }),
+        cache: "no-store",
+      },
+    );
+    const listed = (listRes.ok ? await listRes.json().catch(() => []) : []) as Array<{ name?: string }>;
+    const frameNames = listed.map((f) => f?.name).filter((n): n is string => typeof n === "string" && n.endsWith(".jpg"));
+    if (!frameNames.length) {
+      await rollbackApprove();
+      return NextResponse.json({ error: "No extracted frames found for this video." }, { status: 502 });
+    }
+    let promoted = 0;
+    for (const frameName of frameNames) {
+      const srcPath = `${framesPrefix}${frameName}`;
+      const src = await fetch(
+        `${storageUrl}/object/authenticated/snake-sorter-contributions/${storagePath(srcPath)}`,
+        { headers: h, cache: "no-store" },
+      );
+      if (!src.ok) continue;
+      const bytes = Buffer.from(await src.arrayBuffer());
+      const destPath = `${animalId}/${randomUUID()}-frame-${frameName}`;
+      const upload = await fetch(`${storageUrl}/object/snake-sorter-reference/${storagePath(destPath)}`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_AUTH_KEY,
+          Authorization: `Bearer ${identity.token}`,
+          "Content-Type": "image/jpeg",
+          "x-upsert": "false",
+        },
+        body: bytes,
+        cache: "no-store",
+      });
+      if (!upload.ok) continue;
+      const mediaInsert = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media`, {
+        method: "POST",
+        headers: { ...h, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({
+          animal_id: animalId,
+          created_by: identity.user.id,
+          storage_path: destPath,
+          original_name: `${row.original_name.slice(0, 200)} (${frameName})`.slice(0, 255),
+          mime_type: "image/jpeg",
+          content_sha256: `frame:${row.content_sha256}:${frameName}`,
+          file_size_bytes: bytes.length,
+          view_type: viewType,
+        }),
+        cache: "no-store",
+      });
+      if (mediaInsert.ok) promoted++;
+      else {
+        await fetch(`${storageUrl}/object/snake-sorter-reference/${storagePath(destPath)}`, {
+          method: "DELETE", headers: h, cache: "no-store",
+        }).catch(() => undefined);
+      }
+    }
+    if (!promoted) {
+      await rollbackApprove();
+      return NextResponse.json({ error: "Could not promote video frames into the reference library." }, { status: 502 });
+    }
+  }
+
   const approved = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_contributions?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { ...h, "Content-Type": "application/json", Prefer: "return=minimal" },
