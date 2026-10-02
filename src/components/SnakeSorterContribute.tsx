@@ -175,6 +175,78 @@ export function SnakeSorterContribute() {
     }
   }
 
+  // Videos ride to Google Drive (Supabase Free caps storage uploads at
+  // 50 MB). Same chunked relay shape as uploadChunked, but the server
+  // speaks Drive's resumable-upload protocol with the service account.
+  async function uploadDrive(
+    file: File,
+    meta: { taxon_guess?: string; life_stage_guess?: string; view_type_guess?: string; provenance_hint?: string; notes?: string },
+    onProgress: (pct: number) => void,
+  ): Promise<{ id: string; name: string; media_type: string }> {
+    const initRes = await fetch("/api/snake-sorter/drive-upload?phase=init", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: file.name, mime_type: file.type, size: file.size }),
+    });
+    const init = await initRes.json().catch(() => ({}));
+    if (!initRes.ok) {
+      const detail = typeof init.detail === "string" && init.detail.trim() ? ` — ${init.detail.trim()}` : "";
+      throw new Error(`${init.error ?? "Could not start Drive upload."}${detail}`);
+    }
+    const sessionUri = init.sessionUri as string;
+
+    let offset = 0;
+    let driveFileId: string | null = null;
+    while (offset < file.size) {
+      const piece = file.slice(offset, offset + CHUNK_SIZE);
+      const res = await fetch("/api/snake-sorter/drive-upload?phase=chunk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "x-drive-session": sessionUri,
+          "x-drive-offset": String(offset),
+          "x-drive-size": String(file.size),
+        },
+        body: piece,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = typeof data.detail === "string" && data.detail.trim() ? ` — ${data.detail.trim()}` : "";
+        throw new Error(`${data.error ?? "Chunk upload failed."}${detail}`);
+      }
+      if (typeof data.driveFileId === "string" && data.driveFileId) driveFileId = data.driveFileId;
+      offset = typeof data.offset === "number" ? data.offset : offset + piece.size;
+      onProgress(Math.min(99, Math.round((offset / file.size) * 100)));
+    }
+    if (!driveFileId) throw new Error("Drive did not return a file.");
+
+    const completeRes = await fetch("/api/snake-sorter/drive-upload?phase=complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        driveFileId,
+        name: file.name,
+        mime_type: file.type,
+        size: file.size,
+        taxon_guess: meta.taxon_guess,
+        life_stage_guess: meta.life_stage_guess,
+        view_type_guess: meta.view_type_guess,
+        provenance_hint: meta.provenance_hint,
+        notes: meta.notes,
+      }),
+    });
+    const complete = await completeRes.json().catch(() => ({}));
+    if (!completeRes.ok) {
+      const rej = (complete.rejected ?? [])[0] as { name: string; reason: string } | undefined;
+      const detail = typeof complete.detail === "string" && complete.detail.trim() ? ` — ${complete.detail.trim()}` : "";
+      throw new Error(rej ? rej.reason : `${complete.error ?? "Could not record contribution."}${detail}`);
+    }
+    const item = (complete.accepted ?? [])[0] as { id: string; name: string; media_type: string } | undefined;
+    if (!item?.id) throw new Error("Upload completed but was not recorded.");
+    onProgress(100);
+    return item;
+  }
+
   async function uploadChunked(
     file: File,
     meta: { taxon_guess?: string; life_stage_guess?: string; view_type_guess?: string; provenance_hint?: string; notes?: string },
@@ -267,10 +339,30 @@ export function SnakeSorterContribute() {
     const accepted: string[] = [];
     const rejected: string[] = [];
 
+    // Videos ride to Google Drive (Supabase Free caps uploads at 50 MB);
+    // images keep the existing Supabase paths.
+    const videoFiles = files.filter((f) => f.type.startsWith("video/"));
+    const imageFiles = files.filter((f) => !f.type.startsWith("video/"));
+
+    async function pullFrames(file: File, contributionId: string) {
+      setProgressNote(`${file.name} — pulling frames…`);
+      try {
+        const blobs = await extractFrames(file, 8);
+        if (blobs.length) {
+          const form = new FormData();
+          form.set("contribution_id", contributionId);
+          blobs.forEach((b) => form.append("frames", b, "frame.jpg"));
+          await fetch("/api/snake-sorter/chunked-upload?phase=frames", { method: "POST", body: form });
+        }
+      } catch {
+        // Frames are a bonus — the video itself is safely stored.
+      }
+    }
+
     // Small files go through the classic single-request path, batched by
     // total bytes so a batch never trips the ~4.5 MB platform cap.
-    const smallFiles = files.filter((f) => f.size <= CHUNK_THRESHOLD);
-    const largeFiles = files.filter((f) => f.size > CHUNK_THRESHOLD);
+    const smallFiles = imageFiles.filter((f) => f.size <= CHUNK_THRESHOLD);
+    const largeFiles = imageFiles.filter((f) => f.size > CHUNK_THRESHOLD);
     const batches: File[][] = [];
     {
       let current: File[] = [];
@@ -311,7 +403,7 @@ export function SnakeSorterContribute() {
       setUploading((n) => n + batch.length);
     }
 
-    // Big files (phone photos, any video worth keeping) upload in pieces.
+    // Big images upload in pieces.
     for (const file of largeFiles) {
       setProgressNote(`${file.name} — starting…`);
       try {
@@ -319,21 +411,21 @@ export function SnakeSorterContribute() {
           setProgressNote(`${file.name} — ${pct}%`),
         );
         accepted.push(item.name);
-        // Pull working frames from videos; the original stays the archive.
-        if (file.type.startsWith("video/")) {
-          setProgressNote(`${file.name} — pulling frames…`);
-          try {
-            const blobs = await extractFrames(file, 8);
-            if (blobs.length) {
-              const form = new FormData();
-              form.set("contribution_id", item.id);
-              blobs.forEach((b) => form.append("frames", b, "frame.jpg"));
-              await fetch("/api/snake-sorter/chunked-upload?phase=frames", { method: "POST", body: form });
-            }
-          } catch {
-            // Frames are a bonus — the video itself is safely stored.
-          }
-        }
+      } catch (error) {
+        rejected.push(`${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`);
+      }
+      setUploading((n) => n + 1);
+    }
+
+    // Videos upload to Drive in pieces, then frames are pulled locally.
+    for (const file of videoFiles) {
+      setProgressNote(`${file.name} — starting…`);
+      try {
+        const item = await uploadDrive(file, meta, (pct) =>
+          setProgressNote(`${file.name} — ${pct}%`),
+        );
+        accepted.push(item.name);
+        await pullFrames(file, item.id);
       } catch (error) {
         rejected.push(`${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`);
       }

@@ -24,6 +24,8 @@ type Contribution = {
   promoted_reference_animal_id: string | null;
   created_at: string;
   preview_url: string;
+  storage_path: string | null;
+  transcode_status: string | null;
 };
 
 const TAXA = ["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis", "Unknown / review"];
@@ -465,7 +467,13 @@ function ContributionCard({  contribution,
             // eslint-disable-next-line @next/next/no-img-element
             <img src={contribution.preview_url} alt={contribution.original_name} className="h-full max-h-[320px] w-full object-contain" loading="lazy" />
           ) : (
-            <video src={contribution.preview_url} className="h-full max-h-[320px] w-full object-contain" controls preload="metadata" playsInline />
+            <video
+              src={contribution.storage_path?.startsWith("gdrive:") ? `${contribution.preview_url}?converted=1` : contribution.preview_url}
+              className="h-full max-h-[320px] w-full object-contain"
+              controls
+              preload="metadata"
+              playsInline
+            />
           )}
         </div>
         <div className="p-4">
@@ -475,6 +483,11 @@ function ContributionCard({  contribution,
               <div className="mt-1 text-[9px] text-white/24">
                 {contribution.contributor_name || "Member"} · {contribution.media_type === "video" ? "Video" : "Image"} · {new Date(contribution.created_at).toLocaleString()}
               </div>
+              {contribution.media_type === "video" && contribution.storage_path?.startsWith("gdrive:") && contribution.transcode_status !== "done" && (
+                <div className="mt-1.5 inline-block rounded-full border border-sky-300/15 bg-sky-300/[.04] px-2 py-0.5 text-[8px] font-black uppercase tracking-[.08em] text-sky-100/60">
+                  {contribution.transcode_status === "failed" ? "Conversion failed" : "Converting video…"}
+                </div>
+              )}
             </div>
             <span className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] ${
               contribution.status === "approved" ? "border-emerald-300/15 bg-emerald-300/[.04] text-emerald-100/60"
