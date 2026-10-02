@@ -201,9 +201,10 @@ const BOATMAN_ART = "/arcade/canopy-hunter/port-boatman.webp";
 
 /**
  * The boatman takes over the shopkeeper window when his pill is tapped —
- * his line and the Cast off button laid over the river scene.
+ * his line laid over the river scene. The Cast off button lives below the
+ * portrait so it never covers him.
  */
-function BoatmanScene({ line, onCastOff }: { line: string; onCastOff: () => void }) {
+function BoatmanScene({ line }: { line: string }) {
   return (
     <div className="absolute inset-0" aria-label="The boatman">
       <Image
@@ -218,18 +219,9 @@ function BoatmanScene({ line, onCastOff }: { line: string; onCastOff: () => void
       <p className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.18em] text-white/85 backdrop-blur-sm">
         ⛵ The boatman
       </p>
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3 sm:p-4">
-        <p className="min-w-0 flex-1 text-[11px] italic leading-5 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,.8)] sm:text-sm sm:leading-6">
-          {line}
-        </p>
-        <button
-          type="button"
-          onClick={onCastOff}
-          className="flex-none rounded-2xl bg-emerald-300 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-[#06100c] shadow-[0_8px_24px_rgba(0,0,0,.5)] transition hover:bg-emerald-200 active:scale-95 sm:px-6 sm:py-3 sm:text-sm"
-        >
-          Cast off →
-        </button>
-      </div>
+      <p className="absolute inset-x-0 bottom-0 p-3 text-[11px] italic leading-5 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,.8)] sm:p-4 sm:text-sm sm:leading-6">
+        {line}
+      </p>
     </div>
   );
 }
@@ -318,7 +310,7 @@ export function PortTraderShop({
         {view === "bounty" ? (
           <BountyBoard bounty={bounty} bountyTaken={bountyTaken} onTakeBounty={onTakeBounty} />
         ) : view === "boatman" ? (
-          <BoatmanScene line={boatmanLine} onCastOff={onCastOff} />
+          <BoatmanScene line={boatmanLine} />
         ) : TRADER_CLIPS.length > 0 ? (
           <TraderAnimation />
         ) : (
@@ -329,8 +321,21 @@ export function PortTraderShop({
         </span>
       </div>
 
+      {/* Cast off lives below the portrait — never over the boatman */}
+      {view === "boatman" ? (
+        <div className="flex-none px-4 pt-2 sm:px-5">
+          <button
+            type="button"
+            onClick={onCastOff}
+            className="w-full rounded-2xl bg-emerald-300 px-5 py-3 text-sm font-black uppercase tracking-wide text-[#06100c] shadow-[0_8px_24px_rgba(0,0,0,.5)] transition hover:bg-emerald-200 active:scale-[.99]"
+          >
+            Cast off →
+          </button>
+        </div>
+      ) : null}
+
       {/* View pills — Hank's Animals / Enclosures / Market, port-flavored */}
-      <div className="flex flex-none items-stretch gap-1.5 px-4 pt-3 sm:px-5">
+      <div className="hide-scrollbar flex flex-none items-center gap-1.5 overflow-x-auto px-4 pt-2 sm:overflow-visible sm:px-5 sm:pt-3">
         {VIEWS.map((v) => {
           const selected = v.id === view;
           return (
@@ -339,7 +344,7 @@ export function PortTraderShop({
               type="button"
               onClick={() => onViewChange(v.id)}
               aria-current={selected ? "true" : undefined}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[8px] font-black uppercase tracking-[.05em] transition sm:text-[9px] lg:py-2 lg:pl-1.5 lg:pr-3 lg:text-[11px] ${
+              className={`flex min-w-0 flex-none items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[8px] font-black uppercase tracking-[.05em] transition sm:flex-1 sm:text-[9px] lg:py-2 lg:pl-1.5 lg:pr-3 lg:text-[11px] ${
                 selected
                   ? "border-amber-200/70 bg-gradient-to-b from-amber-200 to-amber-300 text-[#1a1005] shadow-[0_0_18px_rgba(251,191,36,.45)] ring-1 ring-inset ring-white/40"
                   : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
@@ -356,7 +361,7 @@ export function PortTraderShop({
       </div>
 
       {/* Tab header */}
-      <div className="mb-3 mt-4 flex items-center justify-between gap-2 px-4 sm:px-5">
+      <div className="mb-2 mt-3 flex items-center justify-between gap-2 px-4 sm:mb-3 sm:mt-4 sm:px-5">
         <h3 className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">{viewTitle}</h3>
         <span className="rounded-full border border-amber-200/25 bg-amber-200/[.07] px-3 py-1 text-xs font-bold text-amber-100">
           🪙 {tokenBal} tokens
