@@ -279,3 +279,18 @@ button:disabled { cursor: not-allowed; }
     transition-duration: .001ms !important;
   }
 }
+
+/* Canopy Hunter — river port trader shop placeholder motion (until the */
+/* trader's animation loops land). */
+@keyframes port-drift {
+  from { transform: translateX(-1.5%); }
+  to { transform: translateX(1.5%); }
+}
+@keyframes port-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes port-glow {
+  0%, 100% { opacity: .55; }
+  50% { opacity: .95; }
+}
