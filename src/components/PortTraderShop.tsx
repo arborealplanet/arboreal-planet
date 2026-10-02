@@ -19,8 +19,25 @@ export interface PortTraderItem {
   iconSrc?: string;
 }
 
+export interface PortTraderBounty {
+  locality: string;
+  sex: string;
+}
+
+/** Shop tabs — Hank's store has Animals / Enclosures / Player Market; the */
+/** port has these.                                                         */
+export type PortShopView = "supplies" | "shed" | "bounty" | "boatman";
+
+const VIEWS: Array<{ id: PortShopView; label: string; shortLabel: string; emoji: string }> = [
+  { id: "supplies", label: "Supplies", shortLabel: "Supplies", emoji: "🧺" },
+  { id: "shed", label: "Shed Trade", shortLabel: "Sheds", emoji: "🤝" },
+  { id: "bounty", label: "Bounty Board", shortLabel: "Bounty", emoji: "📌" },
+  { id: "boatman", label: "Boatman", shortLabel: "Boat", emoji: "⛵" },
+];
+
 const TRADER_NIGHT_ART = "/arcade/canopy-hunter/port-river-night.webp";
 const TRADER_PORTRAIT = "/arcade/canopy-hunter/port-trader.webp";
+const BOATMAN_CARD = "/arcade/canopy-hunter/port-boatman-card.webp";
 
 /**
  * The trader's idle animation loops. Empty for now — Gage generates the
@@ -121,6 +138,8 @@ const TRADER_TIPS = [
 ];
 
 export interface PortTraderShopProps {
+  view: PortShopView;
+  onViewChange: (view: PortShopView) => void;
   items: PortTraderItem[];
   soldIds: PortTraderItemId[];
   boughtCount: number;
@@ -128,16 +147,24 @@ export interface PortTraderShopProps {
   tokenBal: number;
   sheds: number;
   intelTaken: boolean;
+  bounty: PortTraderBounty | null;
+  bountyTaken: boolean;
+  boatmanLine: string;
   onBuy: (item: PortTraderItem) => void;
   onTradeShed: (forIntel: boolean) => void;
+  onTakeBounty: () => void;
+  onCastOff: () => void;
 }
 
 /**
- * The river port trader's shop — Hank's store structure with the trader's
- * stock: tip bar, shopkeeper window, tonight's stock carousel, shed trades.
+ * The river port trader's shop — Hank Scale's store structure with the
+ * port's options: tip bar, shopkeeper window, view pills (Supplies /
+ * Shed Trade / Bounty Board / Boatman), and the tab content below.
  * The animation slot is a still portrait until Gage's loops arrive.
  */
 export function PortTraderShop({
+  view,
+  onViewChange,
   items,
   soldIds,
   boughtCount,
@@ -145,11 +172,22 @@ export function PortTraderShop({
   tokenBal,
   sheds,
   intelTaken,
+  bounty,
+  bountyTaken,
+  boatmanLine,
   onBuy,
   onTradeShed,
+  onTakeBounty,
+  onCastOff,
 }: PortTraderShopProps) {
   const [tip, setTip] = useState(0);
   const buysLeft = buyLimit - boughtCount;
+
+  const viewTitle =
+    view === "supplies" ? "Tonight's stock"
+    : view === "shed" ? "Shed trade"
+    : view === "bounty" ? "Bounty board"
+    : "The boatman";
 
   return (
     <div className="mt-4 overflow-hidden rounded-[26px] border border-white/[.07] bg-white/[.02]">
@@ -174,79 +212,162 @@ export function PortTraderShop({
         </span>
       </div>
 
-      {/* Tonight's stock */}
-      <div className="p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">Tonight&apos;s stock</h3>
-          <span className="rounded-full border border-amber-200/25 bg-amber-200/[.07] px-3 py-1 text-xs font-bold text-amber-100">
-            🪙 {tokenBal} tokens
-          </span>
-        </div>
-
-        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
-          {items.map((item) => {
-            const sold = soldIds.includes(item.id);
-            const limited = boughtCount >= buyLimit;
-            const poor = tokenBal < item.cost;
-            const disabled = sold || limited || poor;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onBuy(item)}
-                disabled={disabled}
-                className="relative min-w-[208px] max-w-[248px] flex-1 snap-start rounded-2xl border border-white/[.08] bg-black/30 p-4 text-left transition hover:border-amber-200/40 hover:bg-black/45 active:scale-[.98] disabled:opacity-45"
-              >
-                <span className="flex items-center gap-2.5">
-                  {item.iconSrc ? (
-                    <span className="relative h-11 w-11 shrink-0">
-                      <Image src={item.iconSrc} alt="" aria-hidden="true" fill sizes="44px" draggable={false} className="object-contain" />
-                    </span>
-                  ) : (
-                    <span className="text-[28px] leading-none" aria-hidden="true">{item.emoji}</span>
-                  )}
-                  <span className="text-sm font-bold text-white">{item.name}</span>
-                </span>
-                <span className="mt-2 block min-h-[2.5rem] text-xs leading-5 text-white/45">{item.desc}</span>
-                <span className="mt-2 block text-xs font-black uppercase tracking-[.12em] text-amber-100">
-                  {sold ? "Sold" : limited ? "Two's the limit" : poor ? `${item.cost} tokens — short` : `${item.cost} tokens`}
-                </span>
-                {sold ? (
-                  <span className="absolute right-3 top-3 rotate-6 rounded-md border-2 border-amber-200/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-[.14em] text-amber-200/80">
-                    Sold
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Shed trades */}
-        {sheds > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+      {/* View pills — Hank's Animals / Enclosures / Market, port-flavored */}
+      <div className="flex flex-none items-stretch gap-1.5 px-4 pt-3 sm:px-5">
+        {VIEWS.map((v) => {
+          const selected = v.id === view;
+          return (
             <button
+              key={v.id}
               type="button"
-              onClick={() => onTradeShed(false)}
-              className="rounded-full border border-amber-200/30 bg-amber-200/[.07] px-4 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-95"
+              onClick={() => onViewChange(v.id)}
+              aria-current={selected ? "true" : undefined}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border py-1.5 pl-1 pr-2 text-[8px] font-black uppercase tracking-[.05em] transition sm:text-[9px] lg:py-2 lg:pl-1.5 lg:pr-3 lg:text-[11px] ${
+                selected
+                  ? "border-amber-200/70 bg-gradient-to-b from-amber-200 to-amber-300 text-[#1a1005] shadow-[0_0_18px_rgba(251,191,36,.45)] ring-1 ring-inset ring-white/40"
+                  : "border-white/12 bg-white/[.05] text-white/60 backdrop-blur-sm hover:border-white/25 hover:bg-white/[.09] hover:text-white"
+              }`}
             >
-              Trade a shed → +4 tokens ({sheds} in hand)
+              <span className="shrink-0 text-[13px] leading-none lg:text-[15px]" aria-hidden="true">{v.emoji}</span>
+              <span className="truncate">
+                <span className="sm:hidden">{v.shortLabel}</span>
+                <span className="hidden sm:inline">{v.label}</span>
+              </span>
             </button>
-            {!intelTaken ? (
+          );
+        })}
+      </div>
+
+      {/* Tab header */}
+      <div className="mb-3 mt-4 flex items-center justify-between gap-2 px-4 sm:px-5">
+        <h3 className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">{viewTitle}</h3>
+        <span className="rounded-full border border-amber-200/25 bg-amber-200/[.07] px-3 py-1 text-xs font-bold text-amber-100">
+          🪙 {tokenBal} tokens
+        </span>
+      </div>
+
+      {/* Supplies */}
+      {view === "supplies" ? (
+        <div className="px-4 pb-5 sm:px-5">
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
+            {items.map((item) => {
+              const sold = soldIds.includes(item.id);
+              const limited = boughtCount >= buyLimit;
+              const poor = tokenBal < item.cost;
+              const disabled = sold || limited || poor;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onBuy(item)}
+                  disabled={disabled}
+                  className="relative min-w-[208px] max-w-[248px] flex-1 snap-start rounded-2xl border border-white/[.08] bg-black/30 p-4 text-left transition hover:border-amber-200/40 hover:bg-black/45 active:scale-[.98] disabled:opacity-45"
+                >
+                  <span className="flex items-center gap-2.5">
+                    {item.iconSrc ? (
+                      <span className="relative h-11 w-11 shrink-0">
+                        <Image src={item.iconSrc} alt="" aria-hidden="true" fill sizes="44px" draggable={false} className="object-contain" />
+                      </span>
+                    ) : (
+                      <span className="text-[28px] leading-none" aria-hidden="true">{item.emoji}</span>
+                    )}
+                    <span className="text-sm font-bold text-white">{item.name}</span>
+                  </span>
+                  <span className="mt-2 block min-h-[2.5rem] text-xs leading-5 text-white/45">{item.desc}</span>
+                  <span className="mt-2 block text-xs font-black uppercase tracking-[.12em] text-amber-100">
+                    {sold ? "Sold" : limited ? "Two's the limit" : poor ? `${item.cost} tokens — short` : `${item.cost} tokens`}
+                  </span>
+                  {sold ? (
+                    <span className="absolute right-3 top-3 rotate-6 rounded-md border-2 border-amber-200/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-[.14em] text-amber-200/80">
+                      Sold
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Shed trade */}
+      {view === "shed" ? (
+        <div className="px-4 pb-5 sm:px-5">
+          {sheds > 0 ? (
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => onTradeShed(true)}
-                className="rounded-full border border-sky-200/30 bg-sky-300/[.07] px-4 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-300/[.14] active:scale-95"
+                onClick={() => onTradeShed(false)}
+                className="rounded-full border border-amber-200/30 bg-amber-200/[.07] px-4 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-95"
               >
-                Trade a shed → local intel
+                Trade a shed → +4 tokens ({sheds} in hand)
               </button>
-            ) : null}
+              {!intelTaken ? (
+                <button
+                  type="button"
+                  onClick={() => onTradeShed(true)}
+                  className="rounded-full border border-sky-200/30 bg-sky-300/[.07] px-4 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-300/[.14] active:scale-95"
+                >
+                  Trade a shed → local intel
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-xs italic leading-5 text-white/35">
+              Bring me a fresh shed skin next time, hunter — I pay good metal for those.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {/* Bounty board */}
+      {view === "bounty" ? (
+        <div className="px-4 pb-5 sm:px-5">
+          {bounty ? (
+            <div className="rounded-[20px] border border-dashed border-amber-200/25 bg-amber-100/[.04] p-5 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">📌 Pinned to the notice board</p>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/70">
+                Wanted tonight: a <span className="font-bold text-white">{bounty.sex} {bounty.locality}</span> python.
+                Bring one in before the expedition ends — <span className="font-bold text-amber-100">5 tokens</span> on delivery.
+              </p>
+              {bountyTaken ? (
+                <p className="mt-3 text-xs font-bold text-emerald-200/80">✓ You&apos;ve taken this bounty — it pays at the end of the night.</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onTakeBounty}
+                  className="mt-4 rounded-2xl border border-amber-200/30 bg-amber-200/[.08] px-6 py-3 text-sm font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-[.99]"
+                >
+                  Take the bounty
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs italic leading-5 text-white/35">No bounty posted tonight — check back next expedition.</p>
+          )}
+        </div>
+      ) : null}
+
+      {/* Boatman */}
+      {view === "boatman" ? (
+        <div className="px-4 pb-5 sm:px-5">
+          <div className="flex gap-4 rounded-[20px] border border-white/[.07] bg-white/[.02] p-4">
+            <div className="relative h-28 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/10">
+              <Image src={BOATMAN_CARD} alt="The river boatman" fill sizes="96px" draggable={false} className="object-cover object-top" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-base font-semibold text-white">The boatman</h4>
+              <p className="mt-1 text-sm italic leading-6 text-white/55">{boatmanLine}</p>
+              <button
+                type="button"
+                onClick={onCastOff}
+                className="mt-3 w-full rounded-2xl bg-emerald-300 px-6 py-3 text-sm font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
+              >
+                Cast off →
+              </button>
+            </div>
           </div>
-        ) : (
-          <p className="mt-3 text-xs italic text-white/35">
-            Bring me a fresh shed skin next time, hunter — I pay good metal for those.
-          </p>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
