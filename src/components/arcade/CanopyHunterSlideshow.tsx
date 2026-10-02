@@ -52,9 +52,11 @@ const AUTOPLAY_MS = 5000;
 
 /**
  * Canopy Hunter showcase: auto-advancing slideshow of game art with the
- * play button overlaid. Replaces the old static banner card on /arcade.
+ * play button overlaid. On /arcade the button links to the Keeper; pass
+ * onPlay to fire a custom action instead (e.g. opening the expedition
+ * modal from the Keeper home screen).
  */
-export function CanopyHunterSlideshow() {
+export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef<number | null>(null);
@@ -129,6 +131,15 @@ export function CanopyHunterSlideshow() {
         </button>
 
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 p-4 sm:gap-2 sm:p-5">
+          {onPlay ? (
+            <button
+              type="button"
+              onClick={onPlay}
+              className="rounded-2xl bg-emerald-300 px-8 py-3 text-base font-bold text-[#06100c] shadow-[0_8px_30px_rgba(0,0,0,.45)] transition hover:bg-emerald-200 active:scale-[.99] sm:py-3.5"
+            >
+              ▶ Play Canopy Hunter
+            </button>
+          ) : (
           <Link
             href="/arcade/arboreal-keeper"
             className="rounded-2xl bg-emerald-300 px-8 py-3 text-base font-bold text-[#06100c] shadow-[0_8px_30px_rgba(0,0,0,.45)] transition hover:bg-emerald-200 active:scale-[.99] sm:py-3.5"
