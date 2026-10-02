@@ -64,15 +64,13 @@ type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
 /* River port (Phase 1 playtest — gated behind portStopEnabled)        */
 /* ------------------------------------------------------------------ */
 
-type PortPanel = "trader" | null;
 
 interface PortBounty {
   locality: CanopyLocality;
   sex: CanopySex;
 }
 
-const PORT_NIGHT_ART = "/arcade/canopy-hunter/port-river-night.webp";
-const PORT_HUNTER_ART = "/arcade/canopy-hunter/sprite-hunter-port-back.webp";
+const PORT_DUSK_ART = "/arcade/canopy-hunter/port-river-dusk.webp";
 
 /** Trader stock — three of the four are on the table each visit; buy at most two. */
 const PORT_ITEMS: PortItem[] = [
@@ -461,7 +459,7 @@ export function CanopyHunter({
   const [tokens, setTokens] = useState(permit ? PERMIT_TOKENS : 0);
   /* River port stop (gated playtest) — rolled fresh each expedition. */
   const [portVisited, setPortVisited] = useState(false);
-  const [portPanel, setPortPanel] = useState<PortPanel>(null);
+  const [portArrived, setPortArrived] = useState(false);
   const [portShopView, setPortShopView] = useState<PortShopView>("supplies");
   const [portStock, setPortStock] = useState<PortItem[]>([]);
   const [portSold, setPortSold] = useState<PortItemId[]>([]);
@@ -661,7 +659,7 @@ export function CanopyHunter({
     setWalking(false);
     /* River port resets — one visit per expedition, stock re-rolled. */
     setPortVisited(false);
-    setPortPanel(null);
+    setPortArrived(false);
     setPortStock([]);
     setPortSold([]);
     setPortBought(0);
@@ -889,7 +887,8 @@ export function CanopyHunter({
       setPortVisited(true);
       setPortStock(rollPortStock());
       setPortBounty(rollPortBounty(region));
-      setPortPanel(null);
+      setPortShopView("supplies");
+      setPortArrived(false);
       log(`${nightPhaseForLeg(legIndex)} — the trail reaches a lantern-lit river port. Time to resupply.`);
       setPhase("port");
       return;
@@ -900,7 +899,6 @@ export function CanopyHunter({
   /** Leave the port for the next leg. Pushing on skips the stalls and earns
    *  the bat-swarm ambush (wider green zone) in the next grove. */
   function castOff(pushOn = false) {
-    setPortPanel(null);
     if (pushOn) {
       setBatSwarm(true);
       log("You push past the port into deep night — a fruit-bat swarm crosses overhead. The snakes won't hear you coming.");
@@ -1244,45 +1242,28 @@ export function CanopyHunter({
       {phase === "port" && (
         <div className="mt-8">
           <TrailStatus region={region} legIndex={legIndex} searchesLeft={searchesLeft} bagCount={bag.length} streak={streak} phaseName={phaseName} totalGroves={grovesPerExpedition} />
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-white/[.07] sm:aspect-[16/9]">
-            <Image src={PORT_NIGHT_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
-            <NightAtmosphere region={region} legIndex={legIndex} showBackdrop={false} />
-            {/* The hunter waits on the dock, flashlight down */}
-            <div className="pointer-events-none absolute bottom-0 left-1/2 z-10 h-40 w-28 -translate-x-1/2 sm:h-56 sm:w-36">
-              <Image src={PORT_HUNTER_ART} alt="" aria-hidden="true" fill sizes="144px" draggable={false} className="object-contain object-bottom" />
+          {!portArrived ? (
+            /* Arrival — pulling up to the river port at dusk */
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-white/[.07] sm:aspect-[16/9]">
+              <div className="absolute inset-0 animate-[port-arrive_7s_ease-out_forwards]">
+                <Image src={PORT_DUSK_ART} alt="Pulling up to the river port at dusk" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
+              </div>
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(4,10,8,.82)_100%)]" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[.24em] text-amber-100/80">Pulling up to the river port</p>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/60">
+                  Lanterns on the water, halfway into the night. The trader&apos;s waiting.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPortArrived(true)}
+                  className="mt-4 rounded-2xl bg-amber-200 px-8 py-3.5 text-sm font-bold text-[#1a1005] transition hover:bg-amber-100 active:scale-[.99]"
+                >
+                  Step onto the dock →
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => { setPortShopView("supplies"); setPortPanel("trader"); }}
-              className="absolute bottom-[34%] left-[4%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
-            >
-              <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">🧺 Trader&apos;s stall</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setPortShopView("bounty"); setPortPanel("trader"); }}
-              className="absolute bottom-[52%] left-[24%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
-            >
-              <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">📌 Notice board</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setPortShopView("boatman"); setPortPanel("trader"); }}
-              className="absolute bottom-[30%] right-[4%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
-            >
-              <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">⛵ The boatman</span>
-            </button>
-          </div>
-          <p className="mt-4 text-center text-xs text-white/35">
-            A lantern-lit river port, halfway into the night. Resupply, check the board — and cast off when you&apos;re ready.
-          </p>
-          <p className="mt-2 text-center">
-            <span className="inline-block rounded-full border border-amber-200/25 bg-amber-200/[.07] px-4 py-1.5 text-xs font-bold text-amber-100">
-              🪙 {tokenBal} tokens
-            </span>
-          </p>
-
-          {portPanel === "trader" && (
+          ) : (
             <PortTraderShop
               view={portShopView}
               onViewChange={setPortShopView}
