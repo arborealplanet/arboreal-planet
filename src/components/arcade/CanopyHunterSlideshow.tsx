@@ -146,6 +146,7 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
           >
             ▶ Play Canopy Hunter
           </Link>
+          )}
           <p className="text-[11px] text-white/60">
             Expedition event inside Arboreal Keeper — one free flight every week
           </p>
