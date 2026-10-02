@@ -460,6 +460,22 @@ export function CanopyHunter({
   /* River port stop (gated playtest) — rolled fresh each expedition. */
   const [portVisited, setPortVisited] = useState(false);
   const [portArrived, setPortArrived] = useState(false);
+  const [introOpen, setIntroOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem("canopy-hunter-intro") !== "collapsed";
+    } catch {
+      return false;
+    }
+  });
+  function toggleIntro() {
+    setIntroOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem("canopy-hunter-intro", next ? "open" : "collapsed");
+      } catch { /* private mode — just don't persist */ }
+      return next;
+    });
+  }
   const [portShopView, setPortShopView] = useState<PortShopView>("supplies");
   const [portStock, setPortStock] = useState<PortItem[]>([]);
   const [portSold, setPortSold] = useState<PortItemId[]>([]);
@@ -998,7 +1014,7 @@ export function CanopyHunter({
 @keyframes ch-rustle { 0%,100% { transform: rotate(-18deg) translateY(0); opacity: .55; } 50% { transform: rotate(24deg) translateY(-3px); opacity: 1; } }
 @keyframes ch-drift { 0%,100% { transform: translateX(-24px); } 50% { transform: translateX(24px); } }`}</style>
 
-      {/* Header */}
+      {/* Header — collapsible so the game sits near the top without scrolling */}
       <div className="relative text-center">
         <button
           type="button"
@@ -1010,14 +1026,37 @@ export function CanopyHunter({
             <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
-        <div className="inline-flex rounded-full border border-emerald-300/15 bg-emerald-300/[.06] px-4 py-2 text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/70">
-          Arboreal Keeper · Special event
-        </div>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-.03em] text-white sm:text-5xl">Canopy Hunter</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/55">
-          Night in the New Guinea canopy. Walk the trail, read the signs, search the trees —
-          and bring your pythons home to your Arboreal Keeper collection.
-        </p>
+        {introOpen ? (
+          <>
+            <div className="inline-flex rounded-full border border-emerald-300/15 bg-emerald-300/[.06] px-4 py-2 text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/70">
+              Arboreal Keeper · Special event
+            </div>
+            <h1 className="mt-4 text-4xl font-semibold tracking-[-.03em] text-white sm:text-5xl">Canopy Hunter</h1>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/55">
+              Night in the New Guinea canopy. Walk the trail, read the signs, search the trees —
+              and bring your pythons home to your Arboreal Keeper collection.
+            </p>
+            <button
+              type="button"
+              onClick={toggleIntro}
+              className="mt-2 text-[10px] font-black uppercase tracking-[.2em] text-white/30 transition hover:text-white/60"
+            >
+              Hide intro ↑
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleIntro}
+            aria-expanded="false"
+            className="mx-auto flex items-center gap-2 rounded-full border border-white/10 bg-white/[.03] px-4 py-2 text-[10px] font-black uppercase tracking-[.2em] text-white/40 transition hover:border-white/20 hover:text-white/70"
+          >
+            Canopy Hunter
+            <span aria-hidden="true" className="text-white/25">·</span>
+            <span className="normal-case tracking-normal text-white/30">about</span>
+            <span aria-hidden="true">↓</span>
+          </button>
+        )}
       </div>
 
       {/* Briefing */}
