@@ -166,7 +166,10 @@ export function SnakeSorterContribute() {
       body: JSON.stringify({ name: file.name, mime_type: file.type, size: file.size }),
     });
     const init = await initRes.json().catch(() => ({}));
-    if (!initRes.ok) throw new Error(init.error ?? "Could not start chunked upload.");
+    if (!initRes.ok) {
+      const detail = typeof init.detail === "string" && init.detail.trim() ? ` — ${init.detail.trim()}` : "";
+      throw new Error(`${init.error ?? "Could not start chunked upload."}${detail}`);
+    }
     const uploadUrl = init.uploadUrl as string;
 
     let offset = 0;
