@@ -297,30 +297,9 @@ export async function PATCH(request: NextRequest) {
   const id = text(body.id, 100);
   const action = String(body.action ?? "");
 
-  // Contributors may withdraw their own pending contributions via a
-  // dedicated RPC (atomic: the pending check and the status flip happen
-  // together; the RPC itself enforces ownership, so any signed-in
-  // contributor can use it — no membership required).
+  // Withdrawals are disabled: contributions cannot be withdrawn once submitted.
   if (action === "withdraw") {
-    const memberIdentity = await contributorIdentity();
-    if (!memberIdentity) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (!/^[0-9a-f-]{36}$/i.test(id)) {
-      return NextResponse.json({ error: "Invalid review request." }, { status: 400 });
-    }
-    const withdrawn = await fetchJson(
-      `${SUPABASE_AUTH_URL}/rest/v1/rpc/withdraw_snake_sorter_contribution`,
-      memberIdentity.token,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ p_contribution_id: id }),
-      },
-    );
-    if (!withdrawn.ok) return NextResponse.json({ error: "Could not withdraw contribution." }, { status: 502 });
-    if (withdrawn.data !== true) {
-      return NextResponse.json({ error: "Only your pending contributions can be withdrawn." }, { status: 409 });
-    }
-    return NextResponse.json({ ok: true, status: "withdrawn" });
+    return NextResponse.json({ error: "Withdrawals are not available." }, { status: 410 });
   }
 
   // Everything below is owner review.
