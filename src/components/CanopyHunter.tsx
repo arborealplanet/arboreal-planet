@@ -1167,6 +1167,21 @@ export function CanopyHunter({
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-4 border-b border-white/[.06] px-6 py-4 sm:px-8">
+            <Image
+              src="/arcade/canopy-hunter/pilot-bush.webp"
+              alt="Bush pilot leaning against his plane"
+              width={192}
+              height={192}
+              sizes="96px"
+              draggable={false}
+              className="h-20 w-20 shrink-0 rounded-2xl border border-white/10 object-cover object-[25%_30%]"
+            />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/60">Bush pilot</p>
+              <p className="mt-1 text-sm italic leading-6 text-white/70">"Evening. I'm your ride in — I fly hunters over these ridges. Four groves, one night. Don't keep the engine waiting."</p>
+            </div>
+          </div>
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
             <li>· {grovesPerExpedition} groves along the trail, {TREES_PER_GROVE} hiding spots each — search the tall trees and the undergrowth alike.</li>
             <li>· Each grove gives you {SEARCHES_PER_GROVE} searches — spend them wisely, then follow the trail to the next grove.</li>
