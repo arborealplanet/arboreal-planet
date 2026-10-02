@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "First triplet embryos documented in a wild sea turtle nest",
+    url: "https://www.discoverwildlife.com/animal-facts/marine-animals/sea-turtle-triplet-embryos",
+    publishedAt: "2026-10-02",
+    publisher: "Discover Wildlife",
+    summary: "Researchers found three distinct green sea turtle embryos sharing one yolk mass in an unhatched egg from Cuba—the first known triplets recorded in a wild sea turtle nest.",
+  },
+  {
     title: "Machine learning identifies the Burmese pythons managers should target",
     url: "https://phys.org/news/2026-10-python-index-large-females-key.html",
     publishedAt: "2026-10-01",
