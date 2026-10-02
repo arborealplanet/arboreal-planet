@@ -106,6 +106,23 @@ export async function GET(request: NextRequest) {
   if (!response.ok) return NextResponse.json({ error: "Contributions unavailable" }, { status: 502 });
   const rows = await response.json() as ContributionRow[];
 
+  // Transcode status for Drive-backed videos, so the review UI can show
+  // "converting…" vs "ready" without extra round trips.
+  const transcodeStatus: Record<string, string> = {};
+  const videoIds = rows.filter((r) => r.media_type === "video" && r.storage_path?.startsWith("gdrive:")).map((r) => r.id);
+  if (videoIds.length) {
+    const q = await fetch(
+      `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_transcode_queue?contribution_id=in.(${videoIds.map(encodeURIComponent).join(",")})&select=contribution_id,status&order=created_at.desc`,
+      { headers: h, cache: "no-store" },
+    ).catch(() => null);
+    if (q && q.ok) {
+      const qRows = await q.json() as Array<{ contribution_id: string; status: string }>;
+      for (const qr of qRows) {
+        if (!(qr.contribution_id in transcodeStatus)) transcodeStatus[qr.contribution_id] = qr.status;
+      }
+    }
+  }
+
   const names: Record<string, string> = {};
   if (identity.isOwner && rows.length) {
     const ids = [...new Set(rows.flatMap((row) => [row.contributor_user_id, row.reviewed_by]).filter(Boolean))] as string[];
@@ -123,6 +140,7 @@ export async function GET(request: NextRequest) {
     contributions: rows.map((row) => ({
       ...row,
       preview_url: `/api/snake-sorter/contributions/media/${row.id}`,
+      transcode_status: transcodeStatus[row.id] ?? null,
       contributor_name: names[row.contributor_user_id] ?? null,
       reviewer_name: row.reviewed_by ? names[row.reviewed_by] ?? null : null,
     })),
