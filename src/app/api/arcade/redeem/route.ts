@@ -14,8 +14,8 @@ type RedeemResult = {
  * POST /api/arcade/redeem — redeem an event code for the signed-in player.
  * All validation (active window, one claim per account, claim caps) and the
  * Keeper-save reward grant happen inside the redeem_event_code RPC; arcade
- * token rewards are returned to the client, which credits the local wallet
- * only after the server has recorded the claim.
+ * token rewards are returned to the client, which credits the account wallet
+ * (synced across devices) only after the server has recorded the claim.
  */
 export async function POST(request: NextRequest) {
   const identity = await getServerIdentity();
