@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "Escaped and surrendered sulcata tortoises strain Arizona rescues",
+    url: "https://news.azpm.org/p/azpmnews/2026/10/1/231407-non-native-african-tortoises-are-appearing-across-tucson-animal-advocates-fear-the-damage-they-could-cause/",
+    publishedAt: "2026-10-01",
+    publisher: "Arizona Public Media",
+    summary: "Sulcata tortoises are increasingly turning up in yards and wild areas around Tucson as rescues report heavy surrender numbers, highlighting the lifelong care these large tortoises require and concerns about impacts on native species.",
+  },
+  {
     title: "First triplet embryos documented in a wild sea turtle nest",
     url: "https://www.discoverwildlife.com/animal-facts/marine-animals/sea-turtle-triplet-embryos",
     publishedAt: "2026-10-02",
