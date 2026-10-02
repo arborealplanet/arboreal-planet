@@ -147,6 +147,7 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
             ▶ Play Canopy Hunter
           </Link>
           )}
+          )}
         
           )}
           <p className="text-[11px] text-white/60">
