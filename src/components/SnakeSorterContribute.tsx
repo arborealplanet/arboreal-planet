@@ -83,8 +83,28 @@ export function SnakeSorterContribute() {
     [contributions],
   );
 
+  // Some phones/cameras hand the browser a video with an empty MIME type.
+  // Infer it from the extension so those files aren't silently rejected.
+  // (new File([file]) re-wraps the same bytes — no copy, safe at any size.)
+  function withInferredType(file: File): File {
+    if (file.type) return file;
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const mime =
+      ext === "mp4" ? "video/mp4"
+      : ext === "mov" ? "video/quicktime"
+      : ext === "m4v" ? "video/x-m4v"
+      : ext === "webm" ? "video/webm"
+      : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
+      : ext === "png" ? "image/png"
+      : ext === "webp" ? "image/webp"
+      : "";
+    if (!mime) return file;
+    return new File([file], file.name, { type: mime, lastModified: file.lastModified });
+  }
+
   function addFiles(next: File[]) {
     const accepted = next
+      .map(withInferredType)
       .filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"))
       .slice(0, Math.max(0, 12 - files.length));
     if (accepted.length !== next.length) {
@@ -185,7 +205,10 @@ export function SnakeSorterContribute() {
         body: piece,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Chunk upload failed.");
+      if (!res.ok) {
+        const detail = typeof data.detail === "string" && data.detail.trim() ? ` — ${data.detail.trim()}` : "";
+        throw new Error(`${data.error ?? "Chunk upload failed."}${detail}`);
+      }
       offset = typeof data.offset === "number" ? data.offset : offset + piece.size;
       onProgress(Math.min(99, Math.round((offset / file.size) * 100)));
     }
@@ -210,7 +233,8 @@ export function SnakeSorterContribute() {
     const complete = await completeRes.json().catch(() => ({}));
     if (!completeRes.ok) {
       const rej = (complete.rejected ?? [])[0] as { name: string; reason: string } | undefined;
-      throw new Error(rej ? rej.reason : (complete.error ?? "Could not record contribution."));
+      const detail = typeof complete.detail === "string" && complete.detail.trim() ? ` — ${complete.detail.trim()}` : "";
+      throw new Error(rej ? rej.reason : `${complete.error ?? "Could not record contribution."}${detail}`);
     }
     const item = (complete.accepted ?? [])[0] as { id: string; name: string; media_type: string } | undefined;
     if (!item?.id) throw new Error("Upload completed but was not recorded.");
@@ -368,7 +392,7 @@ export function SnakeSorterContribute() {
             >
               <span className="text-2xl">◈</span>
               <span className="text-sm font-semibold text-white/60">Choose photos or videos</span>
-              <span className="text-[10px] text-white/24">Images up to 15 MB · videos up to 1 GB · big files upload in pieces</span>
+              <span className="text-[10px] text-white/24">Images up to 15 MB · videos up to 10 GB · big files upload in pieces</span>
             </button>
             <input
               ref={inputRef}
