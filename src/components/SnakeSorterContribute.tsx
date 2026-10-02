@@ -444,18 +444,6 @@ export function SnakeSorterContribute() {
     );
   }
 
-  async function withdraw(id: string) {
-    const response = await fetch("/api/snake-sorter/contributions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action: "withdraw" }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) setMessage(data.error ?? "Could not withdraw.");
-    else setMessage("Contribution withdrawn.");
-    await load();
-  }
-
   return (
     <div className="space-y-4">
       <section className="panel rounded-[28px] p-5 sm:p-6">
@@ -620,15 +608,6 @@ export function SnakeSorterContribute() {
                   )}
                   {contribution.status === "approved" && (
                     <div className="mt-2 text-[9px] text-emerald-100/45">Accepted into the reference review pipeline.</div>
-                  )}
-                  {contribution.status === "pending_review" && (
-                    <button
-                      type="button"
-                      onClick={() => void withdraw(contribution.id)}
-                      className={`${button} mt-2 border-white/[.07] bg-black/[.06] text-white/40`}
-                    >
-                      Withdraw
-                    </button>
                   )}
                 </div>
               </div>
