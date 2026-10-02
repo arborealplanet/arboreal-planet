@@ -11,10 +11,11 @@ export const runtime = "nodejs";
  * Supabase's Free plan hard-caps every storage upload at 50 MB, so videos
  * ride to Google Drive instead: the browser slices the file into 4 MB
  * pieces (Vercel's edge still rejects bodies over ~4.5 MB), and this route
- * relays each piece into a Drive resumable-upload session owned by a
- * service account. The service account writes into a "Snake Sorter /
- * originals" folder on the owner's Drive that only the owner can open —
- * contributors supply data, they can never browse the archive.
+ * relays each piece into a Drive resumable-upload session authenticated as
+ * the owner's Google account (user OAuth — service accounts have no storage
+ * quota on consumer Drives). Files land in a "Snake Sorter / originals"
+ * folder on the owner's Drive that only the owner can open — contributors
+ * supply data, they can never browse the archive.
  *
  * Phases (?phase=):
  *   init     JSON {name, mime_type, size} -> {sessionUri}
@@ -25,7 +26,7 @@ export const runtime = "nodejs";
  *            pending_review, and drops a transcode job ticket so the
  *            background worker can produce the reviewable converted copy.
  *
- * Env: SNAKE_SORTER_DRIVE_KEY_JSON (service account JSON),
+ * Env: SNAKE_SORTER_DRIVE_CLIENT_ID / _CLIENT_SECRET / _REFRESH_TOKEN,
  *      SNAKE_SORTER_DRIVE_ORIGINALS_FOLDER_ID.
  */
 
