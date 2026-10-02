@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { driveAccessToken } from "@/lib/snake-sorter-drive";
+
+export const runtime = "nodejs";
 
 function storagePath(path: string) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const identity = await getServerIdentity();
   if (!identity) return new NextResponse("Not found", { status: 404 });
   // Supply-only door: any signed-in contributor may preview their own
@@ -26,6 +29,48 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!row?.storage_path) return new NextResponse("Not found", { status: 404 });
   if (!isOwner && row.contributor_user_id !== identity.user.id) {
     return new NextResponse("Not found", { status: 404 });
+  }
+
+  // Drive-backed videos (storage_path = "gdrive:<fileId>"). ?converted=1
+  // serves the transcoded review copy when the worker has produced it,
+  // falling back to the original until then.
+  if (row.storage_path.startsWith("gdrive:")) {
+    let driveFileId = row.storage_path.slice("gdrive:".length);
+    if (new URL(request.url).searchParams.get("converted") === "1") {
+      const q = await fetch(
+        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_transcode_queue?contribution_id=eq.${encodeURIComponent(id)}&status=eq.done&select=converted_drive_file_id&order=completed_at.desc&limit=1`,
+        { headers: h, cache: "no-store" },
+      );
+      const qRows = q.ok ? await q.json() as Array<{ converted_drive_file_id: string | null }> : [];
+      if (qRows[0]?.converted_drive_file_id) driveFileId = qRows[0].converted_drive_file_id as string;
+    }
+    const token = await driveAccessToken();
+    if (!token) return new NextResponse("Storage unavailable", { status: 502 });
+    const range = request.headers.get("range");
+    const driveRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(driveFileId)}?alt=media`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(range ? { Range: range } : {}),
+        },
+        cache: "no-store",
+      },
+    ).catch(() => null);
+    if (!driveRes || !driveRes.ok) {
+      try { await driveRes?.body?.cancel(); } catch {}
+      return new NextResponse("Unavailable", { status: driveRes?.status ?? 502 });
+    }
+    const outHeaders: Record<string, string> = {
+      "Content-Type": row.mime_type || driveRes.headers.get("content-type") || "application/octet-stream",
+      "Cache-Control": "private, max-age=300",
+      "Accept-Ranges": "bytes",
+    };
+    const contentRange = driveRes.headers.get("content-range");
+    const contentLength = driveRes.headers.get("content-length");
+    if (contentRange) outHeaders["Content-Range"] = contentRange;
+    if (contentLength) outHeaders["Content-Length"] = contentLength;
+    return new NextResponse(driveRes.body, { status: driveRes.status, headers: outHeaders });
   }
 
   const object = await fetch(
