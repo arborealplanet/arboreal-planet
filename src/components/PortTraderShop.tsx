@@ -189,6 +189,43 @@ function BountyBoard({
   );
 }
 
+const BOATMAN_ART = "/arcade/canopy-hunter/port-boatman.webp";
+
+/**
+ * The boatman takes over the shopkeeper window when his pill is tapped —
+ * his line and the Cast off button laid over the river scene.
+ */
+function BoatmanScene({ line, onCastOff }: { line: string; onCastOff: () => void }) {
+  return (
+    <div className="absolute inset-0" aria-label="The boatman">
+      <Image
+        src={BOATMAN_ART}
+        alt=""
+        fill
+        sizes="(max-width: 640px) 100vw, 48rem"
+        draggable={false}
+        className="object-cover"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,10,.25)_0%,transparent_40%,rgba(2,8,10,.85)_100%)]" />
+      <p className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.18em] text-white/85 backdrop-blur-sm">
+        ⛵ The boatman
+      </p>
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3 sm:p-4">
+        <p className="min-w-0 flex-1 text-[11px] italic leading-5 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,.8)] sm:text-sm sm:leading-6">
+          {line}
+        </p>
+        <button
+          type="button"
+          onClick={onCastOff}
+          className="flex-none rounded-2xl bg-emerald-300 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-[#06100c] shadow-[0_8px_24px_rgba(0,0,0,.5)] transition hover:bg-emerald-200 active:scale-95 sm:px-6 sm:py-3 sm:text-sm"
+        >
+          Cast off →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const TRADER_TIPS = [
   "Evening, hunter. I stock what the river lets through — and the shelf's slimming fast.",
   "Lantern oil's the cheapest edge you'll buy all night. Ask anyone.",
@@ -265,9 +302,11 @@ export function PortTraderShop({
       </button>
 
       {/* Shopkeeper window — the bounty board takes it over when that pill is tapped */}
-      <div className={`relative w-full flex-none overflow-hidden bg-black ${view === "bounty" ? "aspect-[16/9]" : "h-56 sm:h-72"}`}>
+      <div className={`relative w-full flex-none overflow-hidden bg-black ${view === "bounty" || view === "boatman" ? "aspect-[16/9]" : "h-56 sm:h-72"}`}>
         {view === "bounty" ? (
           <BountyBoard bounty={bounty} bountyTaken={bountyTaken} onTakeBounty={onTakeBounty} />
+        ) : view === "boatman" ? (
+          <BoatmanScene line={boatmanLine} onCastOff={onCastOff} />
         ) : TRADER_CLIPS.length > 0 ? (
           <TraderAnimation />
         ) : (
@@ -385,27 +424,6 @@ export function PortTraderShop({
         </div>
       ) : null}
 
-      {/* Boatman */}
-      {view === "boatman" ? (
-        <div className="px-4 pb-5 sm:px-5">
-          <div className="flex gap-4 rounded-[20px] border border-white/[.07] bg-white/[.02] p-4">
-            <div className="relative h-28 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/10">
-              <Image src={BOATMAN_CARD} alt="The river boatman" fill sizes="96px" draggable={false} className="object-cover object-top" />
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-base font-semibold text-white">The boatman</h4>
-              <p className="mt-1 text-sm italic leading-6 text-white/55">{boatmanLine}</p>
-              <button
-                type="button"
-                onClick={onCastOff}
-                className="mt-3 w-full rounded-2xl bg-emerald-300 px-6 py-3 text-sm font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
-              >
-                Cast off →
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
