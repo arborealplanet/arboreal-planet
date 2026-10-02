@@ -55,7 +55,7 @@ import {
 import { playHankScaleLine } from "@/lib/hank-scale-voice";
 import { addTokens, getTokenBalance, recordScore, reportArcadeEvent, spendTokens } from "@/lib/arcade";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
-import { PortTraderShop } from "@/components/PortTraderShop";
+import { PortTraderShop, type PortShopView } from "@/components/PortTraderShop";
 import type { PortTraderItem as PortItem, PortTraderItemId as PortItemId } from "@/components/PortTraderShop";
 
 type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
@@ -64,7 +64,7 @@ type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
 /* River port (Phase 1 playtest — gated behind portStopEnabled)        */
 /* ------------------------------------------------------------------ */
 
-type PortPanel = "trader" | "board" | "boatman" | null;
+type PortPanel = "trader" | null;
 
 interface PortBounty {
   locality: CanopyLocality;
@@ -72,7 +72,6 @@ interface PortBounty {
 }
 
 const PORT_NIGHT_ART = "/arcade/canopy-hunter/port-river-night.webp";
-const PORT_BOATMAN_CARD = "/arcade/canopy-hunter/port-boatman-card.webp";
 const PORT_HUNTER_ART = "/arcade/canopy-hunter/sprite-hunter-port-back.webp";
 
 /** Trader stock — three of the four are on the table each visit; buy at most two. */
@@ -463,6 +462,7 @@ export function CanopyHunter({
   /* River port stop (gated playtest) — rolled fresh each expedition. */
   const [portVisited, setPortVisited] = useState(false);
   const [portPanel, setPortPanel] = useState<PortPanel>(null);
+  const [portShopView, setPortShopView] = useState<PortShopView>("supplies");
   const [portStock, setPortStock] = useState<PortItem[]>([]);
   const [portSold, setPortSold] = useState<PortItemId[]>([]);
   const [portBought, setPortBought] = useState(0);
@@ -1253,21 +1253,21 @@ export function CanopyHunter({
             </div>
             <button
               type="button"
-              onClick={() => setPortPanel("trader")}
+              onClick={() => { setPortShopView("supplies"); setPortPanel("trader"); }}
               className="absolute bottom-[34%] left-[4%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
             >
               <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">🧺 Trader&apos;s stall</span>
             </button>
             <button
               type="button"
-              onClick={() => setPortPanel("board")}
+              onClick={() => { setPortShopView("bounty"); setPortPanel("trader"); }}
               className="absolute bottom-[52%] left-[24%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
             >
               <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">📌 Notice board</span>
             </button>
             <button
               type="button"
-              onClick={() => setPortPanel("boatman")}
+              onClick={() => { setPortShopView("boatman"); setPortPanel("trader"); }}
               className="absolute bottom-[30%] right-[4%] z-20 max-w-[7rem] rounded-full border border-amber-200/30 bg-black/65 px-4 py-2.5 text-center backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-black/80 active:scale-95 sm:max-w-[11rem]"
             >
               <span className="text-[11px] font-black uppercase tracking-[.14em] text-amber-100">⛵ The boatman</span>
@@ -1284,60 +1284,25 @@ export function CanopyHunter({
 
           {portPanel === "trader" && (
             <PortTraderShop
+              view={portShopView}
+              onViewChange={setPortShopView}
               items={portStock}
               soldIds={portSold}
               boughtCount={portBought}
               tokenBal={tokenBal}
               sheds={sheds}
               intelTaken={portIntel}
+              bounty={portBounty}
+              bountyTaken={portBountyTaken}
+              boatmanLine={BOATMAN_LINES[region?.id ?? "default"] ?? BOATMAN_LINES.default}
               onBuy={buyPortItem}
               onTradeShed={tradeShed}
+              onTakeBounty={() => {
+                setPortBountyTaken(true);
+                log(`River port — took the notice-board bounty: ${portBounty?.sex} ${portBounty?.locality} tonight.`);
+              }}
+              onCastOff={() => castOff()}
             />
-          )}
-
-          {portPanel === "board" && portBounty && (
-            <div className="mt-4 rounded-[26px] border border-dashed border-amber-200/25 bg-amber-100/[.04] p-6 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">📌 Pinned to the notice board</p>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/70">
-                Wanted tonight: a <span className="font-bold text-white">{portBounty.sex} {portBounty.locality}</span> python.
-                Bring one in before the expedition ends — <span className="font-bold text-amber-100">5 tokens</span> on delivery.
-              </p>
-              {portBountyTaken ? (
-                <p className="mt-3 text-xs font-bold text-emerald-200/80">✓ You&apos;ve taken this bounty — it pays at the end of the night.</p>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPortBountyTaken(true);
-                    log(`River port — took the notice-board bounty: ${portBounty.sex} ${portBounty.locality} tonight.`);
-                  }}
-                  className="mt-4 rounded-2xl border border-amber-200/30 bg-amber-200/[.08] px-6 py-3 text-sm font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-[.99]"
-                >
-                  Take the bounty
-                </button>
-              )}
-            </div>
-          )}
-
-          {portPanel === "boatman" && (
-            <div className="mt-4 flex gap-4 rounded-[26px] border border-white/[.07] bg-white/[.02] p-5">
-              <div className="relative h-32 w-28 shrink-0 overflow-hidden rounded-2xl border border-white/10">
-                <Image src={PORT_BOATMAN_CARD} alt="The river boatman" fill sizes="112px" draggable={false} className="object-cover object-top" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-lg font-semibold text-white">The boatman</h3>
-                <p className="mt-1 text-sm italic leading-6 text-white/55">
-                  {BOATMAN_LINES[region?.id ?? "default"] ?? BOATMAN_LINES.default}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => castOff()}
-                  className="mt-4 w-full rounded-2xl bg-emerald-300 px-6 py-3.5 text-sm font-bold text-[#06100c] transition hover:bg-emerald-200 active:scale-[.99]"
-                >
-                  Cast off →
-                </button>
-              </div>
-            </div>
           )}
 
           <button
