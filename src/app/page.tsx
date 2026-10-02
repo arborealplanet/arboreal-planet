@@ -29,6 +29,16 @@ const sellers = [
   },
 ] as const;
 
+const recommendedProducts = [
+  {
+    name: "Pipped",
+    logo: "/recommended/pipped-app-banner.jpg",
+    logoAlt: "Pipped — Husbandry Software banner: green tree python neonates pipping from their eggs",
+    blurb: "Husbandry software for keepers and breeders.",
+    href: "https://pipped.app/app",
+  },
+] as const;
+
 export default async function Home() {
   const stories = await getReptileNews();
   return <main>
@@ -106,6 +116,24 @@ export default async function Home() {
               <h3 className="text-xl font-semibold text-white">{seller.name}</h3>
               <p className="mt-2 text-sm leading-6 text-white/55">{seller.blurb}</p>
               <span className="mt-auto pt-5 text-xs font-bold text-emerald-200">Visit their MorphMarket store <span className="transition group-hover:translate-x-1 inline-block">↗</span></span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20" aria-labelledby="products-title">
+      <p className="section-kicker">Recommended products</p>
+      <h2 id="products-title" className="mt-3 text-3xl font-semibold tracking-[-.04em] text-white sm:text-4xl">Tools we like.</h2>
+      <p className="mt-3 max-w-2xl text-sm leading-7 text-white/55">Software and gear from people we trust. Click through to their own sites — we just point you there.</p>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {recommendedProducts.map((product) => (
+          <a key={product.name} href={product.href} target="_blank" rel="noopener noreferrer" className="panel interactive-card group flex flex-col overflow-hidden rounded-3xl">
+            <Image src={product.logo} alt={product.logoAlt} width={2048} height={768} className="aspect-[8/3] w-full object-cover" />
+            <div className="flex flex-1 flex-col p-6">
+              <h3 className="text-xl font-semibold text-white">{product.name}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/55">{product.blurb}</p>
+              <span className="mt-auto pt-5 text-xs font-bold text-emerald-200">Visit Pipped <span className="transition group-hover:translate-x-1 inline-block">↗</span></span>
             </div>
           </a>
         ))}
