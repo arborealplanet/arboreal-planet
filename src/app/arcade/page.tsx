@@ -5,7 +5,6 @@ import { ArcadeToasts } from "@/components/arcade/ArcadeToasts";
 import { DailyTrivia } from "@/components/arcade/DailyTrivia";
 import { DailyBlackjack } from "@/components/arcade/DailyBlackjack";
 import { RedeemCodeCard } from "@/components/arcade/RedeemCodeCard";
-import { CanopyHunterSlideshow } from "@/components/arcade/CanopyHunterSlideshow";
 
 
 const keeperSteps = [
@@ -78,7 +77,6 @@ export default function ArcadePage() {
             description="Build a Green Tree Python program around breeding, locality projects, housing, offspring, market decisions and records — start small and grow your keeper program over time."
             steps={keeperSteps}
           />
-                    <CanopyHunterSlideshow />
           <GameCard
             href="/arcade/snake-sorting"
             imageSrc="/arcade/snake-sorting/snake-sorter-logo.webp"
