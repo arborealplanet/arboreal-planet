@@ -355,10 +355,21 @@ export async function PATCH(request: NextRequest) {
   let createdAnimal = false;
   let createdMediaId: string | null = null;
   let createdMediaPath: string | null = null;
+  const createdVideoFrames: Array<{ path: string; mediaId: string }> = [];
 
   // Undo anything the approve created, so a failed approval never leaves a
   // zero-image animal or orphaned media row behind for a retry to trip over.
   async function rollbackApprove() {
+    for (const f of createdVideoFrames) {
+      await fetch(`${storageUrl}/object/snake-sorter-reference/${storagePath(f.path)}`, {
+        method: "DELETE", headers: h, cache: "no-store",
+      }).catch(() => undefined);
+      await fetch(
+        `${SUPABASE_AUTH_URL}/rest/v1/snake_sorter_reference_media?id=eq.${encodeURIComponent(f.mediaId)}`,
+        { method: "DELETE", headers: h, cache: "no-store" },
+      ).catch(() => undefined);
+    }
+    createdVideoFrames.length = 0;
     if (createdMediaPath) {
       await fetch(`${storageUrl}/object/snake-sorter-reference/${storagePath(createdMediaPath)}`, {
         method: "DELETE", headers: h, cache: "no-store",
@@ -570,7 +581,12 @@ export async function PATCH(request: NextRequest) {
         }),
         cache: "no-store",
       });
-      if (mediaInsert.ok) promoted++;
+      if (mediaInsert.ok) {
+        const inserted = await mediaInsert.json().catch(() => []) as Array<{ id?: string }>;
+        const mid = inserted[0]?.id;
+        if (mid) createdVideoFrames.push({ path: destPath, mediaId: mid });
+        promoted++;
+      }
       else {
         await fetch(`${storageUrl}/object/snake-sorter-reference/${storagePath(destPath)}`, {
           method: "DELETE", headers: h, cache: "no-store",
@@ -598,8 +614,9 @@ export async function PATCH(request: NextRequest) {
     cache: "no-store",
   });
   if (!approved.ok) {
+    const detail = await approved.text().catch(() => "");
     await rollbackApprove();
-    return NextResponse.json({ error: "Approval could not be recorded. Nothing was promoted." }, { status: 502 });
+    return NextResponse.json({ error: "Approval could not be recorded. Nothing was promoted.", detail: detail.slice(0, 300) }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true, status: "approved", reference_animal_id: animalId });
