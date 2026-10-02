@@ -4,7 +4,10 @@
  *
  * Tokens are the arcade's meta-currency. Games award them for play;
  * Arboreal Keeper spends them (expedition permits, extra trips, cash
- * exchange). Everything persists in localStorage — no account needed.
+ * exchange). The wallet follows the keeper's account: the browser keeps a
+ * fast localStorage cache, but signed-in players sync every earn and spend
+ * to the server, so the balance is identical on every device. Signed-out
+ * players keep a local-only wallet.
  */
 
 "use client";
@@ -109,11 +112,13 @@ export function getTokenTx(): TokenTx[] {
 /** Award tokens. Returns the new balance. */
 export function addTokens(n: number, reason: string, quiet = false): number {
   if (typeof window === "undefined" || n <= 0) return getTokenBalance();
+  void ensureWalletSync();
   const next = getTokenBalance() + Math.floor(n);
   try {
     window.localStorage.setItem(BALANCE_KEY, `${next}`);
   } catch {}
   pushTx(Math.floor(n), reason);
+  pushWalletDelta(Math.floor(n));
   if (!quiet) emitToast("tokens", `+${Math.floor(n)} 🪙`, reason);
   else {
     try {
@@ -128,16 +133,164 @@ export function addTokens(n: number, reason: string, quiet = false): number {
 /** Spend tokens. Returns false when the balance is too low. */
 export function spendTokens(n: number, reason: string): boolean {
   if (typeof window === "undefined" || n <= 0) return false;
+  void ensureWalletSync();
   const bal = getTokenBalance();
   if (bal < n) return false;
   try {
     window.localStorage.setItem(BALANCE_KEY, `${bal - n}`);
   } catch {}
   pushTx(-n, reason);
+  pushWalletDelta(-Math.floor(n));
   try {
     window.dispatchEvent(new Event("arcade-balance"));
   } catch {}
   return true;
+}
+
+/* ------------------------------------------------------------------ */
+/* Wallet cloud sync — tokens follow the account, not the device       */
+/* ------------------------------------------------------------------ */
+
+// Sign-in state for the wallet: null = unknown yet, true = signed in
+// (server balance is authoritative), false = signed out (local only).
+let walletCloudMode: boolean | null = null;
+let walletSyncPromise: Promise<void> | null = null;
+let walletLastAttemptAt = 0;
+// Deltas applied locally while the sign-in state was unknown or the server
+// was unreachable; flushed on the next successful sync.
+let walletPendingDelta = 0;
+
+function setSyncedBalance(n: number) {
+  try {
+    window.localStorage.setItem(BALANCE_KEY, `${Math.max(0, Math.floor(n))}`);
+  } catch {}
+  try {
+    window.dispatchEvent(new Event("arcade-balance"));
+  } catch {}
+}
+
+async function postWallet(body: { delta?: number; seed?: number }): Promise<number | null> {
+  try {
+    const res = await fetch("/api/arcade/wallet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => null)) as { balance?: unknown } | null;
+    return typeof data?.balance === "number" ? data.balance : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Push one earn/spend to the account wallet. Fire-and-forget: the local
+ * cache is already updated, so a failed push just queues the delta for the
+ * next sync instead of blocking play.
+ */
+function pushWalletDelta(n: number) {
+  if (n === 0 || typeof window === "undefined") return;
+  if (walletCloudMode === false) return; // signed out — local only
+  if (walletCloudMode === null) {
+    walletPendingDelta += n;
+    void ensureWalletSync();
+    return;
+  }
+  void postWallet({ delta: n }).then((serverBalance) => {
+    if (serverBalance === null) walletPendingDelta += n;
+  });
+}
+
+/**
+ * First sync: learn whether the player is signed in; when they are, seed
+ * the server wallet greatest-wins so a new device never wipes earned
+ * tokens, then adopt the authoritative balance.
+ */
+export function ensureWalletSync(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (walletSyncPromise) return walletSyncPromise;
+  walletLastAttemptAt = Date.now();
+  walletSyncPromise = (async () => {
+    try {
+      const res = await fetch("/api/arcade/wallet", { cache: "no-store" });
+      if (res.status === 401) {
+        walletCloudMode = false;
+        walletPendingDelta = 0;
+        return;
+      }
+      if (!res.ok) throw new Error(`wallet GET ${res.status}`);
+      const data = (await res.json().catch(() => null)) as { authenticated?: unknown; balance?: unknown } | null;
+      if (!data || data.authenticated !== true || typeof data.balance !== "number") {
+        throw new Error("wallet GET malformed");
+      }
+      walletCloudMode = true;
+      const local = readInt(BALANCE_KEY);
+      const pendingAtSeed = walletPendingDelta;
+      const seeded = await postWallet({ seed: local });
+      if (seeded === null) throw new Error("wallet seed failed");
+      // Mutations that landed while seeding are already in localStorage;
+      // fold the ones that arrived after the seed read into the server too.
+      const lateDelta = walletPendingDelta - pendingAtSeed;
+      walletPendingDelta = 0;
+      let authoritative = seeded;
+      if (lateDelta !== 0) {
+        const flushed = await postWallet({ delta: lateDelta });
+        authoritative = flushed !== null ? flushed : seeded + lateDelta;
+      }
+      setSyncedBalance(authoritative);
+    } catch {
+      // Stay local for now; the next focus/resync retries the handshake.
+      walletCloudMode = null;
+      walletSyncPromise = null;
+    }
+  })();
+  return walletSyncPromise;
+}
+
+/**
+ * Reconcile with the server: flush any queued deltas, then adopt the
+ * authoritative balance. Called when the tab regains focus so a balance
+ * changed on another device shows up here.
+ */
+export function resyncArcadeWallet(): void {
+  if (typeof window === "undefined") return;
+  if (walletCloudMode !== true) {
+    // Signed out, unknown, or a previous handshake failed — retry the
+    // handshake at most once every five minutes so signed-out players
+    // don't pay for a request on every focus.
+    if (Date.now() - walletLastAttemptAt > 5 * 60 * 1000) {
+      walletSyncPromise = null;
+      void ensureWalletSync();
+    }
+    return;
+  }
+  void (async () => {
+    if (walletPendingDelta !== 0) {
+      const d = walletPendingDelta;
+      walletPendingDelta = 0;
+      const flushed = await postWallet({ delta: d });
+      if (flushed !== null) {
+        setSyncedBalance(flushed);
+        return;
+      }
+      walletPendingDelta += d; // retry on the next resync
+      return;
+    }
+    try {
+      const res = await fetch("/api/arcade/wallet", { cache: "no-store" });
+      if (res.status === 401) {
+        walletCloudMode = false;
+        return;
+      }
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => null)) as { authenticated?: unknown; balance?: unknown } | null;
+      if (data && data.authenticated === true && typeof data.balance === "number") {
+        setSyncedBalance(data.balance);
+      }
+    } catch {}
+  })();
 }
 
 export function getDisplayName(): string {
@@ -485,4 +638,4 @@ export function claimQuest(id: string): number {
   emitToast("quest", `📜 ${quest.title} complete`, `+${award} 🪙${streakBonus > 0 ? ` — ${streakBonus}-day streak bonus` : ""}`);
   unlock("quester");
   return award;
-}
+    }
