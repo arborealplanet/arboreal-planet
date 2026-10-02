@@ -177,7 +177,7 @@ export function SnakeSorterContribute() {
 
   // Videos ride to Google Drive (Supabase Free caps storage uploads at
   // 50 MB). Same chunked relay shape as uploadChunked, but the server
-  // speaks Drive's resumable-upload protocol with the service account.
+  // speaks Drive's resumable-upload protocol with the owner's OAuth.
   async function uploadDrive(
     file: File,
     meta: { taxon_guess?: string; life_stage_guess?: string; view_type_guess?: string; provenance_hint?: string; notes?: string },
