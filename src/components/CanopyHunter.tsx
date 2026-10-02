@@ -147,7 +147,7 @@ function pathArtForTrailCount(count: number): string {
   if (count >= 3) return PATH_FORK_3_ART;
   return PATH_ART;
 }
-const EXPLORER_ART = "/arcade/canopy-hunter/explorer-back-keyed.webp";
+const EXPLORER_ART = "/arcade/canopy-hunter/explorer-back-standing.webp";
 const FOREGROUND_ART = "/arcade/canopy-hunter/foreground-branches.webp";
 /** Unused coiled-python illustration, repurposed as the results-screen quarry art. */
 const PYTHON_ART = "/arcade/canopy-hunter/python.webp";
