@@ -4,6 +4,7 @@ import { ArborealPlanetMark } from "@/components/BrandVisuals";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PwaInstallButton } from "@/components/PwaInstallButton";
 import { AppShellRouteFrame } from "@/components/AppShellRouteFrame";
+import { MobileNavGuard } from "@/components/MobileNavGuard";
 import { ArborealRadioPlayer } from "@/components/ArborealRadioPlayer";
 import { fetchOwnProfile,getServerIdentity } from "@/lib/supabase-auth";
 
@@ -111,6 +112,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   );
 
   const mobileNav = (
+    <MobileNavGuard>
     <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(66px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/[.07] bg-[#06100c]/96 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 text-center text-[9px] font-semibold uppercase text-white/48 shadow-[0_-12px_30px_rgba(0,0,0,.16)] backdrop-blur-xl xl:hidden">
       <Link href="/community" className="mobile-nav-item"><span className="mobile-nav-icon">◎</span><span className="mobile-nav-label">Community</span></Link>
       <Link href="/marketplace" className="mobile-nav-item"><span className="mobile-nav-icon">▣</span><span className="mobile-nav-label">Market</span></Link>
@@ -122,6 +124,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <Link href="/login" className="mobile-nav-item"><span className="mobile-nav-icon">◇</span><span className="mobile-nav-label">Sign in</span></Link>
       )}
     </nav>
+    </MobileNavGuard>
   );
 
   const footer = (
