@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArcadeWalletSync } from "@/components/arcade/ArcadeWalletSync";
 
 export const metadata: Metadata = {
   title: "Reptile Games & Arboreal Keeper Arcade",
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function SectionLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <ArcadeWalletSync />
+      {children}
+    </>
+  );
 }
