@@ -27,6 +27,7 @@ import { ChondroCollectionManager } from "@/components/ChondroCollectionManager"
 import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
 import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
 import { requestExpeditionOpen, EXPEDITION_ENTRY_FEE, EXPEDITION_FREE_COOLDOWN_MS, EXPEDITION_PYTHONS } from "@/lib/canopy-hunter";
+import { CanopyHunterSlideshow } from "@/components/arcade/CanopyHunterSlideshow";
 import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
 type WorkspaceView = "home" | "breeding" | "colony" | "clutches" | "market" | "career" | "projects" | "conservation" | "community" | "guide";
@@ -361,6 +362,12 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
                 {housingBlocked ? "Fix housing" : "Head out"}
               </span>
             </button>
+          ) : null}
+
+          {expedition.started ? (
+            <div className="mt-4">
+              <CanopyHunterSlideshow onPlay={openExpedition} />
+            </div>
           ) : null}
 
           <section className="mt-4 overflow-hidden rounded-[30px] border border-emerald-300/12 bg-[#030806] shadow-[0_24px_70px_rgba(0,0,0,.28)]">
