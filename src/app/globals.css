@@ -294,3 +294,9 @@ button:disabled { cursor: not-allowed; }
   0%, 100% { opacity: .55; }
   50% { opacity: .95; }
 }
+
+/* Canopy Hunter — port arrival: slow push-in as the boat pulls up. */
+@keyframes port-arrive {
+  from { transform: scale(1.12); }
+  to { transform: scale(1); }
+}
