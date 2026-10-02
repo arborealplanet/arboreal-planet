@@ -129,6 +129,66 @@ function TraderPlaceholder() {
   );
 }
 
+const BOUNTY_BOARD_ART = "/arcade/canopy-hunter/port-bounty-board.webp";
+
+/**
+ * The bounty board takes over the shopkeeper window when the Bounty Board
+ * pill is tapped — the night's bounty pinned as a notice on the blank
+ * parchment, like a real wanted poster.
+ */
+function BountyBoard({
+  bounty,
+  bountyTaken,
+  onTakeBounty,
+}: {
+  bounty: PortTraderBounty | null;
+  bountyTaken: boolean;
+  onTakeBounty: () => void;
+}) {
+  return (
+    <div className="absolute inset-0" aria-label="Bounty board">
+      <Image
+        src={BOUNTY_BOARD_ART}
+        alt=""
+        fill
+        sizes="(max-width: 640px) 100vw, 48rem"
+        draggable={false}
+        className="object-cover"
+      />
+      {/* Pinned notice on the blank parchment */}
+      <div className="absolute left-[30%] top-[24%] flex h-[58%] w-[33%] -rotate-1 flex-col items-center justify-center rounded-[4px] bg-[linear-gradient(160deg,#f0e0b4_0%,#e3c990_60%,#d3b475_100%)] px-1.5 py-2 text-center shadow-[0_12px_28px_rgba(0,0,0,.55)] sm:px-3">
+        <span aria-hidden="true" className="absolute -top-2 text-sm drop-shadow-[0_2px_3px_rgba(0,0,0,.5)]">📌</span>
+        {bounty ? (
+          <>
+            <p className="text-[8px] font-black uppercase tracking-[.22em] text-[#6b4a1d] sm:text-[10px]">Wanted</p>
+            <p className="mt-1 text-[10px] font-black leading-tight text-[#2e1f0a] sm:text-sm">
+              {bounty.sex} {bounty.locality} python
+            </p>
+            <p className="mt-1 text-[8px] font-bold leading-tight text-[#6b4a1d] sm:text-[10px]">
+              alive · <span className="text-[#2e1f0a]">5 tokens</span> on delivery
+            </p>
+            {bountyTaken ? (
+              <p className="mt-1.5 text-[8px] font-black uppercase tracking-[.14em] text-emerald-900 sm:text-[10px]">✓ Taken</p>
+            ) : (
+              <button
+                type="button"
+                onClick={onTakeBounty}
+                className="mt-1.5 rounded-full border border-[#6b4a1d]/40 bg-[#2e1f0a] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.1em] text-amber-100 transition hover:bg-[#4a3315] active:scale-95 sm:px-3.5 sm:py-1.5 sm:text-[10px]"
+              >
+                Take it
+              </button>
+            )}
+          </>
+        ) : (
+          <p className="text-[8px] italic leading-snug text-[#6b4a1d] sm:text-[10px]">
+            No bounty posted tonight — check back next expedition.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TRADER_TIPS = [
   "Evening, hunter. I stock what the river lets through — and the shelf's slimming fast.",
   "Lantern oil's the cheapest edge you'll buy all night. Ask anyone.",
@@ -204,9 +264,15 @@ export function PortTraderShop({
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
 
-      {/* Shopkeeper window — animation loops when they exist, still portrait until then */}
-      <div className="relative h-56 w-full flex-none overflow-hidden bg-black sm:h-72">
-        {TRADER_CLIPS.length > 0 ? <TraderAnimation /> : <TraderPlaceholder />}
+      {/* Shopkeeper window — the bounty board takes it over when that pill is tapped */}
+      <div className={`relative w-full flex-none overflow-hidden bg-black ${view === "bounty" ? "aspect-[16/9]" : "h-56 sm:h-72"}`}>
+        {view === "bounty" ? (
+          <BountyBoard bounty={bounty} bountyTaken={bountyTaken} onTakeBounty={onTakeBounty} />
+        ) : TRADER_CLIPS.length > 0 ? (
+          <TraderAnimation />
+        ) : (
+          <TraderPlaceholder />
+        )}
         <span className="absolute right-2 top-2 z-10 rounded-full border border-amber-200/30 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-amber-100 backdrop-blur-sm">
           🛒 {buysLeft} {buysLeft === 1 ? "buy" : "buys"} left tonight
         </span>
@@ -315,34 +381,6 @@ export function PortTraderShop({
             <p className="text-xs italic leading-5 text-white/35">
               Bring me a fresh shed skin next time, hunter — I pay good metal for those.
             </p>
-          )}
-        </div>
-      ) : null}
-
-      {/* Bounty board */}
-      {view === "bounty" ? (
-        <div className="px-4 pb-5 sm:px-5">
-          {bounty ? (
-            <div className="rounded-[20px] border border-dashed border-amber-200/25 bg-amber-100/[.04] p-5 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[.2em] text-amber-200/60">📌 Pinned to the notice board</p>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/70">
-                Wanted tonight: a <span className="font-bold text-white">{bounty.sex} {bounty.locality}</span> python.
-                Bring one in before the expedition ends — <span className="font-bold text-amber-100">5 tokens</span> on delivery.
-              </p>
-              {bountyTaken ? (
-                <p className="mt-3 text-xs font-bold text-emerald-200/80">✓ You&apos;ve taken this bounty — it pays at the end of the night.</p>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onTakeBounty}
-                  className="mt-4 rounded-2xl border border-amber-200/30 bg-amber-200/[.08] px-6 py-3 text-sm font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-[.99]"
-                >
-                  Take the bounty
-                </button>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs italic leading-5 text-white/35">No bounty posted tonight — check back next expedition.</p>
           )}
         </div>
       ) : null}

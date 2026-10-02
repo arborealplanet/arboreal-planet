@@ -85,6 +85,7 @@ const PORT_ITEMS: PortItem[] = [
   {
     id: "scent-lure",
     name: "Scent Lure",
+    iconSrc: "/arcade/canopy-hunter/icon-scent-lure.webp",
     cost: 10,
     desc: "A lure charge for the next grove",
     emoji: "🍃",
@@ -92,6 +93,7 @@ const PORT_ITEMS: PortItem[] = [
   {
     id: "sure-grip",
     name: "Sure Grip",
+    iconSrc: "/arcade/canopy-hunter/icon-sure-grip.webp",
     cost: 10,
     desc: "Next grab cannot miss",
     emoji: "✊",
@@ -99,6 +101,7 @@ const PORT_ITEMS: PortItem[] = [
   {
     id: "local-intel",
     name: "Local Intel",
+    iconSrc: "/arcade/canopy-hunter/icon-local-intel.webp",
     cost: 6,
     desc: "The next fork tells the truth — and whispers the python's height",
     emoji: "🧭",
