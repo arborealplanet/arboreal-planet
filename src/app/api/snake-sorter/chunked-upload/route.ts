@@ -32,7 +32,7 @@ const CHUNK_SIZE = 4 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"]);
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 1024 * 1024 * 1024; // 1 GB — 30 s of 8K with headroom
+const MAX_VIDEO_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB — minutes of 8K; TUS carries up to ~50 GB
 
 const TAXA = new Set(["Morelia azurea azurea", "Morelia azurea pulcher", "Morelia azurea utaraensis", "Morelia viridis", "Unknown / review"]);
 const STAGES = new Set(["hatchling", "neonate", "juvenile", "subadult", "adult", "unknown"]);
@@ -80,7 +80,7 @@ function checkTypeAndSize(mime: string, size: number): string | null {
   if (size > limit) {
     return isImage
       ? "Image must be 15 MB or smaller."
-      : "Video must be 1 GB or smaller.";
+      : "Video must be 10 GB or smaller.";
   }
   return null;
 }
