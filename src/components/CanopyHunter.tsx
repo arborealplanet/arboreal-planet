@@ -55,6 +55,8 @@ import {
 import { playHankScaleLine } from "@/lib/hank-scale-voice";
 import { addTokens, getTokenBalance, recordScore, reportArcadeEvent, spendTokens } from "@/lib/arcade";
 import { ChondroSnakeIcon } from "@/components/ChondroSnakeIcon";
+import { PortTraderShop } from "@/components/PortTraderShop";
+import type { PortTraderItem as PortItem, PortTraderItemId as PortItemId } from "@/components/PortTraderShop";
 
 type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
 
@@ -63,16 +65,6 @@ type Phase = "briefing" | "trail" | "grove" | "catch" | "results" | "port";
 /* ------------------------------------------------------------------ */
 
 type PortPanel = "trader" | "board" | "boatman" | null;
-type PortItemId = "lantern-oil" | "scent-lure" | "sure-grip" | "local-intel";
-
-interface PortItem {
-  id: PortItemId;
-  name: string;
-  cost: number;
-  desc: string;
-  emoji: string;
-  iconSrc?: string;
-}
 
 interface PortBounty {
   locality: CanopyLocality;
@@ -80,9 +72,7 @@ interface PortBounty {
 }
 
 const PORT_NIGHT_ART = "/arcade/canopy-hunter/port-river-night.webp";
-const PORT_TRADER_CARD = "/arcade/canopy-hunter/port-trader.webp";
 const PORT_BOATMAN_CARD = "/arcade/canopy-hunter/port-boatman-card.webp";
-const PORT_STALL_ART = "/arcade/canopy-hunter/port-prop-trader-stall.webp";
 const PORT_HUNTER_ART = "/arcade/canopy-hunter/sprite-hunter-port-back.webp";
 
 /** Trader stock — three of the four are on the table each visit; buy at most two. */
@@ -1293,81 +1283,16 @@ export function CanopyHunter({
           </p>
 
           {portPanel === "trader" && (
-            <div className="relative mt-4 overflow-hidden rounded-[26px] border border-white/[.07] bg-white/[.02]">
-              <div className="relative h-24 sm:h-32">
-                <Image src={PORT_STALL_ART} alt="" aria-hidden="true" fill sizes="(max-width: 640px) 100vw, 48rem" draggable={false} className="object-cover" />
-                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,rgba(4,10,8,.88)_100%)]" />
-              </div>
-              <div className="relative flex gap-4 p-5">
-                <div className="relative h-36 w-28 shrink-0 overflow-hidden rounded-2xl border border-white/10">
-                  <Image src={PORT_TRADER_CARD} alt="The river port trader" fill sizes="112px" draggable={false} className="object-cover object-top" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold text-white">The river trader</h3>
-                  <p className="mt-1 text-sm leading-6 text-white/50">
-                    &ldquo;Evening, hunter. I stock what the river lets through. Buy what you need — shelf&apos;s slimming fast.&rdquo;
-                  </p>
-                  <p className="mt-2 text-[11px] font-bold uppercase tracking-[.16em] text-white/40">
-                    {2 - portBought} {2 - portBought === 1 ? "buy" : "buys"} left tonight
-                  </p>
-                </div>
-              </div>
-              <div className="grid gap-2 px-5 pb-2 sm:grid-cols-3">
-                {portStock.map((item) => {
-                  const sold = portSold.includes(item.id);
-                  const limited = portBought >= 2;
-                  const poor = tokenBal < item.cost;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => buyPortItem(item)}
-                      disabled={sold || limited || poor}
-                      className="rounded-2xl border border-white/[.08] bg-black/30 p-4 text-left transition hover:border-amber-200/40 hover:bg-black/45 active:scale-[.98] disabled:opacity-45"
-                    >
-                      <span className="flex items-center gap-2">
-                        {item.iconSrc ? (
-                          <span className="relative h-10 w-10 shrink-0">
-                            <Image src={item.iconSrc} alt="" aria-hidden="true" fill sizes="40px" draggable={false} className="object-contain" />
-                          </span>
-                        ) : (
-                          <span className="text-2xl" aria-hidden="true">{item.emoji}</span>
-                        )}
-                        <span className="text-sm font-bold text-white">{item.name}</span>
-                      </span>
-                      <span className="mt-1.5 block text-xs leading-5 text-white/45">{item.desc}</span>
-                      <span className="mt-2 block text-xs font-black uppercase tracking-[.12em] text-amber-100">
-                        {sold ? "Sold" : limited ? "Two's the limit" : poor ? `${item.cost} tokens — short` : `${item.cost} tokens`}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {sheds > 0 ? (
-                <div className="flex flex-wrap gap-2 px-5 pb-5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => tradeShed(false)}
-                    className="rounded-full border border-amber-200/30 bg-amber-200/[.07] px-4 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-200/[.14] active:scale-95"
-                  >
-                    Trade a shed → +4 tokens ({sheds} in hand)
-                  </button>
-                  {!portIntel && (
-                    <button
-                      type="button"
-                      onClick={() => tradeShed(true)}
-                      className="rounded-full border border-sky-200/30 bg-sky-300/[.07] px-4 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-300/[.14] active:scale-95"
-                    >
-                      Trade a shed → local intel
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <p className="px-5 pb-5 pt-1 text-xs italic text-white/35">
-                  Bring me a fresh shed skin next time, hunter — I pay good metal for those.
-                </p>
-              )}
-            </div>
+            <PortTraderShop
+              items={portStock}
+              soldIds={portSold}
+              boughtCount={portBought}
+              tokenBal={tokenBal}
+              sheds={sheds}
+              intelTaken={portIntel}
+              onBuy={buyPortItem}
+              onTradeShed={tradeShed}
+            />
           )}
 
           {portPanel === "board" && portBounty && (
