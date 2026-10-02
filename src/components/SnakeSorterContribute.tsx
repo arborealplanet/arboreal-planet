@@ -57,6 +57,7 @@ export function SnakeSorterContribute() {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(0);
+  const [progressNote, setProgressNote] = useState("");
   const [message, setMessage] = useState("");
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -96,6 +97,124 @@ export function SnakeSorterContribute() {
     setFiles((current) => current.filter((_, i) => i !== index));
   }
 
+  // Vercel rejects any single request body over ~4.5 MB at the edge, so
+  // files above this line upload in 4 MB pieces via the chunked route.
+  const CHUNK_THRESHOLD = 4 * 1024 * 1024;
+  const CHUNK_SIZE = 4 * 1024 * 1024;
+
+  // Pull a spread of still frames out of a video in the browser — the working
+  // data the Sorter can use directly. The original file is archived untouched.
+  async function extractFrames(file: File, count = 8): Promise<Blob[]> {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.muted = true;
+    (video as HTMLVideoElement & { playsInline?: boolean }).playsInline = true;
+    video.preload = "auto";
+    video.src = url;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error("video load failed"));
+        setTimeout(() => reject(new Error("video load timeout")), 15000);
+      });
+      const duration = video.duration;
+      if (!Number.isFinite(duration) || duration <= 0) return [];
+      const frames: Blob[] = [];
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, 1280 / (video.videoWidth || 1280));
+      canvas.width = Math.max(2, Math.round((video.videoWidth || 1280) * scale));
+      canvas.height = Math.max(2, Math.round((video.videoHeight || 720) * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return [];
+      for (let i = 0; i < count; i++) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const onSeeked = () => {
+              video.removeEventListener("seeked", onSeeked);
+              resolve();
+            };
+            video.addEventListener("seeked", onSeeked);
+            video.currentTime = Math.min((duration * (i + 0.5)) / count, Math.max(0, duration - 0.1));
+            setTimeout(() => {
+              video.removeEventListener("seeked", onSeeked);
+              reject(new Error("seek timeout"));
+            }, 8000);
+          });
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+          if (blob) frames.push(blob);
+        } catch {
+          // A missed frame is fine — the video itself is the archive.
+        }
+      }
+      return frames;
+    } catch {
+      return [];
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  async function uploadChunked(
+    file: File,
+    meta: { taxon_guess?: string; life_stage_guess?: string; view_type_guess?: string; provenance_hint?: string; notes?: string },
+    onProgress: (pct: number) => void,
+  ): Promise<{ id: string; name: string; media_type: string }> {
+    const initRes = await fetch("/api/snake-sorter/chunked-upload?phase=init", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: file.name, mime_type: file.type, size: file.size }),
+    });
+    const init = await initRes.json().catch(() => ({}));
+    if (!initRes.ok) throw new Error(init.error ?? "Could not start chunked upload.");
+    const uploadUrl = init.uploadUrl as string;
+
+    let offset = 0;
+    while (offset < file.size) {
+      const piece = file.slice(offset, offset + CHUNK_SIZE);
+      const res = await fetch("/api/snake-sorter/chunked-upload?phase=chunk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "x-upload-url": uploadUrl,
+          "x-upload-offset": String(offset),
+        },
+        body: piece,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Chunk upload failed.");
+      offset = typeof data.offset === "number" ? data.offset : offset + piece.size;
+      onProgress(Math.min(99, Math.round((offset / file.size) * 100)));
+    }
+
+    const completeRes = await fetch("/api/snake-sorter/chunked-upload?phase=complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uploadUrl,
+        path: init.path,
+        name: file.name,
+        mime_type: file.type,
+        size: file.size,
+        consent: "true",
+        taxon_guess: meta.taxon_guess,
+        life_stage_guess: meta.life_stage_guess,
+        view_type_guess: meta.view_type_guess,
+        provenance_hint: meta.provenance_hint,
+        notes: meta.notes,
+      }),
+    });
+    const complete = await completeRes.json().catch(() => ({}));
+    if (!completeRes.ok) {
+      const rej = (complete.rejected ?? [])[0] as { name: string; reason: string } | undefined;
+      throw new Error(rej ? rej.reason : (complete.error ?? "Could not record contribution."));
+    }
+    const item = (complete.accepted ?? [])[0] as { id: string; name: string; media_type: string } | undefined;
+    if (!item?.id) throw new Error("Upload completed but was not recorded.");
+    onProgress(100);
+    return item;
+  }
+
   async function submit() {
     if (!files.length) {
       setMessage("Add at least one image or video first.");
@@ -107,36 +226,97 @@ export function SnakeSorterContribute() {
     }
     setBusy(true);
     setUploading(0);
+    setProgressNote("");
     setMessage("");
+
+    const meta = {
+      taxon_guess: taxonGuess || undefined,
+      life_stage_guess: lifeStageGuess || undefined,
+      view_type_guess: viewTypeGuess || undefined,
+      provenance_hint: provenanceHint.trim() || undefined,
+      notes: notes.trim() || undefined,
+    };
 
     const accepted: string[] = [];
     const rejected: string[] = [];
+
+    // Small files go through the classic single-request path, batched by
+    // total bytes so a batch never trips the ~4.5 MB platform cap.
+    const smallFiles = files.filter((f) => f.size <= CHUNK_THRESHOLD);
+    const largeFiles = files.filter((f) => f.size > CHUNK_THRESHOLD);
     const batches: File[][] = [];
-    for (let i = 0; i < files.length; i += 6) batches.push(files.slice(i, i + 6));
+    {
+      let current: File[] = [];
+      let currentBytes = 0;
+      for (const file of smallFiles) {
+        if (current.length >= 6 || currentBytes + file.size > CHUNK_THRESHOLD) {
+          batches.push(current);
+          current = [];
+          currentBytes = 0;
+        }
+        current.push(file);
+        currentBytes += file.size;
+      }
+      if (current.length) batches.push(current);
+    }
 
     for (const batch of batches) {
       const form = new FormData();
       batch.forEach((file) => form.append("files", file, file.name));
       form.set("consent", "true");
-      if (taxonGuess) form.set("taxon_guess", taxonGuess);
-      if (lifeStageGuess) form.set("life_stage_guess", lifeStageGuess);
-      if (viewTypeGuess) form.set("view_type_guess", viewTypeGuess);
-      if (provenanceHint.trim()) form.set("provenance_hint", provenanceHint.trim());
-      if (notes.trim()) form.set("notes", notes.trim());
+      if (meta.taxon_guess) form.set("taxon_guess", meta.taxon_guess);
+      if (meta.life_stage_guess) form.set("life_stage_guess", meta.life_stage_guess);
+      if (meta.view_type_guess) form.set("view_type_guess", meta.view_type_guess);
+      if (meta.provenance_hint) form.set("provenance_hint", meta.provenance_hint);
+      if (meta.notes) form.set("notes", meta.notes);
 
       const response = await fetch("/api/snake-sorter/contributions", { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
       for (const item of (data.accepted ?? []) as Array<{ name: string }>) accepted.push(item.name);
       for (const item of (data.rejected ?? []) as Array<{ name: string; reason: string }>) rejected.push(`${item.name}: ${item.reason}`);
       if (!response.ok && !data.accepted?.length) {
-        rejected.push(data.error ?? "Upload failed.");
+        rejected.push(
+          response.status === 413
+            ? "Files too large to send at once — try fewer files or upload big ones individually."
+            : (data.error ?? "Upload failed."),
+        );
       }
       setUploading((n) => n + batch.length);
+    }
+
+    // Big files (phone photos, any video worth keeping) upload in pieces.
+    for (const file of largeFiles) {
+      setProgressNote(`${file.name} — starting…`);
+      try {
+        const item = await uploadChunked(file, meta, (pct) =>
+          setProgressNote(`${file.name} — ${pct}%`),
+        );
+        accepted.push(item.name);
+        // Pull working frames from videos; the original stays the archive.
+        if (file.type.startsWith("video/")) {
+          setProgressNote(`${file.name} — pulling frames…`);
+          try {
+            const blobs = await extractFrames(file, 8);
+            if (blobs.length) {
+              const form = new FormData();
+              form.set("contribution_id", item.id);
+              blobs.forEach((b) => form.append("frames", b, "frame.jpg"));
+              await fetch("/api/snake-sorter/chunked-upload?phase=frames", { method: "POST", body: form });
+            }
+          } catch {
+            // Frames are a bonus — the video itself is safely stored.
+          }
+        }
+      } catch (error) {
+        rejected.push(`${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`);
+      }
+      setUploading((n) => n + 1);
     }
 
     setFiles([]);
     setBusy(false);
     setUploading(0);
+    setProgressNote("");
     await load();
     setMessage(
       accepted.length
@@ -185,7 +365,7 @@ export function SnakeSorterContribute() {
             >
               <span className="text-2xl">◈</span>
               <span className="text-sm font-semibold text-white/60">Choose photos or videos</span>
-              <span className="text-[10px] text-white/24">Images up to 15 MB · videos up to 100 MB · JPEG, PNG, WebP, MP4, WebM, MOV</span>
+              <span className="text-[10px] text-white/24">Images up to 15 MB · videos up to 1 GB · big files upload in pieces</span>
             </button>
             <input
               ref={inputRef}
@@ -275,6 +455,9 @@ export function SnakeSorterContribute() {
             >
               {busy ? `Uploading ${uploading}/${files.length}…` : `Submit ${files.length ? `${files.length} file(s)` : "files"} for review`}
             </button>
+            {busy && progressNote ? (
+              <p className="mt-1 text-[10px] leading-4 text-white/40">{progressNote}</p>
+            ) : null}
           </div>
         </div>
 
