@@ -127,7 +127,7 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
           onClick={() => go(1)}
           className={`${arrowClass} right-3`}
         >
-          <span aria-hidden="true">›</span>
+          <span aria-hidden="true">›</span>          )}
         </button>
 
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 p-4 sm:gap-2 sm:p-5">
@@ -146,6 +146,8 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
           >
             ▶ Play Canopy Hunter
           </Link>
+          )}
+        
           )}
           <p className="text-[11px] text-white/60">
             Expedition event inside Arboreal Keeper — one free flight every week
