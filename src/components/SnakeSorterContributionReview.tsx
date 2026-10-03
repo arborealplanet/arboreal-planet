@@ -84,7 +84,8 @@ function ApproveForm({
     const data = await response.json().catch(() => ({}));
     setBusy(false);
     if (!response.ok) {
-      onDone(data.error ?? "Approval failed.");
+      const detail = data.detail ? ` — ${data.detail}` : "";
+      onDone(`${data.error ?? "Approval failed."}${detail}`);
       return;
     }
     setOpen(false);
