@@ -26,7 +26,7 @@ import { ChondroBreederScreenArt } from "@/components/ChondroBreederScreenArt";
 import { ChondroCollectionManager } from "@/components/ChondroCollectionManager";
 import { ChondroActiveClutchShowcase } from "@/components/ChondroActiveClutchShowcase";
 import { ChondroColonyOverview } from "@/components/ChondroColonyOverview";
-import { requestExpeditionOpen, EXPEDITION_ENTRY_FEE, EXPEDITION_FREE_COOLDOWN_MS, EXPEDITION_PYTHONS } from "@/lib/canopy-hunter";
+import { requestExpeditionOpen, EXPEDITION_FREE_COOLDOWN_MS, EXPEDITION_PYTHONS } from "@/lib/canopy-hunter";
 import { CanopyHunterSlideshow } from "@/components/arcade/CanopyHunterSlideshow";
 import { animalHousingCapacity } from "@/lib/chondro-facility-limits";
 
@@ -291,25 +291,6 @@ function ScreenHeading({ eyebrow, title, detail }: { eyebrow: string; title: str
 function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
   const tools: WorkspaceView[] = ["career", "projects", "conservation", "community", "guide"];
   const [expedition, setExpedition] = useState(readExpeditionCardState);
-  // Founder/testing exemption: unlimited free expeditions, checked
-  // server-side so it follows the account, not the device.
-  const [expeditionUnlimited, setExpeditionUnlimited] = useState(false);
-  // Founder/testing allowlist: unlimited snake housing spaces (same fetch).
-  const [unlimitedSpaces, setUnlimitedSpaces] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/canopy-hunter/status", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled) return;
-        if (data?.unlimited === true) setExpeditionUnlimited(true);
-        if (data?.unlimitedSpaces === true) setUnlimitedSpaces(true);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
   useEffect(() => {
     const refresh = () => setExpedition(readExpeditionCardState());
     window.addEventListener("arboreal-chondro-breeder-save-change", refresh);
@@ -322,16 +303,6 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
     requestExpeditionOpen();
     onOpen("colony");
   }
-  const housingBlocked = expedition.blocked && !unlimitedSpaces;
-  const expeditionLabel = expeditionUnlimited
-    ? housingBlocked
-      ? "Unlimited expeditions — free up housing space first."
-      : "Unlimited free expeditions — tap to head out."
-    : expedition.freeReady
-      ? housingBlocked
-        ? "Free expedition ready — needs housing space first."
-        : "Free expedition ready — tap to head out."
-      : `Next free in ${expedition.freeInDays}d · extra trips $${EXPEDITION_ENTRY_FEE.toLocaleString()}`;
   return (
     <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-5 sm:py-5">
       <div className="overflow-hidden rounded-[28px] border border-white/[.065] bg-[#06100c] shadow-[0_26px_90px_rgba(0,0,0,.28)]">
@@ -344,25 +315,6 @@ function BreederHome({ onOpen }: { onOpen: (view: WorkspaceView) => void }) {
               <div className="mt-1 text-3xl font-black tracking-[-.04em] text-white sm:text-4xl">Arboreal Keeper</div>
             </div>
           </div>
-
-          {expedition.started ? (
-            <button
-              type="button"
-              onClick={openExpedition}
-              className="group mt-4 flex w-full items-center gap-4 overflow-hidden rounded-[24px] border border-emerald-300/25 bg-emerald-300/[.05] p-4 text-left transition hover:border-emerald-300/40 hover:bg-emerald-300/[.08] sm:p-5"
-            >
-              <span className="relative block h-14 w-14 shrink-0 overflow-hidden rounded-[16px] border border-emerald-300/25">
-                <Image src="/arcade/canopy-hunter/expedition-badge.webp" alt="Canopy Hunter expedition badge" fill sizes="56px" className="object-cover" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[9px] font-black uppercase tracking-[.16em] text-emerald-200/60">Special event · Canopy Hunter</span>
-                <span className="mt-1 block text-sm font-bold leading-5 text-white/85">{expeditionLabel}</span>
-              </span>
-              <span className="shrink-0 rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-bold text-[#06100c] transition group-hover:bg-emerald-200">
-                {housingBlocked ? "Fix housing" : "Head out"}
-              </span>
-            </button>
-          ) : null}
 
           {expedition.started ? (
             <div className="mt-4">

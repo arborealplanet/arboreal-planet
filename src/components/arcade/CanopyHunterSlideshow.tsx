@@ -52,9 +52,10 @@ const AUTOPLAY_MS = 5000;
 
 /**
  * Canopy Hunter showcase: auto-advancing slideshow of game art with the
- * play button overlaid. On /arcade the button links to the Keeper; pass
- * onPlay to fire a custom action instead (e.g. opening the expedition
- * modal from the Keeper home screen).
+ * play button below the frame so no artwork (or faces) is ever covered.
+ * On /arcade the button links to the Keeper; pass onPlay to fire a custom
+ * action instead (e.g. opening the expedition modal from the Keeper home
+ * screen).
  */
 export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
   const [index, setIndex] = useState(0);
@@ -85,12 +86,12 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
 
   return (
     <div className="md:col-span-2">
-      <div
-        className="group relative overflow-hidden rounded-2xl border border-white/[.07] bg-black"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
-        <div className="relative aspect-[16/9] w-full">
+      <div className="overflow-hidden rounded-2xl border border-white/[.07] bg-black">
+        <div
+          className="group relative aspect-[16/9] w-full"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
           {SLIDES.map((s, i) => (
             <Image
               key={s.src}
@@ -104,33 +105,47 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
               className={`object-cover transition-opacity duration-700 ${i === index ? "opacity-100" : "opacity-0"}`}
             />
           ))}
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,6,.25)_0%,transparent_30%,transparent_55%,rgba(2,8,6,.82)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,6,.25)_0%,transparent_35%,transparent_100%)]" />
+
+          <div className="pointer-events-none absolute left-4 top-4 sm:left-5">
+            <span className="rounded-full border border-white/15 bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[.16em] text-white/80 backdrop-blur">
+              {SLIDES[index].caption}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Previous slide"
+            onClick={() => go(-1)}
+            className={`${arrowClass} left-3`}
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Next slide"
+            onClick={() => go(1)}
+            className={`${arrowClass} right-3`}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
+
+          <div className="absolute bottom-4 right-4 hidden gap-1.5 sm:flex">
+            {SLIDES.map((s, i) => (
+              <button
+                key={s.src}
+                type="button"
+                aria-label={`Go to slide ${i + 1}: ${s.caption}`}
+                onClick={() => setIndex(i)}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === index ? "w-5 bg-emerald-200" : "w-1.5 bg-white/35 hover:bg-white/60"
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
-        <div className="pointer-events-none absolute left-4 top-4 sm:left-5">
-          <span className="rounded-full border border-white/15 bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[.16em] text-white/80 backdrop-blur">
-            {SLIDES[index].caption}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          aria-label="Previous slide"
-          onClick={() => go(-1)}
-          className={`${arrowClass} left-3`}
-        >
-          <span aria-hidden="true">‹</span>
-        </button>
-        <button
-          type="button"
-          aria-label="Next slide"
-          onClick={() => go(1)}
-          className={`${arrowClass} right-3`}
-        >
-          <span aria-hidden="true">›</span>
-        </button>
-
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 p-4 sm:gap-2 sm:p-5">
+        <div className="flex flex-col items-center gap-1.5 border-t border-white/[.06] bg-[#030806] p-4 sm:p-5">
           {onPlay ? (
             <button
               type="button"
@@ -150,20 +165,6 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
           <p className="text-[11px] text-white/60">
             Expedition event inside Arboreal Keeper — one free flight every week
           </p>
-        </div>
-
-        <div className="absolute bottom-4 right-4 hidden gap-1.5 sm:flex">
-          {SLIDES.map((s, i) => (
-            <button
-              key={s.src}
-              type="button"
-              aria-label={`Go to slide ${i + 1}: ${s.caption}`}
-              onClick={() => setIndex(i)}
-              className={`h-1.5 rounded-full transition-all ${
-                i === index ? "w-5 bg-emerald-200" : "w-1.5 bg-white/35 hover:bg-white/60"
-              }`}
-            />
-          ))}
         </div>
       </div>
     </div>
