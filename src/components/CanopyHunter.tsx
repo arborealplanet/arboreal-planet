@@ -157,6 +157,8 @@ const ZONE_HALF = 0.11; // 22% green zone
 
 const GROVES_PER_EXPEDITION = 4;
 const TREES_PER_GROVE = 3;
+/** Pythons hiding on each grove's python trail — two per grove, eight a night. */
+const PYTHONS_PER_GROVE = 2;
 /** Searches refresh at every grove: each grove is always reachable, and the
  *  choice is which hiding spots to spend them on. */
 const SEARCHES_PER_GROVE = EXPEDITION_SEARCHES / GROVES_PER_EXPEDITION;
@@ -223,6 +225,10 @@ interface TrailOption {
    * the region has no plant art (height mechanic off) or the trail is empty.
    */
   pythonLifeStage: CanopyLifeStage | null;
+  /** Second python hiding spot on the python trail (null when the trail is empty). */
+  secondPythonSpot: number | null;
+  /** The second hidden python's life stage, pre-rolled like the first. */
+  secondPythonLifeStage: CanopyLifeStage | null;
   /**
    * The briefing's promised "sign": rustling leaves, a fresh shed, heavy
    * tracks — or, rarely, the enormous shed that marks a trophy grove.
@@ -595,7 +601,7 @@ export function CanopyHunter({
      grove, so the night always runs every grove. */
   useEffect(() => {
     if (phase !== "trail" && phase !== "grove" && phase !== "port") return;
-    if (resolvedCount >= grovesPerExpedition) {
+    if (resolvedCount >= grovesPerExpedition * PYTHONS_PER_GROVE) {
       const t = setTimeout(() => setPhase("results"), 700);
       return () => clearTimeout(t);
     }
@@ -660,24 +666,42 @@ export function CanopyHunter({
         const spots = createGroveSpots(treeVariants, plantVariants);
         let pythonSpot: number | null = null;
         let pythonLifeStage: CanopyLifeStage | null = null;
+        let secondPythonSpot: number | null = null;
+        let secondPythonLifeStage: CanopyLifeStage | null = null;
         if (hidesPython) {
-          if (plantVariants > 0) {
-            // Height mechanic: adults hunt the tall trees, neonates hide low.
-            const stage = rollLifeStage();
-            const matching = spots
-              .map((s, i) => (stage === "Adult" ? s.kind === "tree" : s.kind === "plant") ? i : -1)
-              .filter((i) => i >= 0);
-            pythonSpot = matching[Math.floor(Math.random() * matching.length)];
-            pythonLifeStage = stage;
-          } else {
-            pythonSpot = Math.floor(Math.random() * spots.length);
-          }
+          // Two pythons hide on the python trail, in two different spots.
+          const taken = new Set<number>();
+          const rollHidingSpot = (): { spot: number; lifeStage: CanopyLifeStage | null } => {
+            let lifeStage: CanopyLifeStage | null = null;
+            let pool: number[];
+            if (plantVariants > 0) {
+              // Height mechanic: adults hunt the tall trees, neonates hide low.
+              lifeStage = rollLifeStage();
+              pool = spots
+                .map((s, i) => (lifeStage === "Adult" ? s.kind === "tree" : s.kind === "plant") && !taken.has(i) ? i : -1)
+                .filter((i) => i >= 0);
+              if (pool.length === 0) pool = spots.map((_, i) => i).filter((i) => !taken.has(i));
+            } else {
+              pool = spots.map((_, i) => i).filter((i) => !taken.has(i));
+            }
+            const pick = pool[Math.floor(Math.random() * pool.length)];
+            taken.add(pick);
+            return { spot: pick, lifeStage };
+          };
+          const first = rollHidingSpot();
+          const second = rollHidingSpot();
+          pythonSpot = first.spot;
+          pythonLifeStage = first.lifeStage;
+          secondPythonSpot = second.spot;
+          secondPythonLifeStage = second.lifeStage;
         }
         trails.push({
           label: trailLabel(trailCount, t),
           spots,
           pythonSpot,
           pythonLifeStage,
+          secondPythonSpot,
+          secondPythonLifeStage,
           // The signs aren't always readable — some nights the canopy keeps
           // quiet, and cold trails sometimes lie with a stale shed.
           sign: hidesPython ? rollPythonTrailSign(Math.random, hot) : rollEmptyTrailSign(),
@@ -749,18 +773,25 @@ export function CanopyHunter({
     setWalking(true);
     window.setTimeout(() => {
       const wilds: Record<number, WildSnake> = {};
-      if (trail.pythonSpot !== null && region) {
-        const prime = trail.sign === "legendary";
-        wilds[trail.pythonSpot] = generateWildSnake(
-          wildIdRef.current,
-          region,
-          Math.random,
-          trail.pythonLifeStage,
-          prime,
-          permit,
-        );
-        wildIdRef.current += 1;
-        if (prime) {
+      if (region) {
+        const hidden: Array<{ spot: number | null; lifeStage: CanopyLifeStage | null }> = [
+          { spot: trail.pythonSpot, lifeStage: trail.pythonLifeStage },
+          { spot: trail.secondPythonSpot, lifeStage: trail.secondPythonLifeStage },
+        ];
+        for (const { spot, lifeStage } of hidden) {
+          if (spot === null) continue;
+          const prime = trail.sign === "legendary";
+          wilds[spot] = generateWildSnake(
+            wildIdRef.current,
+            region,
+            Math.random,
+            lifeStage,
+            prime,
+            permit,
+          );
+          wildIdRef.current += 1;
+        }
+        if (trail.sign === "legendary" && Object.keys(wilds).length > 0) {
           log(`Grove ${legIndex + 1} — the enormous shed wasn't lying. Something exceptional hunts here.`);
         }
       }
@@ -818,11 +849,24 @@ export function CanopyHunter({
     }
   }
 
+  /** Spots in the current grove still hiding a catchable python. */
+  function livePythonSpots(): number[] {
+    if (!grove) return [];
+    const spots = [grove.pythonSpot, grove.secondPythonSpot];
+    return spots.filter(
+      (s): s is number =>
+        s !== null &&
+        groveWilds[s] !== undefined &&
+        !bag.includes(groveWilds[s]) &&
+        !escapedSpots.includes(s),
+    );
+  }
+
   /** Read a found shed for clues about the grove's hidden python (if any). */
   function examineShed() {
     if (phase !== "grove" || !canExamineShed || !grove) return;
-    const spot = grove.pythonSpot;
-    const wild = spot !== null && !escapedSpots.includes(spot) ? groveWilds[spot] ?? null : null;
+    const spot = livePythonSpots()[0] ?? null;
+    const wild = spot !== null ? groveWilds[spot] ?? null : null;
     const clue =
       wild && bag.includes(wild)
         ? "This shed's owner is already in your bag — nice work."
@@ -894,7 +938,7 @@ export function CanopyHunter({
    */
   function deployLure() {
     if (phase !== "grove" || lureCharges <= 0 || !grove) return;
-    const spot = grove.pythonSpot;
+    const spot = livePythonSpots()[0] ?? null;
     const wild = spot !== null ? groveWilds[spot] : undefined;
     if (spot === null || !wild || bag.includes(wild) || escapedSpots.includes(spot)) return;
     spendToolCharge("lure");
@@ -918,7 +962,7 @@ export function CanopyHunter({
   }
 
   /** Whether the scent lure has a live target in the current grove. */
-  const lureSpot = grove?.pythonSpot ?? null;
+  const lureSpot = livePythonSpots()[0] ?? null;
   const lureWild = lureSpot !== null ? groveWilds[lureSpot] : undefined;
   const canLure =
     phase === "grove" &&
@@ -1171,11 +1215,11 @@ export function CanopyHunter({
             <Image
               src="/arcade/canopy-hunter/pilot-bush.webp"
               alt="Dave, the bush pilot, leaning against his plane"
-              width={192}
-              height={192}
-              sizes="96px"
+              width={384}
+              height={384}
+              sizes="160px"
               draggable={false}
-              className="h-20 w-20 shrink-0 rounded-2xl border border-white/10 object-cover object-[25%_30%]"
+              className="h-36 w-36 shrink-0 rounded-3xl border border-white/10 object-cover object-[25%_30%] sm:h-44 sm:w-44"
             />
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/60">Dave · Bush pilot</p>
@@ -1185,7 +1229,7 @@ export function CanopyHunter({
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
             <li>· {grovesPerExpedition} groves along the trail, {TREES_PER_GROVE} hiding spots each — search the tall trees and the undergrowth alike.</li>
             <li>· Each grove gives you {SEARCHES_PER_GROVE} searches — spend them wisely, then follow the trail to the next grove.</li>
-            <li>· {grovesPerExpedition} pythons are hiding out there. At every fork, read the signs — rustling leaves, fresh sheds, heavy tracks. Cold trails sometimes lie.</li>
+            <li>· {grovesPerExpedition * PYTHONS_PER_GROVE} pythons are hiding out there. At every fork, read the signs — rustling leaves, fresh sheds, heavy tracks. Cold trails sometimes lie.</li>
             <li>· Spot one and grab it before it slips away.</li>
             <li>· Not all ground is equal — common localities show themselves often, legendary ones are ghosts. In pulcher country expect Sorong; pray for Arfak.</li>
             <li>· An enormous shed at a fork marks a trophy grove — something exceptional hunts there.{hot ? " Intel says this region is hot tonight — trophy signs are twice as common." : ""}</li>
@@ -1320,7 +1364,7 @@ export function CanopyHunter({
             <div className="relative flex items-end justify-center gap-2 px-4 pb-8 pt-10 sm:gap-6">
               {grove.spots.map((spot, i) => {
                 const wasSearched = searched[i];
-                const showPython = wasSearched && grove.pythonSpot === i;
+                const showPython = wasSearched && (grove.pythonSpot === i || grove.secondPythonSpot === i);
                 const isTree = spot.kind === "tree";
                 const spotName = isTree ? "tree" : "undergrowth";
                 return (

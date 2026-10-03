@@ -11,7 +11,7 @@
 
 export const EXPEDITION_TREES = 12;
 export const EXPEDITION_SEARCHES = 8;
-export const EXPEDITION_PYTHONS = 4;
+export const EXPEDITION_PYTHONS = 8;
 
 /**
  * Signs at the trail fork. The briefing promises readable signs — the
