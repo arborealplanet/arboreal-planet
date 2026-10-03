@@ -13,8 +13,8 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     src: "/arcade/canopy-hunter/pilot-bush.webp",
-    alt: "Bush pilot leaning against his plane at sunset",
-    caption: "Meet your bush pilot",
+    alt: "Dave, the bush pilot, leaning against his plane at sunset",
+    caption: "Meet Dave — your bush pilot",
   },
   {
     src: "/arcade/canopy-hunter/canopy-banner.webp",
@@ -43,7 +43,7 @@ const SLIDES: Slide[] = [
   },
   {
     src: "/arcade/canopy-hunter/explorer-back-standing.webp",
-    alt: "Hunter heading into the jungle",
+    alt: "Gage heading into the jungle",
     caption: "Four groves. One night.",
   },
 ];
@@ -107,12 +107,6 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
           ))}
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,6,.25)_0%,transparent_35%,transparent_100%)]" />
 
-          <div className="pointer-events-none absolute left-4 top-4 sm:left-5">
-            <span className="rounded-full border border-white/15 bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[.16em] text-white/80 backdrop-blur">
-              {SLIDES[index].caption}
-            </span>
-          </div>
-
           <button
             type="button"
             aria-label="Previous slide"
@@ -146,6 +140,9 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
         </div>
 
         <div className="flex flex-col items-center gap-1.5 border-t border-white/[.06] bg-[#030806] p-4 sm:p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/50">
+            {SLIDES[index].caption}
+          </p>
           {onPlay ? (
             <button
               type="button"

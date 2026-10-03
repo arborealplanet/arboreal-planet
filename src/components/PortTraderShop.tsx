@@ -40,7 +40,7 @@ const VIEWS: Array<{ id: PortShopView; label: string; shortLabel: string; emoji:
   { id: "supplies", label: "Supplies", shortLabel: "Supplies", emoji: "🧺" },
   { id: "shed", label: "Shed Trade", shortLabel: "Sheds", emoji: "🤝" },
   { id: "bounty", label: "Bounty Board", shortLabel: "Bounty", emoji: "📌" },
-  { id: "boatman", label: "Boatman", shortLabel: "Boat", emoji: "⛵" },
+  { id: "boatman", label: "Rick", shortLabel: "Rick", emoji: "⛵" },
 ];
 
 const TRADER_NIGHT_ART = "/arcade/canopy-hunter/port-river-night.webp";
@@ -200,13 +200,13 @@ function BountyBoard({
 const BOATMAN_ART = "/arcade/canopy-hunter/port-boatman.webp";
 
 /**
- * The boatman takes over the shopkeeper window when his pill is tapped —
+ * Rick takes over the shopkeeper window when his pill is tapped —
  * his line laid over the river scene. The Cast off button lives below the
  * portrait so it never covers him.
  */
 function BoatmanScene({ line }: { line: string }) {
   return (
-    <div className="absolute inset-0" aria-label="The boatman">
+    <div className="absolute inset-0" aria-label="Rick, the boatman">
       <Image
         src={BOATMAN_ART}
         alt=""
@@ -217,7 +217,7 @@ function BoatmanScene({ line }: { line: string }) {
       />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,10,.25)_0%,transparent_40%,rgba(2,8,10,.85)_100%)]" />
       <p className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.18em] text-white/85 backdrop-blur-sm">
-        ⛵ The boatman
+        ⛵ Rick · The boatman
       </p>
       <p className="absolute inset-x-0 bottom-0 p-3 text-[11px] italic leading-5 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,.8)] sm:p-4 sm:text-sm sm:leading-6">
         {line}
@@ -227,11 +227,11 @@ function BoatmanScene({ line }: { line: string }) {
 }
 
 const TRADER_TIPS = [
-  "Evening, hunter. I stock what the river lets through — and the shelf's slimming fast.",
+  "Evening, Gage. I stock what the river lets through — and the shelf's slimming fast.",
   "Lantern oil's the cheapest edge you'll buy all night. Ask anyone.",
   "Fresh shed skins — I pay good metal for those. Or trade you what I know.",
   "That board's got a name on it with your coin attached. Go have a look.",
-  "The boatman leaves when you say. The river don't wait — but I do.",
+  "Rick leaves when you say. The river don't wait — but I do.",
 ];
 
 export interface PortTraderShopProps {
@@ -258,7 +258,7 @@ export interface PortTraderShopProps {
 /**
  * The river port trader's shop — Hank Scale's store structure with the
  * port's options: tip bar, shopkeeper window, view pills (Supplies /
- * Shed Trade / Bounty Board / Boatman), and the tab content below.
+ * Shed Trade / Bounty Board / Rick), and the tab content below.
  * The animation slot is a still portrait until Gage's loops arrive.
  */
 export function PortTraderShop({
@@ -288,7 +288,7 @@ export function PortTraderShop({
     view === "supplies" ? "Tonight's stock"
     : view === "shed" ? "Shed trade"
     : view === "bounty" ? "Bounty board"
-    : "The boatman";
+    : "Rick · The boatman";
 
   return (
     <div className="mt-4 overflow-hidden rounded-[26px] border border-white/[.07] bg-white/[.02]">
@@ -321,7 +321,7 @@ export function PortTraderShop({
         </span>
       </div>
 
-      {/* Cast off lives below the portrait — never over the boatman */}
+      {/* Cast off lives below the portrait — never over Rick */}
       {view === "boatman" ? (
         <div className="flex-none px-4 pt-2 sm:px-5">
           <button
@@ -435,7 +435,7 @@ export function PortTraderShop({
             </div>
           ) : (
             <p className="text-xs italic leading-5 text-white/35">
-              Bring me a fresh shed skin next time, hunter — I pay good metal for those.
+              Bring me a fresh shed skin next time, Gage — I pay good metal for those.
             </p>
           )}
           {finds.length > 0 ? (

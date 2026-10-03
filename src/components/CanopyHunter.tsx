@@ -149,7 +149,7 @@ const BOATMAN_LINES: Record<string, string> = {
   southern:
     "“Southern water's black as tea and twice as strong. Merauke men swear the Aru pythons swim — I don't ask.”",
   default:
-    "“River's kind tonight, hunter. Next leg's darker than the last — keep your lamp dry.”",
+    "“River's kind tonight, Gage. Next leg's darker than the last — keep your lamp dry.”",
 };
 
 const SWEEP_MS = 1200;
@@ -1170,7 +1170,7 @@ export function CanopyHunter({
           <div className="flex items-center gap-4 border-b border-white/[.06] px-6 py-4 sm:px-8">
             <Image
               src="/arcade/canopy-hunter/pilot-bush.webp"
-              alt="Bush pilot leaning against his plane"
+              alt="Dave, the bush pilot, leaning against his plane"
               width={192}
               height={192}
               sizes="96px"
@@ -1178,8 +1178,8 @@ export function CanopyHunter({
               className="h-20 w-20 shrink-0 rounded-2xl border border-white/10 object-cover object-[25%_30%]"
             />
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/60">Bush pilot</p>
-              <p className="mt-1 text-sm italic leading-6 text-white/70">"Evening. I'm your ride in — I fly hunters over these ridges. Four groves, one night. Don't keep the engine waiting."</p>
+              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/60">Dave · Bush pilot</p>
+              <p className="mt-1 text-sm italic leading-6 text-white/70">&quot;Evening. I&apos;m Dave — your ride in. I fly hunters over these ridges. Four groves, one night. Don&apos;t keep the engine waiting.&quot;</p>
             </div>
           </div>
           <ul className="space-y-2 p-6 text-sm leading-6 text-white/55 sm:px-8">
