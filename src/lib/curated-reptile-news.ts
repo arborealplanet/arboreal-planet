@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "Houston Zoo welcomes a new generation of reptiles",
+    url: "https://abc13.com/story/houston-zoo-introduces-baby-star-tortoises-vipers-geckos-skinks-time-spooky-season/19904828/",
+    publishedAt: "2026-10-03",
+    publisher: "ABC13 Houston",
+    summary: "Houston Zoo announced its first Hosmer's spiny-tailed skink births, five eyelash vipers, star tortoise hatchlings, and Henkel's leaf-tailed geckos produced through recommended Species Survival Plan pairings.",
+  },
+  {
     title: "Escaped and surrendered sulcata tortoises strain Arizona rescues",
     url: "https://news.azpm.org/p/azpmnews/2026/10/1/231407-non-native-african-tortoises-are-appearing-across-tucson-animal-advocates-fear-the-damage-they-could-cause/",
     publishedAt: "2026-10-01",
