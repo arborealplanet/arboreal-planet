@@ -8,6 +8,9 @@ interface Slide {
   src: string;
   alt: string;
   caption: string;
+  /** Slides whose art is a tall portrait sprite use "contain" so the
+      whole figure shows on the black frame instead of an awkward crop. */
+  fit?: "cover" | "contain";
 }
 
 const SLIDES: Slide[] = [
@@ -45,6 +48,7 @@ const SLIDES: Slide[] = [
     src: "/arcade/canopy-hunter/explorer-back-standing.webp",
     alt: "Gage heading into the jungle",
     caption: "Four groves. One night.",
+    fit: "contain",
   },
 ];
 
@@ -102,7 +106,7 @@ export function CanopyHunterSlideshow({ onPlay }: { onPlay?: () => void }) {
               sizes="(max-width: 768px) 100vw, 64rem"
               draggable={false}
               priority={i === 0}
-              className={`object-cover transition-opacity duration-700 ${i === index ? "opacity-100" : "opacity-0"}`}
+              className={`${s.fit === "contain" ? "object-contain" : "object-cover"} transition-opacity duration-700 ${i === index ? "opacity-100" : "opacity-0"}`}
             />
           ))}
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,6,.25)_0%,transparent_35%,transparent_100%)]" />
