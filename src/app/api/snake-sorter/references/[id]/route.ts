@@ -92,6 +92,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
   const requestedTraining = Boolean(body.training_eligible);
   const requestedChallenge = Boolean(body.challenge_eligible);
+  const isStrongExample = Boolean(body.is_strong_example);
   const rightsCleared = ["owned_by_owner","permission_granted","open_license"].includes(rightsStatus);
   const trainingMetadataStrongEnough =
     taxon !== "Unknown / review" &&
@@ -136,6 +137,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     provenance_confidence: provenanceConfidence,
     provenance_claim: clean(body.provenance_claim, 4000) || null,
     exclusion_reason: clean(body.exclusion_reason, 2000) || null,
+    is_strong_example: isStrongExample,
     updated_at: new Date().toISOString(),
   };
 
