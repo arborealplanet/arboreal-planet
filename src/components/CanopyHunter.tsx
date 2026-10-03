@@ -482,6 +482,14 @@ export function CanopyHunter({
   const [sheds, setSheds] = useState(0);
   /** Trail finds pocketed this expedition (ids into TRAIL_FINDS). */
   const [satchel, setSatchel] = useState<string[]>([]);
+  /* Ref mirror of the satchel — the night-end sale runs from the results
+     transitions (event handlers), so it reads the current finds through the
+     mirror instead of a stale effect closure. This effect only writes the
+     ref, never state. */
+  const satchelRef = useRef<string[]>([]);
+  useEffect(() => {
+    satchelRef.current = satchel;
+  }, [satchel]);
   /** Glinting pickups on the trail, rolled once per leg. */
   const [pickupRolls, setPickupRolls] = useState<
     Record<number, Array<{ uid: string; findId: string; left: string; bottom: string }>>
@@ -535,7 +543,6 @@ export function CanopyHunter({
   /** Local intel: next fork tells the truth + whispers the python's height. */
   const [portIntel, setPortIntel] = useState(false);
   const [tokenBal, setTokenBal] = useState<number>(() => getTokenBalance());
-  const bountyPaidRef = useRef(false);
   const [catchTree, setCatchTree] = useState<number | null>(null);
   const [zoneCenter, setZoneCenter] = useState(0.5);
   const [catchResolved, setCatchResolved] = useState(false);
@@ -577,6 +584,52 @@ export function CanopyHunter({
     setJournal((j) => [...j, line]);
   }
 
+  /* Ref mirrors for the night-end settlement — it runs from the results
+     transitions (event handlers / timeouts), so it reads current values
+     through mirrors instead of stale closures. These effects only write
+     refs, never state. */
+  const bagRef = useRef<WildSnake[]>([]);
+  useEffect(() => {
+    bagRef.current = bag;
+  }, [bag]);
+  const portBountyRef = useRef<PortBounty | null>(null);
+  useEffect(() => {
+    portBountyRef.current = portBounty;
+  }, [portBounty]);
+  const portBountyTakenRef = useRef(false);
+  useEffect(() => {
+    portBountyTakenRef.current = portBountyTaken;
+  }, [portBountyTaken]);
+
+  /* Guard so the two results transitions (auto-advance, final trail) can't
+     settle the night twice. Reset in startExpedition. */
+  const nightEndSettledRef = useRef(false);
+  /** Night-end settlement: unsold trail finds are bought up, and the river
+      port bounty pays once if the board's snake was bagged. Called from the
+      results transitions — event handlers and timeouts — never from an
+      effect, so the results effect stays free of synchronous state updates. */
+  function settleNightEnd() {
+    if (nightEndSettledRef.current) return;
+    nightEndSettledRef.current = true;
+    const finds = satchelRef.current;
+    if (finds.length > 0) {
+      const total = finds.reduce((n, id) => n + (TRAIL_FINDS.find((t) => t.id === id)?.value ?? 0), 0);
+      addTokens(total, "Canopy Hunter — trail finds sold");
+      log(`Trail finds sold at the expedition's end — +${total} tokens.`);
+      setSatchel([]);
+    }
+    const bounty = portBountyRef.current;
+    if (portBountyTakenRef.current && bounty) {
+      const hasBounty = bagRef.current.some(
+        (w) => w.locality === bounty.locality && w.sex === bounty.sex,
+      );
+      if (hasBounty) {
+        addTokens(5, "Canopy Hunter — river port bounty");
+        log(`River port bounty paid — ${bounty.sex} ${bounty.locality} delivered. +5 tokens.`);
+      }
+    }
+  }
+
   /* The expedition theme lives as long as the expedition modal does. */
   useEffect(() => () => {
     stopGameMusic();
@@ -601,7 +654,10 @@ export function CanopyHunter({
   useEffect(() => {
     if (phase !== "trail" && phase !== "grove" && phase !== "port") return;
     if (resolvedCount >= grovesPerExpedition * PYTHONS_PER_GROVE) {
-      const t = setTimeout(() => setPhase("results"), 700);
+      const t = setTimeout(() => {
+        settleNightEnd();
+        setPhase("results");
+      }, 700);
       return () => clearTimeout(t);
     }
   }, [phase, resolvedCount, grovesPerExpedition]);
@@ -615,24 +671,8 @@ export function CanopyHunter({
     const s = scoreExpedition(bag.length, bestStreak, escapedCount, totalSearchesUsed, primeCount);
     const tokensEarned = { S: 25, A: 18, B: 12, C: 8, D: 5 }[s.rank] as number;
     addTokens(tokensEarned, `Canopy Hunter — ${s.rank}-rank expedition`);
-    /* Unsold trail finds are bought up at the expedition's end. */
-    if (satchel.length > 0) {
-      const total = satchel.reduce((n, id) => n + (TRAIL_FINDS.find((t) => t.id === id)?.value ?? 0), 0);
-      addTokens(total, "Canopy Hunter — trail finds sold");
-      log(`Trail finds sold at the expedition's end — +${total} tokens.`);
-      setSatchel([]);
-    }
-    /* River port bounty: pays once, only if the board's snake was bagged. */
-    if (portBountyTaken && portBounty && !bountyPaidRef.current) {
-      bountyPaidRef.current = true;
-      const hasBounty = bag.some(
-        (w) => w.locality === portBounty.locality && w.sex === portBounty.sex,
-      );
-      if (hasBounty) {
-        addTokens(5, "Canopy Hunter — river port bounty");
-        log(`River port bounty paid — ${portBounty.sex} ${portBounty.locality} delivered. +5 tokens.`);
-      }
-    }
+    /* Night-end settlement (trail-find sale, river port bounty) runs from
+       the results transitions via settleNightEnd — never from this effect. */
     recordScore("hunter", s.points, `${s.rank}-rank`);
     reportArcadeEvent({
       type: "hunt-complete",
@@ -656,6 +696,7 @@ export function CanopyHunter({
     const treeVariants = regionTrees.length > 0 ? regionTrees.length : TREE_ARTS.length;
     const plantVariants = regionPlants.length;
     const nextLegs: Leg[] = [];
+    const nextPickupRolls: Record<number, Array<{ uid: string; findId: string; left: string; bottom: string }>> = {};
     for (let g = 0; g < grovesPerExpedition; g += 1) {
       const trailCount = pickTrailCount();
       const pythonTrail = Math.floor(Math.random() * trailCount);
@@ -707,6 +748,19 @@ export function CanopyHunter({
         });
       }
       nextLegs.push({ trails });
+      /* Trail pickups: 1–2 glinting finds per walk between groves, rolled
+         here with the legs (event handler) — never from an effect. */
+      const pickupCount = Math.random() < 0.35 ? 2 : 1;
+      const pickupSpots = [
+        { left: "7%", bottom: "34%" },
+        { left: "80%", bottom: "44%" },
+      ];
+      nextPickupRolls[g] = Array.from({ length: pickupCount }, (_, i) => ({
+        uid: `leg${g}-${i}-${Math.floor(Math.random() * 1e9)}`,
+        findId: rollTrailFindId(),
+        left: pickupSpots[i].left,
+        bottom: pickupSpots[i].bottom,
+      }));
     }
     wildIdRef.current = 1;
     setRegion(expeditionRegion);
@@ -723,7 +777,7 @@ export function CanopyHunter({
     setBestStreak(0);
     setSheds(0);
     setSatchel([]);
-    setPickupRolls({});
+    setPickupRolls(nextPickupRolls);
     setCanExamineShed(false);
     const event = rollNightEvent();
     setNightEvent(event);
@@ -757,7 +811,7 @@ export function CanopyHunter({
     setPortLures(0);
     setPortGrips(0);
     setPortIntel(false);
-    bountyPaidRef.current = false;
+    nightEndSettledRef.current = false;
     setTokenBal(getTokenBalance());
     setPhase("trail");
   }
@@ -987,6 +1041,7 @@ export function CanopyHunter({
     setGroveNote(null);
     if (legIndex + 1 >= grovesPerExpedition) {
       log(`${nightPhaseForLeg(legIndex)} — the night ends.`);
+      settleNightEnd();
       setPhase("results");
       return;
     }
@@ -1095,26 +1150,6 @@ export function CanopyHunter({
     // Unmuting mid-expedition picks the theme back up right away.
     if (!next) playGameMusic(CANOPY_THEME_SRC, CANOPY_THEME_VOLUME);
   }
-
-  /* Trail pickups: 1–2 glinting finds per walk between groves, rolled once per leg. */
-  useEffect(() => {
-    if (phase !== "trail") return;
-    setPickupRolls((rolls) => {
-      if (rolls[legIndex]) return rolls;
-      const count = Math.random() < 0.35 ? 2 : 1;
-      const spots = [
-        { left: "7%", bottom: "34%" },
-        { left: "80%", bottom: "44%" },
-      ];
-      const picks = Array.from({ length: count }, (_, i) => ({
-        uid: `leg${legIndex}-${i}-${Math.floor(Math.random() * 1e9)}`,
-        findId: rollTrailFindId(),
-        left: spots[i].left,
-        bottom: spots[i].bottom,
-      }));
-      return { ...rolls, [legIndex]: picks };
-    });
-  }, [phase, legIndex]);
 
   const currentWild = catchTree !== null ? groveWilds[catchTree] : undefined;
   const currentTrails = legs[legIndex]?.trails ?? [];

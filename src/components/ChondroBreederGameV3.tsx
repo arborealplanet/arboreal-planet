@@ -938,10 +938,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
   const expeditionFeeArmTimer = useRef<number | null>(null);
   /** Pay for expeditions/permits with arcade tokens instead of cash. */
   const [payWithTokens, setPayWithTokens] = useState(false);
-  const [tokenBal, setTokenBal] = useState(0);
+  const [tokenBal, setTokenBal] = useState(() => getTokenBalance());
   const refreshTokens = () => setTokenBal(getTokenBalance());
   useEffect(() => {
-    refreshTokens();
     window.addEventListener("arcade-balance", refreshTokens);
     window.addEventListener("focus", refreshTokens);
     return () => {

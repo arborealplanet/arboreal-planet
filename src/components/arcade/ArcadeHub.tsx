@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import {
   ACHIEVEMENTS,
   BOARD_META,
@@ -47,10 +47,9 @@ export function TokenChip({ dark = false }: { dark?: boolean }) {
 }
 
 function useQuests() {
-  const [quests, setQuests] = useState<QuestState[]>([]);
+  const [quests, setQuests] = useState<QuestState[]>(() => dailyQuests());
   const refresh = useCallback(() => setQuests(dailyQuests()), []);
   useEffect(() => {
-    refresh();
     window.addEventListener("arcade-quests", refresh);
     window.addEventListener("focus", refresh);
     return () => {
@@ -64,9 +63,8 @@ function useQuests() {
 /** Today's seeded quests + claim buttons + streak. */
 export function DailyQuests() {
   const { quests, refresh } = useQuests();
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useState(() => questStreak());
   useEffect(() => {
-    setStreak(questStreak());
     const onQ = () => setStreak(questStreak());
     window.addEventListener("arcade-quests", onQ);
     return () => window.removeEventListener("arcade-quests", onQ);
@@ -136,13 +134,13 @@ export function DailyQuests() {
 export function Leaderboards() {
   const boards = Object.keys(BOARD_META) as BoardId[];
   const [tab, setTab] = useState<BoardId>("sorting");
-  const [entries, setEntries] = useState(getBoard(tab));
+  const [, bump] = useReducer((x: number) => x + 1, 0);
   useEffect(() => {
-    setEntries(getBoard(tab));
-    const onFocus = () => setEntries(getBoard(tab));
+    const onFocus = () => bump();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [tab]);
+  }, []);
+  const entries = getBoard(tab);
 
   return (
     <div className="rounded-[26px] border border-white/[.07] bg-white/[.02] p-5 sm:p-6">
@@ -256,9 +254,8 @@ export function TrophyShelf() {
 
 /** Editable keeper name for leaderboard entries. */
 export function DisplayNameEditor() {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => getDisplayName());
   const [saved, setSaved] = useState(false);
-  useEffect(() => setName(getDisplayName()), []);
   return (
     <form
       className="flex items-center gap-2"

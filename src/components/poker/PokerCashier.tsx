@@ -132,7 +132,7 @@ export function PokerCashier({ balance, loading, signedIn, convert, claimBailout
       {busted && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-red-300/25 bg-red-950/40 p-3">
           <p className="text-xs text-red-100/90">
-            Busted! Claim today's bailout to get back in the game.
+            Busted! Claim today&apos;s bailout to get back in the game.
           </p>
           <button
             disabled={bailoutBusy}
