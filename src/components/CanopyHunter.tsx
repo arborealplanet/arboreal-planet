@@ -10,6 +10,7 @@ import {
   CANOPY_REGION_TREES,
   SHED_FIND_CHANCE,
   SHED_FIND_CHANCE_SLOUGHING,
+  PYTHONS_PER_GROVE,
   TRAIL_SIGN_LABELS,
   atmosphereForRegion,
   createGroveSpots,
@@ -157,8 +158,6 @@ const ZONE_HALF = 0.11; // 22% green zone
 
 const GROVES_PER_EXPEDITION = 4;
 const TREES_PER_GROVE = 3;
-/** Pythons hiding on each grove's python trail — two per grove, eight a night. */
-const PYTHONS_PER_GROVE = 2;
 /** Searches refresh at every grove: each grove is always reachable, and the
  *  choice is which hiding spots to spend them on. */
 const SEARCHES_PER_GROVE = EXPEDITION_SEARCHES / GROVES_PER_EXPEDITION;

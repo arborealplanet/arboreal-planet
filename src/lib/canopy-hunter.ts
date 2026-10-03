@@ -12,6 +12,8 @@
 export const EXPEDITION_TREES = 12;
 export const EXPEDITION_SEARCHES = 8;
 export const EXPEDITION_PYTHONS = 8;
+/** Pythons hiding on each grove's python trail — two per grove. */
+export const PYTHONS_PER_GROVE = 2;
 
 /**
  * Signs at the trail fork. The briefing promises readable signs — the

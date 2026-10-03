@@ -22,6 +22,7 @@ import {
   EXPEDITION_PERMIT_FEE,
   EXPEDITION_PYTHONS,
   PERMIT_GROVES,
+  PYTHONS_PER_GROVE,
   REGION_RECOVERY_MS,
   SUBSPECIES_REGION_ID,
   consumeExpeditionOpenRequest,
@@ -1748,7 +1749,7 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
    * Permits always cost, even on a free week. Two-tap to confirm.
    */
   function enterExpeditionPermit(sub: CanopySubspecies) {
-    if (!started || openSlots < PERMIT_GROVES) return;
+    if (!started || openSlots < PERMIT_GROVES * PYTHONS_PER_GROVE) return;
     const region = regionForSubspecies(sub);
     if (isRecovering(region.id)) return;
     if (payWithTokens) {
@@ -2401,9 +2402,9 @@ export function ChondroBreederGameV3({ screen = "all" }: { screen?: BreederGameS
                   <p className="mt-1 text-xs leading-5 text-white/50">
                     Choose your subspecies — {PERMIT_GROVES} groves, trait-boosted animals, and 2 specialist tools (scent lure + sure grip). Rare localities stay rare.
                   </p>
-                  {openSlots < PERMIT_GROVES && (
+                  {openSlots < PERMIT_GROVES * PYTHONS_PER_GROVE && (
                     <p className="mt-2 text-xs font-bold text-red-300/80">
-                      Permits bring home up to {PERMIT_GROVES} snakes — free up housing first.
+                      Permits bring home up to {PERMIT_GROVES * PYTHONS_PER_GROVE} snakes — free up housing first.
                     </p>
                   )}
                   <div className="mt-3 grid grid-cols-1 gap-2">

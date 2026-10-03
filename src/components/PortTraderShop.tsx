@@ -200,26 +200,24 @@ function BountyBoard({
 const BOATMAN_ART = "/arcade/canopy-hunter/port-boatman.webp";
 
 /**
- * Rick takes over the shopkeeper window when his pill is tapped —
- * his line laid over the river scene. The Cast off button lives below the
- * portrait so it never covers him.
+ * Rick's panel: a clean river portrait with his line in a caption strip
+ * below the art — nothing overlaid on him, ever.
  */
-function BoatmanScene({ line }: { line: string }) {
+function BoatmanPanel({ line }: { line: string }) {
   return (
-    <div className="absolute inset-0" aria-label="Rick, the boatman">
-      <Image
-        src={BOATMAN_ART}
-        alt=""
-        fill
-        sizes="(max-width: 640px) 100vw, 48rem"
-        draggable={false}
-        className="object-cover"
-      />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,10,.25)_0%,transparent_40%,rgba(2,8,10,.85)_100%)]" />
-      <p className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.18em] text-white/85 backdrop-blur-sm">
-        ⛵ Rick · The boatman
-      </p>
-      <p className="absolute inset-x-0 bottom-0 p-3 text-[11px] italic leading-5 text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,.8)] sm:p-4 sm:text-sm sm:leading-6">
+    <div className="w-full flex-none">
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-black" aria-label="Rick, the boatman">
+        <Image
+          src={BOATMAN_ART}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 100vw, 48rem"
+          draggable={false}
+          className="object-cover"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,8,10,.22)_0%,transparent_55%,transparent_100%)]" />
+      </div>
+      <p className="border-b border-white/[.06] bg-black/40 px-4 py-3 text-[12px] italic leading-5 text-white/75 sm:px-5 sm:text-sm sm:leading-6">
         {line}
       </p>
     </div>
@@ -305,21 +303,26 @@ export function PortTraderShop({
         <span className="shrink-0 text-[9px] font-black uppercase tracking-[.12em] text-[#0a120d]/40">↻ tip</span>
       </button>
 
-      {/* Shopkeeper window — the bounty board takes it over when that pill is tapped */}
-      <div className={`relative w-full flex-none overflow-hidden bg-black ${view === "bounty" || view === "boatman" ? "aspect-[16/9]" : "h-56 sm:h-72"}`}>
-        {view === "bounty" ? (
-          <BountyBoard bounty={bounty} bountyTaken={bountyTaken} onTakeBounty={onTakeBounty} />
-        ) : view === "boatman" ? (
-          <BoatmanScene line={boatmanLine} />
-        ) : TRADER_CLIPS.length > 0 ? (
-          <TraderAnimation />
-        ) : (
-          <TraderPlaceholder />
-        )}
-        <span className="absolute right-2 top-2 z-10 rounded-full border border-amber-200/30 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-amber-100 backdrop-blur-sm">
-          🛒 {buysLeft} {buysLeft === 1 ? "buy" : "buys"} left tonight
-        </span>
-      </div>
+      {/* Shopkeeper window — the bounty board takes it over when that pill is tapped.
+          Rick gets his own clean panel (portrait + caption strip, nothing overlaid). */}
+      {view === "boatman" ? (
+        <BoatmanPanel line={boatmanLine} />
+      ) : (
+        <div className={`relative w-full flex-none overflow-hidden bg-black ${view === "bounty" ? "aspect-[16/9]" : "h-56 sm:h-72"}`}>
+          {view === "bounty" ? (
+            <BountyBoard bounty={bounty} bountyTaken={bountyTaken} onTakeBounty={onTakeBounty} />
+          ) : TRADER_CLIPS.length > 0 ? (
+            <TraderAnimation />
+          ) : (
+            <TraderPlaceholder />
+          )}
+          {view === "supplies" ? (
+            <span className="absolute right-2 top-2 z-10 rounded-full border border-amber-200/30 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.14em] text-amber-100 backdrop-blur-sm">
+              🛒 {buysLeft} {buysLeft === 1 ? "buy" : "buys"} left tonight
+            </span>
+          ) : null}
+        </div>
+      )}
 
       {/* Cast off lives below the portrait — never over Rick */}
       {view === "boatman" ? (
