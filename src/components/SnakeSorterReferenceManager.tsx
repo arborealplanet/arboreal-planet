@@ -36,6 +36,7 @@ export type SnakeReferenceAnimal = {
   training_eligible: boolean;
   challenge_eligible?: boolean;
   challenge_expectation?: "reject" | "classify" | "review";
+  is_strong_example?: boolean;
   created_at: string;
 };
 
@@ -140,6 +141,7 @@ export function SnakeSorterReferenceManager({
     const payload: Record<string, unknown> = Object.fromEntries(formData.entries());
     payload.training_eligible = formData.get("training_eligible") === "true";
     payload.challenge_eligible = formData.get("challenge_eligible") === "true";
+    payload.is_strong_example = formData.get("is_strong_example") === "true";
     const response = await fetch(`/api/snake-sorter/references/${detail.animal.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -400,6 +402,7 @@ export function SnakeSorterReferenceManager({
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights / use status<select name="rights_status" defaultValue={detail.animal.rights_status ?? "unknown"} className={`${field} mt-2`}><option value="owned_by_owner">Owned by me</option><option value="permission_granted">Permission granted</option><option value="open_license">Open license</option><option value="private_reference_only">Private reference only</option><option value="unknown">Unknown / not reviewed</option></select></label>
                 <label className="text-[9px] font-black uppercase tracking-[.1em] text-white/28">Rights notes<input name="rights_notes" defaultValue={detail.animal.rights_notes ?? ""} className={`${field} mt-2 normal-case tracking-normal`} /></label>
               </div>
+              <label className="mt-3 flex items-start gap-3 rounded-xl border border-emerald-300/15 bg-emerald-300/[.03] p-3 text-xs text-white/40"><input name="is_strong_example" value="true" type="checkbox" defaultChecked={Boolean(detail.animal.is_strong_example)} className="mt-0.5 h-4 w-4 accent-emerald-300" /><span><span className="block text-emerald-50/70">Strong example / anchor animal</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Gold-standard reference for this taxon/locality. Weighted heavily by the Sorter and used as an anchor for reverse-search verification.</span></span></label>
               <label className="mt-3 flex items-start gap-3 rounded-xl border border-white/[.05] p-3 text-xs text-white/40"><input name="training_eligible" value="true" type="checkbox" defaultChecked={detail.animal.training_eligible} className="mt-0.5 h-4 w-4 accent-emerald-300" /><span><span className="block">Candidate for future model training/validation</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Requires approved review, cleared rights, strong/confirmed labels, a locality, known/believed-pure ancestry, and non-challenge status.</span></span></label>
               <label className="mt-3 flex items-start gap-3 rounded-xl border border-amber-300/10 bg-amber-300/[.02] p-3 text-xs text-white/40"><input name="challenge_eligible" value="true" type="checkbox" defaultChecked={Boolean(detail.animal.challenge_eligible)} className="mt-0.5 h-4 w-4 accent-amber-300" /><span><span className="block text-amber-50/55">Challenge / OOD example</span><span className="mt-1 block text-[9px] leading-4 text-white/22">Held out of clean classifier supervision; useful for rejection and difficult-case evaluation.</span></span></label>
               <label className="mt-3 block text-[9px] font-black uppercase tracking-[.1em] text-white/28">Challenge expectation<select name="challenge_expectation" defaultValue={detail.animal.challenge_expectation ?? "review"} className={`${field} mt-2`}><option value="reject">Reject / Unknown</option><option value="classify">Classify trusted hard case</option><option value="review">Review only / diagnostic</option></select></label>
