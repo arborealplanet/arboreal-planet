@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "New collared reed snake described from western Thailand",
+    url: "https://novataxa.blogspot.com/2026/10/calamaria-flavicollaris.html",
+    publishedAt: "2026-10-03",
+    publisher: "Species New to Science",
+    summary: "Morphology and DNA evidence identify Calamaria flavicollaris from Thailand's Tenasserim Range, a small reed snake distinguished in part by a dark collar followed by a yellow neck ring.",
+  },
+  {
     title: "Houston Zoo welcomes a new generation of reptiles",
     url: "https://abc13.com/story/houston-zoo-introduces-baby-star-tortoises-vipers-geckos-skinks-time-spooky-season/19904828/",
     publishedAt: "2026-10-03",
