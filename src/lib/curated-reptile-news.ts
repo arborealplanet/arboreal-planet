@@ -4,6 +4,13 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "Remembering the conservationist who built a refuge for Palawan forest turtles",
+    url: "https://news.mongabay.com/short-article/2026/10/sabine-schoppe-who-built-a-refuge-for-palawans-forest-turtles-has-died/",
+    publishedAt: "2026-10-05",
+    publisher: "Mongabay",
+    summary: "Sabine Schoppe helped rescue thousands of trafficked Palawan forest turtles, establish the species' first dedicated protected area, breed turtles for conservation, and build a rare large-scale post-release monitoring program.",
+  },
+  {
     title: "New collared reed snake described from western Thailand",
     url: "https://novataxa.blogspot.com/2026/10/calamaria-flavicollaris.html",
     publishedAt: "2026-10-03",
