@@ -4,6 +4,20 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "The world's oldest land animal may hold genetic clues to longevity",
+    url: "https://www.reuters.com/science/194-year-old-tortoise-worlds-oldest-land-animal-may-hold-clues-longer-life-2026-10-07/",
+    publishedAt: "2026-10-07",
+    publisher: "Reuters",
+    summary: "Scientists studying Jonathan, a 194-year-old Aldabra giant tortoise, found genetic and epigenetic traits tied to DNA repair, mitochondrial function, tumor suppression, and other longevity pathways, while cautioning that one animal cannot prove cause.",
+  },
+  {
+    title: "Ancient Egyptian rocks reveal a distinct fossil gharial",
+    url: "https://doi.org/10.1098/rsos.261173",
+    publishedAt: "2026-10-07",
+    publisher: "Royal Society Open Science",
+    summary: "CT scans and anatomical comparisons reclassified a roughly 45-million-year-old Egyptian fossil as Herugavialis cairensis, a distinct long-snouted crocodilian that adds detail to the evolutionary history of Mediterranean gharials.",
+  },
+  {
     title: "Remembering the conservationist who built a refuge for Palawan forest turtles",
     url: "https://news.mongabay.com/short-article/2026/10/sabine-schoppe-who-built-a-refuge-for-palawans-forest-turtles-has-died/",
     publishedAt: "2026-10-05",
