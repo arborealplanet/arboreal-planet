@@ -4,6 +4,20 @@ import type { ReptileStory } from "@/lib/reptile-news";
 // Keep the original publisher URL and write fresh, short summaries here.
 export const curatedReptileNews: ReptileStory[] = [
   {
+    title: "Aldabra's wild giant tortoise population reaches a record estimate",
+    url: "https://news.exeter.ac.uk/faculty-of-environment-science-and-economy/ecology-and-conservation/new-study-reports-largest-ever-population-estimate-for-seychelles-giant-tortoises/",
+    publishedAt: "2026-10-07",
+    publisher: "University of Exeter",
+    summary: "Five years of field counts produced the first rigorous atoll-wide estimate of Aldabra's giant tortoises: roughly 180,000 animals, confirming that the once-endangered population is currently large and stable while continued monitoring remains essential.",
+  },
+  {
+    title: "Green sea turtles show that sustained conservation can reverse decline",
+    url: "https://www.theguardian.com/environment/2026/oct/08/world-must-change-food-avoid-biodiversity-collapse-wwf",
+    publishedAt: "2026-10-08",
+    publisher: "The Guardian",
+    summary: "A major WWF wildlife assessment highlights the green sea turtle's recovery after five decades of coordinated protection across about 80 countries, offering evidence that long-term, targeted conservation can bring reptile populations back from severe decline.",
+  },
+  {
     title: "The world's oldest land animal may hold genetic clues to longevity",
     url: "https://www.reuters.com/science/194-year-old-tortoise-worlds-oldest-land-animal-may-hold-clues-longer-life-2026-10-07/",
     publishedAt: "2026-10-07",
