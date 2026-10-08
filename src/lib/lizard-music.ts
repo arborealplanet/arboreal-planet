@@ -22,11 +22,12 @@ export const LIZARD_MUSIC: RadioTrack[] = [
   { title: "warm rain static",       file: "warm-rain-static.mp3",        seconds: 337 },
 ];
 
-// Env override wins; otherwise the Supabase public bucket (project URL is
-// already public in the codebase). No NEXT_PUBLIC_* Vercel config needed.
+// Env override wins; otherwise the Arcade's public lizard-music bucket (the
+// MP3s moved to the standalone Arcade's Supabase project in the four-way
+// split; the radio player stays on Planet and streams them cross-project).
 export const RADIO_BASE_URL =
   process.env.NEXT_PUBLIC_LIZARD_MUSIC_URL ??
-  "https://ykaqnxajszwgeqkmaora.supabase.co/storage/v1/object/public/lizard-music";
+  "https://zuhovlszrohwtdxqrhnx.supabase.co/storage/v1/object/public/lizard-music";
 
 export const radioTrackUrl = (track: RadioTrack) =>
   `${RADIO_BASE_URL}/${encodeURIComponent(track.file)}`;
