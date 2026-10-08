@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchOwnProfile, getServerIdentity, SUPABASE_AUTH_KEY, SUPABASE_AUTH_URL } from "@/lib/supabase-auth";
+import { mirrorSettingToArcade } from "@/lib/arcade-jwt";
 
 async function ownerIdentity() {
   const identity = await getServerIdentity();
@@ -42,5 +43,10 @@ export async function PUT(request: NextRequest) {
   if (!response.ok || !rows || !Array.isArray(rows) || !rows[0]) {
     return NextResponse.json({ error: "Could not save setting." }, { status: 500 });
   }
+  // Mirror to the standalone Arcade's own settings table (best-effort: the
+  // Planet write above already succeeded; a failed mirror never breaks it).
+  // No-op until ARCADE_JWT_SECRET is configured in Planet's env.
+  const mirrored = await mirrorSettingToArcade(identity.user.id, key, value);
+  if (!mirrored) console.warn(`[admin/site-settings] Arcade mirror skipped/failed for key=${key}`);
   return NextResponse.json({ key: rows[0].key, value: rows[0].value });
 }
