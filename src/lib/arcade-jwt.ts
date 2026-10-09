@@ -13,7 +13,9 @@ import { createSign } from "node:crypto";
 // Optional: ARCADE_BASE_URL (defaults to production), ARCADE_JWT_KID.
 
 const ARCADE_JWT_PRIVATE_KEY = process.env.ARCADE_JWT_SECRET ?? "";
-const ARCADE_JWT_KID = process.env.ARCADE_JWT_KID ?? "";
+// Supabase's JWKS normalizes key IDs to lowercase; ensure the token's kid
+// matches exactly or PostgREST won't find the signing key.
+const ARCADE_JWT_KID = (process.env.ARCADE_JWT_KID ?? "").toLowerCase();
 const ARCADE_BASE_URL = process.env.ARCADE_BASE_URL ?? "https://arboreal-arcade.vercel.app";
 
 function base64urlJson(obj: unknown): string {
