@@ -26,7 +26,7 @@ function base64urlJson(obj: unknown): string {
 function derToJose(der: Buffer): Buffer {
   let o = 0;
   if (der[o++] !== 0x30) throw new Error("bad DER sequence");
-  let len = der[o++];
+  const len = der[o++];
   if (len & 0x80) o += len & 0x7f;
   if (der[o++] !== 0x02) throw new Error("bad DER r");
   const rLen = der[o++];
