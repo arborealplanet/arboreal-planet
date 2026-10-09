@@ -2,17 +2,16 @@ import type { NextConfig } from "next";
 
 // The independent Arboreals By Bunn static site is mounted under one removable prefix.
 // Cutover (2026-10-08, owner-authorized): the arcade now lives as a standalone
-// app. Planet's /arcade/* pages redirect to it. Temporary (307) so removing
-// this block instantly restores the embedded arcade — nothing was deleted.
-const ARCADE_BASE_URL =
-  process.env.NEXT_PUBLIC_ARCADE_URL ?? "https://arboreal-arcade.vercel.app";
-
+// app. Planet's /arcade/* pages go through the login handoff, which signs the
+// player into the Arcade (when Planet-logged-in) and lands them on the game.
+// Temporary (307) so removing this block instantly restores the embedded
+// arcade — nothing was deleted.
 const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
         source: "/arcade/:path*",
-        destination: `${ARCADE_BASE_URL}/arcade/:path*`,
+        destination: "/api/arcade/handoff?next=/arcade/:path*",
         permanent: false,
       },
     ];

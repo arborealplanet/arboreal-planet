@@ -16,8 +16,12 @@ function base64url(input: string): string {
   return Buffer.from(input, "utf8").toString("base64url");
 }
 
-/** Mint a 5-minute Arcade JWT. Returns null when the bridge isn't configured. */
-export function mintArcadeJwt(planetUserId: string, userRole: string): string | null {
+/** Mint an Arcade JWT. Returns null when the bridge isn't configured. */
+export function mintArcadeJwt(
+  planetUserId: string,
+  userRole: string,
+  expiresInSeconds = 300
+): string | null {
   if (!ARCADE_JWT_SECRET) return null;
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -27,7 +31,7 @@ export function mintArcadeJwt(planetUserId: string, userRole: string): string | 
       role: "authenticated",
       user_role: userRole,
       iat: now,
-      exp: now + 300,
+      exp: now + expiresInSeconds,
     })
   );
   const signature = createHmac("sha256", ARCADE_JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
