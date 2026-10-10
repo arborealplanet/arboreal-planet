@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerIdentity, fetchOwnProfile } from "@/lib/supabase-auth";
+import { getServerIdentity, fetchOwnRole } from "@/lib/supabase-auth";
 import { mintArcadeJwt } from "@/lib/arcade-jwt";
 
 // Planet → Arcade login handoff. Planet's /arcade/* redirect lands here first;
@@ -21,12 +21,11 @@ export async function GET(request: NextRequest) {
   try {
     const identity = await getServerIdentity();
     if (identity) {
-      const profile = (await fetchOwnProfile(identity.token, identity.user.id)) as {
-        role?: string;
-      } | null;
+      // Lightweight role fetch (single column) to keep the handoff fast.
+      const role = await fetchOwnRole(identity.token, identity.user.id);
       const token = mintArcadeJwt(
         identity.user.id,
-        profile?.role ?? "authenticated",
+        role ?? "authenticated",
         7 * 24 * 3600
       );
       if (token) url.searchParams.set("token", token);

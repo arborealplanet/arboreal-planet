@@ -80,6 +80,22 @@ export async function fetchOwnProfile(token: string, userId: string) {
   return rows[0] ?? null;
 }
 
+/** Lightweight role fetch for the Arcade handoff — only selects the role
+ *  column to minimize latency on the redirect path. */
+export async function fetchOwnRole(token: string, userId: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${SUPABASE_AUTH_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role`, {
+      headers: { apikey: SUPABASE_AUTH_KEY, Authorization: `Bearer ${token}`, Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const rows = await response.json() as Array<{ role?: string }>;
+    return rows[0]?.role ?? null;
+  } catch {
+    return null;
+  }
+}
+
 
 export async function getSnakeSorterAccess(token: string, userId: string) {
   const profile = await fetchOwnProfile(token, userId) as { role?: string } | null;
