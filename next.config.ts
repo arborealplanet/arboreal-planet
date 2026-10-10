@@ -6,12 +6,21 @@ import type { NextConfig } from "next";
 // player into the Arcade (when Planet-logged-in) and lands them on the game.
 // Temporary (307) so removing this block instantly restores the embedded
 // arcade — nothing was deleted.
+// Snake Sorter (2026-10-10, owner-authorized): the sorter tool now lives as a
+// standalone app at https://snake-sorter.vercel.app. Planet's /snake-sorter/*
+// pages redirect there. Temporary (307) so removing this block instantly
+// restores the embedded tool — nothing was deleted.
 const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
         source: "/arcade/:path*",
         destination: "/api/arcade/handoff?next=/arcade/:path*",
+        permanent: false,
+      },
+      {
+        source: "/snake-sorter/:path*",
+        destination: "https://snake-sorter.vercel.app/:path*",
         permanent: false,
       },
     ];
