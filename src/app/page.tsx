@@ -78,6 +78,47 @@ export default async function Home() {
       </div>
     </section>
 
+    <section className="border-b border-white/10 bg-[#060806]" aria-labelledby="keeper-title">
+      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6 sm:py-14">
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="section-kicker">Keeper spotlight</p>
+            <h2 id="keeper-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white sm:text-5xl">Hands on, every day.</h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-white/65">Gage Bunn with GAB-023-001 — a green tree python from the Arboreals By Bunn collection. Daily handling keeps animals calm and keeper-ready.</p>
+          </div>
+          <Link href="/arboreals-by-bunn" className="text-sm font-semibold text-emerald-300 hover:text-emerald-100">Arboreals By Bunn →</Link>
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.6)]">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full object-cover"
+              aria-label="Gage Bunn holding green tree python GAB-023-001"
+            >
+              <source src="/brand/videos/gab-023-001-watch-closeup.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <div className="overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.6)]">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full object-cover"
+              aria-label="Handling a green tree python"
+            >
+              <source src="/brand/videos/gab-023-001-handling-web.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-24" aria-labelledby="trails-title">
       <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="section-kicker">Pick a path</p><h2 id="trails-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white sm:text-5xl">Where will you wander?</h2></div><Link href="/search" className="text-sm font-semibold text-emerald-300 hover:text-emerald-100">Search the whole planet →</Link></div>
       <div className="mt-8 grid gap-4 lg:grid-cols-3">{trails.map((trail) => <Link key={trail.href} href={trail.href} className={`group relative flex min-h-[340px] flex-col overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br ${trail.tone} p-7 transition hover:-translate-y-1 hover:border-emerald-300/35 sm:p-9`}>
