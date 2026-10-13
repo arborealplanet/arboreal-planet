@@ -103,6 +103,36 @@ export default function ArborealsByBunnPage() {
                 </div>
               ))}
             </div>
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <figure className="overflow-hidden rounded-[22px] border border-white/[.07] bg-black/40">
+                <video
+                  className="aspect-video w-full object-cover"
+                  src="/brand/videos/gab-023-001-watch-closeup.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  aria-label="Gage Bunn holding green tree python GAB-023-001"
+                />
+                <figcaption className="px-5 py-4 text-xs leading-5 text-white/38">
+                  GAB-023-001 — a green tree python in hand. Daily handling keeps animals calm and keeper-ready.
+                </figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-[22px] border border-white/[.07] bg-black/40">
+                <video
+                  className="aspect-video w-full object-cover"
+                  src="/brand/videos/gab-023-001-handling-web.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  aria-label="Handling a green tree python"
+                />
+                <figcaption className="px-5 py-4 text-xs leading-5 text-white/38">
+                  Hands-on time with the collection — every animal gets individual attention.
+                </figcaption>
+              </figure>
+            </div>
           </div>
         </div>
       </section>
