@@ -84,7 +84,7 @@ export default async function Home() {
           <div>
             <p className="section-kicker">Keeper spotlight</p>
             <h2 id="keeper-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white sm:text-5xl">Hands on, every day.</h2>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-white/65">Gage Bunn with GAB-023-001 — a green tree python from the Arboreals By Bunn collection. Daily handling keeps animals calm and keeper-ready.</p>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-white/65">Gage Bunn with GAB-023-001 — a green tree python from the Arboreals By Bunn collection. Green trees aren't held often — just when the right snake is in curious, roaming mode.</p>
           </div>
           <Link href="/arboreals-by-bunn" className="text-sm font-semibold text-emerald-300 hover:text-emerald-100">Arboreals By Bunn →</Link>
         </div>

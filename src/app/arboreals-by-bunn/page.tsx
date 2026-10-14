@@ -115,7 +115,7 @@ export default function ArborealsByBunnPage() {
                   aria-label="Gage Bunn holding green tree python GAB-023-001"
                 />
                 <figcaption className="px-5 py-4 text-xs leading-5 text-white/38">
-                  GAB-023-001 — a green tree python in hand. Daily handling keeps animals calm and keeper-ready.
+                  GAB-023-001 — a green tree python in hand. Green trees aren't held often — just when the right snake is in curious, roaming mode.
                 </figcaption>
               </figure>
               <figure className="overflow-hidden rounded-[22px] border border-white/[.07] bg-black/40">
