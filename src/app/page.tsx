@@ -88,7 +88,7 @@ export default async function Home() {
           </div>
           <Link href="/arboreals-by-bunn" className="text-sm font-semibold text-emerald-300 hover:text-emerald-100">Arboreals By Bunn →</Link>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="mt-8 grid gap-4">
           <div className="overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.6)]">
             <video
               autoPlay
@@ -100,19 +100,6 @@ export default async function Home() {
               aria-label="Gage Bunn holding green tree python GAB-023-001"
             >
               <source src="/brand/videos/gab-023-001-watch-closeup.mp4" type="video/mp4" />
-            </video>
-          </div>
-          <div className="overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.6)]">
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="aspect-video w-full object-cover"
-              aria-label="Handling a green tree python"
-            >
-              <source src="/brand/videos/gab-023-001-handling-web.mp4" type="video/mp4" />
             </video>
           </div>
         </div>
@@ -134,6 +121,22 @@ export default async function Home() {
         <Image src="/abb-site/assets/animals.png" alt="Illustrated yellow and red Green Tree Pythons among tropical plants" fill sizes="100vw" className="object-cover object-center opacity-75" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#070c09]/95 via-[#070c09]/75 to-[#070c09]/15 lg:via-[#070c09]/50" />
         <div className="relative z-10 max-w-xl"><p className="text-xs font-black uppercase tracking-[.25em] text-emerald-200">Animal spotlight</p><h2 id="chondro-title" className="mt-4 text-4xl font-semibold leading-tight tracking-[-.04em] text-white sm:text-5xl">Know the animal behind the color.</h2><p className="mt-5 text-base leading-7 text-white/75">Green Tree Pythons are our first deep dive. Explore their populations, natural history and the keeper knowledge behind the images.</p><Link href="/animals/green-tree-python" className="primary-action mt-7">Meet the Green Tree Python →</Link></div>
+        <div className="relative z-10 mt-8 w-full max-w-xl lg:ml-auto lg:mt-0 lg:max-w-md">
+          <div className="overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,.6)]">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full object-cover"
+              aria-label="Handling a green tree python"
+            >
+              <source src="/brand/videos/gab-023-001-handling-web.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <p className="mt-3 text-center text-xs text-white/50">Hands-on with GAB-023-001</p>
+        </div>
       </div>
     </section>
 
