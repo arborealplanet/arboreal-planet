@@ -267,7 +267,7 @@ export function SnakeSorterLabShell({
       </main>
 
       <nav
-        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(84px+env(safe-area-inset-bottom))] gap-1 border-t border-white/[.08] bg-[#020705]/97 px-1.5 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-3 lg:bottom-4 lg:h-[84px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${dockViews.length === 6 ? "grid-cols-6 lg:max-w-[920px]" : dockViews.length === 5 ? "grid-cols-5 lg:max-w-[760px]" : dockViews.length === 4 ? "grid-cols-4 lg:max-w-[640px]" : "grid-cols-3 lg:max-w-[520px]"}`}
+        className={`fixed inset-x-0 bottom-0 z-[80] mx-auto grid h-[calc(76px+env(safe-area-inset-bottom))] gap-0.5 border-t border-white/[.08] bg-[#020705]/97 px-1 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-18px_50px_rgba(0,0,0,.34)] backdrop-blur-xl sm:px-3 lg:bottom-4 lg:h-[84px] lg:rounded-[24px] lg:border lg:px-4 lg:pb-2 ${dockViews.length === 6 ? "grid-cols-6 lg:max-w-[920px]" : dockViews.length === 5 ? "grid-cols-5 lg:max-w-[760px]" : dockViews.length === 4 ? "grid-cols-4 lg:max-w-[640px]" : "grid-cols-3 lg:max-w-[520px]"}`}
         aria-label="Snake Sorter navigation"
       >
         {dockViews.map((id) => {
@@ -279,12 +279,12 @@ export function SnakeSorterLabShell({
               type="button"
               onClick={() => openView(id)}
               aria-current={selected ? "page" : undefined}
-              className={`group flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-1 transition ${selected ? "bg-emerald-300/[.09]" : "hover:bg-white/[.035]"}`}
+              className={`group flex min-w-0 flex-col items-center justify-center rounded-xl px-0.5 py-1 transition ${selected ? "bg-emerald-300/[.09]" : "hover:bg-white/[.035]"}`}
             >
-              <span className={`grid h-9 w-9 place-items-center rounded-[13px] border transition ${selected ? "border-emerald-200/35 bg-emerald-300/[.08] text-emerald-100" : "border-white/[.07] bg-black/25 text-white/42"}`}>
+              <span className={`grid h-8 w-8 place-items-center rounded-[11px] border transition sm:h-9 sm:w-9 sm:rounded-[13px] ${selected ? "border-emerald-200/35 bg-emerald-300/[.08] text-emerald-100" : "border-white/[.07] bg-black/25 text-white/42"}`}>
                 {item.svgIcon || item.icon}
               </span>
-              <span className={`mt-1 truncate text-[8px] font-black uppercase tracking-[.06em] ${selected ? "text-emerald-100/70" : "text-white/28"}`}>{item.short}</span>
+              <span className={`mt-0.5 truncate text-[7px] font-black uppercase tracking-[.06em] sm:text-[8px] ${selected ? "text-emerald-100/70" : "text-white/28"}`}>{item.short}</span>
             </button>
           );
         })}
