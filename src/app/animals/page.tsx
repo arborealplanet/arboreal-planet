@@ -3,11 +3,11 @@ import { PageIntro } from "@/components/AppShell";
 import { AnimalDatabaseExplorer } from "@/components/AnimalDatabaseExplorer";
 
 const priorityAreas = [
-  ["Green Tree Pythons", "LIVE REFERENCE", "The flagship reference record connects taxonomy, locality structure, Genetics, public pedigrees, marketplace listings and keeper discussion."],
-  ["Boiga", "PRIORITY AREA", "Arboreal colubrids belong in the same system with species identity, husbandry context, keeper discussion and marketplace discovery kept separate from unverified claims."],
-  ["Emerald Tree Boas", "PRIORITY AREA", "A natural next boa group for an arboreal-first database, with room for taxonomy, distribution, husbandry and market context without flattening individual line or locality claims."],
-  ["Tree Monitors", "PRIORITY AREA", "Monitor records can bring arboreal lizards into the same reference structure instead of making Arboreal Planet snake-only."],
-  ["Dart Frogs", "PRIORITY AREA", "Amphibian records widen the hub into planted-vivarium species while maintaining clear separation between reference facts and keeper-submitted experience."],
+  ["Green Tree Pythons", "LIVE REFERENCE", "The flagship reference record connects taxonomy, locality structure, Genetics, public pedigrees, marketplace listings and keeper discussion.", "/images/animals/green-tree-python.webp"],
+  ["Boiga", "PRIORITY AREA", "Arboreal colubrids belong in the same system with species identity, husbandry context, keeper discussion and marketplace discovery kept separate from unverified claims.", "/images/animals/boiga.webp"],
+  ["Emerald Tree Boas", "PRIORITY AREA", "A natural next boa group for an arboreal-first database, with room for taxonomy, distribution, husbandry and market context without flattening individual line or locality claims.", "/images/animals/emerald-boa.webp"],
+  ["Tree Monitors", "PRIORITY AREA", "Monitor records can bring arboreal lizards into the same reference structure instead of making Arboreal Planet snake-only.", "/images/animals/tree-monitor.webp"],
+  ["Dart Frogs", "PRIORITY AREA", "Amphibian records widen the hub into planted-vivarium species while maintaining clear separation between reference facts and keeper-submitted experience.", "/images/animals/dart-frog.webp"],
 ] as const;
 
 const supportedGroups = ["Pythons", "Boas", "Colubrids", "Monitors", "Geckos", "Other lizards", "Turtles & tortoises", "Amphibians", "Other exotics"] as const;
@@ -37,7 +37,7 @@ export default function AnimalsPage() {
           <p className="max-w-xl text-xs leading-5 text-white/32">Priority areas are not presented as completed species records. They show where the database is designed to expand next.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {priorityAreas.map(([name, status, text]) => <article key={name} className={`rounded-[22px] border p-5 ${status === "LIVE REFERENCE" ? "border-emerald-300/12 bg-emerald-300/[.03]" : "border-white/[.06] bg-white/[.018]"}`}><div className={`text-[8px] font-black uppercase tracking-[.14em] ${status === "LIVE REFERENCE" ? "text-emerald-200/62" : "text-white/25"}`}>{status}</div><h3 className="mt-3 font-semibold text-white/70">{name}</h3><p className="mt-3 text-xs leading-5 text-white/34">{text}</p></article>)}
+          {priorityAreas.map(([name, status, text, img]) => <article key={name} className={`overflow-hidden rounded-[22px] border ${status === "LIVE REFERENCE" ? "border-emerald-300/12 bg-emerald-300/[.03]" : "border-white/[.06] bg-white/[.018]"}`}><div className="relative h-40 overflow-hidden"><img src={img} alt={name} className="h-full w-full object-cover" loading="lazy" /><div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" /></div><div className="p-5"><div className={`text-[8px] font-black uppercase tracking-[.14em] ${status === "LIVE REFERENCE" ? "text-emerald-200/62" : "text-white/25"}`}>{status}</div><h3 className="mt-3 font-semibold text-white/70">{name}</h3><p className="mt-3 text-xs leading-5 text-white/34">{text}</p></div></article>)}
         </div>
       </section>
 
