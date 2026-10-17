@@ -33,6 +33,16 @@ const topics = [
 export default async function NewsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const { category: requested } = await searchParams;
   const selected = topics.some((topic) => topic.category === requested) ? requested ?? "" : "";
+  // Category-based thumbnail images for news cards
+  const categoryThumbnails: Record<string, string> = {
+    "CONSERVATION": "/images/news/news-conservation.webp",
+    "TAXONOMY": "/images/news/news-science.webp",
+    "BREEDING": "/images/news/news-field.webp",
+    "HUSBANDRY": "/images/news/news-field.webp",
+    "MARKET": "/images/news/news-conservation.webp",
+    "INDUSTRY": "/images/news/news-science.webp",
+  };
+  const defaultThumbnail = "/images/news/news-conservation.webp";
   let stories: Story[] = [];
   let unavailable = false;
   try {
@@ -72,7 +82,12 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
       </div>
       {unavailable ? <div className="panel rounded-3xl p-8 text-white/60">News is temporarily unavailable. Please check back soon.</div>
         : visible.length ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {visible.map((story) => <Link key={story.id} href={`/learn/${story.slug}`} className="panel interactive-card rounded-3xl p-6">
+          {visible.map((story) => <Link key={story.id} href={`/learn/${story.slug}`} className="panel interactive-card overflow-hidden rounded-3xl">
+            <div className="relative h-40 overflow-hidden">
+              <img src={categoryThumbnails[story.category] || defaultThumbnail} alt="" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
+            <div className="p-6">
             <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-emerald-200/65">
               <span>{story.category.toLowerCase().replaceAll("_", " ")}</span>
               <time dateTime={story.published_at}>{new Date(story.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</time>
@@ -80,6 +95,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
             <h2 className="mt-5 text-xl font-semibold leading-snug text-white/85">{story.title}</h2>
             {story.excerpt && <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/50">{story.excerpt}</p>}
             <span className="mt-6 block text-xs font-bold text-emerald-200/70">Read story and sources →</span>
+            </div>
           </Link>)}
         </div> : <div className="panel rounded-3xl p-8">
           <h2 className="text-xl font-semibold text-white/80">No Arboreal Planet reports in this view yet</h2>
