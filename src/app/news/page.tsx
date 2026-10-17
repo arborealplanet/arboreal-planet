@@ -64,12 +64,22 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
     <div className="mx-auto max-w-7xl px-5 pb-16 sm:px-6">
       <section aria-labelledby="featured-news-title" className="mb-9">
         <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="section-kicker">From trusted publishers</p><h2 id="featured-news-title" className="mt-2 text-2xl font-semibold text-white">Recent reptile stories</h2></div><p className="text-xs text-white/45">Publication dates shown · links open the original articles</p></div>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{curatedReptileNews.map((story) => <article key={story.url} className="panel flex flex-col rounded-3xl p-6">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{curatedReptileNews.map((story, idx) => {
+          // Pick thumbnail based on story content
+          const thumbs = ["/images/news/news-conservation.webp", "/images/news/news-science.webp", "/images/news/news-field.webp"];
+          const thumb = thumbs[idx % thumbs.length];
+          return <article key={story.url} className="panel flex flex-col overflow-hidden rounded-3xl">
+          <div className="relative h-40 overflow-hidden">
+            <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          </div>
+          <div className="flex flex-1 flex-col p-6">
           <div className="flex flex-wrap justify-between gap-2 text-xs font-semibold text-emerald-200/75"><span>{story.publisher}</span><time dateTime={story.publishedAt}>{new Date(story.publishedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}</time></div>
           <h3 className="mt-5 text-xl font-semibold leading-snug text-white">{story.title}</h3>
           <p className="mt-3 text-sm leading-6 text-white/60">{story.summary}</p>
           <a href={story.url} target="_blank" rel="noopener noreferrer" className="mt-auto pt-6 text-sm font-bold text-emerald-200 hover:text-white">Read at {story.publisher} ↗</a>
-        </article>)}</div>
+          </div>
+        </article>})}</div>
       </section>
       <div className="panel mb-8 rounded-3xl p-5 sm:p-7">
         <div className="section-kicker">Daily story watch</div>
