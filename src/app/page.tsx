@@ -141,10 +141,10 @@ export default async function Home() {
     </section>
 
     <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20" aria-labelledby="play-title">
-      <div className="relative flex min-h-[400px] flex-col justify-end overflow-hidden rounded-[30px] border border-emerald-300/15 bg-[#101b13] p-7 sm:p-10">
-        <Image src="/hatchery/snakes/localities/manokwari/yellow-adult.webp" alt="Illustrated Green Tree Python" fill sizes="100vw" className="object-contain object-center opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#07110a] via-[#07110a]/55 to-transparent" />
-        <div className="relative z-10 max-w-xl"><p className="section-kicker">Arboreal Arcade</p><h2 id="play-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white">Learn by playing.</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/75">Build a virtual keeper program, follow lineages, and see where your decisions lead. Virtual animals and game values stay inside the game.</p><Link href="/arcade/enter?next=%2Farcade" className="primary-action mt-6">Explore the Arcade →</Link></div>
+      <div className="relative flex min-h-[420px] flex-col justify-end overflow-hidden rounded-[30px] border border-emerald-300/15 bg-[#101b13] p-7 sm:p-10">
+        <Image src="/hatchery/snakes/localities/manokwari/yellow-adult.webp" alt="Illustrated Green Tree Python" fill sizes="100vw" className="object-cover object-center opacity-90 scale-110" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#07110a] via-[#07110a]/60 to-[#07110a]/20" />
+        <div className="relative z-10 max-w-xl"><p className="section-kicker">Arboreal Arcade</p><h2 id="play-title" className="mt-3 text-4xl font-semibold tracking-[-.04em] text-white sm:text-5xl">Learn by playing.</h2><p className="mt-4 max-w-md text-sm leading-7 text-white/80 sm:text-base">Build a virtual keeper program, follow lineages, and see where your decisions lead. Virtual animals and game values stay inside the game.</p><Link href="/arcade/enter?next=%2Farcade" className="primary-action mt-6">Explore the Arcade →</Link></div>
       </div>
     </section>
 
