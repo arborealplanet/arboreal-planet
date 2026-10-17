@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { SnakeSorterScanner } from "@/components/SnakeSorterScanner";
 import { SnakeSorterScanHistory } from "@/components/SnakeSorterScanHistory";
 import { SnakeSorterAcquisitionQueue } from "@/components/SnakeSorterAcquisitionQueue";
@@ -47,13 +47,23 @@ const emptyCandidateStats: CandidateStats = {
   metadata_only: 0,
 };
 
-const viewMeta: Record<View, { label: string; short: string; detail: string; icon: string }> = {
-  home: { label: "Home", short: "Home", detail: "Snake Sorter command center", icon: "⌂" },
-  scan: { label: "Scanner", short: "Scan", detail: "Photo, video and live-camera identification", icon: "◎" },
-  contribute: { label: "Contribute", short: "Share", detail: "Upload photos and videos for owner review", icon: "◈" },
-  candidates: { label: "Candidates", short: "Review", detail: "Harvested listings and reference candidates", icon: "◇" },
-  references: { label: "Reference Library", short: "Library", detail: "Curated animals and accepted reference media", icon: "▦" },
-  history: { label: "Scan History", short: "History", detail: "Past analysis runs and feedback", icon: "↺" },
+const SorterTabIcons: Record<string, ReactNode> = {
+  home: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  scan: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  contribute: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  candidates: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+  references: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+  history: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>,
+};
+
+const viewMeta: Record<View, { label: string; short: string; detail: string; icon: string; svgIcon?: ReactNode }> = {
+
+  home: { label: "Home", short: "Home", detail: "Snake Sorter command center", icon: "⌂", svgIcon: SorterTabIcons.home },
+  scan: { label: "Scanner", short: "Scan", detail: "Photo, video and live-camera identification", icon: "◎", svgIcon: SorterTabIcons.scan },
+  contribute: { label: "Contribute", short: "Share", detail: "Upload photos and videos for owner review", icon: "◈", svgIcon: SorterTabIcons.contribute },
+  candidates: { label: "Candidates", short: "Review", detail: "Harvested listings and reference candidates", icon: "◇", svgIcon: SorterTabIcons.candidates },
+  references: { label: "Reference Library", short: "Library", detail: "Curated animals and accepted reference media", icon: "▦", svgIcon: SorterTabIcons.references },
+  history: { label: "Scan History", short: "History", detail: "Past analysis runs and feedback", icon: "↺", svgIcon: SorterTabIcons.history },
   more: { label: "Laboratory", short: "More", detail: "Models, members, imports, security and system health", icon: "•••" },
 };
 
@@ -271,8 +281,8 @@ export function SnakeSorterLabShell({
               aria-current={selected ? "page" : undefined}
               className={`group flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-1 transition ${selected ? "bg-emerald-300/[.09]" : "hover:bg-white/[.035]"}`}
             >
-              <span className={`grid h-9 w-9 place-items-center rounded-[13px] border text-base transition ${selected ? "border-emerald-200/35 bg-emerald-300/[.08] text-emerald-100" : "border-white/[.07] bg-black/25 text-white/42"}`}>
-                {item.icon}
+              <span className={`grid h-9 w-9 place-items-center rounded-[13px] border transition ${selected ? "border-emerald-200/35 bg-emerald-300/[.08] text-emerald-100" : "border-white/[.07] bg-black/25 text-white/42"}`}>
+                {item.svgIcon || item.icon}
               </span>
               <span className={`mt-1 truncate text-[8px] font-black uppercase tracking-[.06em] ${selected ? "text-emerald-100/70" : "text-white/28"}`}>{item.short}</span>
             </button>

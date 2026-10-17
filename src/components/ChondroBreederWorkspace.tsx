@@ -2,7 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+// SVG tab icons (replacing text symbols)
+const TabIcons: Record<string, ReactNode> = {
+  home: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  breeding: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5L8 13.8 2 9.2h7.6z"/></svg>,
+  colony: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  clutches: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+  market: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+  career: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  projects: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+  conservation: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>,
+  community: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  guide: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+};
 import { ArborealPlanetMark } from "@/components/BrandVisuals"; import { playHankScaleLine } from "@/lib/hank-scale-voice";
 
 import { ArborealKeeperProgramHub } from "@/components/ArborealKeeperProgramHub";
@@ -74,19 +88,20 @@ type ViewMeta = {
   navLabel?: string;
   detail: string;
   icon: string;
+  svgIcon?: ReactNode;
 };
 
 const views: Array<{ id: WorkspaceView } & ViewMeta> = [
-  { id: "home", label: "Home", detail: "Breeder command center", icon: "⌂" },
-  { id: "breeding", label: "Breed", navLabel: "Breed", detail: "Choose adult breeders and follow the reproductive cycle", icon: "◇" },
-  { id: "colony", label: "Animals", navLabel: "Animals", detail: "Raise, test and manage every animal", icon: "◎" },
-  { id: "clutches", label: "Offspring", navLabel: "Offspring", detail: "Eggs, hatchlings, holdbacks and clutch history", icon: "◉" },
-  { id: "market", label: "Store", navLabel: "Store", detail: "Buy enclosures and animals", icon: "$" },
-  { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗" },
-  { id: "projects", label: "Projects", detail: "Lines, traits and breeding goals", icon: "◈" },
-  { id: "conservation", label: "Conservation", detail: "Regional conservation program", icon: "⌁" },
-  { id: "community", label: "Network", detail: "Breeder community and activity", icon: "◌" },
-  { id: "guide", label: "Field Guide", detail: "Subspecies, locality and phenotype reference", icon: "?" },
+  { id: "home", label: "Home", detail: "Breeder command center", icon: "⌂", svgIcon: TabIcons.home },
+  { id: "breeding", label: "Breed", navLabel: "Breed", detail: "Choose adult breeders and follow the reproductive cycle", icon: "◇", svgIcon: TabIcons.breeding },
+  { id: "colony", label: "Animals", navLabel: "Animals", detail: "Raise, test and manage every animal", icon: "◎", svgIcon: TabIcons.colony },
+  { id: "clutches", label: "Offspring", navLabel: "Offspring", detail: "Eggs, hatchlings, holdbacks and clutch history", icon: "◉", svgIcon: TabIcons.clutches },
+  { id: "market", label: "Store", navLabel: "Store", detail: "Buy enclosures and animals", icon: "$", svgIcon: TabIcons.market },
+  { id: "career", label: "Career", detail: "Facility, shows and progression", icon: "↗", svgIcon: TabIcons.career },
+  { id: "projects", label: "Projects", detail: "Lines, traits and breeding goals", icon: "◈", svgIcon: TabIcons.projects },
+  { id: "conservation", label: "Conservation", detail: "Regional conservation program", icon: "⌁", svgIcon: TabIcons.conservation },
+  { id: "community", label: "Network", detail: "Breeder community and activity", icon: "◌", svgIcon: TabIcons.community },
+  { id: "guide", label: "Field Guide", detail: "Subspecies, locality and phenotype reference", icon: "?", svgIcon: TabIcons.guide },
 ];
 
 const dockViews = ["home", "breeding", "colony", "clutches", "market"] as const;
@@ -473,7 +488,7 @@ function ToolCard({ item, onClick }: { item: ViewMeta; onClick: () => void }) {
       onClick={onClick}
       className="group flex min-h-[112px] flex-col items-start rounded-[20px] border border-white/[.065] bg-white/[.025] p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/18 hover:bg-white/[.045]"
     >
-      <span className="grid h-10 w-10 place-items-center rounded-[14px] border border-white/[.07] bg-black/25 text-base text-emerald-200/70">{item.icon}</span>
+      <span className="grid h-10 w-10 place-items-center rounded-[14px] border border-white/[.07] bg-black/25 text-emerald-200/70">{item.svgIcon || item.icon}</span>
       <span className="mt-auto pt-4 text-sm font-bold text-white/80">{item.label}</span>
       <span className="mt-1 text-[11px] leading-4 text-white/38">{item.detail}</span>
     </button>
