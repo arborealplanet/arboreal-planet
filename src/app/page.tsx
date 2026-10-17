@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { HomeLogoAnimation } from "@/components/HomeLogoAnimation";
 import { ReptileNewsCarousel } from "@/components/ReptileNewsCarousel";
 import { getReptileNews } from "@/lib/reptile-news";
@@ -12,11 +13,19 @@ const trails = [
   { number: "03", label: "THE STORIES", title: "Follow the story", description: "Catch sourced reptile news, field notes, guides and the ideas worth talking about.", href: "/news", action: "Browse news", tone: "from-amber-800/30 to-[#201811]" },
 ] as const;
 
-const deeper = [  { title: "Plants & habitats", description: "From carnivorous plants to the spaces our animals call home.", href: "/plants", label: "Explore plants", icon: "✳" },
-  { title: "Journal & guides", description: "Go deeper into keeping, breeding, taxonomy and conservation.", href: "/learn", label: "Start reading", icon: "◌" },
-  { title: "Shows & events", description: "Find places to meet the community beyond the screen.", href: "/events", label: "See events", icon: "◇" },
-  { title: "Marketplace", description: "Browse animals, plants, enclosures and keeper supplies.", href: "/marketplace", label: "Browse listings", icon: "▣" },
-  { title: "Genetics & pedigrees", description: "Explore lineages, parentage and the bigger picture behind every animal.", href: "/genetics", label: "Explore lineages", icon: "⌘" },
+const deeperIcons: Record<string, ReactNode> = {
+  "/plants": <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>,
+  "/learn": <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+  "/events": <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  "/marketplace": <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+  "/genetics": <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>,
+};
+
+const deeper = [  { title: "Plants & habitats", description: "From carnivorous plants to the spaces our animals call home.", href: "/plants", label: "Explore plants" },
+  { title: "Journal & guides", description: "Go deeper into keeping, breeding, taxonomy and conservation.", href: "/learn", label: "Start reading" },
+  { title: "Shows & events", description: "Find places to meet the community beyond the screen.", href: "/events", label: "See events" },
+  { title: "Marketplace", description: "Browse animals, plants, enclosures and keeper supplies.", href: "/marketplace", label: "Browse listings" },
+  { title: "Genetics & pedigrees", description: "Explore lineages, parentage and the bigger picture behind every animal.", href: "/genetics", label: "Explore lineages" },
 ] as const;
 
 const sellers = [
@@ -184,6 +193,6 @@ export default async function Home() {
       </div>
     </section>
 
-    <section className="border-t border-white/10 bg-black/15" aria-labelledby="more-title"><div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-20"><p className="section-kicker">Go a little deeper</p><h2 id="more-title" className="mt-3 text-3xl font-semibold tracking-[-.04em] text-white sm:text-4xl">Keep exploring.</h2><div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{deeper.map((item) => <Link key={item.href} href={item.href} className="panel interactive-card flex min-h-60 flex-col rounded-3xl p-6"><span className="text-3xl text-emerald-200/70" aria-hidden="true">{item.icon}</span><h3 className="mt-7 text-xl font-semibold text-white">{item.title}</h3><p className="mt-2 text-sm leading-6 text-white/55">{item.description}</p><span className="mt-auto pt-5 text-xs font-bold text-emerald-200">{item.label} →</span></Link>)}</div><div className="mt-6 text-center text-sm text-white/45">Looking for a specific animal or keeper? <Link href="/search" className="font-semibold text-emerald-200">Search Arboreal Planet →</Link></div></div></section>
+    <section className="border-t border-white/10 bg-black/15" aria-labelledby="more-title"><div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-20"><p className="section-kicker">Go a little deeper</p><h2 id="more-title" className="mt-3 text-3xl font-semibold tracking-[-.04em] text-white sm:text-4xl">Keep exploring.</h2><div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{deeper.map((item) => <Link key={item.href} href={item.href} className="panel interactive-card flex min-h-60 flex-col rounded-3xl p-6"><span className="text-emerald-200/70" aria-hidden="true">{deeperIcons[item.href]}</span><h3 className="mt-7 text-xl font-semibold text-white">{item.title}</h3><p className="mt-2 text-sm leading-6 text-white/55">{item.description}</p><span className="mt-auto pt-5 text-xs font-bold text-emerald-200">{item.label} →</span></Link>)}</div><div className="mt-6 text-center text-sm text-white/45">Looking for a specific animal or keeper? <Link href="/search" className="font-semibold text-emerald-200">Search Arboreal Planet →</Link></div></div></section>
   </main>;
 }
