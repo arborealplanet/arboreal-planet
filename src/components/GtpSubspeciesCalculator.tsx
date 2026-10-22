@@ -53,6 +53,29 @@ function formatPercent(value: number) {
   return Number.isInteger(value) ? `${value}%` : `${value.toFixed(1)}%`;
 }
 
+// Proportional stacked bar for ancestry results: the same percentages as the
+// lists below, shown visually so a hybrid split reads at a glance. Colors are
+// presentational only and carry no phenotype meaning.
+const TAXON_COLORS: Record<string, string> = {
+  "Morelia viridis": "#22c55e",
+  "Morelia azurea azurea": "#38bdf8",
+  "Morelia azurea pulcher": "#a78bfa",
+  "Morelia azurea utaraensis": "#f59e0b",
+};
+
+const LOCALITY_COLORS = ["#34d399", "#fbbf24", "#f472b6", "#60a5fa", "#fb923c", "#2dd4bf", "#e879f9", "#a3e635"];
+
+function AncestryBar({ entries, colors }: { entries: Array<[string, number]>; colors: Record<string, string> | string[] }) {
+  const colorFor = (label: string, index: number) => (Array.isArray(colors) ? colors[index % colors.length] : colors[label] ?? "#64748b");
+  return (
+    <div className="flex h-4 w-full overflow-hidden rounded-full border border-white/[.08] bg-black/20" role="img" aria-label={entries.map(([label, percent]) => `${label} ${formatPercent(percent)}`).join(", ")}>
+      {entries.map(([label, percent], index) => (
+        <div key={label} title={`${label} ${formatPercent(percent)}`} style={{ width: `${percent}%`, backgroundColor: colorFor(label, index) }} />
+      ))}
+    </div>
+  );
+}
+
 function resultLabel(parent: Parent) {
   const taxa = entriesSorted(parent.taxonAncestry);
   const localities = entriesSorted(parent.localityAncestry);
@@ -124,12 +147,14 @@ export function GtpSubspeciesCalculator() {
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/28">Taxon ancestry</div>
+              <div className="mt-3"><AncestryBar entries={entriesSorted(offspring.taxonAncestry)} colors={TAXON_COLORS} /></div>
               <div className="mt-3 space-y-2">
                 {entriesSorted(offspring.taxonAncestry).map(([taxon, percent]) => <div key={taxon} className="rounded-xl border border-white/[.06] bg-black/10 px-3 py-2 text-sm text-white/55"><div className="flex justify-between gap-3"><span>{taxon}</span><strong className="text-emerald-100/75">{formatPercent(percent)}</strong></div></div>)}
               </div>
             </div>
             <div>
               <div className="text-[10px] font-black uppercase tracking-[.13em] text-white/28">Locality ancestry</div>
+              <div className="mt-3"><AncestryBar entries={entriesSorted(offspring.localityAncestry)} colors={LOCALITY_COLORS} /></div>
               <div className="mt-3 space-y-2">
                 {entriesSorted(offspring.localityAncestry).map(([locality, percent]) => <div key={locality} className="rounded-xl border border-white/[.06] bg-black/10 px-3 py-2 text-sm text-white/55"><div className="flex justify-between gap-3"><span>{locality}</span><strong className="text-amber-100/70">{formatPercent(percent)}</strong></div></div>)}
               </div>
