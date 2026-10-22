@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageIntro } from "@/components/AppShell";
 import { PlantDatabaseExplorer } from "@/components/PlantDatabaseExplorer";
 import { PlantCollectionRoadmap } from "@/components/PlantCollectionRoadmap";
+import { supabasePublicFetch } from "@/lib/supabase-public";
 
 const arborealLenses = [
   ["Epiphytes", "Bromeliads and orchids fit the vertical, mounted side of arboreal display culture. Their collection pages can focus on identity and cultivation without assuming every species belongs in every enclosure."],
@@ -10,7 +11,24 @@ const arborealLenses = [
   ["Keeper context", "Plant records can connect to community posts and marketplace listings while keeping user-submitted experiences and seller claims separate from reference information."],
 ] as const;
 
-export default function PlantsPage() {
+export default async function PlantsPage() {
+  // Stats derive from the live catalog so they can't go stale again
+  // (they previously hardcoded 1 reference collection / 6 roadmap groups).
+  let liveCount = 0;
+  let groupCount = 0;
+  try {
+    const rows = await supabasePublicFetch<{ status: string; plant_group: string }[]>("plant_collections?select=status,plant_group");
+    liveCount = rows.filter((r) => r.status !== "PLANNED").length;
+    groupCount = new Set(rows.map((r) => r.plant_group)).size;
+  } catch {
+    // Catalog sections below surface the real error state; stats fall back to 0.
+  }
+  const stats: [string, string, string][] = [
+    ["REFERENCE", String(liveCount), "Live reference collections"],
+    ["GROUPS", String(groupCount), "Structured plant groups"],
+    ["FOCUS", "CARE", "Identity · cultivation · use"],
+    ["CONNECTED", "3", "Marketplace · Community · Profiles"],
+  ];
   return <main>
     <PageIntro
       eyebrow="Plant Database"
@@ -24,7 +42,7 @@ export default function PlantsPage() {
         <img src="/plants/index-banner.jpg" alt="Nepenthes pitcher plants hanging in a misty greenhouse" className="h-52 w-full object-cover sm:h-72" loading="lazy" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[["REFERENCE","1","Nepenthes collection"],["ROADMAP","6","Structured plant groups"],["FOCUS","CARE","Identity · cultivation · use"],["CONNECTED","3","Marketplace · Community · Profiles"]].map(([label,value,text])=><div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
+        {stats.map(([label,value,text])=><div key={label} className="panel-soft rounded-2xl p-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-white/22">{label}</div><div className="mt-2 text-2xl font-semibold text-white/72">{value}</div><div className="mt-1 text-xs text-white/30">{text}</div></div>)}
       </div>
     </section>
 
